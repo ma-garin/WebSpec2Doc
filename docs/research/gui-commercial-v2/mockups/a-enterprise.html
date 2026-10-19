@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>WebSpec2Doc モック A. Enterprise QA</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=JetBrains+Mono:wght@400;600&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --primary:#2563EB;--primary-light:#EFF4FF;--bg:#F4F6F9;--surface:#FFFFFF;--border:#E3E8EE;--border-strong:#CBD5E1;
+  --text:#212121;--text-2:#616161;--text-3:#8A94A6;
+  --ok:#12B76A;--ok-bg:#DCFAE6;--ok-tx:#067647;
+  --warn:#F79009;--warn-bg:#FEF0C7;--warn-tx:#B54708;
+  --err:#F04438;--err-bg:#FEE4E2;--err-tx:#B42318;
+  --info:#0288D1;--info-bg:#E1F5FE;--info-tx:#01579B;
+  --s1:4px;--s2:8px;--s3:12px;--s4:16px;--s5:20px;--s6:24px;--s8:32px;
+  --nav:#1E293B;--nav-2:#334155;--nav-tx:#CBD5E1;
+  --font:"Noto Sans JP","Inter",system-ui,sans-serif;--mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+  --mockbar:28px;--topbar:44px;--abar:48px;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{font:13px/1.45 var(--font);color:var(--text);background:var(--bg);overflow:hidden}
+button{font:inherit;cursor:pointer}
+:focus-visible{outline:2px solid var(--primary);outline-offset:1px}
+.mono{font-family:var(--mono);font-size:12px}
+.muted{color:var(--text-2)}.faint{color:var(--text-3)}
+/* モック切替バー（アプリ外） */
+#mockbar{position:fixed;top:0;left:0;right:0;height:var(--mockbar);background:#2B2B2B;color:#BDBDBD;display:flex;align-items:center;gap:6px;padding:0 10px;font-size:11px;z-index:100;overflow-x:auto;white-space:nowrap}
+#mockbar b{color:#fff;font-weight:500;margin-right:4px}
+#mockbar a{color:#D6D6D6;text-decoration:none;padding:2px 8px;border:1px solid #555;border-radius:3px}
+#mockbar a[aria-current=page]{background:#fff;color:#111;border-color:#fff}
+/* アプリ枠 */
+#app{position:fixed;top:var(--mockbar);left:0;right:0;bottom:0;display:grid;grid-template-columns:232px 1fr}
+#side{background:var(--nav);color:var(--nav-tx);display:flex;flex-direction:column;min-height:0;overflow-y:auto}
+.brand{padding:12px 14px;border-bottom:1px solid var(--nav-2);color:#fff;font-weight:700;font-size:14px;display:flex;align-items:center;gap:8px}
+.brand .lg{width:22px;height:22px;border-radius:4px;background:var(--primary);display:grid;place-items:center;font-size:11px}
+.sysbox{padding:10px 12px;border-bottom:1px solid var(--nav-2);position:relative}
+.sysbox .lab{font-size:11px;color:#94A3B8;margin-bottom:4px}
+.sysbtn{width:100%;text-align:left;background:var(--nav-2);color:#fff;border:1px solid #475569;border-radius:4px;padding:6px 8px;display:flex;justify-content:space-between;align-items:center;gap:6px}
+.sysmenu{position:absolute;left:12px;right:12px;top:calc(100% - 6px);background:#fff;color:var(--text);border:1px solid var(--border-strong);border-radius:4px;z-index:30;max-height:300px;overflow-y:auto;padding:4px 0;display:none}
+.sysmenu.open{display:block}
+.sysmenu button{display:block;width:100%;text-align:left;background:none;border:0;padding:5px 10px;font-size:12px}
+.sysmenu button:hover,.sysmenu button:focus{background:var(--primary-light)}
+.sysmenu .sw{display:block;padding:5px 10px;color:var(--primary);font-size:12px;border-top:1px solid var(--border);margin-top:4px;text-decoration:none}
+.nav{padding:8px 0;flex:1}
+.nav h4{margin:10px 14px 4px;font-size:10.5px;letter-spacing:.06em;color:#94A3B8;font-weight:500}
+.nav a,.sup a{display:flex;align-items:center;gap:10px;padding:6px 14px;color:var(--nav-tx);text-decoration:none;border-left:3px solid transparent}
+.nav a:hover,.sup a:hover{background:rgba(255,255,255,.06)}
+.nav a[aria-current=page]{background:var(--nav-2);color:#fff;border-left-color:#60A5FA}
+.ic{width:18px;height:18px;border:1px solid #64748B;border-radius:3px;display:inline-grid;place-items:center;font-size:10px;flex:none}
+.sup{border-top:1px solid var(--nav-2);padding:6px 0}
+.acct{border-top:1px solid var(--nav-2);padding:10px 14px;display:flex;gap:8px;align-items:center;font-size:12px}
+.acct .av{width:26px;height:26px;border-radius:50%;background:#475569;color:#fff;display:grid;place-items:center;font-size:11px;flex:none}
+.acct small{display:block;color:#94A3B8;font-size:11px}
+/* main */
+#main{display:flex;flex-direction:column;min-width:0;min-height:0}
+#topbar{height:var(--topbar);background:var(--surface);border-bottom:1px solid var(--border-strong);display:flex;align-items:center;gap:var(--s4);padding:0 var(--s4);flex:none;min-width:0}
+.crumb{font-size:12px;color:var(--text-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.crumb b{color:var(--text);font-weight:600}
+.tb-r{margin-left:auto;display:flex;align-items:center;gap:var(--s3);font-size:12px;white-space:nowrap}
+.tb-r .sep{width:1px;height:18px;background:var(--border-strong)}
+.tgt{font-family:var(--mono);font-size:12px;background:var(--bg);border:1px solid var(--border);border-radius:4px;padding:2px 8px}
+.help{width:22px;height:22px;border:1px solid var(--border-strong);border-radius:50%;background:#fff;font-size:12px;padding:0}
+#pagehead{background:var(--surface);border-bottom:1px solid var(--border);padding:10px var(--s4);display:flex;align-items:center;gap:var(--s4);flex:none;flex-wrap:wrap}
+#pagehead h1{font-size:16px;margin:0;font-weight:700}
+#pagehead p{margin:2px 0 0;color:var(--text-2);font-size:12px}
+#pagehead .acts{margin-left:auto;display:flex;gap:var(--s2);align-items:center}
+.btn{border:1px solid var(--border-strong);background:#fff;color:var(--text);border-radius:4px;padding:4px 12px;height:28px;font-size:12.5px}
+.btn:hover{background:var(--bg)}
+.btn.pri{background:var(--primary);border-color:var(--primary);color:#fff;font-weight:600}
+.btn.pri:hover{background:#1D4FD0}
+.btn.sm{height:24px;padding:0 8px;font-size:12px}
+.btn.err{border-color:var(--err);color:var(--err-tx)}
+/* content */
+#body{flex:1;min-height:0;display:grid;grid-template-columns:1fr;position:relative}
+#body.withpanel{grid-template-columns:minmax(0,1fr) 340px}
+#scroll{overflow:auto;padding:var(--s3) var(--s4) calc(var(--abar) + 28px);min-width:0}
+.screen{display:none}.screen.on{display:block}
+.panel{background:var(--surface);border:1px solid var(--border-strong);border-radius:4px;margin-bottom:var(--s3);min-width:0}
+.panel>h2,.ph{margin:0;font-size:12.5px;font-weight:700;padding:7px 12px;border-bottom:1px solid var(--border);background:#F8FAFC;display:flex;align-items:center;gap:8px;justify-content:space-between}
+.pb{padding:var(--s3)}
+.note{font-size:12px;color:var(--text-2)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:var(--s3)}
+/* バッジ */
+.b{display:inline-flex;align-items:center;height:18px;padding-right:6px;border:1px solid;border-radius:2px;font-size:11px;font-weight:600;white-space:nowrap;line-height:16px;vertical-align:middle}
+.b i{font-style:normal;display:inline-block;min-width:18px;height:16px;text-align:center;font-size:10px;font-weight:700;border-right:1px solid;margin-right:5px;background:rgba(0,0,0,.07)}
+.b.ok{background:var(--ok-bg);color:var(--ok-tx);border-color:var(--ok)}
+.b.warn{background:var(--warn-bg);color:var(--warn-tx);border-color:var(--warn)}
+.b.err{background:var(--err-bg);color:var(--err-tx);border-color:var(--err)}
+.b.info{background:var(--info-bg);color:var(--info-tx);border-color:var(--info)}
+.b.mute{background:#EEF1F5;color:#475569;border-color:var(--text-3)}
+.b.dash{border-style:dashed}.b.dbl{border-style:double;border-width:3px;height:20px}
+.b.dbl i{height:14px;line-height:14px}
+/* KPI 帯 */
+.kpis{display:flex;background:var(--surface);border:1px solid var(--border-strong);border-radius:4px;margin-bottom:var(--s3);flex-wrap:wrap}
+.kpi{flex:1 1 90px;padding:6px 12px;border-right:1px solid var(--border);display:flex;align-items:baseline;gap:8px}
+.kpi:last-child{border-right:0}
+.kpi b{font-size:20px;font-weight:700;font-family:var(--font);line-height:1.1}
+.kpi span{font-size:12px;color:var(--text-2)}
+.kpi.w b{color:var(--warn-tx)}.kpi.e b{color:var(--err-tx)}.kpi.o b{color:var(--ok-tx)}
+/* 表 */
+.tbar{display:flex;gap:var(--s2);align-items:center;padding:6px 12px;border-bottom:1px solid var(--border);flex-wrap:wrap}
+.tbar input[type=search],.tbar select{height:26px;border:1px solid var(--border-strong);border-radius:4px;padding:0 8px;font:inherit;font-size:12px;background:#fff}
+.tbar .cnt{margin-left:auto;font-size:12px;color:var(--text-2)}
+.tscroll{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:12.5px}
+th,td{text-align:left;padding:0 10px;height:32px;border-bottom:1px solid var(--border);white-space:nowrap;vertical-align:middle}
+th{background:#F1F5F9;font-weight:600;font-size:12px;color:#334155;position:sticky;top:0;border-bottom:1px solid var(--border-strong)}
+th button{all:unset;cursor:pointer;display:inline-flex;gap:4px;align-items:center}
+th button:focus-visible{outline:2px solid var(--primary)}
+th[aria-sort=ascending] button::after{content:"▲";font-size:9px}th[aria-sort=descending] button::after{content:"▼";font-size:9px}
+th button:not(:only-child)::after{content:""}
+tbody tr:hover{background:#F8FAFC}
+tbody tr.sel{background:var(--primary-light);box-shadow:inset 3px 0 0 var(--primary)}
+tr[tabindex]{cursor:pointer}
+td.wrap{white-space:normal;line-height:1.35;min-width:200px}
+a.dl{color:var(--primary);text-decoration:none;font-size:12px;margin-right:6px}a.dl:hover{text-decoration:underline}
+/* 監査ログ */
+.audit{font-size:12px}
+.audit li{display:grid;grid-template-columns:130px 130px 1fr;gap:8px;padding:5px 12px;border-bottom:1px solid var(--border);list-style:none}
+.audit ul{margin:0;padding:0}
+.audit li:last-child{border-bottom:0}
+/* system cards */
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:var(--s3)}
+.card{background:var(--surface);border:1px solid var(--border-strong);border-radius:4px;padding:10px 12px;display:flex;flex-direction:column;gap:6px;text-decoration:none;color:inherit;min-height:116px}
+.card:hover,.card:focus-visible{border-color:var(--primary);background:var(--primary-light)}
+.card .t{font-weight:700;font-size:13px;display:flex;justify-content:space-between;gap:6px;align-items:flex-start}
+.card .p{font-size:12px;color:var(--text-2);flex:1}
+.card .s{font-size:12px;border-top:1px solid var(--border);padding-top:6px;display:flex;gap:6px;align-items:center}
+.card.proto{border-style:dashed}
+/* ws */
+.ctx{display:flex;gap:0;flex-wrap:wrap}
+.ctx div{padding:6px 14px;border-right:1px solid var(--border);font-size:12px}
+.ctx div:last-child{border-right:0}
+.ctx small{display:block;color:var(--text-3);font-size:11px}
+.ctx b{font-weight:600}
+.tabs{display:flex;border-bottom:1px solid var(--border-strong);margin-bottom:var(--s3);overflow-x:auto}
+.tabs button{border:0;background:none;padding:7px 14px;border-bottom:2px solid transparent;margin-bottom:-1px;color:var(--text-2);white-space:nowrap;font-size:13px}
+.tabs button[aria-selected=true]{color:var(--primary);font-weight:700;border-bottom-color:var(--primary);background:var(--primary-light)}
+.tabpanel{display:none}.tabpanel.on{display:block}
+.runbar{display:flex;gap:var(--s4);align-items:center;flex-wrap:wrap;padding:8px 12px}
+.runbar .it small{display:block;color:var(--text-3);font-size:11px}
+.runbar .btn{margin-left:auto}
+.banner{display:flex;gap:8px;align-items:flex-start;padding:7px 12px;border:1px solid var(--warn);border-left-width:4px;background:var(--warn-bg);color:var(--warn-tx);border-radius:4px;margin-bottom:var(--s3);font-size:12.5px}
+.banner.errb{border-color:var(--err);background:var(--err-bg);color:var(--err-tx)}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:0}
+.tile{padding:8px 12px;border-right:1px solid var(--border);border-bottom:1px solid var(--border)}
+.tile small{display:block;color:var(--text-2);font-size:11.5px}
+.tile b{font-size:17px;font-family:var(--font)}
+.tile em{font-style:normal;font-size:11px;display:block;color:var(--text-2)}
+.tile.up b{color:var(--ok-tx)}
+/* evidence panel */
+#evp{background:var(--surface);border-left:1px solid var(--border-strong);display:none;flex-direction:column;min-height:0;min-width:0}
+#body.withpanel #evp{display:flex}
+#evp .eh{padding:8px 12px;border-bottom:1px solid var(--border-strong);background:#F8FAFC;display:flex;justify-content:space-between;align-items:center;font-weight:700}
+#evp .eb{overflow:auto;padding:10px 12px calc(var(--abar) + 24px);flex:1}
+dl.kv{margin:0;display:grid;grid-template-columns:92px 1fr;gap:0}
+dl.kv dt{color:var(--text-2);font-size:11.5px;padding:5px 0;border-bottom:1px solid var(--border)}
+dl.kv dd{margin:0;padding:5px 0 5px 4px;border-bottom:1px solid var(--border);word-break:break-all;font-size:12.5px}
+details{margin-top:var(--s3);border:1px solid var(--border);border-radius:4px}
+details summary{padding:6px 10px;cursor:pointer;font-size:12px;background:#F8FAFC}
+details dl{padding:0 10px}
+.empty,.errbox{padding:18px 12px;text-align:center;color:var(--text-2)}
+.empty b,.errbox b{display:block;color:var(--text);margin-bottom:4px;font-size:13px}
+.flow{display:flex;gap:6px;align-items:stretch;flex-wrap:wrap;padding:12px}
+.fn{border:1px solid var(--border-strong);border-radius:4px;padding:6px 10px;background:#fff;min-width:150px;flex:1 1 150px}
+.fn small{display:block;color:var(--text-2);font-size:11px}
+.fa{align-self:center;color:var(--text-3);font-size:11px;text-align:center;flex:none}
+/* 固定アクションバー */
+#abar{position:fixed;left:232px;right:0;bottom:0;z-index:40;background:#fff;border-top:2px solid var(--border-strong);box-shadow:none}
+#abar .r1{height:var(--abar);display:flex;align-items:center;gap:var(--s3);padding:0 var(--s4);flex-wrap:nowrap}
+#abar .r1 .msg{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#abar .r2{display:none;padding:8px var(--s4);background:var(--warn-bg);border-top:1px solid var(--warn);align-items:center;gap:var(--s3);flex-wrap:wrap;color:var(--warn-tx)}
+#abar .r2.on{display:flex}
+#toast{position:fixed;right:16px;top:calc(var(--mockbar) + 54px);background:#1E293B;color:#fff;padding:8px 12px;border-radius:4px;z-index:90;display:none;font-size:12px}
+/* 狭幅 */
+@media (max-width:900px){
+  #app{grid-template-columns:52px 1fr}
+  .brand span,.sysbox .lab,.sysbtn .nm,.nav h4,.nav a span.tx,.sup a span.tx,.acct div{display:none}
+  .sysbox{padding:8px 6px}.sysbtn{justify-content:center;padding:6px 0}
+  .nav a,.sup a{justify-content:center;padding:7px 0}
+  .brand{justify-content:center;padding:12px 0}.acct{justify-content:center;padding:10px 0}
+  .sysmenu{left:52px;right:auto;width:220px;top:40px}
+  #abar{left:52px}
+  #body.withpanel{grid-template-columns:1fr}
+  #body.withpanel #evp{position:absolute;right:0;top:0;bottom:0;width:min(360px,94%);box-shadow:-2px 0 0 var(--border-strong)}
+  #body:not(.withpanel) #evp{display:none}
+  .grid2{grid-template-columns:1fr}
+  .tb-r .hide-n{display:none}
+  .audit li{grid-template-columns:1fr;gap:0}
+  #pagehead .acts{margin-left:0}
+}
+</style>
+</head>
+<body>
+<nav id="mockbar" aria-label="モック画面切替"><b>モック画面切替</b>
+<a href="#systems" data-s="systems">1 システム選択</a><a href="#home" data-s="home">2 指揮ホーム</a><a href="#ws" data-s="ws">3 System01 ワークスペース</a><a href="#evidence" data-s="evidence">4 Evidence ドロワー</a><a href="#impact" data-s="impact">5 System09 影響度分析</a>
+<span style="margin-left:auto;color:#888">A. Enterprise QA · 2026-10-20 · 見本データ</span></nav>
+
+<div id="app">
+<aside id="side" aria-label="サイドバー">
+  <div class="brand"><span class="lg" aria-hidden="true">W2</span><span>WebSpec2Doc</span></div>
+  <div class="sysbox">
+    <div class="lab">現在の System</div>
+    <button class="sysbtn" id="sysbtn" aria-haspopup="listbox" aria-expanded="false" title="System を切り替える"><span class="nm" id="sysname">System 01 ドキュメント作成</span><span aria-hidden="true">▾</span></button>
+    <div class="sysmenu" id="sysmenu" role="listbox" aria-label="System 切替">
+      <button role="option" data-go="home">指揮（まとめ役）</button>
+      <button role="option" data-go="ws">System 01 ドキュメント作成</button>
+      <button role="option" data-go="systems">System 01 · app（試作）</button>
+      <button role="option" data-go="systems">System 02 テスト自動化</button>
+      <button role="option" data-go="systems">System 03 AutoRun</button>
+      <button role="option" data-go="systems">System 04 CLI / API</button>
+      <button role="option" data-go="systems">System 05 オートヒーリング</button>
+      <button role="option" data-go="systems">System 06 ドキュメント検証</button>
+      <button role="option" data-go="systems">System 07 バッチ・スクリプト</button>
+      <button role="option" data-go="systems">System 08 バッチ・バックエンド</button>
+      <button role="option" data-go="impact">System 09 影響度分析</button>
+      <a class="sw" href="#systems">切替（システム選択へ）</a>
+    </div>
+  </div>
+  <div class="nav" role="navigation" aria-label="主ナビ">
+    <h4>共通</h4>
+    <a href="#systems" data-s="systems"><span class="ic">▦</span><span class="tx">システム選択</span></a>
+    <a href="#home" data-s="home"><span class="ic">⌂</span><span class="tx">指揮ホーム</span></a>
+    <h4>SYSTEM 01 ドキュメント作成</h4>
+    <a href="#ws" data-s="ws"><span class="ic">▤</span><span class="tx">ワークスペース</span></a>
+    <a href="#evidence" data-s="evidence"><span class="ic">◧</span><span class="tx">Evidence</span></a>
+    <h4>SYSTEM 09 影響度分析</h4>
+    <a href="#impact" data-s="impact"><span class="ic">⇄</span><span class="tx">影響度分析</span></a>
+  </div>
+  <div class="sup"><a href="#systems"><span class="ic">?</span><span class="tx">使い方</span></a><a href="#systems"><span class="ic">⚙</span><span class="tx">設定</span></a></div>
+  <div class="acct"><span class="av">YF</span><div>yuki.fujimagari<small>テナント: demo-tenant</small></div></div>
+</aside>
+
+<div id="main">
+  <header id="topbar">
+    <div class="crumb" id="crumb"></div>
+    <div class="tb-r">
+      <span class="hide-n">対象: <span class="tgt">demo.realworld.show</span></span>
+      <span class="sep hide-n"></span>
+      <span class="hide-n">テナント demo-tenant</span>
+      <span class="sep hide-n"></span>
+      <span class="hide-n faint">最終同期 06:44</span>
+      <span class="b ok" title="接続状態"><i>✓</i>接続中</span>
+      <button class="help" aria-label="ヘルプ">?</button>
+    </div>
+  </header>
+  <section id="pagehead" aria-label="ページヘッダ">
+    <div><h1 id="ptitle"></h1><p id="pdesc"></p></div>
+    <span id="pstate"></span>
+    <div class="acts" id="pacts"></div>
+  </section>
+
+  <div id="body">
+  <div id="scroll">
+
+  <!-- 1 システム選択 -->
+  <div class="screen" id="s-systems">
+    <div class="cards" id="cards"></div>
+  </div>
+
+  <!-- 2 指揮ホーム -->
+  <div class="screen" id="s-home">
+    <div class="kpis" role="group" aria-label="KPI">
+      <div class="kpi"><b>2</b><span>全サイト</span></div>
+      <div class="kpi o"><b>1</b><span>正常</span></div>
+      <div class="kpi"><b>0</b><span>実行中</span></div>
+      <div class="kpi e"><b>1</b><span>失敗</span></div>
+      <div class="kpi w"><b>2</b><span>確認待ち</span></div>
+      <div class="kpi w"><b>1</b><span>承認待ち</span></div>
+      <div class="kpi"><b>5</b><span>未確認</span></div>
+      <div class="kpi"><b>3</b><span>今日の変更</span></div>
+    </div>
+    <div class="panel">
+      <h2>サイト一覧 <span class="note" style="font-weight:400">2026-10-20 06:44 時点</span></h2>
+      <div class="tbar"><input type="search" id="f-home" placeholder="サイトで絞り込み" aria-label="サイトで絞り込み" data-filter="t-home"><select aria-label="状態で絞り込み" id="sel-home"><option value="">状態: すべて</option><option>一部完了</option><option>失敗</option></select><span class="cnt" id="cnt-home">2 件</span></div>
+      <div class="tscroll"><table id="t-home" data-sortable>
+        <thead><tr><th><button>サイト</button></th><th><button>最新の状態</button></th><th><button>現在の工程</button></th><th><button>最終実行</button></th><th>根拠の健全性</th><th><button>人の対応待ち</button></th><th>最新の変更</th><th>最新の失敗</th><th>開く</th></tr></thead>
+        <tbody>
+        <tr tabindex="0" data-status="一部完了"><td class="mono">demo.realworld.show</td><td><span data-b="一部完了"></span></td><td>テスト設計</td><td>06:43</td><td><span class="b ok"><i>実</i>20</span> <span class="b info"><i>静</i>62</span> <span class="b mute dash"><i>?</i>5</span></td><td><span data-b="承認待ち"></span> 1</td><td>Route 10 を静的に検出</td><td class="faint">なし</td><td><a class="dl" href="#ws">01</a><a class="dl" href="#systems">02</a><a class="dl" href="#systems">03</a><a class="dl" href="#impact">09</a></td></tr>
+        <tr tabindex="0" data-status="失敗"><td class="mono">localhost:8792</td><td><span data-b="失敗"></span></td><td>実行</td><td>06:44</td><td class="faint">未集計</td><td><span data-b="確認待ち"></span> 1</td><td class="faint">なし</td><td>実行で失敗（ログ参照）</td><td><a class="dl" href="#ws">01</a><a class="dl" href="#systems">02</a><a class="dl" href="#systems">03</a><a class="dl" href="#impact">09</a></td></tr>
+        </tbody></table></div>
+      <div class="pb note">根拠の健全性: <span class="b ok"><i>実</i>実測</span> <span class="b info"><i>静</i>静的</span> <span class="b mute dash"><i>?</i>未確認</span>。静的は「到達済み」ではありません。</div>
+    </div>
+    <div class="panel">
+      <h2>サイト詳細: 5 工程 <span class="note" style="font-weight:400">demo.realworld.show</span></h2>
+      <div class="flow" style="padding:8px 12px;align-items:center">
+        <span class="b ok"><i>✓</i>1 解析 完了</span><span class="fa">→</span><span class="b warn"><i>◐</i>2 テスト設計 一部完了</span><span class="fa">→</span><span class="b mute"><i>-</i>3 実行 未開始</span><span class="fa">→</span><span class="b mute"><i>-</i>4 分析して直す 未開始</span><span class="fa">→</span><span class="b mute"><i>-</i>5 報告 未開始</span>
+      </div>
+    </div>
+    <div class="grid2">
+      <div class="panel"><h2>見本: Empty（サイト 0 件）</h2><div class="empty"><b>サイトがまだありません</b>最初の対象を登録すると、解析が始まります。<br><button class="btn pri" style="margin-top:10px">サイトを追加</button></div></div>
+      <div class="panel"><h2>見本: Error（取得失敗）</h2><div class="errbox"><span class="b err"><i>✕</i>取得失敗</span><br><b style="margin-top:8px">サイト一覧を取得できませんでした</b>前回取得した結果（06:44）は残しています。<br><button class="btn" style="margin-top:10px">再読み込み</button></div></div>
+    </div>
+  </div>
+
+  <!-- 3/4 System01 ワークスペース -->
+  <div class="screen" id="s-ws">
+    <div class="panel"><div class="ctx">
+      <div><small>サイト</small><b class="mono">demo.realworld.show</b></div>
+      <div><small>最終解析</small><b>2026/10/20 06:25</b></div>
+      <div><small>解析状態</small><span data-b="完了"></span></div>
+      <div><small>画面</small><b>6</b></div>
+      <div><small>テスト</small><b>40</b></div>
+    </div></div>
+    <div class="tabs" role="tablist" aria-label="ワークスペース">
+      <button role="tab" id="tab0" aria-selected="false" tabindex="-1" aria-controls="tp0">画面仕様</button>
+      <button role="tab" id="tab1" aria-selected="false" tabindex="-1" aria-controls="tp1">テストケース</button>
+      <button role="tab" id="tab2" aria-selected="false" tabindex="-1" aria-controls="tp2">技法</button>
+      <button role="tab" id="tab3" aria-selected="false" tabindex="-1" aria-controls="tp3">地図</button>
+      <button role="tab" id="tab4" aria-selected="true" aria-controls="tp4">リバース解析</button>
+    </div>
+    <div class="tabpanel" id="tp0" role="tabpanel" aria-labelledby="tab0"><div class="panel"><div class="empty"><b>画面仕様（見本外）</b>このモックではリバース解析タブのみ描画します。</div></div></div>
+    <div class="tabpanel" id="tp1" role="tabpanel" aria-labelledby="tab1"><div class="panel"><div class="empty"><b>テストケース（見本外）</b>テスト 40 件は System02 で管理します。</div></div></div>
+    <div class="tabpanel" id="tp2" role="tabpanel" aria-labelledby="tab2"><div class="panel"><div class="empty"><b>技法（見本外）</b></div></div></div>
+    <div class="tabpanel" id="tp3" role="tabpanel" aria-labelledby="tab3"><div class="panel"><div class="empty"><b>地図（見本外）</b></div></div></div>
+    <div class="tabpanel on" id="tp4" role="tabpanel" aria-labelledby="tab4">
+      <div class="panel"><div class="runbar">
+        <div class="it"><small>対象</small><span class="mono">demo.realworld.show</span></div>
+        <div class="it"><small>最終解析</small>06:25</div>
+        <div class="it"><small>所要</small>4.5 秒</div>
+        <div class="it"><small>結果</small><span data-b="完了"></span></div>
+        <div class="it"><small>解析エンジン</small><span class="b ok"><i>✓</i>利用可能</span> <span class="mono">REA 6.7.0</span></div>
+        <button class="btn pri">再実行</button>
+      </div></div>
+      <div class="banner" role="status"><b aria-hidden="true">◐</b><div><b>一部のみ取得しました（見本）</b><br>取得できた範囲だけを表示しています。Partial は「成功」ではありません。足りない範囲は「未確認」のままです。</div></div>
+      <div class="panel"><h2>Before → After <span class="note" style="font-weight:400">単発測定 · 追加解析時間 4.5 秒</span></h2>
+        <div class="tiles">
+          <div class="tile up"><small>静的候補</small><b>0 → 62</b><em>増加</em></div>
+          <div class="tile up"><small>Route（静的）</small><b>0 → 10</b><em>到達は別途確認</em></div>
+          <div class="tile"><small>API 候補（静的）</small><b>0 → 0</b><em>変化なし</em></div>
+          <div class="tile"><small>API（実測）</small><b>17 → 17</b><em>変化なし · 増分に数えない</em></div>
+          <div class="tile up"><small>Module 依存</small><b>0 → 51</b><em>増加（推論を含む）</em></div>
+          <div class="tile"><small>追加解析時間</small><b>4.5 秒</b><em>単発測定</em></div>
+        </div></div>
+      <div class="panel">
+        <h2>根拠一覧 <span class="note" style="font-weight:400">行を選ぶと右に根拠を表示 / Enter で開く</span></h2>
+        <div class="tbar"><input type="search" placeholder="値で絞り込み" aria-label="値で絞り込み" data-filter="t-ev"><select id="sel-ev" aria-label="状態で絞り込み"><option value="">状態: すべて</option><option>実測</option><option>静的</option><option>推論</option><option>曖昧</option></select><span class="cnt" id="cnt-ev">5 件</span></div>
+        <div class="tscroll"><table id="t-ev" data-sortable>
+          <thead><tr><th><button>種別</button></th><th><button>値</button></th><th><button>状態</button></th><th>根拠の位置</th><th>出所</th></tr></thead>
+          <tbody id="evrows"></tbody></table></div>
+      </div>
+      <div class="panel audit"><h2>監査ログ（誰がいつ） <span class="note" style="font-weight:400">常時表示</span></h2><ul id="audit-ws"></ul></div>
+    </div>
+  </div>
+
+  <!-- 5 System09 影響度分析 -->
+  <div class="screen" id="s-impact">
+    <div class="panel"><div class="ctx">
+      <div><small>対象システム</small><b>見本: 会員管理システム</b></div>
+      <div><small>変更要求</small><b class="mono">CR-001</b></div>
+      <div><small>サイト（コード依存の入力）</small><b class="mono">demo.realworld.show</b></div>
+      <div><small>状態</small><span data-b="承認待ち"></span></div>
+    </div></div>
+    <div class="grid2">
+      <div class="panel"><h2>層 1 文書の影響 <span class="b info"><i>文</i>文書</span></h2>
+        <div class="kpis" style="margin:8px;border-radius:2px"><div class="kpi"><b>6</b><span>影響</span></div><div class="kpi e"><b>1</b><span>P1</span></div><div class="kpi w"><b>6</b><span>要確認</span></div><div class="kpi w"><b>3</b><span>テストの抜け</span></div></div>
+        <div class="pb note" style="padding-top:0">既存の文書 BFS（幅優先探索）の結果です。サイトのコード依存とは別の層で、混ぜて数えません。</div></div>
+      <div class="panel"><h2>層 2 コード依存（サイト単位・静的） <span class="b info"><i>静</i>静的</span></h2>
+        <div class="pb"><div class="banner" style="margin:0"><b aria-hidden="true">!</b><div>サイト <span class="mono">demo.realworld.show</span> と対象システム「見本: 会員管理システム」の<b>対応は未設定</b>です。同一のものとして扱っていません。</div></div></div></div>
+    </div>
+    <div class="panel"><h2>コード依存の流れ</h2>
+      <div class="flow">
+        <div class="fn"><small>変更元 chunk</small><span class="mono">chunk-JC6VLHRF.js</span></div><span class="fa">→</span>
+        <div class="fn"><small>影響候補 · import している · 1 段</small><span class="mono">main-E5ZTFQ7Z.js</span> <span data-b="推論"></span></div><span class="fa">→</span>
+        <div class="fn"><small>Route</small><b>10</b> <span class="note">うち実測で到達 3</span><br><span class="note">認証済み 0 / 未確認 2 / 曖昧 5</span></div><span class="fa">→</span>
+        <div class="fn"><small>System02 テスト観点</small><b>8</b> <span class="note">件</span></div>
+      </div>
+      <div class="pb note" style="padding-top:0">route の内訳: <span class="b ok"><i>実</i>到達 3</span> <span class="b ok dbl"><i>認</i>認証済み 0</span> <span class="b mute dash"><i>?</i>未確認 2</span> <span class="b warn"><i>曖</i>曖昧 5</span>（静的候補を到達済みとして数えていません）</div>
+    </div>
+    <div class="panel"><h2>Before → After</h2>
+      <div class="tiles"><div class="tile up"><small>依存 edge</small><b>0 → 51</b></div><div class="tile up"><small>新規影響候補</small><b>0 → 1</b></div><div class="tile up"><small>関連 route</small><b>0 → 10</b></div><div class="tile up"><small>関連テスト</small><b>0 → 8</b></div></div></div>
+    <div class="panel"><h2>承認 <span data-b="承認待ち"></span></h2>
+      <div class="pb">CR-001 の影響度分析を確認し、承認または差し戻しを選びます。承認者・時刻は操作者として記録します（この見本では記録のみで、変更は実行されません）。
+      <div style="margin-top:8px;display:flex;gap:8px"><button class="btn pri" data-act="approve">承認</button><button class="btn err" data-act="reject">差し戻し</button></div></div></div>
+    <div class="grid2">
+      <div class="panel"><h2>見本: Empty（変更要求なし）</h2><div class="empty"><b>変更要求がありません</b>変更要求を登録すると、文書とコードの影響を分析します。<br><button class="btn pri" style="margin-top:10px">変更要求を登録</button></div></div>
+      <div class="panel audit"><h2>監査ログ（誰がいつ）</h2><ul id="audit-im"></ul></div>
+    </div>
+  </div>
+
+  </div><!-- /scroll -->
+
+  <!-- Evidence 右パネル -->
+  <aside id="evp" aria-label="Evidence" role="complementary">
+    <div class="eh"><span>Evidence</span><button class="btn sm" id="evclose" aria-label="閉じる (Esc)">閉じる Esc</button></div>
+    <div class="eb" id="evbody"></div>
+  </aside>
+  </div>
+</div>
+</div>
+
+<!-- 固定アクションバー -->
+<div id="abar" role="region" aria-label="承認バー">
+  <div class="r2" id="confirm" role="alertdialog" aria-labelledby="cmsg"><span id="cmsg"></span><button class="btn pri" id="cok">確定する</button><button class="btn" id="cng">取り消す</button></div>
+  <div class="r1"><span data-b="承認待ち"></span><b id="apend">承認待ち 1 件</b><span class="msg muted" id="actx"></span>
+    <button class="btn pri" data-act="approve">承認</button><button class="btn err" data-act="reject">差し戻し</button></div>
+</div>
+<div id="toast" role="status"></div>
+<script>
+(function(){
+'use strict';
+var $=function(s,r){return (r||document).querySelector(s)},$$=function(s,r){return Array.prototype.slice.call((r||document).querySelectorAll(s))};
+/* バッジ: 色だけでなく 形（枠線の種類）＋略号＋文字 */
+var BM={'実測':['ok','実'],'認証済み実測':['ok dbl','認'],'静的':['info','静'],'文書':['info','文'],'記録':['mute','記'],'推論':['warn dash','推'],'曖昧':['warn','曖'],'未確認':['mute dash','?'],'利用不可':['err','×'],
+'未開始':['mute','-'],'準備中':['mute','…'],'実行中':['info','▶'],'確認待ち':['warn','!'],'承認待ち':['warn','人'],'一部完了':['warn','◐'],'完了':['ok','✓'],'失敗':['err','✕'],'中止':['mute','■']};
+function badge(n,label){var m=BM[n]||['mute','·'];return '<span class="b '+m[0]+'"><i>'+m[1]+'</i>'+(label||n)+'</span>'}
+function paintBadges(r){$$('[data-b]',r).forEach(function(e){e.outerHTML=badge(e.getAttribute('data-b'))})}
+function esc(s){return String(s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
+
+/* システム選択 11 枚 */
+var CARDS=[
+['指揮（まとめ役）','全サイトの状態と、人の対応待ちをまとめて見ます。','2 サイト・承認待ち 1・確認待ち 2','home'],
+['System 01 ドキュメント作成','サイトを解析し、画面仕様とテストケースを作ります。','2 サイト・最終解析 06:25','ws'],
+['System 01 · app ドキュメント作成(app)','新しい画面の試作です。表示はサンプルデータで、実装済みではありません。','試作（サンプルデータ）','systems',1],
+['System 02 テスト自動化','テスト観点からテストを設計し、実行します。','テスト 40 件（demo.realworld.show）','systems'],
+['System 03 AutoRun','サイトを探索して、画面への到達と API を実測します。','最終実行 06:43・実測で到達 3','systems'],
+['System 04 CLI / API','外部のツールから操作するための CLI と API です。','接続状況 未確認','systems'],
+['System 05 オートヒーリング','失敗を修正案にして再検証し、人が承認します。','承認待ち 1','systems'],
+['System 06 ドキュメント検証','要件・設計の文書を点検し、抜けを見つけます。','最新の点検 未確認','systems'],
+['System 07 バッチ・スクリプトのテスト','バッチやスクリプトの動作をテストします。','未開始','systems'],
+['System 08 バッチ・バックエンドのテスト','バッチとバックエンドの連携をテストします。','未開始','systems'],
+['System 09 影響度分析','変更要求が及ぼす文書・コード・テストの影響を調べます。','CR-001 · 承認待ち','impact']];
+$('#cards').innerHTML=CARDS.map(function(c){var st=c[4]?'<span class="b mute dash"><i>試</i>試作</span>':(/承認待ち/.test(c[2])?badge('承認待ち',c[2]):(/未開始/.test(c[2])?badge('未開始'):(/未確認/.test(c[2])?badge('未確認',c[2]):'<span class="b mute"><i>•</i>'+esc(c[2])+'</span>')));
+ if(c[4])st+=' <span class="note">'+esc(c[2])+'</span>';
+ return '<a class="card'+(c[4]?' proto':'')+'" href="#'+c[3]+'"><div class="t"><span>'+esc(c[0])+'</span></div><div class="p">'+esc(c[1])+'</div><div class="s">'+st+'</div></a>'}).join('');
+
+/* Evidence データ */
+var COMMON_LIM='URL への到達だけを確認。画面内容・機能の正しさは未確認。';
+var EV=[
+{id:'r1',kind:'API',val:'GET /api/articles',st:'実測',extra:'',pos:'実行時の観測（200 応答）',src:'System03 探索',
+ d:{claim:'API GET /api/articles を実行時に観測した',state:badge('実測'),probe:'200 応答を確認',auth:'rea-runtime-observation',prov:'System03 AutoRun',file:'—（実行時の観測）',dig:'—',obs:'GET https://demo.realworld.show/api/articles → 200（2026-10-20 06:43）',au:'未使用（保存済みの認証状態なし）',basis:'実測した 1 リクエストの結果',lim:'この 1 回の観測のみ。応答内容の正しさは未確認。実測 API は REA の増分に数えない。',rel:'System02 観点 未集計 / System09 影響候補 0 件'}},
+{id:'r2',kind:'Route',val:'settings',st:'静的',extra:'到達は未確認 → System03: 認証等で未確認',pos:'main-E5ZTFQ7Z.js:1:4705',src:'ast-static-analysis',
+ d:{claim:'ソースに画面ルート settings の宣言がある（到達は未確認）',state:badge('静的')+' → 探索結果 '+badge('未確認','認証等で未確認')+'<br><span class="note">未認証の GET でログイン画面へ移動</span>',probe:'認証等で未確認',auth:'ast-static-analysis',prov:'rea-agents 6.7.0',file:'main-E5ZTFQ7Z.js:1:4705',dig:'6b73427c…',obs:'GET https://demo.realworld.show/settings → 最終 URL /login（2026-10-20 06:43）',au:'未使用（保存済みの認証状態なし）',basis:'静的な宣言のみ。画面遷移の実測とは照合していない。',lim:COMMON_LIM,rel:'System02 観点 0 件 / System09 影響候補 1 件'}},
+{id:'r3',kind:'Route',val:'register',st:'静的',extra:'System03: 実測で到達（未認証）',pos:'main-E5ZTFQ7Z.js',src:'ast-static-analysis',
+ d:{claim:'ソースに画面ルート register の宣言がある',state:badge('静的')+' → 探索結果 '+badge('実測','実測で到達（未認証）'),probe:'実測で到達（未認証）',auth:'ast-static-analysis',prov:'rea-agents 6.7.0',file:'main-E5ZTFQ7Z.js',dig:'詳細に記載',obs:'GET https://demo.realworld.show/register → 到達を確認（2026-10-20 06:43）',au:'未使用（保存済みの認証状態なし）',basis:'静的な宣言と、未認証での到達の実測。2 つは別の根拠として並べている。',lim:COMMON_LIM,rel:'System02 観点 未集計 / System09 影響候補 0 件'}},
+{id:'r4',kind:'Module',val:'main-E5ZTFQ7Z.js',st:'推論',extra:'chunk-JC6VLHRF.js を import している',pos:'import 関係（1 段）',src:'rea-agents 6.7.0',
+ d:{claim:'main-E5ZTFQ7Z.js が chunk-JC6VLHRF.js を import している（1 段）',state:badge('推論'),probe:'未実施（実行時の観測なし）',auth:'import-graph',prov:'rea-agents 6.7.0',file:'main-E5ZTFQ7Z.js',dig:'詳細に記載',obs:'なし',au:'未使用',basis:'静的な import 関係からの推論。実行時の依存とは照合していない。',lim:'依存の「可能性」を示すだけで、影響の有無は確定しない。',rel:'System02 観点 8 件 / System09 影響候補 1 件'}},
+{id:'r5',kind:'API',val:'/api/profiles/:username（method 不明）',st:'曖昧',extra:'method を特定できない（GET とはみなさない）',pos:'ソース内の文字列',src:'ast-static-analysis',
+ d:{claim:'ソースに /api/profiles/:username の文字列がある。HTTP method は不明',state:badge('曖昧'),probe:'未実施',auth:'ast-static-analysis',prov:'rea-agents 6.7.0',file:'main-E5ZTFQ7Z.js',dig:'詳細に記載',obs:'なし',au:'未使用',basis:'文字列の検出のみ。method・応答は未確認。',lim:'API 候補（静的）であり、実在や仕様は未確認。',rel:'System02 観点 未集計 / System09 影響候補 0 件'}}];
+$('#evrows').innerHTML=EV.map(function(r){return '<tr tabindex="0" data-id="'+r.id+'" data-status="'+r.st+'" aria-label="'+esc(r.kind+' '+r.val)+' の根拠を開く"><td>'+r.kind+'</td><td class="mono">'+esc(r.val)+'</td><td>'+badge(r.st)+(r.extra?' <span class="note">'+esc(r.extra)+'</span>':'')+'</td><td class="mono">'+esc(r.pos)+'</td><td>'+esc(r.src)+'</td></tr>'}).join('');
+var selId=null,lastRow=null;
+function renderPanel(){
+  var b=$('#evbody');
+  if(!selId){b.innerHTML='<div class="empty"><b>行を選んでください</b>根拠一覧の行を選ぶと、出所・観測・制限をここに表示します。</div>';return}
+  var r=EV.filter(function(x){return x.id===selId})[0],d=r.d;
+  b.innerHTML='<dl class="kv"><dt>主張</dt><dd><b>'+esc(d.claim)+'</b></dd><dt>状態</dt><dd>'+d.state+'</dd><dt>権威</dt><dd class="mono">'+esc(d.auth)+'</dd><dt>provider</dt><dd class="mono">'+esc(d.prov)+'</dd><dt>出所ファイル</dt><dd class="mono">'+esc(d.file)+'</dd><dt>digest</dt><dd class="mono">'+esc(d.dig)+'</dd><dt>実行時の観測</dt><dd>'+esc(d.obs)+'</dd><dt>認証</dt><dd>'+esc(d.au)+'</dd><dt>対応の根拠</dt><dd>'+esc(d.basis)+'</dd><dt>制限</dt><dd>'+esc(d.lim)+'</dd><dt>関連</dt><dd>'+esc(d.rel)+'</dd></dl><details><summary>詳細情報（id など）</summary><dl class="kv"><dt>evidence id</dt><dd class="mono">ev-'+r.id+'-20261020</dd><dt>種別</dt><dd>'+esc(r.kind)+'</dd><dt>site</dt><dd class="mono">demo.realworld.show</dd><dt>取得</dt><dd>2026-10-20 06:25〜06:43</dd></dl></details>';
+  $$('#evrows tr').forEach(function(t){t.classList.toggle('sel',t.dataset.id===selId)});
+}
+function pick(tr){selId=tr.dataset.id;lastRow=selId;renderPanel();if(cur!=='evidence')location.hash='evidence'}
+$('#evrows').addEventListener('click',function(e){var t=e.target.closest('tr');if(t)pick(t)});
+$('#evrows').addEventListener('keydown',function(e){var t=e.target.closest('tr');if(t&&(e.key==='Enter'||e.key===' ')){e.preventDefault();pick(t)}});
+
+/* 監査ログ */
+var AU={ws:[['2026-10-20 06:44','system · rea-agents 6.7.0','リバース解析の結果を保存（根拠 5 行の見本）'],['2026-10-20 06:43','AutoRun（System03）','探索で GET /settings → /login を観測'],['2026-10-20 06:25','yuki.fujimagari','demo.realworld.show を解析（完了・4.5 秒）']],
+ im:[['2026-10-20 06:42','system','コード依存を静的に算出（edge 51・対象システムとの対応は未設定）'],['2026-10-20 06:41','system','文書の影響を算出（影響 6・P1 1）'],['2026-10-20 06:40','yuki.fujimagari','変更要求 CR-001 を登録']]};
+function paintAudit(){['ws','im'].forEach(function(k){$('#audit-'+k).innerHTML=AU[k].map(function(a){return '<li><span class="mono">'+a[0]+'</span><span>'+esc(a[1])+'</span><span>'+esc(a[2])+'</span></li>'}).join('')})}
+paintAudit();
+
+/* ルーティング */
+var CFG={
+systems:{sys:'（未選択）',crumb:['システム選択'],title:'システム選択',desc:'作業する System を選びます。',st:'<span class="b mute"><i>•</i>11 件</span>',acts:'<button class="btn pri" data-go="home">指揮ホームを開く</button><button class="btn">使い方</button>',ctx:'承認待ち 1 件（System 05 オートヒーリング）'},
+home:{sys:'指揮（まとめ役）',crumb:['指揮','指揮ホーム'],title:'指揮ホーム',desc:'全サイトの状態と、人の対応が必要な項目を一覧します。',st:badge('一部完了'),acts:'<button class="btn pri">確認待ちを開く（2）</button><button class="btn">サイトを追加</button>',ctx:'承認待ち 1 件（System 05 オートヒーリング）'},
+ws:{sys:'System 01 ドキュメント作成',crumb:['System 01 ドキュメント作成','ワークスペース'],title:'ワークスペース',desc:'サイト demo.realworld.show の解析結果と、リバース解析の根拠を確認します。',st:badge('完了'),acts:'<button class="btn">CSV 出力</button><button class="btn" data-go="systems">切替</button>',ctx:'承認待ち 1 件（System 05 オートヒーリング）'},
+evidence:{sys:'System 01 ドキュメント作成',crumb:['System 01 ドキュメント作成','ワークスペース','Evidence'],title:'Evidence',desc:'選んだ根拠の出所・観測・制限を確認します。Esc で閉じて一覧に戻ります。',st:badge('完了'),acts:'<button class="btn" id="back2ws">一覧に戻る (Esc)</button>',ctx:'承認待ち 1 件（System 05 オートヒーリング）'},
+impact:{sys:'System 09 影響度分析',crumb:['System 09 影響度分析','影響度分析'],title:'影響度分析',desc:'変更要求 CR-001 の影響を、文書とコードの 2 つの根拠の層で確認します。',st:badge('承認待ち'),acts:'<button class="btn pri" data-act="approve">承認へ進む</button><button class="btn">レポート出力</button>',ctx:'この画面の対象: CR-001 影響度分析'}};
+var cur='';
+function show(){
+  var h=(location.hash||'#systems').slice(1);if(!CFG[h])h='systems';
+  var prev=cur;cur=h;var c=CFG[h];
+  $$('.screen').forEach(function(s){s.classList.toggle('on',s.id==='s-'+h)});
+  $$('[data-s]').forEach(function(a){if(a.getAttribute('data-s')===h)a.setAttribute('aria-current','page');else a.removeAttribute('aria-current')});
+  $('#sysname').textContent=c.sys;
+  $('#crumb').innerHTML='WebSpec2Doc / '+c.crumb.map(function(x,i){return i===c.crumb.length-1?'<b>'+x+'</b>':x}).join(' / ');
+  $('#ptitle').textContent=c.title;$('#pdesc').textContent=c.desc;$('#pstate').innerHTML=c.st;$('#pacts').innerHTML=c.acts;
+  $('#actx').textContent=done?'':c.ctx;
+  layout();
+  if(h==='evidence'&&!selId){selId='r2';renderPanel()}
+  if(h==='evidence'){$('#evp').setAttribute('aria-label','Evidence（開いています）');var cb=$('#evclose');setTimeout(function(){cb.focus()},0)}
+  if(prev==='evidence'&&h==='ws'&&lastRow){var t=$('#evrows tr[data-id="'+lastRow+'"]');if(t)setTimeout(function(){t.focus()},0)}
+  $('#scroll').scrollTop=0;
+}
+function layout(){
+  var wide=window.innerWidth>900;
+  $('#body').classList.toggle('withpanel',cur==='evidence'||(cur==='ws'&&wide));
+}
+window.addEventListener('hashchange',show);window.addEventListener('resize',layout);
+$('#evclose').addEventListener('click',closeEv);
+function closeEv(){if(cur==='evidence')location.hash='ws'}
+
+/* 表: 並べ替え・絞り込み */
+$$('table[data-sortable]').forEach(function(t){
+  $$('th',t).forEach(function(th,ci){var bt=$('button',th);if(!bt)return;
+    th.setAttribute('aria-sort','none');
+    bt.addEventListener('click',function(){var asc=th.getAttribute('aria-sort')!=='ascending';
+      $$('th',t).forEach(function(x){x.setAttribute('aria-sort','none')});th.setAttribute('aria-sort',asc?'ascending':'descending');
+      var tb=$('tbody',t),rows=$$('tr',tb);rows.sort(function(a,b){var x=a.cells[ci].textContent,y=b.cells[ci].textContent;return asc?x.localeCompare(y,'ja'):y.localeCompare(x,'ja')});rows.forEach(function(r){tb.appendChild(r)})})});
+  var p=t.closest('.panel'),inp=$('input[type=search]',p),sel=$('select',p),cnt=$('.cnt',p);
+  function ap(){var q=inp.value.trim().toLowerCase(),s=sel.selectedIndex>0?sel.value:'',n=0;
+    $$('tbody tr',t).forEach(function(r){var ok=(!q||r.textContent.toLowerCase().indexOf(q)>-1)&&(!s||r.dataset.status===s);r.hidden=!ok;if(ok)n++});cnt.textContent=n+' 件'}
+  inp.addEventListener('input',ap);sel.addEventListener('change',ap);
+});
+
+/* タブ（矢印キー） */
+var tabs=$$('.tabs [role=tab]');
+function selTab(i,f){tabs.forEach(function(t,j){t.setAttribute('aria-selected',j===i);t.tabIndex=j===i?0:-1;$('#tp'+j).classList.toggle('on',j===i)});if(f)tabs[i].focus()}
+tabs.forEach(function(t,i){t.addEventListener('click',function(){selTab(i)});t.addEventListener('keydown',function(e){var n=e.key==='ArrowRight'?(i+1)%5:e.key==='ArrowLeft'?(i+4)%5:e.key==='Home'?0:e.key==='End'?4:-1;if(n>-1){e.preventDefault();selTab(n,true)}})});
+
+/* System 切替ドロップダウン */
+var sb=$('#sysbtn'),sm=$('#sysmenu');
+function menu(o){sm.classList.toggle('open',o);sb.setAttribute('aria-expanded',o);if(o)$('button',sm).focus()}
+sb.addEventListener('click',function(){menu(!sm.classList.contains('open'))});
+sm.addEventListener('click',function(e){var b=e.target.closest('[data-go]');if(b){location.hash=b.dataset.go;menu(false)}});
+sm.addEventListener('keydown',function(e){var bs=$$('button',sm),i=bs.indexOf(document.activeElement);if(e.key==='ArrowDown'){e.preventDefault();bs[Math.min(i+1,bs.length-1)].focus()}if(e.key==='ArrowUp'){e.preventDefault();bs[Math.max(i-1,0)].focus()}});
+document.addEventListener('click',function(e){if(!e.target.closest('.sysbox'))menu(false);var g=e.target.closest('[data-go]');if(g&&!g.closest('#sysmenu'))location.hash=g.dataset.go;if(e.target.id==='back2ws')closeEv()});
+
+/* 承認バー */
+var done=false,act=null;
+function now(){var d=new Date();return '2026-10-20 '+('0'+d.getHours()).slice(-2)+':'+('0'+d.getMinutes()).slice(-2)}
+document.addEventListener('click',function(e){var a=e.target.closest('[data-act]');if(!a||done)return;act=a.dataset.act;
+  var tgt=cur==='impact'?'CR-001 の影響度分析':'System 05 オートヒーリングの修正案';
+  $('#cmsg').textContent=(act==='approve'?'承認':'差し戻し')+'します: '+tgt+'。操作者（yuki.fujimagari）と時刻を監査ログに記録します。よろしいですか？';
+  $('#confirm').classList.add('on');$('#cok').focus()});
+$('#cng').addEventListener('click',function(){$('#confirm').classList.remove('on');act=null});
+$('#cok').addEventListener('click',function(){var t=now(),w=act==='approve'?'承認':'差し戻し';
+  AU.ws.unshift([t,'yuki.fujimagari',w+'を記録（承認待ち 1 → 0）']);AU.im.unshift([t,'yuki.fujimagari','CR-001 を'+w+'（操作者記録・見本）']);paintAudit();
+  done=true;$('#confirm').classList.remove('on');$('#apend').textContent='承認待ち 0 件';$('#actx').textContent='直近: '+w+' '+t.slice(11)+'（記録のみ・変更は実行しません）';
+  $$('#abar [data-act],#s-impact [data-act]').forEach(function(b){b.disabled=true});
+  var t2=$('#toast');t2.textContent=w+'を監査ログに記録しました（見本）';t2.style.display='block';setTimeout(function(){t2.style.display='none'},2500)});
+
+/* Esc */
+document.addEventListener('keydown',function(e){if(e.key!=='Escape')return;
+  if($('#confirm').classList.contains('on')){$('#cng').click();return}
+  if(sm.classList.contains('open')){menu(false);sb.focus();return}
+  closeEv()});
+
+paintBadges(document);renderPanel();
+if(!location.hash)location.hash='systems';
+show();
+})();
+</script>
+</body>
+</html>

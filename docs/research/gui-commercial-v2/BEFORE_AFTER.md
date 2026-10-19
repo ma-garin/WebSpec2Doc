@@ -42,3 +42,6 @@ Before は Phase0 の静的監査（UI_MATURITY_MATRIX.md）。After は C. Hybr
 - 04: CLI → コマンド組み立て → コピー（成功・失敗の通知）
 - 09: 対象システム → コード依存 → 変更元 → 5 段（変更→module→route→test→承認）→ route → ドロワー
 - 05・06・07・08: 入口の page header・状態・空状態・幅を確認（業務データが無いため承認・実行の通しは未検証）
+
+## 追記（2026-10-20）
+- D-P0-3 解消: 指揮の実行履歴（/orchestration/d）を /orchestration と同じ共通シェル・サイドバーに統一、旧比較案 b は廃止して /orchestration へ 301 転送、asset version は既存の ASSET_VERSION 方式 1 つに統一

@@ -2672,9 +2672,6 @@
         "templates/partials/conductor-sidebar.html",
         "static/js/orchestration.js",
         "static/css/orchestration.css",
-        "templates/orchestration_b.html",
-        "static/js/orchestration-b.js",
-        "static/css/orchestration-b.css",
         "templates/orchestration_d.html",
         "static/js/orchestration-d.js",
         "static/css/orchestration-d.css"

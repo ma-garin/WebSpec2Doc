@@ -129,3 +129,6 @@ html, body { overflow: hidden; }
 }
 .cd-dialog-acts { display: flex; gap: 8px; justify-content: flex-end; margin-top: 4px; }
 .cd-cta-slot { margin-left: auto; display: inline-flex; align-items: center; }
+
+/* 共通シェル（app-shell・conductor-sidebar）の本文に入れる（D-P0-3）。トップバーは共通シェル側にある */
+.app-content > .cd-shell { position: relative; inset: auto; height: 100%; grid-template-rows: auto 1fr; }

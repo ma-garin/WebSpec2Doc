@@ -102,3 +102,5 @@ _autorun_egress.ts
 
 # statusline用の一時進捗（セッション状態。コミットしない）
 .claude/progress.json
+# REA テスト fixture の配布物（ビルド成果物ではないので dist/ の除外から外す）
+!tests/fixtures/reverse_analysis/app/dist/

@@ -18,6 +18,8 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='css/user-menu.css') }}?v={{ _ver }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/ta2.css') }}?v={{ _ver }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/ws.css') }}?v={{ _ver }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/c-hybrid.css') }}?v={{ _ver }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/c-shell.css') }}?v={{ _ver }}">
 </head>
 {# data-mode は state.js が URL の書き換え先を決めるのに使う。
    test-only のとき "/" に書き換えると、リロードで /dashboard に着地して
@@ -444,6 +446,7 @@
 <div class="toasts" id="toasts"></div>
 
 {# 共通ヘッダーのユーザーメニュー・テナントチップを動かす（index.html と同じもの） #}
+<script src="{{ url_for('static', filename='js/c-hybrid.js') }}?v={{ _ver }}"></script>
 <script src="{{ url_for('static', filename='js/user-menu.js') }}?v={{ _ver }}"></script>
 <script src="{{ url_for('static', filename='js/ta2/state.js') }}?v={{ _ver }}"></script>
 <script src="{{ url_for('static', filename='js/ta2/list.js') }}?v={{ _ver }}"></script>

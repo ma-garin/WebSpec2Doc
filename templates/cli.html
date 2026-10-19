@@ -8,6 +8,8 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='tokens.css') }}?v={{ _ver }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/system-select.css') }}?v={{ _ver }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/cli-mode.css') }}?v={{ _ver }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/c-hybrid.css') }}?v={{ _ver }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/c-shell.css') }}?v={{ _ver }}">
 </head>
 <body class="sysselect-body cli-body">
 
@@ -125,6 +127,7 @@
     </section>
   </main>
 
+  <script src="{{ url_for('static', filename='js/c-hybrid.js') }}?v={{ _ver }}"></script>
   <script src="{{ url_for('static', filename='js/cli-mode.js') }}?v={{ _ver }}"></script>
 </body>
 </html>

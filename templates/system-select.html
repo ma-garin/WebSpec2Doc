@@ -16,6 +16,8 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='css/ta2.css') }}?v={{ _ver }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/ws.css') }}?v={{ _ver }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/system-select.css') }}?v={{ _ver }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/c-hybrid.css') }}?v={{ _ver }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/c-shell.css') }}?v={{ _ver }}">
   {# カード枚数は SYSTEMS（web/system_registry.py）の件数で決まる。列数は幅で切り替える。 #}
   <style>
     .sysselect-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
@@ -81,6 +83,7 @@
     <p class="sysselect-note">いつでもこの画面に戻って切り替えられます。</p>
   </main>
 
+  <script src="{{ url_for('static', filename='js/c-hybrid.js') }}?v={{ _ver }}"></script>
   <script src="{{ url_for('static', filename='js/user-menu.js') }}?v={{ _ver }}"></script>
 </body>
 </html>

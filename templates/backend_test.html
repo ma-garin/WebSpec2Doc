@@ -11,6 +11,8 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='css/components.css') }}?v={{ _ver }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/user-menu.css') }}?v={{ _ver }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/backend-test.css') }}?v={{ _ver }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/c-hybrid.css') }}?v={{ _ver }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/c-shell.css') }}?v={{ _ver }}">
 </head>
 {# バッチ・バックエンドのテスト（System 08）。承認済みの見本 static/mock/system08/v2/（home.html・job.html）の骨格。
    本体は 4 つの表示（ホーム／実行履歴／観点カタログ／案件）を JS が出し分ける。案件の中は ステッパー → 承認バー → 段階 1〜8 の本体。
@@ -392,6 +394,7 @@
 <template id="bs-tpl-result"><tr><td data-f="id"></td><td data-f="name"></td><td data-f="fact"></td><td data-f="auto"></td><td><select data-f="human" aria-label="人の判断"><option value="">判断していない</option><option value="pass">合格</option><option value="fail">不合格</option></select><input data-f="reason" maxlength="200" placeholder="判断の理由" aria-label="判断の理由"></td><td><span class="pill" data-f="state"></span></td></tr></template>
 <template id="bs-tpl-defect"><tr><td data-f="id"></td><td data-f="title"></td><td><span class="bs-sev" data-f="severity"></span></td><td data-f="case"></td><td><span class="pill p-new" data-f="state">未対応</span></td></tr></template>
 
+<script src="{{ url_for('static', filename='js/c-hybrid.js') }}?v={{ _ver }}"></script>
 <script src="{{ url_for('static', filename='js/user-menu.js') }}?v={{ _ver }}"></script>
 <script src="{{ url_for('static', filename='js/backend-test.js') }}?v={{ _ver }}"></script>
 <script src="{{ url_for('static', filename='js/backend-test-run.js') }}?v={{ _ver }}"></script>

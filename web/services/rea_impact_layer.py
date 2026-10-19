@@ -34,7 +34,8 @@ def loc_file(location: Any) -> str:
 
 
 def _empty(site: str, module: str, message: str, state: str = "unconfirmed") -> dict:
-    zero = {"dependency_edges": 0, "candidates": 0, "routes": 0, "apis": 0, "tests": 0, "observed_routes": 0}
+    zero = {"dependency_edges": 0, "candidates": 0, "routes": 0, "apis": 0, "tests": 0, "observed_routes": 0,
+            "observed_routes_authenticated": 0}
     return {"layer": LAYER, "site": site, "state": state, "module": module, "notice": NOTICE,
             "message": message, "impacted": [], "external": [], "sources": [],
             "metrics": {"before": {**zero, "reason": BEFORE_REASON}, "after": dict(zero)},
@@ -90,7 +91,12 @@ def _reach(probe: dict | None, evidence_id: Any) -> tuple[str, str]:
     item = (probe or {}).get(evidence_id)
     if not item or item.get("status") not in STATUS_LABEL:
         return "not_probed", "未探索"
-    return item["status"], STATUS_LABEL[item["status"]]
+    status = item["status"]
+    if status == "observed":  # authenticated が無ければ未認証扱い
+        return status, "実測で到達（認証済み）" if item.get("authenticated") is True else "実測で到達（未認証）"
+    if status == "auth_required" and item.get("auth_attempted") is True:
+        return status, "保存済みの認証状態でも未確認"
+    return status, STATUS_LABEL[status]
 
 
 def _related(evidence: list, probe: dict | None = None) -> dict[str, dict[str, list[dict]]]:
@@ -107,6 +113,7 @@ def _related(evidence: list, probe: dict | None = None) -> dict[str, dict[str, l
                 "location": ev.get("location")}  # fmt: skip
         if ev.get("group") == "route":
             item["reach_status"], item["reach_label"] = _reach(probe, ev.get("id"))
+            item["reach_authenticated"] = item["reach_status"] == "observed" and (probe or {}).get(ev.get("id"), {}).get("authenticated") is True
         key = "routes" if ev.get("group") == "route" else "apis"
         by.setdefault(f, {"routes": [], "apis": []})[key].append(item)
     return by
@@ -138,6 +145,9 @@ def build_layer(site: str, ev: dict, module: str = "", probe: dict | None = None
     def observed_n(ids: set) -> int:
         return sum(1 for v in related.values() for i in v["routes"] if i["id"] in ids and i["reach_status"] == "observed")
 
+    def observed_auth_n(ids: set) -> int:
+        return sum(1 for v in related.values() for i in v["routes"] if i["id"] in ids and i.get("reach_authenticated"))
+
     def tests_for(r: dict) -> list[dict]:
         return [vps[i["id"]] for i in r["routes"] + r["apis"] if i["id"] in vps]
 
@@ -150,7 +160,8 @@ def build_layer(site: str, ev: dict, module: str = "", probe: dict | None = None
         res["metrics"]["after"] = {"dependency_edges": len(internal) + len(external), "candidates": len(sources),
                                    "routes": len(routes), "apis": len(apis),
                                    "tests": len((routes | apis) & set(vps)),
-                                   "observed_routes": observed_n(routes)}  # fmt: skip
+                                   "observed_routes": observed_n(routes),
+                                   "observed_routes_authenticated": observed_auth_n(routes)}  # fmt: skip
         res["metrics"]["before"] = zero_before
         res["external_edges"] = len(external)
         return res
@@ -178,7 +189,8 @@ def build_layer(site: str, ev: dict, module: str = "", probe: dict | None = None
     res["metrics"]["after"] = {"dependency_edges": len(seen_edges) + len(res["external"]),
                                "candidates": len(rev_c) + len(fwd_c), "routes": len(routes),
                                "apis": len(apis), "tests": len((routes | apis) & set(vps)),
-                               "observed_routes": observed_n(routes)}  # fmt: skip
+                               "observed_routes": observed_n(routes),
+                                   "observed_routes_authenticated": observed_auth_n(routes)}  # fmt: skip
     return res
 
 

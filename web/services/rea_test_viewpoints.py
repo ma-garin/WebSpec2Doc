@@ -66,7 +66,12 @@ def _reach(probe: dict | None, evidence_id: Any) -> tuple[str, str]:
     item = (probe or {}).get(evidence_id)
     if not item or item.get("status") not in STATUS_LABEL:
         return "not_probed", NOT_PROBED_LABEL
-    return item["status"], STATUS_LABEL[item["status"]]
+    status = item["status"]
+    if status == "observed":  # 認証状態を使ったかを文字で区別する（authenticated が無ければ未認証扱い）
+        return status, "実測で到達（認証済み）" if item.get("authenticated") is True else "実測で到達（未認証）"
+    if status == "auth_required" and item.get("auth_attempted") is True:
+        return status, "保存済みの認証状態でも未確認"
+    return status, STATUS_LABEL[status]
 
 
 def _route_rows(evidence: list[dict], probe: dict | None = None) -> list[dict]:
@@ -87,9 +92,12 @@ def _route_rows(evidence: list[dict], probe: dict | None = None) -> list[dict]:
         row = rows[-1]
         row["reach_status"], row["reach_label"] = status, label
         row["runnable"] = status == "observed"  # 実測で到達した route だけ。source（由来）は static のまま
+        row["reach_authenticated"] = row["runnable"] and ((probe or {}).get(e.get("id")) or {}).get("authenticated") is True
         if row["runnable"]:
             # 文言の「到達は未確認」を、System 03 の実測（GET の遷移で到達）に合わせて言い換える
             row["text"] = f"画面ルート {value} の表示と操作を確認する（System 03 が GET の遷移で到達を確認済み）"
+            if row["reach_authenticated"]:
+                row["text"] += "（認証状態を使用）"
             row["runnable_label"] = RUNNABLE_LABEL
             row["reach_observed_at"] = ((probe or {}).get(e.get("id")) or {}).get("observed_at")
     return rows

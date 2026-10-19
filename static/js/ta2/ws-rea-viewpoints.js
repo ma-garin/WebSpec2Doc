@@ -24,7 +24,7 @@
     var lim = (v.limitations || []).map(function (x) { return '<li>' + esc(x) + '</li>'; }).join('');
     var reach = v.kind === 'route'
       ? '<span class="rv-badge rt-reach rt-reach-' + esc(v.reach_status || 'not_probed') + '">到達: ' + esc(v.reach_label || '未探索') + '</span>'
-        + (v.runnable ? '<span class="rv-badge rt-reach-run">' + esc(v.runnable_label || '実行対象（実測で到達）') + '</span>' : '')
+        + (v.runnable ? '<span class="rv-badge rt-reach-run">' + esc(v.runnable_label || '実行対象（実測で到達）') + (v.reach_authenticated ? '（認証済み）' : '（未認証）') + '</span>' : '')
       : '';
     var tag = v.is_new ? '' : '<span class="rt-note">既存の実測（増分に数えない）</span>';
     return '<li class="rt-row"><details><summary>'

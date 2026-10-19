@@ -1,0 +1,322 @@
+{
+  "schema": "webspec2doc-real-rea-value-measurement/2",
+  "provider": {
+    "kind": "real",
+    "name": "rea-agents",
+    "version": "6.7.0",
+    "executable": "~/.local/share/webspec2doc-tools/rea-6.7.0/bin/rea"
+  },
+  "conditions": {
+    "fixture": "tests/fixtures/reverse_analysis/real/app",
+    "fixture_file_sha256": {
+      "mapped/app.js": "803fc3dd6fe066d4c111f752602d28f059ae1ac1c6e48e1292673363fe412b9b",
+      "mapped/app.js.map": "d6d26ed677d63806aa12549b2b110d645e2dead00bfb3ec1a1b13fe7ec25fc84",
+      "mapped/dep.js": "5d8f65d2774e206bc9f7a7a4ad39ca2dc563b5c31e46ab57ef4874961237ce29",
+      "modules/api.js": "3a2d13c9fe228896f5dfc7ccb13ca578c0ae69bcd76945a28e406db85e05ad6c",
+      "modules/helper.js": "565600c99ff90f1e13d849e4d83675cdbcbab05649515ebebc3a4565226b4b42",
+      "modules/lazy.js": "753d35be2fc14c8764b5e885808a1cb02d614d1d559c30e8d574f7eb0ef8183f",
+      "modules/main.js": "8a2f5b2f3748063bc272432fc012d71a36908e1f54748c4b6c7637d91aa73a95",
+      "routes/app.js": "49d008ab3bc5436e646086d5789cf53d5baf02b0e0dea70bdd9b120f8283a696",
+      "routes/lib.js": "00ce0f6157816d0663ffa0e2762928c48f3b1f4e1ce9de18021ba4a3946b05d5"
+    },
+    "runtime_snapshot": "tests/fixtures/reverse_analysis/runtime_snapshot.json",
+    "runtime_snapshot_sha256": "ccf45b4d18cfca3cfce7ca7d265990d8d3ab58757e7b6f99aae4394e928975b5",
+    "same_fixture_and_snapshot": true,
+    "input_hashes_unchanged": true,
+    "repetitions": 1,
+    "before_provider_invocations": 0,
+    "before_definition": "existing load_snapshot + build_screen_api_map only; no reverse analysis and no REA",
+    "after_definition": "same runtime snapshot + actual REA 6.7.0 via product CLI --reverse-analysis --reverse-provider-evidence"
+  },
+  "before": {
+    "metrics": {
+      "static_candidates": 0,
+      "route_candidates": 0,
+      "api_candidates": 0,
+      "module_candidates": 0,
+      "module_dependency_edges": 0,
+      "source_mapped_evidence": 0,
+      "runtime_observations": 3,
+      "http_method_candidates": 0,
+      "runtime_observed": 3,
+      "static_syntax_states": {},
+      "inferred_relations": 0,
+      "ambiguous_relations": 0,
+      "unknown_relations": 0,
+      "matched_relations": 0
+    },
+    "wall_seconds": 0.144704,
+    "observed_map_sha256": "13618d12e21dd3beeb3fe47388bf0071799eff1492b97ea6e23b9bb0e5b0bdd7"
+  },
+  "after": {
+    "metrics": {
+      "static_candidates": 35,
+      "route_candidates": 4,
+      "api_candidates": 9,
+      "module_candidates": 21,
+      "module_dependency_edges": 14,
+      "source_mapped_evidence": 1,
+      "runtime_observations": 3,
+      "http_method_candidates": 0,
+      "runtime_observed": 3,
+      "static_syntax_states": {
+        "inferred": 11,
+        "observed": 24
+      },
+      "inferred_relations": 0,
+      "ambiguous_relations": 0,
+      "unknown_relations": 16,
+      "matched_relations": 0
+    },
+    "wall_seconds": 4.957604,
+    "exit_code": 0,
+    "status": "complete",
+    "output_sha256": "3729d4184d0fa240239c95ee661d9c054eee6f06ce4efcfed9ee4a148a7bb5e2"
+  },
+  "added_wall_seconds": 4.8129,
+  "useful_new_evidence": [
+    {
+      "qa_question": "Which static route declaration is an exploration candidate: /settings?",
+      "answer": "/settings",
+      "candidate_id": "sc-18b065f9431e7801",
+      "source": {
+        "artifact_path": "routes/app.js",
+        "unit": "line_column_utf16",
+        "start_line": 4,
+        "start_column": 17,
+        "end_line": 4,
+        "end_column": 34,
+        "start_byte": null,
+        "end_byte": null,
+        "unavailable_reason": null
+      },
+      "claim_scope": "static declaration candidate; runtime reachability unknown"
+    },
+    {
+      "qa_question": "Which static route declaration is an exploration candidate: /users?",
+      "answer": "/users",
+      "candidate_id": "sc-43782f9a8ea697f8",
+      "source": {
+        "artifact_path": "routes/app.js",
+        "unit": "line_column_utf16",
+        "start_line": 3,
+        "start_column": 37,
+        "end_line": 3,
+        "end_column": 51,
+        "start_byte": null,
+        "end_byte": null,
+        "unavailable_reason": null
+      },
+      "claim_scope": "static declaration candidate; runtime reachability unknown"
+    },
+    {
+      "qa_question": "Which static route declaration is an exploration candidate: /items?",
+      "answer": "/items",
+      "candidate_id": "sc-68f19ac9fc846f5c",
+      "source": {
+        "artifact_path": "mapped/app.js",
+        "unit": "line_column_utf16",
+        "start_line": 3,
+        "start_column": 18,
+        "end_line": 3,
+        "end_column": 32,
+        "start_byte": null,
+        "end_byte": null,
+        "unavailable_reason": null
+      },
+      "claim_scope": "static declaration candidate; runtime reachability unknown"
+    },
+    {
+      "qa_question": "Which static route declaration is an exploration candidate: /users/:id?",
+      "answer": "/users/:id",
+      "candidate_id": "sc-a29b412503a5ee10",
+      "source": {
+        "artifact_path": "routes/app.js",
+        "unit": "line_column_utf16",
+        "start_line": 3,
+        "start_column": 71,
+        "end_line": 3,
+        "end_column": 89,
+        "start_byte": null,
+        "end_byte": null,
+        "unavailable_reason": null
+      },
+      "claim_scope": "static declaration candidate; runtime reachability unknown"
+    },
+    {
+      "qa_question": "Which imports are declared by modules/main.js?",
+      "answer": [
+        "./api.js",
+        "./helper.js",
+        "./lazy.js"
+      ],
+      "edge_ids": [
+        "jag_edge_8b29043a5882a3e3392779e1ebfdea025499311b4d010297c786de706b051e2c",
+        "jag_edge_b44e96090ecd59dc765ecab16ef6f486f0d9d7f6fef0ef19e8ed167047631659",
+        "jag_edge_baf787042a18cd19065fae7fcca010dcd01d7db0a2285581ea8aaa4413c8fc5a",
+        "jag_edge_bdb3c17c17b897534b015674bb1bd1490b3e1c7045b854dde8d241311b208b1b",
+        "jag_edge_e897c1715ce10b81eac4d22cc6f8763d39875e731a5923b48cb19dea9198b2e3"
+      ],
+      "claim_scope": "provider inferred imports; no runtime causality claim"
+    },
+    {
+      "qa_question": "Which original source name is declared by the source map?",
+      "answer": "src/app.ts",
+      "candidate_id": "sc-5728f9fb106a5f80",
+      "claim_scope": "map-declared source name; freshness and exact range mapping unverified"
+    },
+    {
+      "qa_question": "Where is the /api/items static call-site?",
+      "answer": {
+        "artifact_path": "mapped/app.js",
+        "unit": "line_column_utf16",
+        "start_line": 2,
+        "start_column": 0,
+        "end_line": 2,
+        "end_column": 38,
+        "start_byte": null,
+        "end_byte": null,
+        "unavailable_reason": null
+      },
+      "candidate_id": "sc-9659acf72f3fb937",
+      "claim_scope": "static call-site; method/origin correspondence unknown"
+    }
+  ],
+  "useful_new_count": 7,
+  "relative_score": {
+    "basis": "controlled fixture QA evidence questions only, not overall product ability; same 8 static questions plus one question per runtime record; HTTP verb question remains unanswered",
+    "before_answered": 3,
+    "after_answered": 10,
+    "total_questions": 11,
+    "before": 100,
+    "after": 333.3
+  },
+  "ac10": "Pass",
+  "measurement_artifacts": "/private/tmp/ws2d-runtime-real-measure-112f5uix",
+  "limitations": [
+    "single measurement, not a performance benchmark",
+    "missing method remains null; no method inferred from function name",
+    "stale source-map freshness and exact generated-to-original ranges unverified",
+    "old REA-vs-REA comparison is historical and is not the baseline for AC10"
+  ],
+  "historical_rea_to_rea_comparison": {
+    "before": {
+      "code": "変更前の src/reverse_analysis（退避コピー）",
+      "status": "complete",
+      "wall_seconds": 4.19,
+      "answered": 2,
+      "answers": {
+        "Q1_route_/users": {
+          "answered": false,
+          "reason": "route 候補 0 件"
+        },
+        "Q2_route_/settings": {
+          "answered": false,
+          "reason": "route 候補 0 件"
+        },
+        "Q3_route_/users/:id": {
+          "answered": false,
+          "reason": "route 候補 0 件"
+        },
+        "Q4_route_/items": {
+          "answered": false,
+          "reason": "route 候補 0 件"
+        },
+        "Q5_main_js_imports": {
+          "answered": false,
+          "reason": "modules/main.js を起点とする imports edge が出力に無い"
+        },
+        "Q6_api_explicit_http_method": {
+          "answered": false,
+          "evidence": [
+            "None"
+          ],
+          "ground_truth": "POST（routes/app.js の fetch 第 2 引数）"
+        },
+        "Q7_source_map_original_name": {
+          "answered": true,
+          "evidence": [
+            "src/app.ts"
+          ]
+        },
+        "Q8_api_items_call_site": {
+          "answered": true,
+          "evidence": [
+            "mapped/app.js:2"
+          ]
+        }
+      },
+      "candidate_kinds": {
+        "api": 13,
+        "module": 21,
+        "source": 1
+      },
+      "routes_misclassified_as_api": 4
+    },
+    "after": {
+      "code": "変更後の src/reverse_analysis（--reverse-provider-evidence）",
+      "status": "complete",
+      "wall_seconds": 2.59,
+      "answered": 7,
+      "answers": {
+        "Q1_route_/users": {
+          "answered": true,
+          "evidence": "routes/app.js:3:37"
+        },
+        "Q2_route_/settings": {
+          "answered": true,
+          "evidence": "routes/app.js:4:17"
+        },
+        "Q3_route_/users/:id": {
+          "answered": true,
+          "evidence": "routes/app.js:3:71"
+        },
+        "Q4_route_/items": {
+          "answered": true,
+          "evidence": "mapped/app.js:3:18"
+        },
+        "Q5_main_js_imports": {
+          "answered": true,
+          "evidence": [
+            "./api.js",
+            "./helper.js",
+            "./lazy.js"
+          ]
+        },
+        "Q6_api_explicit_http_method": {
+          "answered": false,
+          "evidence": [
+            "None"
+          ],
+          "ground_truth": "POST（routes/app.js の fetch 第 2 引数）"
+        },
+        "Q7_source_map_original_name": {
+          "answered": true,
+          "evidence": [
+            "src/app.ts"
+          ]
+        },
+        "Q8_api_items_call_site": {
+          "answered": true,
+          "evidence": [
+            "mapped/app.js:2"
+          ]
+        }
+      },
+      "candidate_kinds": {
+        "api": 9,
+        "module": 21,
+        "route": 4,
+        "source": 1
+      },
+      "routes_misclassified_as_api": 0,
+      "dependency_edges": 14
+    },
+    "relative_score": {
+      "basis": "同じ 8 問・同じ分母での正答数比。Before=100",
+      "before": 100,
+      "after": 350.0
+    },
+    "excluded_from_ac10": true
+  }
+}

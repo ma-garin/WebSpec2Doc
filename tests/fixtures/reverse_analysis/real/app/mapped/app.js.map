@@ -1,0 +1,1 @@
+{"version": 3, "file": "app.js", "sources": ["src/app.ts"], "sourcesContent": ["import { value } from \"./dep\";\nfetch(\"/api/items\", {method:\"GET\"});\nconst routes=[{path:\"/items\",component:\"Items\"}];\nconsole.log(value,routes);\n"], "names": [], "mappings": "AAAA;AACA;AACA;AACA"}

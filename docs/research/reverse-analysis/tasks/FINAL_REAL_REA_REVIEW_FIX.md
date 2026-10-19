@@ -1,0 +1,9 @@
+# Codex最終差分レビュー修正（Opus5.5）
+必読: FINAL_REAL_REA.md、CLAUDE.md、AGENTS.md、CONVENTIONS.md。同じ禁止範囲を維持。変更はreverse_analysis関連とそのテスト/測定/guideのみ。
+1. 最重要: REAL_REA_VALUE_MEASUREMENT.jsonのBeforeが旧REA統合でありユーザー指定のruntime/snapshotのみではない。現「旧→新REA」結果はhistorical_comparison等に分離して保持し、新baselineは既存load_snapshot/build_screen_api_mapだけをfresh subprocessで実測する。Afterは実REA現実装。固定QA質問集にはruntime snapshot各実在JSON pointerへの質問（実測API記録）を加え、static専用8問だけのBefore0で無理に比率を作らない。同じ質問集合への回答数でBefore100/Afterを算定し、製品全能力点と称さない。API method根拠なしは未回答のまま。測定にstatic/route/API/module/edge/source-map/runtime/method有根拠数、static syntax observed・runtime observed・inferred/ambiguous/unknown（別集計）、added wall全て入れる。1回の時間は単発である旨明記。
+2. _node_candidate_kindはendpointノードの全observations集合がrouteだけの場合しかrouteにしない。同ノードにnetworkとrouteのobservationsが混ざるとroute候補をAPIに誤分類する。candidate kindは各obs.properties.endpoint_kindで決め、他のAPI観測にrouteを潰されないようにし、実Evidenceに基づく加工fixtureで回帰テストする。
+3. dependency_edgesはsource/target upstream idとkindだけでnode identityを保存していない。元graphを捨てるJSONでは一部edgeの参照先が解釈不能。実際のsource/target node.identityをboundedな構造で保持し（export-bindingをmoduleへ捏造しない）、provider/extractor名と版・artifact digest・元evidence location/coverageを実際に有るものだけ保持する。既存フィールドと追加が矛盾しない形でモデルに追加。上流stateを昇格しない。候補provenanceもprovider/extractor識別/版、source_map参照を保持。
+4. reverse_analysis内のblack/ruff/mypyの指摘は今回変更前にあってもこのREA統合のファイルであるため直す。modelsのUP038等、rea_adapter mypy3件（_expect bool化、Noneの適切なnarrow）を動作不変で修正。src/main.pyの既存domain未使用等scope外は変更しない。banditは規約どおり-llでMedium/Highのみゲート。全体の7failure/quality_harness範囲外を勝手に直さない。
+5. 実REA SIGINTも確認する。既存fake証拠だけで実REA取消と称さない。完了が速すぎて取消前に終了した場合は未検証と明記し、捏造しない。
+テスト: 上記局所回帰→関連7ファイル（reverse_analysis6files + apispec）を最後に1回、black/ruff/mypy/bandit対象検査を修正後1回。全体3970/7はsrc範囲外failureなので同じ全体pytest/quality_harnessを再実行しない。最終関連ログ/tmp/ws2d-real-review-related.log、gate logs /tmp/ws2d-real-review-*.log。測定は必要なBefore/After各1回だけ。
+変更禁止: GUI/09/Ghidra/Android/orchestration/CI/newdeps/install/update/gitcommit/push/別agent。終了時、最終関連結果・target gate・BeforeAfter・未検証を短く返す。

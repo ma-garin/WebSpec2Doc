@@ -1,0 +1,120 @@
+{
+  "schema": "webspec2doc-reverse-analysis-value-measurement/1",
+  "measured_on": "2026-10-19",
+  "provider": {
+    "kind": "fake",
+    "notice": "偽の rea 実行ファイルが固定 fixture rea_6_7_0_application_evidence.json を返した測定。実 REA は実行していない。価値ゲート（AC10）の実 provider 実証は未検証。"
+  },
+  "inputs": {
+    "js_input": "tests/fixtures/reverse_analysis/app",
+    "js_input_label": "input-app",
+    "runtime_snapshot": "tests/fixtures/reverse_analysis/runtime_snapshot.json",
+    "runtime_snapshot_sha256": "ccf45b4d18cfca3cfce7ca7d265990d8d3ab58757e7b6f99aae4394e928975b5"
+  },
+  "ground_truth": [
+    {
+      "id": "gt-api-items",
+      "kind": "api",
+      "artifact_path": "dist/app.js",
+      "start_line": 1,
+      "start_column": 40,
+      "end_column": 59,
+      "text": "fetch(\"/api/items\")",
+      "origin": null,
+      "path": "/api/items",
+      "resolution": "exact",
+      "in_before": true,
+      "useful_new": false,
+      "reason": "Before の snapshot に GET /api/items の実測がある。重複として数えない"
+    },
+    {
+      "id": "gt-api-users",
+      "kind": "api",
+      "artifact_path": "dist/app.js",
+      "start_line": 2,
+      "start_column": 41,
+      "end_column": 66,
+      "text": "fetch(`/api/users/${id}`)",
+      "origin": null,
+      "path": null,
+      "resolution": "partial",
+      "in_before": false,
+      "useful_new": true,
+      "reason": "実測に無い動的 path の呼び出し位置。path は確定させず、探索対象として使える"
+    },
+    {
+      "id": "gt-api-orders-v1",
+      "kind": "api",
+      "artifact_path": "dist/app.js",
+      "start_line": 3,
+      "start_column": 41,
+      "end_column": 92,
+      "text": "fetch(\"https://api.example.test/v1/orders?limit=5\")",
+      "origin": "https://api.example.test",
+      "path": "/v1/orders",
+      "resolution": "exact",
+      "in_before": false,
+      "useful_new": true,
+      "reason": "実測に無い別 origin の API。実測の /api/orders とは origin・path が異なり同一とみなさない"
+    },
+    {
+      "id": "gt-source-app-ts",
+      "kind": "source",
+      "artifact_path": "dist/app.js.map",
+      "start_line": null,
+      "start_column": null,
+      "end_column": null,
+      "text": null,
+      "origin": null,
+      "path": "../src/app.ts",
+      "resolution": "partial",
+      "in_before": false,
+      "useful_new": true,
+      "reason": "配布 JS の元ソース名を map から特定。本文は map に無く content は unavailable"
+    }
+  ],
+  "before": {
+    "artifact": "build_screen_api_map(load_snapshot(runtime_snapshot)) の JSON（sort_keys・ensure_ascii=False）",
+    "screen_api_map_sha256": "57b5213c4fcaa06d77f0221614b0ad591d7683d4047419487a7ea9bb888b83b7",
+    "screens_with_api": 2,
+    "observed_calls": 3,
+    "static_evidence": 0
+  },
+  "after": {
+    "output_sha256": "76e4d8acde4c47f402910f3ee669451def555d1ab00ff32b85c24a62573bb29f",
+    "output_bytes": 11050,
+    "summary": {
+      "static_candidates": 4,
+      "observed_api_records": 3,
+      "inferred_relations": 0,
+      "ambiguous_relations": 0,
+      "unknown_relations": 6,
+      "matched_relations": 0
+    },
+    "candidates_by_kind": {
+      "api": 3,
+      "source": 1,
+      "module": 0,
+      "route": 0
+    },
+    "useful_new_evidence": 3,
+    "false_extractions": 0,
+    "duplicate_candidates": 0,
+    "not_counted_as_new": [
+      "gt-api-items"
+    ],
+    "output_change_2026_10_19": "FINAL_REAL_REA で出力が変わったため hash/bytes だけ更新（旧 6ab4ce2ff8019416177de44b15e4f60564351f1ba57910ecbec390d54ab9aef6・10942 bytes）。理由: 実 REA は route を返すと判明し route 不在の診断文を訂正、source 候補に鮮度・行対応未確認の制限を追加。summary と候補数は不変。cost_fake_provider の after_output_bytes・wall・RSS は旧 schema での測定値のまま（新出力で測り直していない）"
+  },
+  "cost_fake_provider": {
+    "method": "/usr/bin/time -l を 5 回。wall は中央値、peak RSS は最大値。RSS は親プロセスのみで fake provider の子プロセスを含まない",
+    "environment": "macOS 27.0.1 arm64・Python 3.12.13",
+    "before_wall_seconds_median": 0.11,
+    "after_wall_seconds_median": 0.415,
+    "added_seconds_median": 0.305,
+    "before_peak_rss_bytes_max": 33685504,
+    "after_peak_rss_bytes_max": 72073216,
+    "before_output_bytes": 886,
+    "after_output_bytes": 10942,
+    "after_runs_byte_identical": true
+  }
+}

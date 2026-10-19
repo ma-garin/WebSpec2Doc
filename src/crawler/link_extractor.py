@@ -12,6 +12,7 @@ from crawler.page_crawler import (
     EmbeddedFrame,
     FieldData,
     FormData,
+    PostbackNavigation,
     SourceEvidence,
     is_internal_link,
     normalize_url,
@@ -250,6 +251,90 @@ def _same_origin_child_frames(page: Page, base_url: str) -> list[Any]:
         for frame in _iter_child_frames(page)
         if _is_same_origin_frame(frame.url or "", base_url)
     ]
+
+
+#: ポストバック遷移の上限。メニューが巨大なサイトで報告が膨らむのを防ぐ。
+MAX_POSTBACK_NAVIGATIONS = 100
+
+#: __doPostBack('ctl00$Menu','Item2') / WebForm_PostBackOptions('btnNext', ...) から
+#: 第 1 引数（コントロール ID）を取り出す。ASP.NET WebForms の遷移先識別子にあたる。
+_POSTBACK_TARGET_PATTERN = re.compile(
+    r"""(?:__doPostBack|WebForm_PostBackOptions)\s*\(\s*"""
+    r"""(['"])(?P<target>.*?)\1"""
+    r"""(?:\s*,\s*(['"])(?P<argument>.*?)\3)?""",
+    re.IGNORECASE,
+)
+
+#: javascript: href の一覧を、表示ラベル付きで取り出すスクリプト。
+_JAVASCRIPT_HREF_SCRIPT = """
+(els) => els
+  .filter((a) => (a.getAttribute('href') || '').trim().toLowerCase().startsWith('javascript:'))
+  .slice(0, 300)
+  .map((a) => ({
+    href: (a.getAttribute('href') || '').trim(),
+    label: (a.innerText || a.textContent || a.getAttribute('title') || '').trim().slice(0, 120),
+    // WebForms の id は ctl00$Menu$Item2 のように $ を含み '#id' では
+    // 無効な CSS セレクタになるため、属性セレクタで組む。
+    selector: a.id
+      ? '[id="' + a.id.replace(/["\\\\]/g, '\\\\$&') + '"]'
+      : (a.getAttribute('name')
+          ? '[name="' + a.getAttribute('name').replace(/["\\\\]/g, '\\\\$&') + '"]'
+          : 'a'),
+  }))
+"""
+
+
+def extract_postback_navigations(page: Page, base_url: str) -> list[PostbackNavigation]:
+    """href が javascript: の遷移を証跡として取り出す（ASP.NET WebForms 対策）。
+
+    WebForms / DNN のメニューは href が URL ではなく __doPostBack(...) なので、
+    extract_internal_links は 1 件も返さずクロールが入口ページで終わる。
+    ここで拾っておけば、report に「未追跡の遷移が N 件ある」と出せる。
+    実際の遷移は POST を伴うため、MutationBlocker を外さない限り追跡しない。
+    """
+    del base_url  # javascript: href は同一オリジン判定の対象外
+    try:
+        raw = cast(
+            list[dict[str, str]],
+            page.eval_on_selector_all("a[href]", _JAVASCRIPT_HREF_SCRIPT),
+        )
+    except Exception as exc:
+        logger.warning("ポストバック遷移の抽出に失敗しました: %s", exc)
+        return []
+
+    navigations: list[PostbackNavigation] = []
+    seen: set[tuple[str, str]] = set()
+    for entry in raw:
+        href = str(entry.get("href") or EMPTY_TEXT)
+        matched = _POSTBACK_TARGET_PATTERN.search(href)
+        # javascript:void(0) のような慣用句は遷移ではないので対象外。
+        if matched is None:
+            continue
+        target = matched.group("target")
+        if not target:
+            continue
+        argument = matched.group("argument") or EMPTY_TEXT
+        key = (target, argument)
+        if key in seen:
+            continue
+        seen.add(key)
+        navigations.append(
+            PostbackNavigation(
+                label=str(entry.get("label") or EMPTY_TEXT),
+                target=target,
+                selector=str(entry.get("selector") or "a"),
+                argument=argument,
+            )
+        )
+        if len(navigations) >= MAX_POSTBACK_NAVIGATIONS:
+            break
+
+    if navigations:
+        logger.warning(
+            "ポストバック遷移を %d 件検出しました（href が javascript: のためクロール対象外）",
+            len(navigations),
+        )
+    return navigations
 
 
 def extract_links_all_scopes(page: Page, base_url: str) -> list[str]:

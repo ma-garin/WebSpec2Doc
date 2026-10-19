@@ -9,6 +9,7 @@ from analyzer.html_analyzer import AnalyzedPage
 EMPTY_CELL = "-"
 FORMS_TITLE = "# フォーム一覧"
 SCREENS_TITLE = "# 画面一覧"
+POSTBACK_TITLE = "## 未追跡の遷移（href が javascript:）"
 
 
 def generate_screens_markdown(
@@ -25,7 +26,37 @@ def generate_screens_markdown(
         "|---:|---|---|---|---:|---|",
     ]
     rows = [_screen_row(index, page, graph) for index, page in enumerate(pages, start=1)]
-    return "\n".join(lines + rows) + "\n"
+    return "\n".join(lines + rows + _postback_section(pages)) + "\n"
+
+
+def _postback_section(pages: list[AnalyzedPage]) -> list[str]:
+    """href が javascript: のため追えなかった遷移を節として出す。
+
+    ASP.NET WebForms / DNN は __doPostBack で画面遷移するため、リンクとして
+    辿れず画面一覧に現れない。何も書かないと「遷移が無い」と読めてしまうので、
+    未追跡であることを明示する（evidence-only 原則）。検出ゼロなら節ごと出さず、
+    既存レポートの形を変えない。
+    """
+    rows: list[str] = []
+    for page in pages:
+        for nav in page.page_data.postback_navigations:
+            target = f"{nav.target}:{nav.argument}" if nav.argument else nav.target
+            rows.append(
+                f"| {page.page_id} | {_cell(nav.label)} | "
+                f"{_cell(target)} | {_cell(nav.selector)} |"
+            )
+    if not rows:
+        return []
+    return [
+        "",
+        POSTBACK_TITLE,
+        "",
+        "これらの遷移はリンクではなくポストバックのため、クロール対象外（未追跡）です。",
+        "",
+        "| 画面ID | ラベル | 遷移先(target:argument) | セレクタ |",
+        "|---|---|---|---|",
+        *rows,
+    ]
 
 
 def generate_forms_markdown(form_summary: list[dict[str, object]]) -> str:

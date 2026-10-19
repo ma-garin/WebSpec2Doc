@@ -1,13 +1,12 @@
-"""リバース解析（System 01）の結果を画面向けに整形して返す read-only API。
+"""リバース解析（System 01）の結果表示と実行の API。
 
-reverse_analysis.json（``python -m main --reverse-analysis`` の出力）を読み、
+GET  /api/reverse-analysis?domain=        結果を画面向けに整形して返す（読み取りのみ）
+POST /api/sites/<domain>/reverse-analysis/run   CLI と同じ service で解析して保存する
+
 状態の取り違え（静的候補を実測扱い・method 不明を GET 補完など）をしない形に変換する。
-値はすべてファイルから取り、無いものは null（画面では「未確認」「未計測」）で返す。
-
-置き場所: <出力>/<domain>/reverse_analysis/
-  reverse_analysis.json     必須。解析結果
-  value_measurement.json    任意。実行時のみ／＋リバース解析の比較測定
-  source_map_checks.json    任意。source map の検証結果（ケースごとの終了状態）
+値はすべてサイトの保存物から取り、無いものは null（画面では「未確認」「未計測」）で返す。
+結果は run.json（対象サイト・snapshot digest）と一致するときだけ表示する（別サイトの結果を混ぜない）。
+置き場所は web/services/reverse_analysis_run.py を参照。
 """
 
 from __future__ import annotations
@@ -19,12 +18,12 @@ from typing import Any
 from flask import Blueprint, current_app, request
 
 from web.config import OUTPUT_DIR
+from web.services import reverse_analysis_run as runner
 from web.tenancy import scoped_output_dir
 from web.validation import _valid_domain
 
 bp = Blueprint("reverse_analysis", __name__)
 
-_DIR = "reverse_analysis"
 
 _KIND_LABEL = {"route": "Route", "api": "API", "module": "Module", "source": "Source"}
 
@@ -51,12 +50,6 @@ _LIMITATION = {
 _IMPORT_KIND = {"static-import": "静的 import", "dynamic-import": "動的 import", "require": "require"}
 
 # source map の検証ケース。成功＝正常ではないので、意味を必ず併記する。
-_SOURCE_MAP_CASES = {
-    "normal": ("source map あり", "元ソース名は取得。生成コードとの正確な行対応は未確認"),
-    "missing": ("source map なし", "解析は成功したが、元ソースへの対応付けはできない"),
-    "stale": ("古い source map", "解析は成功したが、map の鮮度は保証されない（古さを検出できない）"),
-    "malformed": ("壊れた source map", "一部のみ取得。読めなかった部分は利用不可"),
-}
 
 
 def _limitations(codes: list[str]) -> list[str]:
@@ -186,18 +179,21 @@ def _dependencies(doc: dict) -> list[dict]:
     return out
 
 
-def _source_map(base: Path) -> list[dict]:
-    path = base / "source_map_checks.json"
-    if not path.is_file():
-        return []
-    out = []
-    for case in _read_json(path):
-        name = case.get("case", "")
-        label, meaning = _SOURCE_MAP_CASES.get(name, (name, "結果の意味は未確認"))
-        status = case.get("status")
-        outcome = {"complete": "success", "partial": "partial"}.get(status or "", "failed")
-        out.append({"case": name, "label": label, "outcome": outcome, "meaning": meaning})
-    return out
+def _source_map(run: dict, doc: dict) -> list[dict]:
+    """このサイトで取得した source map の状況。成功しても「正常」とは書かない。"""
+    maps = int(run.get("source_maps") or 0)
+    unavailable = any(
+        "source-map" in d.get("message", "") and d.get("code") == "static_node_unsupported"
+        for d in doc.get("diagnostics", [])
+    )
+    if maps == 0:
+        row = ("source map なし", "success", "解析は成功したが、元ソースへの対応付けはできない")
+    elif doc.get("status") == "partial":
+        row = ("source map 一部のみ", "partial", "一部のみ取得。読めなかった部分は利用不可")
+    else:
+        note = "（一部は解析対象外）" if unavailable else ""
+        row = ("source map あり", "success", f"取得はできたが、鮮度と正確な行対応は保証されない{note}")
+    return [{"case": "site", "label": row[0], "outcome": row[1], "meaning": f"{row[2]}（取得 {maps} 件）"}]
 
 
 def _diagnostics(items: list[dict]) -> list[dict]:
@@ -222,80 +218,97 @@ def _diagnostics(items: list[dict]) -> list[dict]:
     return out
 
 
-def _summary(doc: dict, measurement: dict | None) -> tuple[list[dict], float | None, bool]:
-    if measurement:
-        b = measurement.get("before", {}).get("metrics", {})
-        a = measurement.get("after", {}).get("metrics", {})
-        score = measurement.get("relative_score") or {}
-        added = measurement.get("added_wall_seconds")
-        once = (measurement.get("conditions") or {}).get("repetitions") == 1
-    else:  # 比較測定が無い場合: 実行時のみの値は解析結果の実測件数だけ分かる
-        b = {"runtime_observations": len(doc.get("runtime_observations", []))}
-        s = doc.get("static_candidates", [])
-        a = {
-            "static_candidates": len(s),
-            "route_candidates": sum(1 for c in s if c.get("kind") == "route"),
-            "api_candidates": sum(1 for c in s if c.get("kind") == "api"),
-            "module_dependency_edges": len(_dependencies(doc)),
-            "runtime_observations": len(doc.get("runtime_observations", [])),
-        }
-        score, added, once = {}, None, False
+def _summary(run: dict) -> list[dict]:
+    b, a = run.get("before") or {}, run.get("after") or {}
 
     def row(key: str, label: str, mkey: str, note: str = "") -> dict:
         return {"key": key, "label": label, "before": b.get(mkey), "after": a.get(mkey), "note": note}
 
-    rows = [
+    return [
         row("static", "静的候補", "static_candidates", "ソースに構文がある候補。実行の証明ではない"),
         row("route", "Route", "route_candidates", "静的な宣言。到達は未確認"),
         row("api_static", "API 候補（静的）", "api_candidates", "HTTP method は不明のまま"),
         row("api_runtime", "API（実測）", "runtime_observations", "実行時の観測。リバース解析では増えない"),
         row("module_dep", "Module 依存", "module_dependency_edges", "import の関係"),
-        {
-            "key": "qa",
-            "label": "QA に答えられる問い",
-            "before": score.get("before_answered"),
-            "after": score.get("after_answered"),
-            "note": f"{score['total_questions']} 問中" if score.get("total_questions") else "未計測",
+        row("source_map", "Source map 根拠", "source_mapped_evidence", "鮮度は保証されない"),
+        {"key": "qa", "label": "QA に答えられる問い", "before": None, "after": None,
+         "note": "未計測（このサイトの正解集合が無い）"},
+    ]  # fmt: skip
+
+
+def _run_meta(domain: str, run: dict | None) -> dict:
+    provider = runner.provider_status()
+    running = runner.is_running(domain)
+    snapshot = runner.latest_snapshot(_base(), domain)
+    reason = nxt = None
+    if running:
+        reason, nxt = "このサイトのリバース解析を実行中です。", "完了すると結果が自動で更新されます。"
+    elif snapshot is None:
+        reason, nxt = "このサイトの実行時記録がありません。", "先にドキュメント作成でサイトを解析してください。"
+    elif not provider.available:
+        reason, nxt = provider.reason, provider.next_action
+    last = None
+    if run:
+        last = {k: run.get(k) for k in ("finished_at", "seconds", "js_files", "source_maps")}
+        last["status"] = {"complete": "complete", "partial": "partial"}.get(run.get("status") or "", "failed")
+    return {
+        "site": {"domain": domain},
+        "provider_status": {
+            "available": provider.available, "version": provider.version,
+            "reason": provider.reason, "next_action": provider.next_action,
         },
-    ]
-    return rows, added, once
+        "last_run": last,
+        "running": running,
+        "can_run": reason is None,
+        "cannot_run_reason": reason,
+        "cannot_run_next": nxt,
+    }  # fmt: skip
+
+
+def _base() -> Path:
+    return scoped_output_dir(OUTPUT_DIR)
 
 
 def _payload(domain: str) -> dict:
-    base = scoped_output_dir(OUTPUT_DIR) / domain / _DIR
-    target = base / "reverse_analysis.json"
+    root = runner.site_dir(_base(), domain)
+    target = root / runner.RESULT_DIR / runner.RESULT_FILE
+    run_path = root / runner.RUN_FILE
+    run = _read_json(run_path) if run_path.is_file() else None
+    meta = _run_meta(domain, run)
     if not target.is_file():
-        return {
-            "state": "empty",
-            "message": "このサイトにはリバース解析の結果がありません。",
-            "next_action": "CLI モードでリバース解析を実行すると、ここに結果が表示されます。",
-        }
+        return {**meta, "state": "empty",
+                "message": "このサイトのリバース解析結果はまだありません。",
+                "next_action": "「リバース解析を実行」を押すと、このサイトの JavaScript を解析します。"}  # fmt: skip
     doc = _read_json(target)
-    status = doc.get("status")
-    if status in ("provider_unavailable", "unavailable"):
-        return {
-            "state": "provider_unavailable",
-            "message": "静的解析ツールを実行できませんでした。",
-            "next_action": "解析ツールの導入場所を確認して再実行してください。",
-        }
-    measurement_path = base / "value_measurement.json"
-    measurement = _read_json(measurement_path) if measurement_path.is_file() else None
+    sha = (doc.get("inputs") or {}).get("runtime_snapshot_sha256")
+    if not run or run.get("domain") != domain or run.get("snapshot_sha256") != sha:
+        return {**meta, "state": "mismatch",
+                "message": "保存されている結果の対象を、このサイトの実行記録で確かめられませんでした。",
+                "next_action": "「リバース解析を実行」で、このサイトの結果を作り直してください。"}  # fmt: skip
     producer = doc.get("producer") or {}
     version = producer.get("provider_version")
-    summary, added, once = _summary(doc, measurement)
+    diagnostics = _diagnostics(doc.get("diagnostics", []))
+    latest = runner.latest_snapshot(_base(), domain)
+    if latest is not None and latest.name != run.get("snapshot"):
+        diagnostics.insert(0, {
+            "severity": "warning",
+            "message": "この結果は最新のサイト解析より前の実行時記録で作られています。",
+            "next_action": "最新の記録で比べるには、リバース解析を再実行してください。",
+        })  # fmt: skip
     coverage = doc.get("coverage") or {}
     return {
+        **meta,
         "state": "ok",
-        "status": status,
+        "status": doc.get("status"),
         "provider": {"name": "rea-agents", "version": version} if version else None,
-        "input_label": (doc.get("inputs") or {}).get("static_root_label", ""),
-        "summary": summary,
-        "added_seconds": added,
-        "measured_once": once,
+        "input_label": domain,
+        "summary": _summary(run),
+        "added_seconds": run.get("seconds"),
+        "measured_once": run.get("repetitions") == 1,
         "evidence": _runtime_evidence(doc) + _static_evidence(doc, version),
         "dependencies": _dependencies(doc),
-        "source_map": _source_map(base),
-        "diagnostics": _diagnostics(doc.get("diagnostics", [])),
+        "source_map": _source_map(run, doc),
+        "diagnostics": diagnostics,
         "coverage_limitations": _limitations(
             (coverage.get("static") or {}).get("limitations", [])
             + (coverage.get("runtime") or {}).get("limitations", [])
@@ -303,12 +316,15 @@ def _payload(domain: str) -> dict:
     }
 
 
+_BAD_SITE = {"state": "error", "message": "サイトの指定が正しくありません。",
+             "next_action": "サイト一覧から開き直してください。"}  # fmt: skip
+
+
 @bp.get("/api/reverse-analysis")
 def api_reverse_analysis() -> tuple[dict, int] | dict:
     domain = request.args.get("domain", "").strip()
     if not domain or not _valid_domain(domain):
-        return {"state": "error", "message": "サイトの指定が正しくありません。",
-                "next_action": "サイト一覧から開き直してください。"}, 400
+        return _BAD_SITE, 400
     try:
         return _payload(domain)
     except (OSError, ValueError, KeyError, TypeError, AttributeError) as exc:
@@ -316,5 +332,23 @@ def api_reverse_analysis() -> tuple[dict, int] | dict:
         return {
             "state": "error",
             "message": "リバース解析の結果を読み込めませんでした（ファイルが壊れている可能性があります）。",
-            "next_action": "同じ入力でリバース解析を再実行してください。",
+            "next_action": "リバース解析を再実行してください。",
         }
+
+
+_HTTP = {"success": 200, "partial": 200, "busy": 409, "no_runtime": 422,
+         "provider_unavailable": 422, "error": 500}  # fmt: skip
+
+
+@bp.post("/api/sites/<domain>/reverse-analysis/run")
+def api_reverse_analysis_run(domain: str) -> tuple[dict, int]:
+    """対象サイトの最新 snapshot と、そのページの JS で解析する。入力は domain だけ。"""
+    if not _valid_domain(domain) or not (_base() / domain).is_dir():
+        return {"result": "error", "message": _BAD_SITE["message"], "next_action": _BAD_SITE["next_action"]}, 404
+    try:
+        res = runner.run_for_site(_base(), domain)
+    except (OSError, ValueError, KeyError, TypeError) as exc:
+        current_app.logger.warning("reverse_analysis の実行に失敗: %s (%s)", domain, exc)
+        res = runner.RunResult("error", "リバース解析を完了できませんでした。結果は更新していません。",
+                               "時間をおいて再実行してください。")  # fmt: skip
+    return {"result": res.result, "message": res.message, "next_action": res.next_action}, _HTTP[res.result]

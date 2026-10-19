@@ -18,7 +18,9 @@ from playwright.sync_api import sync_playwright
 VIEWPORTS = ((1440, 900), (1280, 720))
 _SKIP = ("/api", "/static", "/auth/oidc", "/download", "/metrics", "/open", "/preview", "/review/export")
 
-_JS = r"""() => {
+REVERSE_VIEWPORTS = ((816, 900), (1440, 900))
+
+_JS = r"""(rootSel) => {
   const vw = innerWidth, vh = innerHeight, out = [];
   const canScroll = (a, axis) => {
     const s = getComputedStyle(a), ov = axis === 'y' ? s.overflowY : s.overflowX;
@@ -49,7 +51,7 @@ _JS = r"""() => {
     if (r.right > vw + 1 && !docScroll('x')) return `画面の右 ${Math.round(r.right - vw)}px が見えない`;
     return '';
   };
-  for (const el of document.querySelectorAll('a,button,input,select,textarea,label,h1,h2,h3,p,li,td,th,[class*=card]')) {
+  for (const el of document.querySelectorAll((rootSel ? rootSel + ' ' : '') + 'a,button,input,select,textarea,label,h1,h2,h3,p,li,td,th,[class*=card]')) {
     const r = el.getBoundingClientRect(), s = getComputedStyle(el);
     if (r.width < 3 || r.height < 3 || s.visibility === 'hidden' || el.closest('[hidden],[aria-hidden=true],dialog:not([open])')) continue;
     const why = clipped(el);
@@ -57,6 +59,78 @@ _JS = r"""() => {
   }
   return out;
 }"""
+
+
+_JS_EXTRA = r"""() => {
+  const out = [], vw = innerWidth, vh = innerHeight, d = document.scrollingElement;
+  if (d.scrollWidth > d.clientWidth) out.push(`ページが横にスクロールする（${d.scrollWidth} > ${d.clientWidth}）`);
+  const rv = document.querySelector('#spec-reverse');
+  if (rv) {
+    const r = rv.getBoundingClientRect();
+    if (rv.scrollWidth > rv.clientWidth + 1) out.push(`#spec-reverse が横にはみ出す（${rv.scrollWidth} > ${rv.clientWidth}）`);
+    if (r.right > vw + 1) out.push(`#spec-reverse の右 ${Math.round(r.right - vw)}px が画面外`);
+  }
+  return out;
+}"""
+
+_JS_DRAWER = r"""() => {
+  const el = document.querySelector('.rv-drawer');
+  if (!el) return ['ドロワーが見つからない'];
+  const r = el.getBoundingClientRect(), vw = innerWidth, vh = innerHeight, out = [];
+  if (r.left < -1 || r.top < -1 || r.right > vw + 1 || r.bottom > vh + 1)
+    out.push(`ドロワーが画面に収まらない（left=${Math.round(r.left)} top=${Math.round(r.top)} right=${Math.round(r.right)}/${vw} bottom=${Math.round(r.bottom)}/${vh}）`);
+  return out;
+}"""
+
+
+def _report(w: int, h: int, name: str, found: list[str]) -> int:
+    for f in found[:5]:
+        print(f"NG {w}x{h} {name}: {f}")
+    if len(found) > 5:
+        print(f"NG {w}x{h} {name}: ほか {len(found) - 5} 件")
+    return len(found)
+
+
+def _check_reverse(page, base: str, domain: str, w: int, h: int) -> tuple[int, int]:
+    """リバース解析画面（一覧・ドロワー・各タブ）を検査する。(NG 件数, 検査した画面数) を返す。"""
+    name = f"/sites/{domain}/spec#reverse"
+    try:
+        page.goto(f"{base}/sites/{domain}/spec", wait_until="load", timeout=15000)
+        page.click('#spec-seg button[data-m="reverse"]', timeout=10000)
+        page.wait_for_selector("#spec-reverse .rv", state="visible", timeout=10000)
+    except Exception as exc:
+        print(f"NG {w}x{h} {name}: 開けない（{type(exc).__name__}）")
+        return 1, 1
+    total, screens = 0, 0
+
+    def run(label: str, root: str) -> None:
+        nonlocal total, screens
+        screens += 1
+        page.wait_for_timeout(300)
+        total += _report(w, h, label, page.evaluate(_JS, root) + page.evaluate(_JS_EXTRA))
+
+    run(name, "#spec-reverse")
+    try:
+        page.click("#spec-reverse .rv-panel tbody tr", timeout=5000)
+        page.wait_for_selector(".rv-drawer", state="visible", timeout=5000)
+        screens += 1
+        page.wait_for_timeout(300)
+        total += _report(w, h, name + ":drawer", page.evaluate(_JS, ".rv-drawer") + page.evaluate(_JS_DRAWER))
+        page.keyboard.press("Escape")
+        page.wait_for_timeout(200)
+    except Exception as exc:
+        print(f"NG {w}x{h} {name}:drawer: 開けない（{type(exc).__name__}）")
+        total, screens = total + 1, screens + 1
+    tabs = page.eval_on_selector_all(".rv-tab[data-tab]", "els => els.map(e => e.dataset.tab)")
+    for tab in tabs:
+        try:
+            page.click(f'.rv-tab[data-tab="{tab}"]', timeout=5000)
+        except Exception as exc:
+            print(f"NG {w}x{h} {name}:{tab}: 開けない（{type(exc).__name__}）")
+            total, screens = total + 1, screens + 1
+            continue
+        run(f"{name}:{tab}", "#spec-reverse")
+    return total, screens
 
 
 def _routes() -> list[str]:
@@ -75,6 +149,11 @@ def main() -> int:
     if "--docverify-review" in args:  # System 06 のレビュー内の画面（開いたレビューが要る）も見る
         i = args.index("--docverify-review")
         review = args[i + 1]
+        args = args[:i] + args[i + 2:]
+    reverse = []
+    while "--reverse-analysis" in args:  # リバース解析画面（一覧・ドロワー・各タブ）を 816/1440 幅で見る
+        i = args.index("--reverse-analysis")
+        reverse.append(args[i + 1])
         args = args[:i] + args[i + 2:]
     pages = args or _routes()
     if review:
@@ -109,6 +188,20 @@ def main() -> int:
                 total += len(found)
             page.close()
         browser.close()
+    if reverse:
+        with sync_playwright() as p:
+            try:
+                browser = p.chromium.launch()
+            except Exception:
+                browser = p.chromium.launch(channel="chrome")
+            for w, h in REVERSE_VIEWPORTS:
+                page = browser.new_page(viewport={"width": w, "height": h})
+                for domain in reverse:
+                    n, screens = _check_reverse(page, base, domain, w, h)
+                    total += n
+                    print(f"リバース解析 {w}x{h} {domain}: {screens} 画面 / NG {n} 件")
+                page.close()
+            browser.close()
     print(f"見切れ {total} 件（{len(pages)} 画面 × {len(VIEWPORTS)} 幅）")
     return 1 if total else 0
 

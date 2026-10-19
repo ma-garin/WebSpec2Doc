@@ -22,6 +22,8 @@ STATE_LABEL = {
     "unknown": "不明",
     "unavailable": "利用不可",
 }
+NOT_PROBED_LABEL = "未探索"
+RUNNABLE_LABEL = "実行対象（実測で到達）"
 NO_EVIDENCE_NEXT = "System01 でリバース解析を実行すると観点が増えます"
 
 
@@ -57,7 +59,17 @@ def _row(*, text: str, kind: str, source: str, state: str, evidence_id: Any,
     }
 
 
-def _route_rows(evidence: list[dict]) -> list[dict]:
+def _reach(probe: dict | None, evidence_id: Any) -> tuple[str, str]:
+    """System 03 の到達確認結果（by_evidence）から (status, label)。結果が無ければ「未探索」。"""
+    from web.services.static_route_probe_store import STATUS_LABEL
+
+    item = (probe or {}).get(evidence_id)
+    if not item or item.get("status") not in STATUS_LABEL:
+        return "not_probed", NOT_PROBED_LABEL
+    return item["status"], STATUS_LABEL[item["status"]]
+
+
+def _route_rows(evidence: list[dict], probe: dict | None = None) -> list[dict]:
     rows, seen = [], set()
     for e in evidence:
         if e.get("group") != "route" or e.get("origin") != "static":
@@ -71,6 +83,15 @@ def _route_rows(evidence: list[dict]) -> list[dict]:
             kind="route", source="static", state=e.get("state") or "unknown",
             evidence_id=e.get("id"), location=e.get("location"), claim=e.get("claim") or "",
             limitations=e.get("limitations"), is_new=True))  # fmt: skip
+        status, label = _reach(probe, e.get("id"))
+        row = rows[-1]
+        row["reach_status"], row["reach_label"] = status, label
+        row["runnable"] = status == "observed"  # 実測で到達した route だけ。source（由来）は static のまま
+        if row["runnable"]:
+            # 文言の「到達は未確認」を、System 03 の実測（GET の遷移で到達）に合わせて言い換える
+            row["text"] = f"画面ルート {value} の表示と操作を確認する（System 03 が GET の遷移で到達を確認済み）"
+            row["runnable_label"] = RUNNABLE_LABEL
+            row["reach_observed_at"] = ((probe or {}).get(e.get("id")) or {}).get("observed_at")
     return rows
 
 
@@ -126,20 +147,21 @@ def _module_rows(dependencies: list[dict]) -> list[dict]:
     return rows
 
 
-def build_viewpoints(rea: dict | None, before: int | None = None) -> dict:
+def build_viewpoints(rea: dict | None, before: int | None = None, probe: dict | None = None) -> dict:
     """site_evidence() の結果から観点候補と Before→After を作る。
 
     before: System 02 既存のテスト候補数。None なら実測 API 由来の数を Before とする。
+    probe: System 03 の到達確認結果（static_route_probe_store.by_evidence）。省略時は全 route が「未探索」。
     """
     if not rea or rea.get("state") != "ok":
         msg = (rea or {}).get("message") or "このサイトのリバース解析結果はまだありません。"
         return {"state": "no_evidence", "message": f"リバース解析の根拠なし（未確認）。{msg}",
                 "next_action": NO_EVIDENCE_NEXT, "viewpoints": [], "covered_by_runtime": [],
                 "metrics": {"before": before if before is not None else 0, "after": before if before is not None else 0,
-                            "new": 0, "with_evidence": 0, "before_basis": "既存テスト候補数" if before is not None else "未確認"}}  # fmt: skip
+                            "new": 0, "with_evidence": 0, "runnable": 0, "probed": 0, "before_basis": "既存テスト候補数" if before is not None else "未確認"}}  # fmt: skip
     evidence = rea.get("evidence") or []
     api_rows, covered = _api_rows(evidence)
-    rows = _route_rows(evidence) + api_rows + _module_rows(rea.get("dependencies") or [])
+    rows = _route_rows(evidence, probe) + api_rows + _module_rows(rea.get("dependencies") or [])
     new = [r for r in rows if r["is_new"]]
     if before is None:
         before, basis = sum(1 for r in rows if r["source"] == "runtime"), "実測 API 由来の観点数"
@@ -151,6 +173,9 @@ def build_viewpoints(rea: dict | None, before: int | None = None) -> dict:
         "viewpoints": rows,
         "covered_by_runtime": covered,
         "metrics": {"before": before, "after": before + len(new), "new": len(new),
-                    "with_evidence": sum(1 for r in new if r["evidence_id"]), "before_basis": basis},  # fmt: skip
+                    "with_evidence": sum(1 for r in new if r["evidence_id"]),
+                    "runnable": sum(1 for r in new if r.get("runnable")),
+                    "probed": sum(1 for r in rows if r.get("kind") == "route" and r.get("reach_status") != "not_probed"),
+                    "before_basis": basis},  # fmt: skip
         "last_run": rea.get("last_run"),
     }

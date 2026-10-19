@@ -157,3 +157,7 @@
 .rt-more>summary{cursor:pointer;font-weight:600;padding:var(--space-2) 0}
 .rt-more>summary:focus-visible{outline:2px solid var(--color-primary);outline-offset:2px}
 .rt-wrap .rv-head-main{flex:0 0 auto}
+
+/* System 03 の到達確認の重ね表示（文字ラベルが主。色は補助） */
+.rt-reach-observed,.rt-reach-run{border-color:var(--color-primary);color:var(--color-primary);font-weight:700}
+.rt-reach-not_probed{color:var(--color-text-secondary)}

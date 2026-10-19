@@ -73,7 +73,8 @@ def test_no_rea_is_zero_and_unconfirmed():
     for ev in ({"state": "empty", "message": "なし"}, {"state": "error"}, None):
         r = L.build_layer("s", ev, "b.js")
         assert r["state"] == "unconfirmed" and r["impacted"] == []
-        assert r["metrics"]["after"] == {"dependency_edges": 0, "candidates": 0, "routes": 0, "apis": 0, "tests": 0}
+        assert r["metrics"]["after"] == {"dependency_edges": 0, "candidates": 0, "routes": 0, "apis": 0, "tests": 0,
+                                         "observed_routes": 0}
         assert r["message"]
 
 
@@ -107,3 +108,21 @@ def test_unknown_module_and_normalization():
     assert L.build_layer("s", _ev(DEPS), "zzz.js")["state"] == "unknown_module"
     assert L.norm_module("./dir/chunk-A.js?x=1") == "chunk-A.js"
     assert L.loc_file("main.js:1:79") == "main.js" and L.loc_file("実行記録 https://x/") == ""
+
+
+def test_observed_routes_in_after_metrics():
+    probe = {"r1": {"status": "observed"}, "r2": {"status": "unreached"}}
+    r = L.build_layer("s", _ev(DEPS, EVID), "b.js", probe)
+    assert r["metrics"]["after"]["observed_routes"] == 1
+    routes = {i["id"]: i for c in r["impacted"] for i in c["routes"]} | {i["id"]: i for i in r["own"]["routes"]}
+    assert routes["r1"]["reach_status"] == "observed" and routes["r1"]["reach_label"] == "実測で到達"
+    assert routes["r2"]["reach_label"] == "未到達"
+    assert r["notice"] == L.NOTICE
+
+
+def test_no_probe_all_not_probed():
+    for probe in (None, {}):
+        r = L.build_layer("s", _ev(DEPS, EVID), "b.js", probe)
+        assert r["metrics"]["after"]["observed_routes"] == 0
+        assert {i["reach_label"] for c in r["impacted"] for i in c["routes"]} == {"未探索"}
+    assert L.build_layer("s", _ev(DEPS, EVID))["metrics"]["after"]["observed_routes"] == 0

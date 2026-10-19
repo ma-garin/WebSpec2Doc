@@ -118,6 +118,9 @@ def create_app() -> Flask:
     from web.routes import reverse_analysis as reverse_analysis_routes
 
     app.register_blueprint(reverse_analysis_routes.bp)
+    from web.routes import static_route_probe as static_route_probe_routes
+
+    app.register_blueprint(static_route_probe_routes.bp)
     app.register_blueprint(login.bp)
     app.register_blueprint(record.bp)
     app.register_blueprint(report.bp)

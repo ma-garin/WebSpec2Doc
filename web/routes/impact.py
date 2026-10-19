@@ -315,4 +315,7 @@ def rea_layer():
     if not _valid_domain(domain):
         return jsonify({"error": "サイトの指定が正しくありません。一覧から選び直してください。"}), 400
     module = request.args.get("module", "").strip()[:300]
-    return jsonify(layer.build_layer(domain, site_evidence(domain), module))
+    from web.services import static_route_probe_store as probe_store
+
+    probe = probe_store.by_evidence(probe_store.load(scoped_output_dir(OUTPUT_DIR), domain))
+    return jsonify(layer.build_layer(domain, site_evidence(domain), module, probe))

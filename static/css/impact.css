@@ -178,3 +178,7 @@ button.im-btn-danger.btn-danger{background:var(--ng-tx);color:#fff!important;bor
 .im-rea-b.s-ambiguous{background:var(--wa-bg);color:var(--wa-tx)}
 .im-rea-b.s-unknown{background:var(--bg);color:var(--tx2);border-color:var(--line)}
 @media (max-width:760px){.im-rea-ba{grid-template-columns:minmax(0,1fr)}}
+
+.im-rea-reach.r-observed{background:#ECFDF3;color:#067647;border-color:#ABEFC6}
+.im-rea-reach.r-not_probed{background:var(--bg);color:var(--tx2);border-color:var(--line)}
+.im-rea-reach.r-unreached,.im-rea-reach.r-auth_required,.im-rea-reach.r-ambiguous,.im-rea-reach.r-failed{background:var(--wa-bg);color:var(--wa-tx)}

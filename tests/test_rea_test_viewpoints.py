@@ -18,7 +18,7 @@ def test_static_route_is_not_reached():
     assert "到達は未確認" in v["text"] and "到達済み" not in v["text"] and "実行済み" not in v["text"]
     assert v["source_label"] == "静的候補由来" and v["evidence_state"] == "inferred"
     assert out["metrics"] == {"before": 10, "after": 11, "new": 1, "with_evidence": 1,
-                              "before_basis": "既存のテスト候補数"}  # fmt: skip
+                              "runnable": 0, "probed": 0, "before_basis": "既存のテスト候補数"}  # fmt: skip
 
 
 def test_null_method_is_not_filled_with_get():
@@ -76,3 +76,36 @@ def test_no_rea_means_zero_and_unconfirmed():
 def test_only_ok_state_is_used():
     rea = {"state": "mismatch", "evidence": [_ev("r", "route", "static", "x")]}
     assert build_viewpoints(rea, 0)["viewpoints"] == []
+
+
+def _probe(**by_id):
+    return {k: {"evidence_id": k, "status": s, "reason": "r", "observed_at": "2026-10-20T00:00:00" if s == "observed" else None,
+                "final_url": None} for k, s in by_id.items()}  # fmt: skip
+
+
+_ROUTES = [_ev(f"r{i}", "route", "static", f"p{i}") for i in range(1, 7)]
+
+
+def test_probe_none_keeps_legacy_and_marks_not_probed():
+    out = build_viewpoints(_ok(_ROUTES[:1]), before=0)
+    (v,) = out["viewpoints"]
+    assert v["reach_status"] == "not_probed" and v["reach_label"] == "未探索" and v["runnable"] is False
+    assert out["metrics"]["runnable"] == 0 and out["metrics"]["probed"] == 0
+    assert out["metrics"]["new"] == 1 and out["metrics"]["after"] == 1
+
+
+def test_only_observed_route_is_runnable():
+    probe = _probe(r1="observed", r2="unreached", r3="auth_required", r4="ambiguous", r5="failed")
+    out = build_viewpoints(_ok(_ROUTES), before=0, probe=probe)
+    by = {v["evidence_id"]: v for v in out["viewpoints"]}
+    assert [k for k, v in by.items() if v["runnable"]] == ["r1"]
+    assert by["r1"]["source"] == "static" and by["r1"]["runnable_label"] == "実行対象（実測で到達）"
+    assert by["r2"]["reach_label"] == "未到達" and by["r3"]["reach_label"] == "認証等で未確認"
+    assert by["r6"]["reach_status"] == "not_probed"
+    assert out["metrics"]["runnable"] == 1 and out["metrics"]["probed"] == 5
+
+
+def test_empty_probe_all_not_probed():
+    out = build_viewpoints(_ok(_ROUTES), before=0, probe={})
+    assert {v["reach_status"] for v in out["viewpoints"]} == {"not_probed"}
+    assert out["metrics"]["runnable"] == 0 and out["metrics"]["probed"] == 0

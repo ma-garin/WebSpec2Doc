@@ -19,13 +19,20 @@
   }
   function dl(title, m, reason) {
     return '<div class="im-rea-card"><h4>' + esc(title) + '</h4><dl><dt>依存 edge</dt><dd>' + m.dependency_edges + '</dd><dt>影響候補 module</dt><dd>' + m.candidates +
-      '</dd><dt>関連 route</dt><dd>' + m.routes + '</dd><dt>関連 API（静的）</dt><dd>' + m.apis + '</dd><dt>関連テスト</dt><dd>' + m.tests + '</dd></dl>' +
+      '</dd><dt>関連 route</dt><dd>' + m.routes + '</dd>' +
+      '<dt>実測で到達した関連 route</dt><dd>' + (m.observed_routes || 0) + '</dd><dt>関連 API（静的）</dt><dd>' + m.apis + '</dd><dt>関連テスト</dt><dd>' + m.tests + '</dd></dl>' +
       (reason ? '<p class="im-rea-note">' + esc(reason) + '</p>' : '') + '</div>';
+  }
+  function reach(i) {
+    if (!i.reach_label) return '';
+    // 実際に開いた結果（到達・未到達・認証）だけ「実測」と書く。曖昧・失敗・未探索は開いていない／確かめられていない
+    var measured = ['unreached', 'auth_required'].indexOf(i.reach_status) >= 0;  // observed は名前に「実測」を含む
+    return ' <span class="im-rea-b im-rea-reach r-' + esc(i.reach_status || 'not_probed') + '">到達: ' + esc(i.reach_label) + (measured ? '（実測）' : '') + '</span>';
   }
   function items(list, label) {
     if (!list || !list.length) return '';
     return '<ul class="im-rea-rel" aria-label="' + esc(label) + '">' + list.map(function (i) {
-      return '<li>' + esc(label) + ' <code>' + esc((i.method ? i.method + ' ' : '') + i.value) + '</code> ' + badge(i.state) + ' <small>' + esc(i.location || '') + '（静的）</small></li>';
+      return '<li>' + esc(label) + ' <code>' + esc((i.method ? i.method + ' ' : '') + i.value) + '</code> ' + badge(i.state) + reach(i) + ' <small>' + esc(i.location || '') + '（静的）</small></li>';
     }).join('') + '</ul>';
   }
   function tests(list) {

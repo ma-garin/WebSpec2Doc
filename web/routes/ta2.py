@@ -976,4 +976,7 @@ def api_rea_test_viewpoints(domain: str) -> Any:
     if not _valid_domain(domain):
         return {"state": "error", "message": "サイトの指定が正しくありません。",
                 "next_action": "サイト一覧から開き直してください。"}, 400  # fmt: skip
-    return build_viewpoints(site_evidence(domain), _existing_candidate_count(domain))
+    from web.services import static_route_probe_store as probe_store
+
+    probe = probe_store.by_evidence(probe_store.load(scoped_output_dir(OUTPUT_DIR), domain))
+    return build_viewpoints(site_evidence(domain), _existing_candidate_count(domain), probe)

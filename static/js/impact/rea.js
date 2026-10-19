@@ -21,7 +21,7 @@
     return '<div class="im-rea-card"><h4>' + esc(title) + '</h4><dl><dt>依存 edge</dt><dd>' + m.dependency_edges + '</dd><dt>影響候補 module</dt><dd>' + m.candidates +
       '</dd><dt>関連 route</dt><dd>' + m.routes + '</dd>' +
       '<dt>実測で到達した関連 route</dt><dd>' + (m.observed_routes || 0) + '</dd><dt>うち認証済み</dt><dd>' + (m.observed_routes_authenticated || 0) + '</dd><dt>関連 API（静的）</dt><dd>' + m.apis + '</dd><dt>関連テスト</dt><dd>' + m.tests + '</dd></dl>' +
-      (reason ? '<p class="im-rea-note">' + esc(reason) + '</p>' : '') + '</div>';
+      (reason ? '<p class="im-rea-note">' + esc(String(reason).replace('このサイトに対する', '選んだサイトに対する')) + '</p>' : '') + '</div>';
   }
   function reach(i) {
     if (!i.reach_label) return '';
@@ -90,8 +90,11 @@
     }, function (e) { ui.failed($('#im-rea-body', box), e, function () { load(box, site, mod); }); });
   }
   function render(el, ctx) {
-    el.innerHTML = '<div class="dashboard-section-head"><div><h2 class="dash-section-title">コード依存（リバース解析・静的）</h2>' +
+    var sys = (ctx && ctx.system) || {}, sname = sys.name || sys.title || '';
+    var link = 'コード依存はサイト単位（System01 のリバース解析結果）です。この対象システム' + (sname ? '（' + sname + '）' : '') + 'との対応は設定されていません。同じものとは限りません。';
+    el.innerHTML = '<div class="dashboard-section-head"><div><h2 class="dash-section-title">コード依存（サイト単位・静的）<span id="im-rea-cur" class="im-rea-cur"></span></h2>' +
       '<p class="dashboard-section-copy">System 01 のリバース解析で見つけた module の import 関係です。' + esc(NOTICE) + '。既存の影響分析とは別の層です。</p></div></div>' +
+      '<p class="im-rea-link" role="note">' + esc(link) + '</p>' +
       '<div class="im-rea-bar"><label>対象サイト<select id="im-rea-site"><option value="">読み込み中…</option></select></label></div><div id="im-rea-body"></div>';
     get({}).then(function (d) {
       var sites = d.sites || [], sel = $('#im-rea-site', el);
@@ -101,7 +104,10 @@
         return;
       }
       sel.innerHTML = sites.map(function (s) { return '<option value="' + esc(s) + '">' + esc(s) + '</option>'; }).join('');
-      sel.addEventListener('change', function () { load(el, sel.value, ''); });
+      var cur = $('#im-rea-cur', el);
+      function mark() { cur.textContent = ' ／ 選択中: ' + sel.value; }
+      sel.addEventListener('change', function () { mark(); load(el, sel.value, ''); });
+      mark();
       load(el, sel.value, '');
     }, function (e) { ui.failed($('#im-rea-body', el), e, function () { render(el, ctx); }); });
   }

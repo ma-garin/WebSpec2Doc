@@ -381,7 +381,29 @@
 
   var VIEW_NAMES = ['run', 'projects', 'history'];
 
-  function switchView(view) {
+  /* 画面状態は URL ハッシュに載せる（docverify と同じ書き方）。
+     画面切替は pushState、実行の選択は replaceState。#run/<実行ID> #projects #history */
+  function parseHash() {
+    var m = /^#(run|projects|history)(?:\/(.+))?$/.exec(location.hash || '');
+    if (!m) { return null; }
+    var rid = '';
+    try { rid = m[2] ? decodeURIComponent(m[2]) : ''; } catch (e) { rid = ''; }
+    return { view: m[1], runId: rid };
+  }
+
+  function hashFor(view) {
+    if (view === 'run' && state.selectedRunId) { return '#run/' + encodeURIComponent(state.selectedRunId); }
+    return '#' + view;
+  }
+
+  function syncHash(push) {
+    var want = location.pathname + location.search + hashFor(state.activeView);
+    if (location.pathname + location.search + location.hash === want) { return; }
+    try { history[push ? 'pushState' : 'replaceState'](null, '', want); } catch (e) { /* URL を書けなくても画面は動かす */ }
+  }
+
+  function switchView(view, opts) {
+    opts = opts || {};
     state.activeView = view;
     // ビューそのものも要素の有無を確かめてから触る。テンプレート側で 1 つでも
     // 外れると、以降の初期化ごと落ちて画面が白くなるため。
@@ -395,6 +417,7 @@
       var nav = $['hl-nav-' + v];
       if (nav && nav.classList) { nav.classList.toggle('active', view === v); }
     });
+    if (!opts.noUrl) { syncHash(!opts.replace); }
   }
 
   /* ---------------- 統計 ---------------- */
@@ -1426,6 +1449,7 @@
 
   function openRun(runId) {
     state.selectedRunId = runId;
+    if (state.activeView === 'run') { syncHash(false); }
     hideAllConfirms();
     stopPolling();
     // 別の実行を開くときは前回の署名を捨てる（同じ内容でも描き直す必要がある）。
@@ -2598,7 +2622,19 @@
     // 設定画面は接続先の一覧、実行の直リンクは実行ビュー。属性が無い / 未知の値なら
     // 従来どおり実行ビューにする。
     var defaultView = (document.body.dataset && document.body.dataset.defaultView) || '';
-    switchView(VIEW_NAMES.indexOf(defaultView) >= 0 ? defaultView : 'run');
+    // URL ハッシュ（リロード・ブックマーク・戻る）を優先。無い・不正なら従来の既定画面
+    var h = parseHash();
+    if (h) {
+      defaultView = h.view;
+      if (h.runId && !state.focusRunId) { state.focusRunId = h.runId; }
+    }
+    switchView(VIEW_NAMES.indexOf(defaultView) >= 0 ? defaultView : 'run', { replace: true });
+    window.addEventListener('popstate', function () {
+      var p = parseHash();
+      var v = p ? p.view : 'run';
+      switchView(v, { noUrl: true });
+      if (p && p.view === 'run' && p.runId && p.runId !== state.selectedRunId) { openRun(p.runId); }
+    });
 
     loadProjects().then(function () {
       loadStats();

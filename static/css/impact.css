@@ -182,3 +182,5 @@ button.im-btn-danger.btn-danger{background:var(--ng-tx);color:#fff!important;bor
 .im-rea-reach.r-observed{background:#ECFDF3;color:#067647;border-color:#ABEFC6}
 .im-rea-reach.r-not_probed{background:var(--bg);color:var(--tx2);border-color:var(--line)}
 .im-rea-reach.r-unreached,.im-rea-reach.r-auth_required,.im-rea-reach.r-ambiguous,.im-rea-reach.r-failed{background:var(--wa-bg);color:var(--wa-tx)}
+.im-rea-link{margin:0 0 8px;padding:8px 12px;border:1px solid var(--line);border-radius:8px;font-size:12.5px;color:var(--tx2)}
+.im-rea-cur{font-size:12.5px;font-weight:400;color:var(--tx2)}

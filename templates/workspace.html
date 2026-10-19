@@ -2,9 +2,10 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=1440">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
-<title>WebSpec2Doc</title>
+{%- set _ws_title = {'home': 'サイト一覧', 'spec': '分析・設計', 'tests': '自動化', 'changes': '変更', 'schedule': '定期実行', 'report': '報告', 'team': 'チーム'} -%}
+<title>{{ _ws_title.get(ws, 'サイト一覧') }}{{ ' - ' ~ domain if domain else '' }} - {{ 'テスト自動化' if mode == 'test-only' else 'ワークスペース' }} - WebSpec2Doc</title>
 <!-- Google Fonts はこのアプリの CSP（style-src 'self' 'unsafe-inline'）でブロックされ、
      読み込まれないまま console エラーだけが残るため置かない。
      描画は ta2.css の --sans / --mono のフォールバック（system-ui 等）で確定する。 -->
@@ -37,6 +38,7 @@
         <span>{{ 'テスト自動化' if mode == 'test-only' else 'ワークスペース' }}</span>
       </span>
     </a>
+    <a href="/systems" class="sys-switcher" title="システムを切り替える" aria-label="システムを切り替える"><span class="sys-switcher-label">システム</span><span class="sys-switcher-cur">{{ 'テスト自動化' if mode == 'test-only' else 'ワークスペース' }}</span><span class="sys-switcher-swap">切替</span></a>
 
     <nav class="app-nav" aria-label="メインナビゲーション">
       <button type="button" class="app-nav-item" data-view="home" title="サイト一覧">

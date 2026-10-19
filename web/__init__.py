@@ -91,6 +91,10 @@ def create_app() -> Flask:
 
     app.jinja_env.auto_reload = dev_reload
     app.jinja_env.globals["_ver"] = str(int(time.time()))
+    # System 一覧の正本（番号・名称・入口）。テンプレートに番号や数を直書きしない。
+    from web.system_registry import SYSTEMS, system as _system
+
+    app.jinja_env.globals.update(SYSTEMS=SYSTEMS, sysreg=_system)
     if dev_reload:
         # 開発時はレンダリングのたびに値を差し替える。Jinja のグローバルは
         # 起動時に固定されるため、context_processor で毎回上書きする。

@@ -61,19 +61,25 @@
     var cur = state.job && state.job.id;
     $('#bt-jobs').innerHTML = jobs.length ? jobs.map(function (j) {
       var script = (j.files.filter(function (f) { return f.kind === 'script'; })[0] || {}).name || 'スクリプト未取り込み';
-      var foot = j.case_count ? j.case_count + ' ケース' + (j.ask_count ? '・要確認 ' + j.ask_count : '') : 'ケース未作成';
+      var foot = j.case_count ? j.case_count + ' ケース（生成済み・未実行）' + (j.ask_count ? '・要確認 ' + j.ask_count : '') : 'ケース未作成';
       var on = j.id === cur;
       return '<div class="it' + (on ? ' on' : '') + '" role="listitem"><button type="button" class="it-main" data-job="' + esc(j.id) + '" aria-current="' + on + '">'
-        + '<i class="' + (j.case_count ? (j.ask_count ? 'i-flaky' : 'i-pass') : 'i-new') + '"></i>'
+        + '<i class="' + (j.case_count ? (j.ask_count ? 'i-flaky' : 'i-new') : 'i-new') + '"></i>'
         + '<span class="grow"><b>' + esc(j.name) + '</b><small>' + esc(script) + '</small><small>' + esc(foot) + ' · ' + esc(fmtTime(j.updated_at)) + '</small></span></button>'
         + '<button type="button" class="del" data-deljob="' + esc(j.id) + '" title="「' + esc(j.name) + '」を削除" aria-label="「' + esc(j.name) + '」を削除">✕</button></div>';
     }).join('') : '<div class="it empty">' + (state.jobs.length ? '一致する案件はありません' : 'まだ案件がありません') + '</div>';
   }
-  function openJob(id) {
+  /* URL は ?job=<id>#<step>。案件を開く・段階を変えるのは pushState、起動時と戻る・進むの復元は積まない */
+  function syncUrl(push) {
+    var want = location.pathname + (state.job ? '?job=' + encodeURIComponent(state.job.id) : '') + '#' + state.step;
+    if (location.pathname + location.search + location.hash === want) return;
+    history[push ? 'pushState' : 'replaceState'](null, '', want);
+  }
+  function openJob(id, noPush) {
     banner('');
     return api('GET', API + '/' + id).then(function (d) {
       setJob(d.job);
-      history.replaceState(null, '', '?job=' + id + '#' + state.step);
+      syncUrl(!noPush);
     }).catch(function (e) { banner(e.message); });
   }
   function setJob(job) {
@@ -121,7 +127,7 @@
     $('#bt-env').value = j.settings.env; $('#bt-fw').value = j.settings.framework; $('#bt-cmd').value = j.settings.command;
     var f = j.facts;
     $('#bt-facts-pill').textContent = f ? '読み取り済み · ' + fmtTime(j.analyzed_at) : '未読み取り';
-    $('#bt-facts-pill').className = 'pill ' + (f ? 'p-pass' : 'p-new');
+    $('#bt-facts-pill').className = 'pill p-new';
     $('#bt-analyze').textContent = f ? '読み取り直す' : '読み取る';
     if (!f) { $('#bt-facts').innerHTML = '<p class="bt-none">スクリプトを取り込んで「読み取る」を押すと、引数・終了コード・入出力・環境変数がここに並びます。</p>'; }
     else {
@@ -152,7 +158,7 @@
     all.forEach(function (c) { if (obsList.indexOf(c.obs) < 0) obsList.push(c.obs); });
     if (state.obs && obsList.indexOf(state.obs) < 0) state.obs = '';
     var kpi = function (v, l, cls) { return '<div class="kpi' + (cls ? ' ' + cls : '') + '"><b>' + esc(v) + '</b><span>' + esc(l) + '</span></div>'; };
-    $('#bt-kpis').innerHTML = kpi(all.length, 'ケース') + kpi(obsList.length, '観点') + kpi(ask, '要確認（仕様に記載なし）', ask ? 'wa' : '') + kpi(all.length - ask, '根拠つき', all.length ? 'ok' : '');
+    $('#bt-kpis').innerHTML = kpi(all.length, '生成したケース数') + kpi(obsList.length, '観点') + kpi(ask, '要確認（仕様に記載なし）', ask ? 'wa' : '') + kpi(all.length - ask, '根拠つき（生成済み）') + kpi('未実行', '合格／失敗（実行結果を取り込むと表示）', 'nr');
     $('#bt-obs').innerHTML = all.length ? ['すべて'].concat(obsList).map(function (o) {
       var key = o === 'すべて' ? '' : o, n = key ? all.filter(function (c) { return c.obs === key; }).length : all.length;
       return '<span class="fchip' + (state.obs === key ? ' on' : '') + '" role="button" tabindex="0" aria-pressed="' + (state.obs === key) + '" data-obs="' + esc(key) + '">' + esc(o) + ' <em>' + n + '</em></span>';
@@ -168,7 +174,7 @@
       }
       return '<tr class="' + (c.ask ? 'ask' : '') + '"><td>' + esc(c.id) + '</td><td>' + esc(c.obs) + '</td><td>' + esc(c.tech) + '</td><td>' + esc(c.pre)
         + '</td><td><code>' + esc(c.run) + '</code></td><td>' + exp + '</td><td>' + esc(c.src) + '</td><td>'
-        + (c.ask ? '<span class="pill p-flaky">要確認</span>' : '<span class="pill p-pass">' + (c.origin === 'manual' ? '追加' : '根拠あり') + '</span>') + '</td></tr>';
+        + (c.ask ? '<span class="pill p-flaky">要確認</span>' : '<span class="pill p-new">' + (c.origin === 'manual' ? '追加' : '根拠あり') + '・未実行</span>') + '</td></tr>';
     }).join('') : '<tr><td colspan="8" class="bt-none">ケースはまだありません。「取り込み」で読み取ってから「観点とケース表を作る」を押してください。</td></tr>';
     $('#bt-ask-note').textContent = ask ? '要確認の ' + ask + ' 件は期待結果を推測で埋めていません。「期待結果を書く」で決めるか、質問票で確かめてください。' : '';
     var bd = $('#bt-bd-ask'); bd.textContent = ask; bd.hidden = !ask;
@@ -178,8 +184,8 @@
   function renderCode() {
     var srcs = state.job.sources;
     $('#bt-srcs').innerHTML = srcs.length ? srcs.map(function (s, i) {
-      return '<div class="it' + (i === state.src ? ' on' : '') + '" role="listitem"><button type="button" class="it-main" data-src="' + i + '"><i class="i-pass"></i>'
-        + '<span class="grow"><b>' + esc(s.name) + '</b><small>' + esc(s.map) + '</small></span></button></div>';
+      return '<div class="it' + (i === state.src ? ' on' : '') + '" role="listitem"><button type="button" class="it-main" data-src="' + i + '"><i class="i-new"></i>'
+        + '<span class="grow"><b>' + esc(s.name) + '</b><small>生成済み（未実行）</small><small>' + esc(s.map) + '</small></span></button></div>';
     }).join('') : '<div class="it empty">まだ生成していません</div>';
     var s = srcs[state.src];
     $('#bt-src-name').textContent = s ? s.name : 'テストコード';
@@ -196,7 +202,7 @@
     set('#bt-dl-q', base + 'questions.csv', ask.length > 0);
     var checks = [];
     checks.push(ask.length ? '要確認が ' + ask.length + ' 件残っています（' + ask.map(function (c) { return c.id; }).join('・') + '）。期待結果を書くか、質問票で確かめてください。' : '要確認のケースはありません。');
-    checks.push(j.sources.length ? 'テストコードはこの画面では実行していません。お使いの環境で 1 回実行して確かめてください。' : 'テストコードがまだありません。「テストコード」で生成してください。');
+    checks.push(j.sources.length ? 'テストコードは生成済み（未実行）です。この画面では実行していません。お使いの環境で 1 回実行して確かめてください。' : 'テストコードがまだありません。「テストコード」で生成してください。');
     checks.push('入力サンプルに個人情報が含まれていないか確かめてから渡してください。');
     $('#bt-checks').innerHTML = checks.map(function (c) { return '<li>' + esc(c) + '</li>'; }).join('');
   }
@@ -207,10 +213,10 @@
     renderIntake(); renderCases(); renderCode(); renderExport();
   }
 
-  function go(step) {
+  function go(step, noPush) {
     if (!STEPS.some(function (s) { return s.id === step; })) step = 'intake';
     state.step = step;
-    if (location.hash !== '#' + step) history.replaceState(null, '', location.search + '#' + step);
+    syncUrl(!noPush);
     renderSteps();
     $('#bt-content').scrollTop = 0;
   }
@@ -264,7 +270,7 @@
       var name = $('#bt-newname').value.trim();
       if (!name) return;
       return run(f.querySelector('button'), api('POST', API, { name: name }), '案件を作りました').then(function (d) {
-        if (d && d.job) { f.hidden = true; $('#bt-newname').value = ''; go('intake'); history.replaceState(null, '', '?job=' + d.job.id + '#intake'); }
+        if (d && d.job) { f.hidden = true; $('#bt-newname').value = ''; go('intake', true); state.job = d.job; syncUrl(true); }
       });
     }
     if (f.id === 'bt-addform') {
@@ -290,17 +296,36 @@
   document.addEventListener('keydown', function (e) {
     if ((e.key === 'Enter' || e.key === ' ') && e.target.matches('[data-obs]')) { e.preventDefault(); e.target.click(); }
   });
+  /* 状態の語彙: 生成済み（未実行）／書き出し済み（未実行）／実行済み（結果あり）／確認済み。この画面は実行しない */
+  (function () {
+    var host = $('#bt-content');
+    if (!host || $('#bt-truth')) return;
+    var n = document.createElement('p');
+    n.id = 'bt-truth'; n.className = 'bt-truth';
+    n.textContent = 'この画面ではテストを実行しません。生成・書き出しまでです。実行結果は取り込むまで表示しません。';
+    host.insertBefore(n, host.firstChild);
+  })();
   var drop = $('#bt-drop');
   ['dragenter', 'dragover'].forEach(function (n) { drop.addEventListener(n, function (e) { e.preventDefault(); drop.classList.add('over'); }); });
   ['dragleave', 'drop'].forEach(function (n) { drop.addEventListener(n, function (e) { e.preventDefault(); drop.classList.remove('over'); }); });
   drop.addEventListener('drop', function (e) { upload(e.dataTransfer.files); });
   $('#bt-q').addEventListener('input', renderJobs);
-  window.addEventListener('hashchange', function () { go(location.hash.slice(1)); });
+  /* 戻る・進む・手入力のハッシュ変更。URL の案件と段階へ画面を合わせる */
+  function restore() {
+    var step = location.hash.slice(1);
+    state.step = STEPS.some(function (s) { return s.id === step; }) ? step : 'intake';
+    var id = new URLSearchParams(location.search).get('job');
+    if (id && (!state.job || state.job.id !== id)) return openJob(id, true);
+    if (!id && state.job) { state.job = null; renderAll(); }
+    go(state.step, true);
+  }
+  window.addEventListener('popstate', restore);
 
-  state.step = location.hash.slice(1) || 'intake';
+  var h0 = location.hash.slice(1);
+  state.step = STEPS.some(function (s) { return s.id === h0; }) ? h0 : 'intake';
   var jid = new URLSearchParams(location.search).get('job');
   loadJobs().then(function () {
-    if (jid) return openJob(jid);
+    if (jid) return openJob(jid, true);
     renderAll();
   });
 })();

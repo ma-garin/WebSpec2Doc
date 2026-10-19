@@ -260,12 +260,26 @@
   });
   // 画面共通の [data-go]（メニュー移動）に拾われないよう data-to-report を使う
   $('[data-to-report]').addEventListener('click', function () { window.DVT.go(3); });
-  $('[data-redo]').addEventListener('click', function () {
+  // 「登録からやり直す」は指摘・通報・承認・結論を消すので、1 クリックでは実行せず確認行を挟む
+  var redoBtn = $('[data-redo]');
+  var cfm = document.createElement('div');
+  cfm.className = 'dvt-confirm'; cfm.hidden = true; cfm.setAttribute('role', 'alertdialog');
+  cfm.innerHTML = '<span class="dvt-confirm-msg">検査をやり直すと、この検査の指摘・誤検知の通報・登録の承認・結論がすべて消えます。登録した文書は残ります。元に戻せません。</span>' +
+    '<button type="button" class="danger" data-cfm-ok>やり直す</button><button type="button" data-cfm-no>やめる</button>';
+  $('.s2top').insertAdjacentElement('afterend', cfm);
+  function setCfm(open) {
+    cfm.hidden = !open;
+    if (open) { $('[data-cfm-no]').focus(); } else { redoBtn.focus(); }
+  }
+  redoBtn.addEventListener('click', function () { if (!busy) setCfm(cfm.hidden); });
+  $('[data-cfm-no]').addEventListener('click', function () { setCfm(false); });
+  cfm.addEventListener('keydown', function (e) { if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); setCfm(false); } });
+  $('[data-cfm-ok]').addEventListener('click', function () {
     if (busy) return;
     busy = true;
     Promise.resolve(window.DVT.api('tier/reset', json('POST', { to: 1 })))
       .then(function () { return window.DVT.refresh(); })
-      .then(function () { busy = false; window.DVT.go(1); },
+      .then(function () { busy = false; setCfm(false); window.DVT.go(1); },
         function (err) { busy = false; toast((err && err.message) || 'やり直せませんでした。少し待ってからもう一度お試しください。'); });
   });
   document.addEventListener('keydown', function (e) {

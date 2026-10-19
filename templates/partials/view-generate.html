@@ -32,22 +32,29 @@
               {# ドキュメント作成(app): URL の代わりにアプリを指定する。値は #url-input に
                  https://app.<package> として同期し（doc-app-mode.js）、以降の画面解析・実行・
                  レポートは URL 版と同じ経路を通る。 #}
-              <label class="form-label">解析対象アプリ <span style="color:var(--color-critical)">*</span></label>
-              <div class="discover-scope-chips" role="radiogroup" aria-label="プラットフォーム" style="margin-bottom:8px">
-                <label class="checkbox-chip"><input type="radio" name="app-platform" value="android" checked> Android（.apk / .aab）</label>
-                <label class="checkbox-chip"><input type="radio" name="app-platform" value="ios"> iOS（.app・シミュレータ専用）</label>
+              <div class="app-prototype-note" role="note" style="border:1px solid var(--color-border,#999);border-left:4px solid #b26a00;background:var(--color-surface-alt,#fff8e8);padding:10px 12px;margin-bottom:12px;font-size:13px;line-height:1.6">
+                <strong>【試作（サンプルデータ）】</strong>
+                この画面はサンプルアプリ（SampleShop）の画面の流れを再生する試作です。APK・.app の実解析、エミュレータ・実機での操作、未到達 Activity の洗い出しはまだ行いません（実解析は未対応）。<br>
+                できること: 出力の形を確かめる ／ できないこと: 自分のアプリの解析
               </div>
-              <div class="input-row" style="gap:8px;margin-bottom:8px">
-                <label for="app-package" class="visually-hidden">アプリ</label>
+              <label class="form-label">デモ用サンプルアプリ <span style="color:var(--color-critical)">*</span></label>
+              <div class="discover-scope-chips" role="radiogroup" aria-label="プラットフォーム（試作のため使用しません）" style="margin-bottom:8px">
+                <label class="checkbox-chip"><input type="radio" name="app-platform" value="android" checked disabled> Android（.apk / .aab）</label>
+                <label class="checkbox-chip"><input type="radio" name="app-platform" value="ios" disabled> iOS（.app・シミュレータ専用）</label>
+                <span class="form-hint" style="font-size:12px">試作のため使用しません</span>
+              </div>
+              <div class="input-row" style="gap:8px;margin-bottom:8px;flex-wrap:wrap">
+                <label for="app-package" class="visually-hidden">デモ用サンプルアプリ</label>
                 <select id="app-package" class="url-input" style="flex:1">
-                  <option value="com.example.sampleshop">SampleShop（com.example.sampleshop）</option>
+                  <option value="com.example.sampleshop">サンプル（SampleShop・デモ）</option>
                 </select>
-                <label for="app-file" class="visually-hidden">アプリファイル</label>
-                <input type="file" id="app-file" accept=".apk,.aab" style="flex:1;font-size:12px" />
-                <label for="app-device" class="visually-hidden">実行先</label>
-                <select id="app-device" class="url-input" style="flex:1">
+                <label for="app-file" class="visually-hidden">アプリファイル（試作のため使用しません）</label>
+                <input type="file" id="app-file" accept=".apk,.aab" style="flex:1;font-size:12px" disabled />
+                <label for="app-device" class="visually-hidden">実行先（試作のため使用しません）</label>
+                <select id="app-device" class="url-input" style="flex:1" disabled>
                   <option>エミュレータ Pixel 8 (API 34)</option><option>実機 (adb 接続)</option>
                 </select>
+                <span class="form-hint" style="font-size:12px;flex-basis:100%">アプリファイル・実行先は試作のため使用しません（常にサンプルを再生します）</span>
               </div>
               {% else %}
               <label for="url-input" class="form-label">解析対象URL <span style="color:var(--color-critical)">*</span></label>

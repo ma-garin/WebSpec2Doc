@@ -292,7 +292,7 @@ a.btn{text-decoration:none}
    残り幅を超えるとグリッド全体が押し出されて 1px はみ出す
    （サイドバーを --sidebar-w=256px 相当に広げた際に /tests で発生）。
    minmax(0,1fr) でトラック自体の下限を 0 にし、はみ出しは列内 overflow に委ねる。 */
-.app{grid-template-columns:var(--sidebar-w) 280px minmax(0,1fr)}
+.app{grid-template-columns:var(--sidebar-w) clamp(200px,20vw,300px) minmax(0,1fr)}
 
 .rail.app-sidebar{
   display:flex;flex-direction:column;align-items:stretch;
@@ -345,3 +345,37 @@ a.btn{text-decoration:none}
 .rail.app-sidebar .ta-user{display:block;position:relative}
 .rail.app-sidebar .ta-user .ava{flex:none}
 .rail.app-sidebar .upop{left:0;right:0;bottom:44px;width:auto}
+
+/* ---- システム切替（ws 側は components.css を読まないため最小限を置く） ---- */
+.rail.app-sidebar .sys-switcher{display:flex;align-items:center;gap:8px;padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface-subtle);color:var(--text);text-decoration:none;font-size:12px;min-width:0}
+.rail.app-sidebar .sys-switcher:hover{border-color:var(--primary)}
+.rail.app-sidebar .sys-switcher-label{font-weight:700;font-size:10px;letter-spacing:.06em;color:var(--text-muted);white-space:nowrap}
+.rail.app-sidebar .sys-switcher-cur{font-weight:800;font-size:13px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rail.app-sidebar .sys-switcher-swap{margin-left:auto;font-weight:700;color:var(--primary);border:1px solid var(--border);border-radius:999px;padding:1px 9px;white-space:nowrap}
+
+/* ---- 可変幅（viewport=device-width。基準: 1920/1440/1280=3列, 1024=list細, 816=rail アイコンのみ） ---- */
+.main,.list{min-width:0}
+.main code,.main pre,.main td,.main th{overflow-wrap:anywhere}
+.main table{max-width:100%}
+.main .pb,.main .steps,.main .md .mb{overflow:auto}
+.rail.app-sidebar{min-height:0;max-height:100vh}
+@media (max-width:1100px){
+  .stage-wrap,.spec-grid,.rep-wrap,#p-report .rep-wrap{grid-template-columns:minmax(0,1fr) minmax(220px,320px)}
+  .rep-kpi{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .form-grid,.next-grid{grid-template-columns:minmax(0,1fr)}
+}
+@media (max-width:1024px){
+  .app{grid-template-columns:var(--sidebar-w) clamp(180px,19vw,220px) minmax(0,1fr)}
+}
+@media (max-width:860px){
+  :root{--sidebar-w:60px}
+  .app{grid-template-columns:60px clamp(160px,22vw,200px) minmax(0,1fr)}
+  .rail.app-sidebar{padding:14px 6px;align-items:center}
+  .rail.app-sidebar .app-brand-text,.rail.app-sidebar .nav-label,.rail.app-sidebar .app-nav-group,.rail.app-sidebar .sys-switcher-label,.rail.app-sidebar .sys-switcher-cur{display:none}
+  .rail.app-sidebar .sys-switcher{padding:6px 4px;justify-content:center;width:100%}
+  .rail.app-sidebar .sys-switcher-swap{margin:0;padding:1px 4px;font-size:11px}
+  .rail.app-sidebar button.app-nav-item,.rail.app-sidebar a.app-nav-item{justify-content:center;padding:0}
+  .rail.app-sidebar .app-nav-item .bd{position:absolute;top:2px;right:2px;margin:0}
+  .stage-wrap,.spec-grid,.rep-wrap,#p-report .rep-wrap{grid-template-columns:minmax(0,1fr)}
+  .stage-wrap,.spec-grid,.rep-wrap{overflow:auto}
+}

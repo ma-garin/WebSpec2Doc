@@ -21,3 +21,12 @@
 /* 実行名と「新しく始める」の行は出さない（開くたびに新しい実行、過去の実行は履歴から開く） */
 .dvt .dvt-head{display:none}
 .dvt-hist tr[data-iid]{cursor:pointer}.dvt-hist tr[data-iid]:hover td{background:#F5F8FF}
+
+/* 破壊操作のインライン確認行（System05 の .hl-confirm と同じ方式。confirm() は使わない） */
+.dvt-confirm{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 10px;padding:10px 14px;border:1px solid #FDA29B;background:#FEF3F2;border-radius:8px;font-size:12.5px;color:#B42318}
+.dvt-confirm[hidden]{display:none}
+.dvt-confirm .dvt-confirm-msg{flex:1 1 280px;line-height:1.6}
+.dvt-confirm button{font:inherit;font-weight:700;padding:5px 14px;border-radius:6px;border:1px solid #D0D5DD;background:#fff;color:#344054;cursor:pointer}
+.dvt-confirm button.danger{background:#B42318;border-color:#B42318;color:#fff}
+.dvt-confirm button:disabled{opacity:.5;cursor:not-allowed}
+.dvt-confirm button:focus-visible{outline:2px solid #B42318;outline-offset:2px}

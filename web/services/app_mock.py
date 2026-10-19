@@ -28,6 +28,25 @@ SCREENS: tuple[tuple[str, str, str], ...] = (
 )
 
 
+SAMPLE_BANNER = (
+    '<div role="note" style="padding:10px 16px;background:#fff8e8;border-bottom:3px solid #b26a00;'
+    'font-size:14px;font-weight:bold">'
+    "【試作】サンプルデータの再生結果（実アプリの仕様ではありません）</div>"
+)
+
+
+def _mark_report_as_sample(report: Path) -> None:
+    """成果物の先頭に「実アプリの仕様ではない」帯を入れる（重複挿入しない）。"""
+    if not report.is_file():
+        return
+    html = report.read_text(encoding="utf-8")
+    if SAMPLE_BANNER in html:
+        return
+    marker = '<body class="app-page">'
+    html = html.replace(marker, marker + SAMPLE_BANNER, 1) if marker in html else SAMPLE_BANNER + html
+    report.write_text(html, encoding="utf-8")
+
+
 def is_app_target(url: str) -> bool:
     """``https://app.<package>`` を「スマホアプリ対象」とみなす（モックの取り決め）。"""
     try:
@@ -84,15 +103,14 @@ def run_stream(
         return "CRAWL_EVENT:" + json.dumps(payload, ensure_ascii=False) + "\n"
 
     yield f"RUN_ID:{run_id}\n"
-    yield f"対象アプリ: {domain[4:]}（エミュレータ）\n"
-    yield "アプリをインストールしています…\n"
+    yield "サンプルデータを再生しています（実アプリは解析していません）\n"
     sleep(0.8)
-    yield "起動して初期画面を取得しました\n"
+    yield f"再生対象: デモ用サンプル（{domain[4:]}）。入力されたアプリは使用しません\n"
     yield ev({"event": "crawl_started", "total": total, "parallelism": 1})
     for index, (pid, activity, _title) in enumerate(screens, start=1):
         url = f"{base}/{activity}"
         yield ev({"event": "page_started", "index": index, "url": url, "total": total})
-        yield f"[{index}/{total}] クロール中: {url}\n"
+        yield f"[{index}/{total}] サンプル画面を再生中: {url}\n"
         for name in (f"{pid}.png", f"{pid}_full.png"):
             src = FIXTURE_DIR / "screenshots" / name
             if src.is_file():
@@ -112,11 +130,12 @@ def run_stream(
     # 生成フェーズも実物と同じイベント（generate_started → generate_completed × n）で進捗を出す
     steps = ("フォーム項目を抽出", "遷移と状態を確定", "テスト条件を組み立て", "文書を書き出し")
     yield ev({"event": "generate_started", "total_steps": len(steps)})
-    yield "解析中: フォーム項目・遷移・テスト条件を組み立てています\n"
+    yield "サンプルデータから出力の形を組み立てています（実アプリの解析結果ではありません）\n"
     for index, label in enumerate(steps, start=1):
         sleep(0.5)
         if index == len(steps):
             shutil.copytree(FIXTURE_DIR, domain_dir, dirs_exist_ok=True)
+            _mark_report_as_sample(domain_dir / "report.html")
         yield ev(
             {
                 "event": "generate_completed",

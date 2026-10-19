@@ -24,7 +24,7 @@
 
   <main class="cli-stage">
     <div class="cli-head">
-      <div class="sysselect-kicker">System 03</div>
+      <div class="sysselect-kicker">{{ sysreg('cli').label }}</div>
       <h1>CLI モード（画面なし）</h1>
       <p>
         ブラウザを開かずに、ドキュメント作成・AutoRun・テスト実行を端末から回します。
@@ -49,8 +49,8 @@
         <label class="cli-field">
           <span>やること</span>
           <select id="cli-cmd">
-            <option value="doc">01 ドキュメント作成（仕様書を生成）</option>
-            <option value="autorun">02 AutoRun（解析からテスト実行まで全自動）</option>
+            <option value="doc">{{ sysreg('doc').number }} {{ sysreg('doc').name }}（仕様書を生成）</option>
+            <option value="autorun">{{ sysreg('autorun').number }} {{ sysreg('autorun').name }}（解析からテスト実行まで全自動）</option>
             <option value="test">テストケースを実行する</option>
             <option value="sites">解析済みサイトを一覧する</option>
             <option value="show">成果物の場所を確認する</option>
@@ -89,8 +89,8 @@
       <table class="cli-table">
         <thead><tr><th>コマンド</th><th>内容</th><th>GUI の対応</th><th>コマンド例（コピペ可）</th></tr></thead>
         <tbody>
-          <tr><td><code>doc</code></td><td>クロールして画面仕様書・遷移図・項目定義を生成</td><td>01 ドキュメント作成</td><td><code>python src/cli.py doc --url https://example.com --format html,md,json</code></td></tr>
-          <tr><td><code>autorun</code></td><td>解析 → 設計 → spec 生成 → テスト実行までを自動で通す</td><td>02 AutoRun</td><td><code>python src/cli.py autorun --url https://example.com</code></td></tr>
+          <tr><td><code>doc</code></td><td>クロールして画面仕様書・遷移図・項目定義を生成</td><td>{{ sysreg('doc').number }} {{ sysreg('doc').name }}</td><td><code>python src/cli.py doc --url https://example.com --format html,md,json</code></td></tr>
+          <tr><td><code>autorun</code></td><td>解析 → 設計 → spec 生成 → テスト実行までを自動で通す</td><td>{{ sysreg('autorun').number }} {{ sysreg('autorun').name }}</td><td><code>python src/cli.py autorun --url https://example.com</code></td></tr>
           <tr><td><code>test</code></td><td>テストケース表から Playwright を実行して結果を保存</td><td>レポートの「テスト実行」</td><td><code>python src/cli.py test --domain example.com</code></td></tr>
           <tr><td><code>sites</code></td><td>解析済みサイトと画面数・項目数・履歴数の一覧</td><td>ホームの解析履歴</td><td><code>python src/cli.py sites</code></td></tr>
           <tr><td><code>show</code></td><td>1 サイトの成果物の場所と、テスト実行の実績</td><td>レポートのエクスポート</td><td><code>python src/cli.py show --domain example.com</code></td></tr>

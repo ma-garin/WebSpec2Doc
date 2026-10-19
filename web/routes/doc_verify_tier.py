@@ -5,7 +5,7 @@ import logging
 import re
 import tempfile
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 from flask import Blueprint, jsonify, request
@@ -26,7 +26,7 @@ def _err(message: str, status: int):
 
 
 def _now() -> str:
-    return datetime.now(timezone.utc).isoformat()
+    return datetime.now(UTC).isoformat()
 
 
 def _load(iid: str):
@@ -248,15 +248,28 @@ def confirm(iid: str):
 
 @bp.route(f"{_P}/reset", methods=["POST"])
 def reset(iid: str):
+    from web.services.docverify import perm
     insp, err = _load(iid)
     if err:
         return err
+    # 検査の編集（plan_edit: 議長かテナント管理者）と同じ判定。認証オフでは制限しない
+    denied = perm.check("plan_edit", insp)
+    if denied:
+        return jsonify(error=denied, code="forbidden"), 403
     to = _body().get("to")
     t = _tier(insp)
+    dropped = {"findings": len(t["findings"]), "reports": len(t["reports"]), "had_conclusion": bool(t["conclusion"])}
     if to == 1:
         t = {**t, "approved": None, "findings": [], "reports": {}, "conclusion": None}
     elif to == 2:
-        t = {**t, "conclusion": None}
+        t = {**t, "conclusion": None, "findings": list(t["findings"]), "reports": dict(t["reports"])}
+        dropped = {"findings": 0, "reports": 0, "had_conclusion": dropped["had_conclusion"]}
     else:
         return _err("戻り先は 1 か 2 で指定してください。", 400)
-    return _save(insp, t)
+    resp = _save(insp, t)
+    if resp[1] == 200:  # 保存できたときだけ、操作者つきで追記専用の操作記録に残す
+        try:
+            perm.record("tier_reset", iid, {"to": to, "dropped": dropped})
+        except Exception:
+            log.exception("やり直しの操作記録に失敗 %s", iid)
+    return resp

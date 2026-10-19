@@ -25,7 +25,7 @@
     </a>
     <a href="/systems" class="sys-switcher" title="システムを切り替える">
       <span class="sys-switcher-label">システム</span>
-      <span class="sys-switcher-cur">バックエンド</span>
+      <span class="sys-switcher-cur">{{ sysreg('backend').name }}</span>
       <span class="sys-switcher-swap">切替</span>
     </a>
     <a href="#" data-new class="btn-primary sidebar-primary-action">
@@ -44,7 +44,7 @@
     <div class="app-sidebar-foot">バッチの資料を読み取り、観点・ケース・テストコードを作って、実行から判定までを段階ごとに承認して進めます。</div>
   </aside>
   <div class="app-main">
-    {% set topbar_crumb = 'ホーム' %}{% set topbar_title = 'バッチ・バックエンドのテスト' %}
+    {% set topbar_crumb = sysreg('backend').name %}{% set topbar_title = 'バッチ・バックエンドのテスト' %}
     {% include 'partials/topbar.html' %}
     <div class="s8-chips" id="s8-chips"></div>
     <div class="s8-head-actions" id="s8-head-actions" hidden><button type="button" class="btn-outline-sm" id="s8-export-head"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>書き出し</button><button type="button" class="btn-primary" id="s8-run-head" disabled title="段階 6 のテストコードを承認すると実行できます"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 4.5v15l12-7.5z"/></svg>実行する</button></div>

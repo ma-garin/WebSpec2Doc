@@ -297,7 +297,12 @@
   }
 
   /* ---- 表示の切り替え（ホーム／実行履歴／観点カタログ／案件）と URL ハッシュ ---- */
-  function setHash(h) { history.replaceState(null, '', location.pathname + (h ? '#' + h : '')); }
+  /* push=true は画面（ホーム・履歴・カタログ・案件）の切替。段階など画面内の選択は replaceState */
+  function setHash(h, push) {
+    var want = location.pathname + (h ? '#' + h : '');
+    if (location.pathname + location.search + location.hash === want) return;
+    history[push ? 'pushState' : 'replaceState'](null, '', want);
+  }
   function setView(v, navKey) {
     state.view = v;
     $$('.s8-view').forEach(function (s) { s.classList.toggle('is-active', s.id === 'view-' + v); });
@@ -314,18 +319,18 @@
   function goNav(v) {
     var c = $('#app-content');
     if (v === 'home' || v === 'jobs') {
-      setHash(''); setView('home', v); renderHome();
+      setHash('', true); setView('home', v); renderHome();
       if (v === 'jobs') $('#jobs').scrollIntoView({ block: 'start' }); else c.scrollTop = 0;
       return;
     }
-    setHash(v); setView(v); c.scrollTop = 0;
+    setHash(v, true); setView(v); c.scrollTop = 0;
     if (v === 'catalog' && !state.summary) loadSummary();
   }
   function route() {
     var h = location.hash.replace(/^#/, ''), p = new URLSearchParams(h), old = /^s([1-8])$/.exec(h);
     var jid = p.get('job') || new URLSearchParams(location.search).get('job');
-    if (jid) return openJob(jid, p.get('stage') || (old && old[1]));
-    if (h === 'runs' || h === 'catalog') return setView(h);
+    if (jid) return openJob(jid, p.get('stage') || (old && old[1]), true);
+    if (h === 'runs' || h === 'catalog') { setView(h); if (h === 'catalog' && !state.summary) loadSummary(); return; }
     setView('home');
   }
   function renderTop() {
@@ -347,12 +352,12 @@
     });
     act.hidden = false; rb.disabled = !!why; rb.title = why;
   }
-  function openJob(id, stage) {
+  function openJob(id, stage, fromUrl) {
     notify('');
     return api('GET', API + '/' + encodeURIComponent(id)).then(function (d) {
       if (!state.job || state.job.id !== d.job.id) { resetFlt(); state.detailFor = ''; }
       state.role = d.my_role || '';
-      state.view = 'job'; state.stage = +(stage || currentStage(d.job)); setJob(d.job); setView('job'); showStage(state.stage);
+      state.view = 'job'; state.stage = +(stage || currentStage(d.job)); setJob(d.job); setView('job'); showStage(state.stage, !fromUrl);
       /* 役割が応答に無いとき（古いサーバ）だけ利用者名を問い合わせて members と突き合わせる */
       if (!d.my_role && !state.meAsked) { state.meAsked = true; loadMe().then(function () { if (state.job) renderAll(); }); }
     }).catch(notify);
@@ -430,10 +435,10 @@
     if (state.view === 'job' && state.job) { renderStepper(); renderProd(); renderPanel(); }
     renderTop(); renderHome(); renderRuns();
   }
-  function showStage(n) {
+  function showStage(n, push) {
     n = Math.min(8, Math.max(1, parseInt(n, 10) || 1));
     state.stage = n; state.oracleFor = ''; state.adding = false; state.detailFor = '';
-    if (state.job) setHash('job=' + encodeURIComponent(state.job.id) + '&stage=' + n);
+    if (state.job) setHash('job=' + encodeURIComponent(state.job.id) + '&stage=' + n, !!push);
     renderStepper(); renderPanel();
     var c = $('#app-content'); if (c) c.scrollTop = 0;
     if (n >= 6 && state.job && window.BackendTestRun && window.BackendTestRun.show) window.BackendTestRun.show(n);
@@ -744,7 +749,7 @@
   ['dragenter', 'dragover'].forEach(function (n) { drop.addEventListener(n, function (e) { e.preventDefault(); drop.classList.add('over'); }); });
   ['dragleave', 'drop'].forEach(function (n) { drop.addEventListener(n, function (e) { e.preventDefault(); drop.classList.remove('over'); }); });
   drop.addEventListener('drop', function (e) { upload(e.dataTransfer.files); });
-  window.addEventListener('hashchange', route);
+  window.addEventListener('popstate', route);   // 戻る・進む・ハッシュの手入力。pushState では hashchange が出ないため popstate で受ける
 
   /* 段階 6〜8 の担当（backend-test-run.js）が使う共通の入口。role は setJob のたびに更新する文字列 */
   Object.assign(NS, {

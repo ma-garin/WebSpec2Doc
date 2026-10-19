@@ -458,7 +458,18 @@ def _action(kind: str, primary: str = "", secondary: str = "",
             "items": list(items or []), **extra}
 
 
-def _current_for_setup() -> _Current:
+def _current_for_setup(domain: str = "") -> _Current:
+    """サイト未登録、またはサイトはあるが指揮の実行記録・対象（プロジェクト）が無い状態。
+
+    domain が空 = サイト 0 件（未登録）。domain があれば観測済みサイトは存在するので
+    「登録されていない」とは言わず、指揮の対象が未設定である事実と次の行動 1 つを返す。
+    """
+    if domain:
+        return _Current(
+            key="setup", state="human", headline="指揮を始める",
+            text=f"サイト {domain} はありますが、指揮の対象（プロジェクト）が未設定です。"
+                 "解析を始めると対象が作られます。",
+            text_source="user", action=_action("start", primary="解析を始める"))
     return _Current(key="setup", state="human", headline="サイトを指定", text=_SETUP_TEXT,
                      text_source="user", action=_action("start", primary="解析を始める"))
 
@@ -656,15 +667,15 @@ def _current_for_finished(out_dir: Path, run: ConductorRun) -> _Current:
                                     items=[_monitor_item(project)]))
 
 
-def _current_of(out_dir: Path, run: ConductorRun | None) -> _Current:
+def _current_of(out_dir: Path, run: ConductorRun | None, domain: str = "") -> _Current:
     if run is None:
-        return _current_for_setup()
+        return _current_for_setup(domain)
     if run.status == "succeeded":
         return _current_for_finished(out_dir, run)
     index = int(run.step_index or 0)
     record = run.steps[index] if 0 <= index < len(run.steps) else None
     if record is None:
-        return _current_for_setup()
+        return _current_for_setup(domain)
     if run.status == "waiting_human":
         return _current_for_waiting(out_dir, run, record)
     if run.status in ("running", "queued"):
@@ -742,7 +753,7 @@ def build(out_dir: Path, domain: str) -> dict[str, Any]:
     repos = _list_repos(out_dir)
     run = _latest_run(out_dir, resolved_domain) if resolved_domain else None
 
-    current = _current_of(out_dir, run)
+    current = _current_of(out_dir, run, resolved_domain)
     steps = _steps_list(run, current)
     rounds = _rounds(run, current)
 

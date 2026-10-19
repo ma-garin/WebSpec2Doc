@@ -22,11 +22,15 @@
 
   function rowHtml(v) {
     var lim = (v.limitations || []).map(function (x) { return '<li>' + esc(x) + '</li>'; }).join('');
+    var reach = v.kind === 'route'
+      ? '<span class="rv-badge rt-reach rt-reach-' + esc(v.reach_status || 'not_probed') + '">到達: ' + esc(v.reach_label || '未探索') + '</span>'
+        + (v.runnable ? '<span class="rv-badge rt-reach-run">' + esc(v.runnable_label || '実行対象（実測で到達）') + '</span>' : '')
+      : '';
     var tag = v.is_new ? '' : '<span class="rt-note">既存の実測（増分に数えない）</span>';
     return '<li class="rt-row"><details><summary>'
       + '<span class="rt-text">' + esc(v.text) + '</span>'
       + '<span class="rt-meta"><span class="rv-badge rt-src-' + esc(v.source) + '">' + esc(v.source_label) + '</span>'
-      + '<span class="rv-badge">根拠: ' + esc(v.evidence_state_label) + '</span>'
+      + '<span class="rv-badge">根拠: ' + esc(v.evidence_state_label) + '</span>' + reach
       + '<span class="rt-loc">' + (v.location ? esc(v.location) : '位置: 未確認') + '</span>' + tag + '</span>'
       + '</summary><div class="rt-detail"><p>' + esc(v.claim || '（根拠の説明なし）') + '</p>'
       + (lim ? '<p class="rt-h">限界</p><ul>' + lim + '</ul>' : '')
@@ -45,11 +49,12 @@
     var cov = (d.covered_by_runtime || []).length;
     host.innerHTML = '<div class="rt-wrap">'
       + '<div class="rv-head-main"><h3 class="rv-title">リバース解析で増えたテスト観点</h3>'
-      + '<p class="rv-lead">静的解析の候補です。到達・実行は未確認のものを含みます。Before はリバース解析なし（' + esc(m.before_basis || '') + '）。</p></div>'
+      + '<p class="rv-lead">静的解析の候補です。到達・実行は未確認のものを含みます（System 03 で到達を実測した route のみ「実測で到達」。探索済み ' + esc(m.probed || 0) + ' 件）。Before はリバース解析なし（' + esc(m.before_basis || '') + '）。</p></div>'
       + '<div class="rv-tiles">'
       + tile('テスト候補数', m.before, m.after, m.new > 0)
       + tile('新規観点数', 0, m.new, m.new > 0)
       + tile('Evidence 付き候補数', 0, m.with_evidence, m.with_evidence > 0)
+      + tile('実行対象（実測で到達）', 0, m.runnable || 0, (m.runnable || 0) > 0)
       + '</div>'
       + (cov ? '<p class="rt-cov">実測で確認済みの API と同じ path の静的 API ' + cov + ' 件は、静的出典として扱い新規観点に数えていません。</p>' : '')
       + (rows.length ? '<details class="rt-more"><summary>観点の一覧と根拠（' + rows.length + ' 件）</summary><ul class="rt-list">' + rows.map(rowHtml).join('') + '</ul></details>'

@@ -12,7 +12,7 @@ from typing import Any
 
 LAYER = "code_static"
 NOTICE = "静的依存（実行時の依存ではない）"
-TESTS_NOTE = "System 02 のリバース解析由来のテスト観点（静的候補由来。到達・実行は未確認）。該当が無ければ 0 件"
+TESTS_NOTE = "System 02 のリバース解析由来のテスト観点（静的候補由来。到達は各 route の表示を参照。System 03 で実測したものだけ「実測で到達」）。該当が無ければ 0 件"
 BEFORE_REASON = ("既存の影響分析は文書・項目・変更要求が単位で、サイト（コード依存）の概念が無いため、"
                  "このサイトに対する依存 edge・影響候補は 0 件です。")  # fmt: skip
 UNCONFIRMED = "未確認（結果なし）"
@@ -34,7 +34,7 @@ def loc_file(location: Any) -> str:
 
 
 def _empty(site: str, module: str, message: str, state: str = "unconfirmed") -> dict:
-    zero = {"dependency_edges": 0, "candidates": 0, "routes": 0, "apis": 0, "tests": 0}
+    zero = {"dependency_edges": 0, "candidates": 0, "routes": 0, "apis": 0, "tests": 0, "observed_routes": 0}
     return {"layer": LAYER, "site": site, "state": state, "module": module, "notice": NOTICE,
             "message": message, "impacted": [], "external": [], "sources": [],
             "metrics": {"before": {**zero, "reason": BEFORE_REASON}, "after": dict(zero)},
@@ -83,7 +83,17 @@ def _bfs(start: str, adj: dict, forward: bool) -> list[dict]:
     return out
 
 
-def _related(evidence: list) -> dict[str, dict[str, list[dict]]]:
+def _reach(probe: dict | None, evidence_id: Any) -> tuple[str, str]:
+    """route の到達は System 03 の実測。結果が無ければ「未探索」（到達済みに見せない）。"""
+    from web.services.static_route_probe_store import STATUS_LABEL
+
+    item = (probe or {}).get(evidence_id)
+    if not item or item.get("status") not in STATUS_LABEL:
+        return "not_probed", "未探索"
+    return item["status"], STATUS_LABEL[item["status"]]
+
+
+def _related(evidence: list, probe: dict | None = None) -> dict[str, dict[str, list[dict]]]:
     """module(file) ごとの route / 静的 API。実測 API（runtime）は page 単位で file を持たないので関連付けない。"""
     by: dict[str, dict[str, list[dict]]] = {}
     for ev in evidence:
@@ -95,6 +105,8 @@ def _related(evidence: list) -> dict[str, dict[str, list[dict]]]:
         item = {"id": ev.get("id"), "value": ev.get("value"), "method": ev.get("method"),
                 "state": ev.get("state") or "unknown", "origin": "static",
                 "location": ev.get("location")}  # fmt: skip
+        if ev.get("group") == "route":
+            item["reach_status"], item["reach_label"] = _reach(probe, ev.get("id"))
         key = "routes" if ev.get("group") == "route" else "apis"
         by.setdefault(f, {"routes": [], "apis": []})[key].append(item)
     return by
@@ -108,8 +120,11 @@ def list_sources(deps: list) -> list[dict]:
     return sorted(rows, key=lambda r: (-r["degree"], r["module"]))
 
 
-def build_layer(site: str, ev: dict, module: str = "") -> dict:
-    """REA の site_evidence 結果から layer="code_static" の結果を作る。state != ok は 0 件・未確認。"""
+def build_layer(site: str, ev: dict, module: str = "", probe: dict | None = None) -> dict:
+    """REA の site_evidence 結果から layer="code_static" の結果を作る。state != ok は 0 件・未確認。
+
+    probe: System 03 の到達確認結果（by_evidence）。route の到達は実測、module 依存は静的として区別する。
+    """
     module = norm_module(module)
     if not isinstance(ev, dict) or ev.get("state") != "ok":
         msg = (ev or {}).get("message") if isinstance(ev, dict) else None
@@ -117,8 +132,11 @@ def build_layer(site: str, ev: dict, module: str = "") -> dict:
     deps = ev.get("dependencies") or []
     internal, fwd, rev, external = _graph(deps)
     sources = list_sources(deps)
-    related = _related(ev.get("evidence") or [])
+    related = _related(ev.get("evidence") or [], probe)
     vps = _viewpoints_by_evidence(ev)
+
+    def observed_n(ids: set) -> int:
+        return sum(1 for v in related.values() for i in v["routes"] if i["id"] in ids and i["reach_status"] == "observed")
 
     def tests_for(r: dict) -> list[dict]:
         return [vps[i["id"]] for i in r["routes"] + r["apis"] if i["id"] in vps]
@@ -131,7 +149,8 @@ def build_layer(site: str, ev: dict, module: str = "") -> dict:
         apis = {i["id"] for v in related.values() for i in v["apis"]}
         res["metrics"]["after"] = {"dependency_edges": len(internal) + len(external), "candidates": len(sources),
                                    "routes": len(routes), "apis": len(apis),
-                                   "tests": len((routes | apis) & set(vps))}  # fmt: skip
+                                   "tests": len((routes | apis) & set(vps)),
+                                   "observed_routes": observed_n(routes)}  # fmt: skip
         res["metrics"]["before"] = zero_before
         res["external_edges"] = len(external)
         return res
@@ -158,7 +177,8 @@ def build_layer(site: str, ev: dict, module: str = "") -> dict:
     apis = {i["id"] for m in set(mods) for i in related.get(m, {}).get("apis", [])}
     res["metrics"]["after"] = {"dependency_edges": len(seen_edges) + len(res["external"]),
                                "candidates": len(rev_c) + len(fwd_c), "routes": len(routes),
-                               "apis": len(apis), "tests": len((routes | apis) & set(vps))}  # fmt: skip
+                               "apis": len(apis), "tests": len((routes | apis) & set(vps)),
+                               "observed_routes": observed_n(routes)}  # fmt: skip
     return res
 
 

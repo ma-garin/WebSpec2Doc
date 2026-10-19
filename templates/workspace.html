@@ -232,7 +232,7 @@
     <section class="panel" id="p-spec">
       <div class="ph">
         <h2 id="spec-title">仕様</h2><code id="spec-sub"></code>
-        <div class="seg" id="spec-seg" style="margin-left:10px"><button data-m="screen" class="on">画面仕様</button><button data-m="cases">テストケース</button><button data-m="tech">技法</button><button data-m="map">地図</button></div>
+        <div class="seg" id="spec-seg" style="margin-left:10px"><button data-m="screen" class="on">画面仕様</button><button data-m="cases">テストケース</button><button data-m="tech">技法</button><button data-m="map">地図</button><button data-m="reverse">リバース解析</button></div>
         <div class="sp"></div>
         <div class="pop-wrap"><button type="button" class="btn" id="spec-export-btn" aria-haspopup="true" aria-expanded="false" aria-controls="spec-export-pop">書き出し ▾</button>
           <div class="upop" id="spec-export-pop" role="menu" hidden></div>
@@ -243,6 +243,7 @@
         <div class="spec-grid" id="spec-screen"></div>
         <div id="spec-cases" hidden></div>
           <div id="spec-tech" tabindex="0" role="region" aria-label="この画面に適用したテスト技法" hidden></div>
+        <div id="spec-reverse" role="region" aria-label="リバース解析" hidden></div>
       </div>
     </section>
 
@@ -452,12 +453,14 @@
 <!-- ws modules -->
 <!-- 仕様 WS: テストケース表（#spec-cases）とその依存。core.js は旧シェル専用のため読み込まない -->
 <link rel="stylesheet" href="{{ url_for('static', filename='css/testcase-grid.css') }}?v={{ _ver }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/reverse-analysis.css') }}?v={{ _ver }}">
 <script src="{{ url_for('static', filename='js/table-utils.js') }}?v={{ _ver }}"></script>
 <script src="{{ url_for('static', filename='js/ui-states.js') }}?v={{ _ver }}"></script>
 <script src="{{ url_for('static', filename='js/view-utils.js') }}?v={{ _ver }}"></script>
 <script src="{{ url_for('static', filename='js/view-testcase-grid.js') }}?v={{ _ver }}"></script>
 <script src="{{ url_for('static', filename='js/testcase-grid-edit.js') }}?v={{ _ver }}"></script>
 <script src="{{ url_for('static', filename='js/ta2/ws-spec.js') }}?v={{ _ver }}"></script>
+<script src="{{ url_for('static', filename='js/ta2/ws-reverse.js') }}?v={{ _ver }}"></script>
 <script src="{{ url_for('static', filename='js/ta2/ws-drift.js') }}?v={{ _ver }}"></script>
 <script src="{{ url_for('static', filename='js/ta2/ws-schedule.js') }}?v={{ _ver }}"></script>
 <script src="{{ url_for('static', filename='js/ta2/ws-report.js') }}?v={{ _ver }}"></script>

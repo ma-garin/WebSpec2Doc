@@ -1,0 +1,76 @@
+[
+  {
+    "url": "https://app.example.com/items",
+    "title": "一覧",
+    "headings": [],
+    "links": [],
+    "forms": [],
+    "screenshot_path": null,
+    "buttons": [],
+    "api_calls": [
+      {
+        "method": "GET",
+        "path": "/api/items",
+        "status_code": 200,
+        "content_type": "application/json",
+        "sample_fields": [
+          "id",
+          "name"
+        ]
+      }
+    ],
+    "stack_info": null,
+    "state_id": "default",
+    "a11y_issues": [],
+    "page_states": [],
+    "validation_observations": [],
+    "spa_transitions": [],
+    "embedded_frames": [],
+    "http_status": 0,
+    "console_errors": [],
+    "mixed_content": [],
+    "performance": null,
+    "element_boxes": [],
+    "horizontal_overflow": false
+  },
+  {
+    "url": "https://app.example.com/orders",
+    "title": "注文",
+    "headings": [],
+    "links": [],
+    "forms": [],
+    "screenshot_path": null,
+    "buttons": [],
+    "api_calls": [
+      {
+        "method": "GET",
+        "path": "/api/orders",
+        "status_code": 200,
+        "content_type": "application/json",
+        "sample_fields": [
+          "id"
+        ]
+      },
+      {
+        "method": "POST",
+        "path": "/api/orders",
+        "status_code": 201,
+        "content_type": "application/json",
+        "sample_fields": []
+      }
+    ],
+    "stack_info": null,
+    "state_id": "default",
+    "a11y_issues": [],
+    "page_states": [],
+    "validation_observations": [],
+    "spa_transitions": [],
+    "embedded_frames": [],
+    "http_status": 0,
+    "console_errors": [],
+    "mixed_content": [],
+    "performance": null,
+    "element_boxes": [],
+    "horizontal_overflow": false
+  }
+]

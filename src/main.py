@@ -338,14 +338,106 @@ def parse_args() -> argparse.Namespace:
             "（既定 OFF。--reference-doc と併用必須。単独指定は警告して無視）"
         ),
     )
+    _add_reverse_analysis_args(parser)
     args = parser.parse_args()
+    _validate_reverse_analysis_args(parser, args)
     if args.ci:
         args.compare = True
         args.fail_on_drift = True
     return args
 
 
+_REVERSE_ANALYSIS_INPUTS = ("js_input", "runtime_snapshot", "rea_command")
+_REVERSE_ANALYSIS_KEYS = frozenset(
+    {"reverse_analysis", "output", "reverse_provider_evidence", *_REVERSE_ANALYSIS_INPUTS}
+)
+
+
+def _add_reverse_analysis_args(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument(
+        "--reverse-analysis",
+        action="store_true",
+        help=(
+            "ローカル JS の静的候補（REA）と既存 snapshot の API 実測を限定的に対応付け、"
+            "--output の専用ディレクトリへ reverse_analysis.json だけを保存する（クロールしない）"
+        ),
+    )
+    parser.add_argument("--js-input", help="--reverse-analysis: 解析するローカル JS ディレクトリ")
+    parser.add_argument("--runtime-snapshot", help="--reverse-analysis: 既存の snapshot.json")
+    parser.add_argument(
+        "--rea-command", help="--reverse-analysis: 導入済み rea 実行ファイルの絶対パス"
+    )
+    parser.add_argument(
+        "--reverse-provider-evidence",
+        action="store_true",
+        help="--reverse-analysis: REA の出典（route/API の上流 node・imports・source map 所見）も保存する",
+    )
+
+
+def _validate_reverse_analysis_args(
+    parser: argparse.ArgumentParser, args: argparse.Namespace
+) -> None:
+    """--reverse-analysis は 3 入力と専用 --output を必須にし、他のモードとの併用を拒否する。"""
+    if not args.reverse_analysis:
+        given = [name for name in _REVERSE_ANALYSIS_INPUTS if getattr(args, name) is not None]
+        if getattr(args, "reverse_provider_evidence", False):
+            given.append("reverse_provider_evidence")
+        if given:
+            flags = ", ".join("--" + name.replace("_", "-") for name in given)
+            parser.error(f"{flags} は --reverse-analysis と一緒に指定してください")
+        return
+    missing = [name for name in _REVERSE_ANALYSIS_INPUTS if not getattr(args, name)]
+    if missing:
+        flags = ", ".join("--" + name.replace("_", "-") for name in missing)
+        parser.error(f"--reverse-analysis には {flags} の指定が必要です")
+    if args.output == parser.get_default("output"):
+        parser.error("--reverse-analysis では専用の出力ディレクトリを --output に指定してください")
+    conflicts = sorted(
+        "--" + name.replace("_", "-")
+        for name, value in vars(args).items()
+        if name not in _REVERSE_ANALYSIS_KEYS and value != parser.get_default(name)
+    )
+    if conflicts:
+        parser.error(f"--reverse-analysis は {', '.join(conflicts)} と併用できません")
+
+
+def _run_reverse_analysis(args: argparse.Namespace) -> int:
+    """reverse analysis を独立実行し、exit code を返す（flag 指定時だけ import する）。"""
+    from reverse_analysis.reporter import OUTPUT_FILENAME, format_summary
+    from reverse_analysis.service import ReverseAnalysisRequest, run_reverse_analysis
+
+    request = ReverseAnalysisRequest(
+        js_input=str(args.js_input),
+        runtime_snapshot=str(args.runtime_snapshot),
+        rea_command=str(args.rea_command),
+        output_dir=str(args.output),
+        include_provider_evidence=bool(args.reverse_provider_evidence),
+    )
+    try:
+        outcome = run_reverse_analysis(request, cancel_event=_STOP_REQUESTED)
+    except KeyboardInterrupt:
+        print("reverse analysis を取り消しました。成果物は保存されていません。", file=sys.stderr)
+        print("次の行動: 必要なら同じ入力で再実行してください。", file=sys.stderr)
+        return 130
+    except (OSError, RuntimeError):  # 生の例外文は絶対 path を含みうるので出さない
+        print("reverse analysis を完了できませんでした。成果物はありません。", file=sys.stderr)
+        print("次の行動: 入力と出力先の権限・場所を確認して再実行してください。", file=sys.stderr)
+        return 2
+    if outcome.output_path is None:
+        for diag in outcome.diagnostics:
+            print(f"[{diag.severity}] {diag.message}", file=sys.stderr)
+            print(f"次の行動: {diag.next_action}", file=sys.stderr)
+        return outcome.exit_code
+    assert outcome.document is not None
+    label = str(Path(str(args.output)) / OUTPUT_FILENAME)
+    for line in format_summary(outcome.document, label):
+        print(line)
+    return outcome.exit_code
+
+
 def run(args: argparse.Namespace) -> None:
+    if bool(getattr(args, "reverse_analysis", False)):
+        sys.exit(_run_reverse_analysis(args))
     auth_path = getattr(args, "auth", None)
     if getattr(args, "login_simple", False):
         _submit_login_simple(args)

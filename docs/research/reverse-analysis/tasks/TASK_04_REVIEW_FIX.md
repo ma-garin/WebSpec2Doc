@@ -1,0 +1,13 @@
+# Task 4後 Codex全体レビューの是正
+必読: CLAUDE.md、AGENTS.md、docs/design/specs/CONVENTIONS.md、IMPLEMENTATION_PLAN.md、tasks/TASK_02.md、TASK_04.md。
+変更可能範囲: src/reverse_analysis/normalize.py、rea_adapter.py、tests/test_reverse_analysis_{adapter,normalize,cli}.py、docs/guide/reverse-analysis.md、tests/fixtures/reverse_analysis/{value_measurement.json,VALUE_MEASUREMENT.md}のみ。以下3点だけ修正。対象外refactor/依存・設定変更/install/update/実REA実行/調査拡大/GUI等/commit/push禁止。
+1. normalize_staticでdegraded時に常にLIMIT_DIGEST_MISMATCHをcoverageへ足す問題。実際に候補にあるLIMIT_FILE_NOT_VERIFIED/LIMIT_DIGEST_MISMATCHだけを決定的順で足す。map欠測/変更それぞれcoverageとCLIにも虚偽理由が出ない回帰テスト。
+2. CLI実SIGINTテストがfinallyで子pidをkillした後に停止assertしており製品の子終了能力を偽陽性にする。成功pathの所有child終了チェックは必ずtest側killする前に行う。finallyのkillは失敗時cleanup専用にする。同様にadapterのtimeout/cancelテストも製品能力をcleanupで隠していないか確認して対象内修正。
+3. adapter probe_versionはcancel_eventを受けずrun_static_analysisもprobeエラーをすべてunavailableにする。version probe中のcancel_event/KeyboardInterruptをcancelledに保ち、全所有processgroup終了、CLI exit130・cancelledJSONになるテスト追加。probe関数fakeはkwargs互換を保つこと。
+ドキュメントでAC6を過大評価しない。現状adapterはmapを解釈せずdigest比較のみ。既存CLIのold/brokenケースは「provider解析後の改変検知」検証に過ぎず、解析前から古い/壊れたmapを実REAが正しく扱うかは未検証。明記しAC6全体Passと称さない。guide測定記録へのリンク../../testsは階層が誤りなので../../../testsへ直す。
+対象6ファイルのpytestを実行し/tmp/webspec2doc-final-fix-tests.logへ保存。正常fixture結果が同じならvalue測定記録は更新不要。最終報告:修正内容、対象テスト末尾、未検証だけ。
+
+## 追加の境界検証修正（この節のみ）
+- _accept_outputのvalidate_evidenceでauthority/state/identity等がlist/dictだとmembership/dict lookupによりTypeError/KeyError等が出る。例えばnode observations[0].evidence.authority=[]。_accept_output境界でschema型不正をsanitized invalid_provider_output failedへ変換し、絶対path/tracebackを出さない。単なるtryですべて成功させず非成功にする。ValueError/TypeError/KeyError/RecursionErrorなど構造起因を想定しCtrl-Cは潰さない。adapterテスト追加。
+- validate_location source-range.source、source_map_reference.map_path、resolution.kind=artifact-relativeのpathは安全なroot内相対pathだけを受入（ref.source_nameの../src/fooはoriginal名なので別。これを一律拒否しない）。現在はunsafeとしてverifyしても候補artifact_pathに絶対path/traversalが残る。verify_fileより前のschemaで不正参照をinvalid_provider_outputとして拒否し、実ファイル読取なし・入力絶対root等の漏洩なしをテスト。
+許可ファイルはrea_adapter.pyとtests/test_reverse_analysis_adapter.pyのみ。新規調査/別修正禁止。最後に5つのreverse_analysisテストとtests/test_apispec_recovery.pyの合計6ファイルを1回実行し/tmp/webspec2doc-final-tests.logへ保存。

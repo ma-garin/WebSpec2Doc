@@ -1,0 +1,12 @@
+import { thing } from './lib.js';
+import { createBrowserRouter } from 'react-router-dom';
+const router = createBrowserRouter([{path: '/users', element: thing}, {path: '/users/:id', element: thing}]);
+const routes = [{path: '/settings', component: thing}];
+app.get('/express-route', thing);
+router.post('/router-post', thing);
+fetch('/api/explicit', {method: 'POST', body: '{}'});
+fetch('/api/no-method');
+axios.get('/api/axios-get');
+axios.post('/api/axios-post', {});
+const xhr = new XMLHttpRequest(); xhr.open('PATCH', '/api/xhr');
+const staticUrl = '/api/static-only';

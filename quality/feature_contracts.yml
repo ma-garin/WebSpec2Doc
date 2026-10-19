@@ -3343,6 +3343,62 @@
         "error_path",
         "evidence"
       ]
+    },
+    {
+      "feature_id": "reverse_analysis",
+      "name": "reverse analysis（ローカル JS の静的候補と既存 snapshot 実測の限定突合）",
+      "risk_level": "high",
+      "status": "implemented",
+      "ui_files": [],
+      "route_files": [
+        "src/main.py"
+      ],
+      "core_files": [
+        "src/reverse_analysis/models.py",
+        "src/reverse_analysis/runtime.py",
+        "src/reverse_analysis/rea_adapter.py",
+        "src/reverse_analysis/normalize.py",
+        "src/reverse_analysis/reconcile.py",
+        "src/reverse_analysis/reporter.py",
+        "src/reverse_analysis/service.py"
+      ],
+      "symbols": [
+        "load_runtime_observations",
+        "run_static_analysis",
+        "normalize_static",
+        "reconcile",
+        "summarize",
+        "build_document",
+        "write_document",
+        "run_reverse_analysis"
+      ],
+      "outputs": [
+        "{--output}/reverse_analysis.json（schema_version 1）",
+        "--reverse-provider-evidence 時のみ provider_evidence（route/API 上流出典・imports edge・source map 所見）",
+        "CLI 要約（実測・静的構文の事実・対応推論・未確認・coverage・欠測理由・出力先）"
+      ],
+      "persistence": [
+        "{--output}/reverse_analysis.json（tmp + os.replace。入力・既存 report/snapshot は読み取りのみ）"
+      ],
+      "failure_modes": [
+        "flag_off_no_provider_probe_or_import",
+        "missing_inputs_or_crawl_mode_conflict_rejected",
+        "output_inside_input_or_snapshot_dir_or_symlink_rejected",
+        "provider_missing_saves_runtime_with_static_unavailable",
+        "provider_timeout_cancel_or_invalid_output_non_success_exit",
+        "write_failure_reported_without_claiming_artifact",
+        "unknown_schema_version_rejected",
+        "method_path_only_never_matched",
+        "page_url_origin_not_used_as_api_origin",
+        "route_classified_inferred_not_compared_to_runtime",
+        "missing_http_method_not_fabricated",
+        "source_map_missing_or_malformed_provider_reason_kept"
+      ],
+      "required_tests": [
+        "happy_path",
+        "error_path",
+        "evidence"
+      ]
     }
   ]
 }

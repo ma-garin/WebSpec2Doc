@@ -74,7 +74,7 @@ def test_no_rea_is_zero_and_unconfirmed():
         r = L.build_layer("s", ev, "b.js")
         assert r["state"] == "unconfirmed" and r["impacted"] == []
         assert r["metrics"]["after"] == {"dependency_edges": 0, "candidates": 0, "routes": 0, "apis": 0, "tests": 0,
-                                         "observed_routes": 0}
+                                         "observed_routes": 0, "observed_routes_authenticated": 0}
         assert r["message"]
 
 
@@ -115,7 +115,7 @@ def test_observed_routes_in_after_metrics():
     r = L.build_layer("s", _ev(DEPS, EVID), "b.js", probe)
     assert r["metrics"]["after"]["observed_routes"] == 1
     routes = {i["id"]: i for c in r["impacted"] for i in c["routes"]} | {i["id"]: i for i in r["own"]["routes"]}
-    assert routes["r1"]["reach_status"] == "observed" and routes["r1"]["reach_label"] == "実測で到達"
+    assert routes["r1"]["reach_status"] == "observed" and routes["r1"]["reach_label"] == "実測で到達（未認証）"
     assert routes["r2"]["reach_label"] == "未到達"
     assert r["notice"] == L.NOTICE
 
@@ -126,3 +126,15 @@ def test_no_probe_all_not_probed():
         assert r["metrics"]["after"]["observed_routes"] == 0
         assert {i["reach_label"] for c in r["impacted"] for i in c["routes"]} == {"未探索"}
     assert L.build_layer("s", _ev(DEPS, EVID))["metrics"]["after"]["observed_routes"] == 0
+
+
+def test_authenticated_observed_label_and_metric():
+    probe = {"r1": {"status": "observed", "authenticated": True}, "r2": {"status": "auth_required", "auth_attempted": True}}
+    r = L.build_layer("s", _ev(DEPS, EVID), "b.js", probe)
+    assert r["metrics"]["after"]["observed_routes"] == 1
+    assert r["metrics"]["after"]["observed_routes_authenticated"] == 1
+    routes = {i["id"]: i for c in r["impacted"] for i in c["routes"]} | {i["id"]: i for i in r["own"]["routes"]}
+    assert routes["r1"]["reach_label"] == "実測で到達（認証済み）" and routes["r1"]["reach_authenticated"] is True
+    assert routes["r2"]["reach_label"] == "保存済みの認証状態でも未確認"
+    r0 = L.build_layer("s", _ev(DEPS, EVID), "b.js", None)
+    assert r0["metrics"]["after"]["observed_routes_authenticated"] == 0

@@ -20,7 +20,7 @@
   function dl(title, m, reason) {
     return '<div class="im-rea-card"><h4>' + esc(title) + '</h4><dl><dt>依存 edge</dt><dd>' + m.dependency_edges + '</dd><dt>影響候補 module</dt><dd>' + m.candidates +
       '</dd><dt>関連 route</dt><dd>' + m.routes + '</dd>' +
-      '<dt>実測で到達した関連 route</dt><dd>' + (m.observed_routes || 0) + '</dd><dt>関連 API（静的）</dt><dd>' + m.apis + '</dd><dt>関連テスト</dt><dd>' + m.tests + '</dd></dl>' +
+      '<dt>実測で到達した関連 route</dt><dd>' + (m.observed_routes || 0) + '</dd><dt>うち認証済み</dt><dd>' + (m.observed_routes_authenticated || 0) + '</dd><dt>関連 API（静的）</dt><dd>' + m.apis + '</dd><dt>関連テスト</dt><dd>' + m.tests + '</dd></dl>' +
       (reason ? '<p class="im-rea-note">' + esc(reason) + '</p>' : '') + '</div>';
   }
   function reach(i) {

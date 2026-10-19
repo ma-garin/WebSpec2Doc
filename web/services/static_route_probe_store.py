@@ -16,7 +16,11 @@ System 01 の reverse_analysis.json（静的候補）は書き換えない。到
     "reason": str,                 # 利用者向けの理由（1 文）
     "http_status": int | null,
     "final_url": str | null,       # 遷移後に留まった URL
-    "observed_at": ISO | null      # status == observed のときだけ
+    "observed_at": ISO | null,     # status == observed のときだけ
+    "authenticated": bool,         # その結果が System 01 の保存済み認証状態付きの遷移によるものか
+    "auth_attempted": bool,        # 認証状態付きで再探索したか
+    "evidence": str,               # 観測した事実（1 文）
+    "limitation": str              # この結果で言えないこと（observed は「正しさは未確認」）
   }]
 }
 observed は「GET の遷移でその URL に到達し、アプリがその URL に留まった」実測だけを指す。
@@ -31,6 +35,7 @@ from typing import Any
 from web.services import reverse_analysis_run as runner
 
 PROBE_FILE = "route_probe.json"
+AUTH_LABEL = "保存済みの認証状態で確認"  # 認証状態付きで observed になった item の GUI 表示用（STATUS_LABEL は変えない）
 STATUSES = ("observed", "unreached", "auth_required", "ambiguous", "failed")
 STATUS_LABEL = {
     "observed": "実測で到達",

@@ -9,6 +9,11 @@ System 01 のリバース解析が見つけた「到達未確認の静的 route 
 
 ブラウザ操作は ``open_navigator`` に差し替えられる（テストは fake を渡す）。
 navigator は ``goto(url) -> NavResult``（失敗は NavError）と、任意で ``states() -> int | None`` を持つ。
+
+認証状態の再利用: 未認証の探索で auth_required だった route だけ、System 01 が保存した
+<出力>/<domain>/auth.json（Playwright storage_state）付きの新しい context で 1 回だけ再探索する。
+auth.json の中身は読まず、ログ・API 応答・保存 JSON にパスも中身も出さない
+（``open_navigator(storage_state=<path>)`` に渡すだけ）。使うのは通常ファイルで出力配下に resolve できるものだけ。
 """
 
 from __future__ import annotations
@@ -92,8 +97,59 @@ def _is_safe_target(url: str) -> bool:
     return is_safe_target(url)
 
 
-def classify_route(origin: str, route: str, navigator: Any) -> dict[str, Any]:
-    """route 値 1 つを分類する。evidence_id を含まない結果（共通部分）を返す。"""
+LIMIT_REACH = "URL への到達だけを確認。画面内容・機能の正しさは未確認"
+LIMIT_AUTH = "System01 で保存済みの認証状態を使用"
+REASON_AUTH_EXPIRED = "保存済みの認証状態でもログイン画面へ移動した（期限切れの可能性）"
+REASON_NO_AUTH = "保存済みの認証状態がありません"
+
+
+def auth_state_path(base: Path, domain: str) -> Path | None:
+    """System 01 が保存した auth.json。通常ファイル（symlink 不可）で出力配下に resolve できるときだけ返す。"""
+    try:
+        path = base / domain / "auth.json"
+        if path.is_symlink() or not path.is_file():
+            return None
+        resolved = path.resolve()
+        if not resolved.is_relative_to(base.resolve()):
+            return None
+        return resolved
+    except (OSError, ValueError):
+        return None
+
+
+def _decorate(res: dict[str, Any], authenticated: bool, attempted: bool) -> dict[str, Any]:
+    """認証の有無・観測した事実・限界を付ける（auth.json のパスや中身は入れない）。"""
+    st, final = res["status"], res.get("final_url")
+    if st == "observed":
+        evidence = f"GET の遷移で最終 URL {final} に留まった" + ("（認証状態あり）" if authenticated else "")
+        limit = LIMIT_REACH + (f"。{LIMIT_AUTH}" if authenticated else "")
+    elif st == "auth_required":
+        evidence = f"GET の遷移でログイン画面（最終 URL {final}）へ移動した" + ("（認証状態あり）" if authenticated else "")
+        limit = "ログイン画面までしか観測できず、この route の内容は未確認"
+    elif st == "unreached":
+        evidence = (f"GET の応答が HTTP {res['http_status']} だった" if (res.get("http_status") or 0) >= 400
+                    else f"GET の遷移で別の URL（{final}）へ移動した") + ("（認証状態あり）" if authenticated else "")
+        limit = "この route への到達は確認できていない"
+    elif st == "ambiguous":
+        evidence, limit = "パラメータの値が必要なため開かなかった", "値を推測しないため到達は未確認"
+    else:
+        evidence, limit = f"{res['reason']}", "到達は未確認"
+    return {**res, "authenticated": authenticated, "auth_attempted": attempted,
+            "evidence": evidence, "limitation": limit}  # fmt: skip
+
+
+def classify_route(origin: str, route: str, navigator: Any, *, authenticated: bool = False) -> dict[str, Any]:
+    """route 値 1 つを分類する。evidence_id を含まない結果（共通部分）を返す。
+
+    authenticated=True は認証状態付き navigator での再探索（auth_required は期限切れの可能性として扱う）。
+    """
+    res = _classify_core(origin, route, navigator)
+    if authenticated and res["status"] == "auth_required":
+        res = {**res, "reason": REASON_AUTH_EXPIRED}
+    return _decorate(res, authenticated, authenticated)
+
+
+def _classify_core(origin: str, route: str, navigator: Any) -> dict[str, Any]:
     base: dict[str, Any] = {"url": None, "http_status": None, "final_url": None,
                             "observed_at": None, "states_found": None}  # fmt: skip
     if needs_value(route):
@@ -134,17 +190,58 @@ def _count_states(navigator: Any) -> int | None:
         return None
 
 
-def probe_candidates(origin: str, candidates: list[dict[str, Any]], navigator: Any) -> list[dict[str, Any]]:
-    """候補ごとに結果を付ける。同じ route 値は 1 回だけ開き、全候補 id に同じ結果を付ける。"""
+def _reprobe_with_auth(origin: str, by_value: dict[str, dict[str, Any]],
+                       open_auth_navigator: OpenNavigator) -> None:  # fmt: skip
+    """auth_required の route だけ、認証状態付きの新しい context で 1 回だけ再探索する（by_value を更新）。"""
+    targets = [r for r, v in by_value.items() if v["status"] == "auth_required"]
+    if not targets:
+        return
+    try:
+        with open_auth_navigator() as auth_nav:
+            for route in targets:
+                by_value[route] = classify_route(origin, route, auth_nav, authenticated=True)
+    except Exception:  # noqa: BLE001  認証状態付き context を開けない／途中で壊れた分は failed
+        for route in targets:
+            if not by_value[route].get("auth_attempted"):
+                failed = {**by_value[route], "status": "failed",
+                          "reason": "確認に失敗した（保存済みの認証状態でページを開けなかった）"}  # fmt: skip
+                by_value[route] = _decorate(failed, True, True)
+
+
+def probe_candidates(origin: str, candidates: list[dict[str, Any]], navigator: Any, *,
+                     open_auth_navigator: OpenNavigator | None = None,
+                     auth_available: bool | None = None) -> list[dict[str, Any]]:  # fmt: skip
+    """候補ごとに結果を付ける。同じ route 値は 1 回だけ開き、全候補 id に同じ結果を付ける。
+
+    open_auth_navigator があれば、未認証で auth_required だった route だけ認証状態付きで再探索する。
+    auth_available=False のとき auth_required の理由に「保存済みの認証状態がありません」を添える。
+    """
     by_value: dict[str, dict[str, Any]] = {}
     items = []
     for cand in candidates:
         route = str(cand.get("value") or "")
         if route not in by_value:
             by_value[route] = classify_route(origin, route, navigator)
+    if open_auth_navigator is not None:
+        _reprobe_with_auth(origin, by_value, open_auth_navigator)
+    elif auth_available is False:
+        for route, v in by_value.items():
+            if v["status"] == "auth_required":
+                by_value[route] = {**v, "reason": f"{v['reason']}（{REASON_NO_AUTH}）"}
+    for cand in candidates:
+        route = str(cand.get("value") or "")
         items.append({"evidence_id": cand.get("id"), "route": route,
                       "location": cand.get("location"), **by_value[route]})  # fmt: skip
     return items
+
+
+def reprobe_items_with_auth(origin: str, items: list[dict[str, Any]],
+                            open_auth_navigator: OpenNavigator) -> list[dict[str, Any]]:  # fmt: skip
+    """未認証の探索結果（items）のうち auth_required の route だけを、認証状態付きで再探索する。"""
+    keys = ("evidence_id", "route", "location")
+    by_value = {i["route"]: {k: v for k, v in i.items() if k not in keys} for i in items}
+    _reprobe_with_auth(origin, by_value, open_auth_navigator)
+    return [{**{k: i.get(k) for k in keys}, **by_value[i["route"]]} for i in items]
 
 
 # ------------------------------------------------------------------ Playwright
@@ -184,7 +281,7 @@ class _PlaywrightNavigator:
 
 
 @contextlib.contextmanager
-def playwright_navigator() -> Iterator[_PlaywrightNavigator]:
+def playwright_navigator(storage_state: str | None = None) -> Iterator[_PlaywrightNavigator]:
     from crawler.playwright_runtime import configure_playwright_browsers_path
 
     configure_playwright_browsers_path()
@@ -193,7 +290,7 @@ def playwright_navigator() -> Iterator[_PlaywrightNavigator]:
     with sync_playwright() as pw:
         browser = pw.chromium.launch(headless=True)
         try:
-            context = browser.new_context()
+            context = browser.new_context(storage_state=storage_state) if storage_state else browser.new_context()
             page = context.new_page()
             page.route("**/*", guard_route)
             yield _PlaywrightNavigator(page)
@@ -253,8 +350,19 @@ def run_probe(base: Path, domain: str, evidence: dict[str, Any],
         started = datetime.now(_JST)
         t0 = time.monotonic()
         try:
-            with (open_navigator or playwright_navigator)() as navigator:
-                items = probe_candidates(origin, candidates, navigator)
+            opener = open_navigator or playwright_navigator
+            auth_path = auth_state_path(base, domain)
+            auth_opener = None
+            if auth_path is not None:
+                def auth_opener(_p: str = str(auth_path)):  # noqa: ANN202
+                    return opener(storage_state=_p)
+
+            # 認証状態付きの再探索は、未認証のブラウザを閉じてから開く（Playwright の同期 API は入れ子にできない）
+            with opener() as navigator:
+                items = probe_candidates(origin, candidates, navigator,
+                                         auth_available=auth_path is not None)  # fmt: skip
+            if auth_opener is not None:
+                items = reprobe_items_with_auth(origin, items, auth_opener)
         except Exception:  # noqa: BLE001
             return ProbeRun("error", "ブラウザを起動できず、到達確認を完了できませんでした。結果は更新していません。",
                             "管理者にブラウザ（Playwright）の導入を確認してください。")  # fmt: skip
@@ -265,7 +373,9 @@ def run_probe(base: Path, domain: str, evidence: dict[str, Any],
             "seconds": round(time.monotonic() - t0, 1), "items": items,
         })  # fmt: skip
         n_obs = sum(1 for i in items if i["status"] == "observed")
-        return ProbeRun("success", f"{len(items)} 件の route 候補のうち {n_obs} 件を実測で到達確認しました。",
+        n_auth = sum(1 for i in items if i["status"] == "observed" and i.get("authenticated"))
+        extra = f"（うち {n_auth} 件は保存済みの認証状態で確認）" if n_auth else ""
+        return ProbeRun("success", f"{len(items)} 件の route 候補のうち {n_obs} 件を実測で到達確認しました。{extra}",
                         "結果を確認し、未到達・認証等で未確認の候補は画面から手動で確かめてください。")  # fmt: skip
     finally:
         with _running_lock:
@@ -313,12 +423,16 @@ def build_status(base: Path, domain: str, evidence: dict[str, Any]) -> dict[str,
             "http_status": i.get("http_status"), "final_url": i.get("final_url"),
             "observed_at": i.get("observed_at"), "location": i.get("location"),
             "states_found": i.get("states_found"),
+            "authenticated": bool(i.get("authenticated")), "auth_attempted": bool(i.get("auth_attempted")),
+            "evidence": i.get("evidence") or "", "limitation": i.get("limitation") or "",
             "system02_viewpoints": views.get(i.get("evidence_id"), []),
         })  # fmt: skip
     return {
         **out, "state": "ok", "can_run": can_run, "cannot_run_reason": reason,
         "message": f"{counts['observed']} 件が実測で到達、{len(items) - counts['observed']} 件は未確認のままです。",
         "next_action": "未到達・認証等で未確認・曖昧の候補は、画面から手動で確かめてください。",
-        "after": {**counts, "promoted": counts["observed"], "system02_runnable": runnable},
+        "after": {**counts, "promoted": counts["observed"], "system02_runnable": runnable,
+                  "observed_authenticated": sum(1 for i in items if i["status"] == "observed" and i["authenticated"]),
+                  "auth_state_available": auth_state_path(base, domain) is not None},
         "seconds": doc.get("seconds"), "finished_at": doc.get("finished_at"), "items": items,
     }  # fmt: skip

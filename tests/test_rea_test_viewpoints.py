@@ -109,3 +109,29 @@ def test_empty_probe_all_not_probed():
     out = build_viewpoints(_ok(_ROUTES), before=0, probe={})
     assert {v["reach_status"] for v in out["viewpoints"]} == {"not_probed"}
     assert out["metrics"]["runnable"] == 0 and out["metrics"]["probed"] == 0
+
+
+def _probe_auth(**by_id):
+    return {k: {"evidence_id": k, "status": s, "authenticated": a, "auth_attempted": t, "reason": "r",
+                "observed_at": "2026-10-20T00:00:00" if s == "observed" else None, "final_url": None}
+            for k, (s, a, t) in by_id.items()}  # fmt: skip
+
+
+def test_authenticated_splits_reach_label():
+    probe = _probe_auth(r1=("observed", True, True), r2=("observed", False, False), r3=("auth_required", False, True),
+                        r4=("auth_required", False, False))
+    out = build_viewpoints(_ok(_ROUTES[:5]), before=0, probe=probe)
+    by = {v["evidence_id"]: v for v in out["viewpoints"]}
+    assert by["r1"]["reach_label"] == "実測で到達（認証済み）" and by["r1"]["reach_authenticated"] is True
+    assert by["r1"]["text"].endswith("（System 03 が GET の遷移で到達を確認済み）（認証状態を使用）")
+    assert by["r2"]["reach_label"] == "実測で到達（未認証）" and by["r2"]["reach_authenticated"] is False
+    assert by["r2"]["text"].endswith("確認済み）")
+    assert by["r1"]["runnable"] and by["r2"]["runnable"]
+
+
+def test_auth_attempted_auth_required_is_not_runnable():
+    out = build_viewpoints(_ok(_ROUTES[:2]), before=0, probe=_probe_auth(r1=("auth_required", False, True)))
+    by = {v["evidence_id"]: v for v in out["viewpoints"]}
+    assert by["r1"]["reach_label"] == "保存済みの認証状態でも未確認" and by["r1"]["runnable"] is False
+    assert by["r1"]["reach_authenticated"] is False
+    assert by["r2"]["reach_label"] == "未探索" and by["r2"]["reach_authenticated"] is False

@@ -70,6 +70,17 @@
     return { observed: 'is-ok', unreached: 'is-miss', auth_required: 'is-auth', ambiguous: 'is-amb', failed: 'is-fail' }[status] || '';
   }
 
+  function reachLabel(it) {
+    if (it.status === 'observed') return it.authenticated === true ? '認証済みで実測' : '未認証で実測';
+    if (it.status === 'auth_required' && it.auth_attempted === true) return '保存済みの認証状態でも未確認';
+    return it.status_label || it.status;
+  }
+
+  function authStateText(d) {
+    var v = d && d.after ? d.after.auth_state_available : null;
+    return v === true ? 'System01 で保存済み' : (v === false ? 'なし' : '不明');
+  }
+
   function renderBar(d) {
     var hasResult = d && d.state === 'ok';
     var canRun = !(d && d.can_run === false) && !!state.domain && !state.running && !(d && d.running);
@@ -88,6 +99,7 @@
     return '<div class="asr-bar">' +
       '<div class="asr-bar-item"><span class="asr-label">対象サイト</span>' + site + '</div>' +
       '<div class="asr-bar-item"><span class="asr-label">最終実行</span><span>' + esc(last) + '</span></div>' +
+      '<div class="asr-bar-item"><span class="asr-label">認証状態</span><span>' + esc(authStateText(d)) + '</span></div>' +
       '<button type="button" class="btn btn-primary asr-run" id="asr-run"' + (canRun ? '' : ' disabled') + '>' +
         (state.running || (d && d.running) ? '探索中…' : (hasResult ? '再実行' : '探索を実行')) + '</button>' +
       '</div>' +
@@ -108,11 +120,15 @@
     var a = d.after;
     if (!a) return '';
     var before = d.before ? d.before.static_routes : null;
+    var obs = Number(a.observed) || 0;
+    var authN = Number(a.observed_authenticated);
+    if (isNaN(authN)) authN = (d.items || []).filter(function (x) { return x.status === 'observed' && x.authenticated === true; }).length;
     return '<div class="asr-band" aria-label="探索の前後">' +
       '<div class="asr-band-before"><span class="asr-label">探索前</span>静的 Route 候補 <strong>' + esc(num(before)) + '</strong></div>' +
       '<div class="asr-arrow" aria-hidden="true">→</div>' +
       '<div class="asr-band-after"><span class="asr-label">探索後</span><ul>' +
-        '<li>実測で到達 <strong>' + esc(num(a.observed)) + '</strong></li>' +
+        '<li>実測で到達 <strong>' + esc(num(a.observed)) + '</strong>' +
+          '<div class="asr-sub-auth">うち認証済み ' + esc(num(authN)) + ' ／ 未認証 ' + esc(num(Math.max(obs - authN, 0))) + '</div></li>' +
         '<li>未到達 <strong>' + esc(num(a.unreached)) + '</strong></li>' +
         '<li>認証等で未確認 <strong>' + esc(num(a.auth_required)) + '</strong></li>' +
         '<li>曖昧（値が必要） <strong>' + esc(num(a.ambiguous)) + '</strong></li>' +
@@ -129,6 +145,9 @@
     var details =
       '<dl class="asr-dl">' +
       '<dt>理由</dt><dd>' + esc(it.reason || '-') + '</dd>' +
+      '<dt>認証</dt><dd>' + esc(it.authenticated === true ? '認証済み' : '未認証') + (it.auth_attempted ? '（保存済みの認証状態を試行）' : '') + '</dd>' +
+      '<dt>証跡</dt><dd>' + esc(it.evidence || '-') + '</dd>' +
+      '<dt>限界</dt><dd>' + esc(it.limitation || '-') + '</dd>' +
       '<dt>HTTP ステータス</dt><dd>' + esc(it.http_status == null ? '-' : it.http_status) + '</dd>' +
       '<dt>確認日時</dt><dd>' + esc(fmtTime(it.observed_at) || '-') + '</dd>' +
       '<dt>System02 テスト観点</dt><dd>' + (vps.length
@@ -136,7 +155,7 @@
       '</dl>';
     return '<tr class="asr-row">' +
       '<td data-label="Route"><code>' + esc(it.route) + '</code></td>' +
-      '<td data-label="状態"><span class="asr-badge ' + badgeClass(it.status) + '">' + esc(it.status_label || it.status) + '</span></td>' +
+      '<td data-label="状態"><span class="asr-badge ' + badgeClass(it.status) + '">' + esc(reachLabel(it)) + '</span></td>' +
       '<td data-label="理由">' + esc(it.reason || '') + '</td>' +
       '<td data-label="開いた URL"><div class="asr-url">' + esc(it.url || '-') + '</div>' + finalUrl + '</td>' +
       '<td data-label="静的根拠の位置">' + esc(it.location || '-') + '</td>' +
@@ -152,6 +171,7 @@
       '<th scope="col">開いた URL / 遷移後 URL</th><th scope="col">静的根拠の位置</th><th scope="col">観点数</th>' +
       '</tr></thead><tbody>' + items.map(renderRow).join('') + '</tbody></table></div>' +
       '<ul class="asr-notes"><li>「実測で到達」は GET の遷移でその URL に留まったことだけを示します（画面が正しいことの証明ではありません）。</li>' +
+      '<li>認証済みで実測した場合も、その URL へ到達したことだけを示します。画面内容・機能の正しさは別途確認が必要です。</li>' +
       '<li>曖昧（値が必要）な Route は、値を推測せず開いていません。</li></ul>';
   }
 

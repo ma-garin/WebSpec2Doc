@@ -49,3 +49,4 @@
   .asr-row td::before { content: attr(data-label); display: block; font-size: var(--text-xs); color: var(--color-text-secondary); }
   .asr-run { margin-left: 0; }
 }
+.asr-sub-auth { font-size: var(--text-xs); color: var(--color-text-secondary); }

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>バッチ・バックエンドのテスト | WebSpec2Doc</title>
+<title>ホーム - バッチ・バックエンドのテスト - WebSpec2Doc</title>
 <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
 <link rel="stylesheet" href="{{ url_for('static', filename='tokens.css') }}?v={{ _ver }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='app.css') }}?v={{ _ver }}">
@@ -53,6 +53,7 @@
     <main class="app-content" id="app-content" tabindex="-1">
       <div class="app-content-inner">
       {# 失敗の通知（理由＋次の行動 1 行） #}
+      <div id="s8-reason" hidden></div>
       <div class="bs-banner err" id="bs-banner" role="alert" hidden>
         <div><b id="bs-banner-title"></b><p id="bs-banner-msg"></p><p id="bs-banner-next"></p></div>
         <span class="sp"></span><button type="button" class="btn-outline-sm" id="bs-banner-retry" hidden>もう一度接続する</button>
@@ -91,20 +92,20 @@
           </div>
         </div>
         <div class="stat-cards" id="s8-home-kpis" aria-label="案件のまとめ"><div class="stat-card"><div class="stat-card-head"><span class="stat-card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6.5A1.5 1.5 0 0 1 4.5 5H9l2 2.5h8.5A1.5 1.5 0 0 1 21 9v9.5a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 18.5z"/></svg></span><span class="stat-card-label">案件</span></div><div class="stat-card-num">-</div><div class="stat-card-sub"></div></div><div class="stat-card"><div class="stat-card-head"><span class="stat-card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 4.5v15l12-7.5z"/></svg></span><span class="stat-card-label">実行中</span></div><div class="stat-card-num">-</div><div class="stat-card-sub"></div></div><div class="stat-card"><div class="stat-card-head"><span class="stat-card-icon is-warn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M15 9l-6 6M9 9l6 6"/></svg></span><span class="stat-card-label">不合格</span></div><div class="stat-card-num">-</div><div class="stat-card-sub"></div></div><div class="stat-card"><div class="stat-card-head"><span class="stat-card-icon is-warn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 9v4M12 17h.01M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/></svg></span><span class="stat-card-label">未検証</span></div><div class="stat-card-num">-</div><div class="stat-card-sub"></div></div></div>
-        <table class="data dashboard-table" aria-label="案件">
+        <div class="s8-tblscroll"><table class="data dashboard-table" aria-label="案件">
           <thead><tr><th>案件</th><th>段階の進捗</th><th>最終更新</th><th>結果</th><th>操作</th></tr></thead>
           <tbody id="s8-jobs"></tbody>
-        </table>
+        </table></div>
       </section>
 
       <section class="view s8-view" id="view-runs">
         <div class="dashboard-section-head">
           <div><h2 class="dash-section-title">実行履歴</h2><p class="dashboard-section-copy">すべての案件の実行を新しい順に並べます。開くと、その案件の実行の段階へ移ります。</p></div>
         </div>
-        <table class="data dashboard-table" aria-label="実行履歴">
+        <div class="s8-tblscroll"><table class="data dashboard-table" aria-label="実行履歴">
           <thead><tr><th>案件</th><th>開始</th><th>接続先</th><th>業務日付</th><th>状態</th><th>件数</th><th>操作</th></tr></thead>
           <tbody id="s8-runs"></tbody>
-        </table>
+        </table></div>
       </section>
 
       <section class="view s8-view" id="view-catalog">
@@ -113,10 +114,10 @@
           <div class="dashboard-section-actions"><span class="s8-none" id="s8-cat-count"></span>
             <label for="s8-cat-q" class="visually-hidden">観点を探す</label><input id="s8-cat-q" class="url-input s8-cat-q" placeholder="観点・カテゴリ・技法で探す"></div>
         </div>
-        <table class="data dashboard-table s8-cases" aria-label="観点カタログ">
+        <div class="s8-tblscroll"><table class="data dashboard-table s8-cases" aria-label="観点カタログ">
           <thead><tr><th>ID</th><th>カテゴリ</th><th>観点</th><th>技法</th><th>優先度</th><th>対象のテストレベル</th></tr></thead>
           <tbody id="s8-catalog"></tbody>
-        </table>
+        </table></div>
       </section>
 
       <section class="view s8-view" id="view-job">
@@ -194,7 +195,7 @@
         </div>
         <div class="stat-cards" id="bs-facts-kpis"></div>
         <div class="bs-card bs-card-flush">
-          <div class="bs-card-h"><h3>読み取った事実</h3><span class="bs-mut">どの事実にも根拠の行が付きます。根拠の無い推測は載せません</span></div>
+          <div class="bs-card-h"><h3><span data-ev="document"></span> 読み取った事実</h3><span class="bs-mut">どの事実にも根拠の行が付きます。根拠の無い推測は載せません</span></div>
           <div class="bs-tblwrap"><table class="bs-tbl" aria-label="読み取った事実">
             <thead><tr><th>ID</th><th>読み取った事実</th><th>根拠</th><th>引用</th></tr></thead>
             <tbody id="bs-facts"></tbody>
@@ -239,10 +240,10 @@
                 <button type="button" class="btn-outline-sm" data-act="generate" data-stage="4">ケースを作る</button>
               </div>
             </div>
-            <table class="data dashboard-table s8-cases" aria-label="テストケース">
+            <div class="s8-tblscroll"><table class="data dashboard-table s8-cases" aria-label="テストケース">
               <thead><tr><th>ID</th><th>観点</th><th>手順</th><th>期待値</th><th>確かめ方</th><th>確定</th><th>操作</th></tr></thead>
               <tbody id="bs-cases"></tbody>
-            </table>
+            </table></div>
           </div>
           <div class="s8-foot">
             <div class="s8-more"><span class="s8-none" id="s8-case-count"></span><button type="button" class="btn-outline-sm" id="s8-case-more">さらに表示</button></div>
@@ -327,8 +328,8 @@
       <section class="bs-panel" id="bs-stage-8" data-stage="8" hidden>
         <div class="stat-cards" id="bs-result-kpis"></div>
         <div class="bs-split">
-          <div class="bs-card"><span class="bs-tag fact">事実 — 実行で確かめたこと</span><ul class="bs-list" id="bs-judge-facts"></ul></div>
-          <div class="bs-card"><span class="bs-tag judge">判断 — QA の評価</span><ul class="bs-list" id="bs-judge-human"></ul></div>
+          <div class="bs-card"><span class="bs-tag fact"><span data-ev="observed"></span> 事実 — 実行で確かめたこと</span><ul class="bs-list" id="bs-judge-facts"></ul></div>
+          <div class="bs-card"><span class="bs-tag judge"><span data-ev="record"></span> 判断 — QA の評価</span><ul class="bs-list" id="bs-judge-human"></ul></div>
         </div>
         <div class="bs-card bs-card-flush">
           <div class="bs-card-h"><h3>ケースごとの判定</h3><span class="bs-mut">合格に数えるのは「合格」だけです</span></div>
@@ -352,7 +353,7 @@
             <tbody id="bs-defects"></tbody>
           </table></div>
         </div>
-        <div class="bs-card bs-uv"><h3>未検証 — この結果では確かめていないこと</h3><ul class="bs-list" id="bs-unverified"></ul></div>
+        <div class="bs-card bs-uv"><h3><span data-ev="unverified"></span> 未検証 — この結果では確かめていないこと</h3><ul class="bs-list" id="bs-unverified"></ul></div>
         <div class="bs-card" id="s8-export">
           <h3>書き出し</h3>
           <div class="bs-actions bs-wrap">

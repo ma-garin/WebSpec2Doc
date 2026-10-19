@@ -52,6 +52,19 @@
 
       <div id="hl-error" class="hl-banner" role="alert" hidden></div>
 
+      {# 何の画面か・いまの状態・主操作は先頭に 1 つずつ。状態は WS2D.status、理由は WS2D.reason が描く。 #}
+      <header class="c-page-head hl-page-head" id="hl-page-head">
+        <div class="c-page-head__main">
+          <h1 class="c-page-head__title" id="hl-page-title">オートヒーリング</h1>
+          <p class="c-page-head__desc" id="hl-page-desc">接続したリポジトリの不具合を検出し、修正案を作り、PR にして人が承認するまでを 1 画面で追います。</p>
+          <div class="c-page-head__state" id="hl-ws-status"></div>
+        </div>
+        <div class="c-page-head__actions">
+          <a class="c-btn c-btn--secondary" href="/healing">報告書を見る</a>
+        </div>
+      </header>
+      <div id="hl-run-reason" class="hl-run-reason"></div>
+
       <!-- ═══════════ 実行 ═══════════ -->
       <section id="hl-view-run">
 
@@ -141,6 +154,10 @@
             {% endif %}
           </div>
         </div>
+
+        {# 判断の文脈: 接続先・実行・PR・報告書を 1 行に。承認の前に残っている問題の件数を判断ボタンの直下に出す。 #}
+        <div class="c-context hl-run-context" id="hl-run-context" hidden></div>
+        <div class="hl-blockers" id="hl-blockers" hidden aria-live="polite"></div>
 
         {% if hl_admin %}
         <div class="hl-confirm" id="hl-merge-confirm" hidden inert>
@@ -273,7 +290,7 @@
         {% endif %}
 
         <div class="hl-table-wrap">
-          <table class="data dashboard-table hl-projects-table">
+          <table class="data dashboard-table c-table hl-projects-table">
             <thead><tr><th class="hl-th-nowrap">名前</th><th class="hl-th-nowrap">リポジトリ</th><th class="hl-th-nowrap">ブランチ</th><th class="hl-th-nowrap">検証コマンド</th><th class="hl-th-nowrap">実行者</th><th class="hl-th-nowrap">毎日の見張り</th><th class="hl-th-nowrap">操作</th></tr></thead>
             <tbody id="hl-projects"></tbody>
           </table>
@@ -298,7 +315,7 @@
           </div>
         </div>
         <div class="hl-table-wrap">
-          <table class="data dashboard-table hl-runs-table">
+          <table class="data dashboard-table c-table hl-runs-table">
             <thead><tr><th>状態</th><th>開始</th><th class="num">所要時間</th><th>対象</th><th class="num">周回</th><th class="num">直した件数</th><th>PR</th><th>操作</th></tr></thead>
             <tbody id="hl-runs"></tbody>
           </table>
@@ -307,6 +324,7 @@
           まだ実行がありません。<br>
           「実行」で対象のコードベースを選び、ヒーリングを開始してください。
         </div>
+        <div id="hl-runs-state"></div>
         <div class="hl-more-row"><button type="button" class="btn-outline-sm" id="hl-runs-more" hidden>もっと見る</button></div>
       </section>
 

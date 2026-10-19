@@ -79,3 +79,18 @@ a.btn{text-decoration:none}a.btn[aria-disabled=true]{opacity:.45;pointer-events:
 
 .bt-truth{font-size:12px;color:var(--tx2);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:6px 12px;margin-bottom:12px}
 .kpi.nr b{color:var(--tx3);font-size:16px}
+
+/* Wave4: page header・状態の理由・4 段の状態（生成済み / 書き出し済み / 実行済み / 確認済み）・状態表示 */
+.bt-head{padding:0 0 8px}
+.bt-head .c-page-head__desc{max-width:62ch}
+.bt-reason{margin-bottom:12px}
+.bt-stages{list-style:none;margin:0 0 12px;padding:0;display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:8px}
+.bt-stages[hidden]{display:none}
+.bt-stage{display:flex;flex-direction:column;align-items:flex-start;gap:4px;min-width:0;padding:8px 12px;border:1px solid var(--line);border-radius:8px;background:var(--sf)}
+.bt-stage small{font-size:10.5px;letter-spacing:.06em;color:var(--tx3)}
+.bt-stage span:last-child{font-size:11.5px;color:var(--tx2);overflow-wrap:anywhere}
+.bt-state{min-width:0}
+.bt-state:not(:empty){margin-bottom:12px}
+.bt-state[hidden]{display:none}
+.bt-head .c-btn:disabled{opacity:.5;cursor:not-allowed}
+@media (max-width:900px){.bt-steps{grid-template-columns:repeat(2,minmax(0,1fr))}.bt-addform{grid-template-columns:1fr 1fr}.bt-content{padding:12px}}

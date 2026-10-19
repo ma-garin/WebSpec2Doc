@@ -2,7 +2,7 @@
  *
  * 色は ta2.css の :root トークンを使う。healing.html が ta2.css を読み損ねて
  * トークンが全滅した事故があったため、ここではすべてフォールバック付きで書く。
- * PC 専用。メディアクエリは足さない。
+ * PC 専用だが、816〜1920px で横スクロールを出さない（末尾のメディアクエリ）。
  */
 
 /* ── 1 画面に収める（ta2.css の .main / .ed-b と同じ型）──────────
@@ -466,4 +466,49 @@
   font-size: 12.5px;
   z-index: 60;
   box-shadow: 0 8px 24px rgba(16, 24, 40, .18);
+}
+
+/* ── 判断の文脈（C 共通部品との接続） ───────────────────────────── */
+.hl-page-head { flex: 0 0 auto; padding: 0; }
+.hl-page-head[hidden] { display: none; }
+#hl-ws-reason:empty { display: none; }
+#hl-ws-reason { flex: 0 0 auto; }
+.hl-doc-context { flex: 0 0 auto; }
+.hl-doc-context[hidden] { display: none; }
+.hl-doc-context a { color: var(--color-primary-dark, #1D4ED8); }
+.hl-page-reports .hl-table-wrap.c-table-wrap { max-height: none; }
+.hl-page-reports .hl-table-wrap .hl-reports-table.c-table th { height: auto; }
+.hl-nested-row[hidden] { display: none; }
+.hl-nested-wrap { overflow-x: auto; }
+
+/* 承認ボタンの横（右の判断エリア）に出す阻害理由。 */
+.hl-blockers {
+  display: flex; flex-direction: column; gap: 4px; padding: 8px 10px; font-size: 12px;
+  border: 1px solid var(--color-border, var(--line, #D0D5DD)); border-radius: 8px;
+  background: var(--color-surface-3, var(--bg, #F9FAFB)); color: var(--color-text-secondary, var(--tx2, #475467));
+}
+.hl-blockers-lead { color: var(--color-text, var(--tx, #101828)); }
+.hl-blockers-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 3px; }
+.hl-blockers-list li { line-height: 1.4; }
+.hl-blocker {
+  display: inline-block; min-width: 3.2em; text-align: center; padding: 0 6px; border-radius: 999px;
+  border: 1px solid var(--color-border, #D0D5DD); background: var(--color-surface, #fff);
+  font-variant-numeric: tabular-nums;
+}
+.hl-blocker.is-err { border-color: var(--color-error, #DC2626); color: var(--color-error-tx, #991B1B); background: var(--color-error-bg, #FEF2F2); font-weight: 700; }
+.hl-blocker.is-warn { border-color: var(--color-warning, #D97706); color: var(--color-warning-tx, #92400E); background: var(--color-warning-bg, #FFFBEB); font-weight: 700; }
+.hl-blockers .hl-doc-note { margin: 2px 0 0; }
+
+/* ── 幅への追従（816〜1920px。横スクロールを出さない） ───────────── */
+@media (max-width: 1100px) {
+  .hl-doc-wrap { grid-template-columns: minmax(0, 1fr); }
+  .hl-doc-actions { position: static; }
+  .hl-doc { padding: 18px 16px; }
+  .hl-list-head { flex-wrap: wrap; }
+}
+@media (max-width: 816px) {
+  .hl-page-reports .app-content, .hl-page-report .app-content { padding: 12px; }
+  .hl-nested-wrap { padding: 8px 8px 12px; }
+  .hl-cell-action { text-align: left; white-space: normal; }
+  .hl-cell-when { white-space: normal; }
 }

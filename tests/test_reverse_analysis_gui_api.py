@@ -295,3 +295,18 @@ def test_run_end_to_end_with_real_rea(client, monkeypatch):
     assert rows["static"]["after"] > 0 and rows["static"]["before"] == 0
     assert rows["api_runtime"]["before"] == rows["api_runtime"]["after"] == 1
     assert all(e["method"] is None for e in body["evidence"] if e["origin"] == "static")
+
+
+# ------------------------------------------------------------------ C. Hybrid 統合（静的な契約）
+
+
+def test_gui_uses_ws2d_parts_and_keeps_product_truth():
+    """REA タブは WS2D の部品で描き、既存ドロワーを持たず、実測 API を増分に数えない。"""
+    js = (ROOT / "static/js/ta2/ws-reverse.js").read_text(encoding="utf-8")
+    for part in ("W.status.html", "W.evidence.html", "W.kpis(", "W.state(", "W.reason(", "W.drawer.open("):
+        assert part in js, part
+    assert "rv-drawer" not in js
+    assert "変化なし・増分に数えない" in js
+    for label in ("未認証実測", "observed_auth", "未確認"):
+        assert label in js, label
+    assert "/static-routes/probe" in js

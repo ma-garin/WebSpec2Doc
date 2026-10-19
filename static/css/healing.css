@@ -915,3 +915,45 @@ table.hl-projects-table td { padding-top: 6px; padding-bottom: 6px; }
 }
 .hl-monitor-now { padding: 2px 8px; font-size: 12px; }
 .hl-monitor-note { margin-top: 3px; font-size: 11px; color: var(--hl-text-3, #667085); }
+
+/* ── 判断の文脈（C 共通部品との接続） ─────────────────────────────
+   page header・状態の理由・文脈行・承認前の阻害理由。色は tokens.css の意味色を使う。 */
+.hl-page-head { padding: 0 0 8px; }
+.hl-run-reason:empty { display: none; }
+.hl-run-context { margin: 0 0 8px; }
+.hl-run-context a { color: var(--color-primary-dark, #1D4ED8); }
+.hl-blockers {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px;
+  margin: 0 0 10px; padding: 6px 10px; font-size: 12px;
+  border: 1px solid var(--color-border, #D0D5DD); border-radius: 8px;
+  background: var(--color-surface-3, #F9FAFB); color: var(--color-text-secondary, #475467);
+}
+.hl-blockers[hidden] { display: none; }
+.hl-blockers-lead { font-weight: 700; color: var(--color-text, #101828); }
+.hl-blocker {
+  display: inline-block; padding: 1px 8px; border-radius: 999px; font-variant-numeric: tabular-nums;
+  border: 1px solid var(--color-border, #D0D5DD); background: var(--color-surface, #fff);
+}
+.hl-blocker.is-err { border-color: var(--color-error, #DC2626); color: var(--color-error-tx, #991B1B); background: var(--color-error-bg, #FEF2F2); font-weight: 700; }
+.hl-blocker.is-warn { border-color: var(--color-warning, #D97706); color: var(--color-warning-tx, #92400E); background: var(--color-warning-bg, #FFFBEB); font-weight: 700; }
+.hl-blockers-note { flex: 1 1 220px; min-width: 0; }
+
+/* ── 幅への追従（816〜1920px。横スクロールを出さない） ─────────────── */
+@media (max-width: 1280px) {
+  .hl-run-panes { grid-template-columns: minmax(0, 1fr) minmax(0, 360px); }
+}
+@media (max-width: 1024px) {
+  .hl-run-panes, .hl-run-panes:has(.hl-log-card[hidden]) { grid-template-columns: minmax(0, 1fr); }
+  .hl-run-log-pane { min-height: 260px; }
+  .hl-hero-grid { grid-template-columns: minmax(0, 1fr); }
+  .hl-form-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  #hl-view-run { grid-template-rows: auto auto; }
+  .hl-run-top { overflow: visible; }
+}
+@media (max-width: 816px) {
+  /* 一覧は c-table のカード表示に任せる。固定幅と省略を外す。 */
+  .hl-table-wrap > table { min-width: 0; }
+  .hl-projects-table, .hl-runs-table { table-layout: auto; }
+  .hl-projects-table td, .hl-runs-table td { overflow: visible; white-space: normal; width: auto !important; }
+  .hl-projects-table th, .hl-runs-table th { width: auto !important; }
+}

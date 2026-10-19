@@ -264,6 +264,31 @@
     words.forEach(function (w) { if (w) out = out.split(esc(w)).join('<mark>' + esc(w) + '</mark>'); });
     return out;
   }
+  /* 指摘の根拠: 文書（本文の引用あり）／推論（引用なし）／未確認（作成者に質問中）を形＋文字で示し、詳細は WS2D.drawer に出す */
+  function evCode(f) { return f.certainty === '要確認' ? 'unverified' : (f.quote ? 'document' : 'inferred'); }
+  function evRow(f) {
+    var ws = window.WS2D;
+    if (!ws || !ws.evidence) return '';
+    return '<span class="dv-evrow">' + ws.evidence.html(evCode(f)) + '<button type="button" class="dv-evbtn" data-ev-fid="' + esc(f.id) + '">根拠を見る</button></span>';
+  }
+  function openEvidence(fid, btn) {
+    var f = ((rv() || {}).findings || []).filter(function (x) { return x.id === fid; })[0];
+    if (!f || !window.WS2D || !WS2D.drawer) return;
+    var code = evCode(f);
+    var facts = [], inf = [], lim = [];
+    if (f.quote) facts.push({ label: '本文の該当箇所', value: f.quote });
+    if (f.origin === 'auto') inf.push('自動検出の規則による候補です。人が確かめるまで確定した指摘ではありません。');
+    if (!f.quote) lim.push('本文の引用がありません。該当箇所を本文で確かめてください。');
+    if (code === 'unverified') lim.push('作成者に質問中です。回答が届くまで未確認です。');
+    var src = [{ label: '位置', value: f.location || '—' }];
+    if (f.viewpoint) src.push({ label: '観点', value: f.viewpoint });
+    src.push({ label: '起票', value: f.raised_by || (f.origin === 'auto' ? '自動候補' : '—') });
+    WS2D.drawer.open({ title: '指摘 ' + f.id + ' の根拠', state: code, stateReason: { document: '本文の引用があります。', inferred: '本文の引用がなく、推論です。', unverified: '作成者への確認待ちです。' }[code], claim: f.message, facts: facts, inferences: inf, limitations: lim, sources: src, returnFocus: btn });
+  }
+  document.addEventListener('click', function (ev) {
+    var b = ev.target.closest && ev.target.closest('[data-ev-fid]');
+    if (b) { ev.preventDefault(); openEvidence(b.getAttribute('data-ev-fid'), b); }
+  });
   function findingCard(f, withActs) {
     var s = sev(f.severity);
     var acts = '';
@@ -277,7 +302,7 @@
     return '<div class="f"><div class="top"><span class="chip ' + SEV_CLS[s] + '">' + SEV[s] + '</span><b>' + esc(f.id) + '</b>' +
       (f.viewpoint ? '<span class="ck">観点: ' + esc(f.viewpoint) + '</span>' : '') +
       (f.checklist_item ? '<span class="chip c-auto">' + esc(CK_LABEL[f.checklist_item] || f.checklist_item) + '</span>' : '') +
-      '<span class="loc">' + esc(f.location) + '</span></div><div>' + esc(f.message) + '</div>' +
+      '<span class="loc">' + esc(f.location) + '</span>' + evRow(f) + '</div><div>' + esc(f.message) + '</div>' +
       '<div class="role">起票: ' + esc(f.raised_by || (f.origin === 'auto' ? '自動候補' : '')) + '・状態: ' + esc(STATUS[f.status] || f.status) +
       (f.certainty === '要確認' ? '・作成者に質問中' : '') + '</div>' + acts + '</div>';
   }
@@ -406,13 +431,13 @@
     var sevOpt = function (v) { return ['critical', 'major', 'minor'].map(function (k) { return '<option value="' + k + '"' + (k === v ? ' selected' : '') + '>' + SEV[k] + '</option>'; }).join(''); };
     var stOpt = function (v) { return ['adopted', 'fixed', 'verified', 'rejected'].map(function (k) { return '<option value="' + k + '"' + (k === v ? ' selected' : '') + '>' + STATUS[k] + '</option>'; }).join(''); };
     part(view, 'body').innerHTML = (pend ? '<div class="role" style="margin-bottom:8px">未検討の候補が ' + pend + ' 件残っています。</div>' : '') +
-      '<table class="dv-t"><thead><tr><th>番号</th><th>重大度</th><th>指摘</th><th>場所</th><th>起票</th><th>状態</th><th>作成者の対応結果</th><th></th></tr></thead><tbody>' +
+      '<div style="overflow-x:auto;max-width:100%"><table class="dv-t"><thead><tr><th>番号</th><th>重大度</th><th>指摘</th><th>場所</th><th>起票</th><th>状態</th><th>作成者の対応結果</th><th></th></tr></thead><tbody>' +
       fs.map(function (f) {
         return '<tr data-fid="' + esc(f.id) + '"><td><b>' + esc(f.id) + '</b></td><td><select data-t="sev">' + sevOpt(sev(f.severity)) + '</select></td>' +
-          '<td>' + esc(f.message) + (f.answer ? '<div class="role">回答: ' + esc(f.answer) + '</div>' : '') + '</td><td class="loc">' + esc(f.location) + '</td><td>' + esc(f.raised_by || '') + '</td>' +
+          '<td>' + esc(f.message) + evRow(f) + (f.answer ? '<div class="role">回答: ' + esc(f.answer) + '</div>' : '') + '</td><td class="loc">' + esc(f.location) + '</td><td>' + esc(f.raised_by || '') + '</td>' +
           '<td><select data-t="st">' + stOpt(f.status) + '</select></td><td><input type="text" data-t="disp" value="' + esc(f.disposition || '') + '" style="width:100%"></td>' +
           '<td><button type="button" class="b" data-t="save">保存</button></td></tr>';
-      }).join('') + '</tbody></table>';
+      }).join('') + '</tbody></table></div>';
     part(view, 'body').onclick = function (ev) {
       var b = ev.target.closest('[data-t="save"]'); if (!b) return;
       var tr = b.closest('tr');

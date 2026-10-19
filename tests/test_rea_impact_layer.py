@@ -138,3 +138,22 @@ def test_authenticated_observed_label_and_metric():
     assert routes["r2"]["reach_label"] == "保存済みの認証状態でも未確認"
     r0 = L.build_layer("s", _ev(DEPS, EVID), "b.js", None)
     assert r0["metrics"]["after"]["observed_routes_authenticated"] == 0
+
+
+def test_flow_summary_stages_blockers_and_link():
+    probe = {"r1": {"status": "observed", "authenticated": True}, "r2": {"status": "observed"}}
+    r = L.build_layer("s", _ev(DEPS, EVID), "b.js", probe=probe)
+    f = r["flow"]
+    assert f["stages"]["change"] == 1 and f["stages"]["routes"] == 2
+    assert f["route_reach"] == {"observed_auth": 1, "observed": 1, "unverified": 0}
+    assert f["link"]["state"] == "unset"
+    assert {b["code"] for b in f["blockers"]} >= {"ambiguous"}
+    assert all(row["reach_class"] in ("observed_auth", "observed", "unverified") for row in f["route_rows"])
+
+
+def test_flow_blockers_unverified_and_no_tests():
+    f = L.build_layer("s", _ev(DEPS, EVID), "b.js")["flow"]
+    codes = {b["code"]: b["count"] for b in f["blockers"]}
+    assert codes["routes_unverified"] == 2
+    assert ("tests_zero" in codes) == (f["stages"]["tests"] == 0)
+    assert "flow" not in L.build_layer("s", _ev(DEPS, EVID))

@@ -1,6 +1,33 @@
         <!-- ===== 生成ビュー（4ステップウィザード） ===== -->
         <section class="view" id="view-generate">
 
+          {% if app_mode %}
+          <section class="doc-app-proto" role="note" aria-labelledby="doc-app-proto-title">
+            <h2 id="doc-app-proto-title" class="doc-app-proto__title"><span class="doc-app-proto__tag">試作</span>ドキュメント作成(app)は試作です</h2>
+            <p class="doc-app-proto__reason c-reason">実解析は未対応のため、サンプルデータで表示しています</p>
+            <div class="doc-app-proto__cols">
+              <div class="doc-app-proto__col">
+                <h3>できること</h3>
+                <ul>
+                  <li>サンプルアプリ SampleShop で出力の形を確かめる</li>
+                  <li>画面仕様書・遷移図・フォーム定義の見本を見る</li>
+                </ul>
+              </div>
+              <div class="doc-app-proto__col doc-app-proto__col--no">
+                <h3>できないこと</h3>
+                <ul>
+                  <li>APK・.app の実解析</li>
+                  <li>エミュレータ・実機での操作</li>
+                  <li>未到達 Activity の洗い出し</li>
+                  <li>自分のアプリの解析</li>
+                </ul>
+              </div>
+            </div>
+            <p class="doc-app-proto__data">使うデータ: サンプルデータ（固定 6 画面）</p>
+            <span class="visually-hidden">【試作（サンプルデータ）】実解析は未対応</span>
+          </section>
+          {% endif %}
+
           <!-- ウィザードステップインジケーター -->
           <div class="wizard-progress" id="wizard-progress-bar" style="margin-bottom:16px;display:none">
             <div class="wizard-step-node is-active" id="ws-1">
@@ -32,11 +59,6 @@
               {# ドキュメント作成(app): URL の代わりにアプリを指定する。値は #url-input に
                  https://app.<package> として同期し（doc-app-mode.js）、以降の画面解析・実行・
                  レポートは URL 版と同じ経路を通る。 #}
-              <div class="app-prototype-note" role="note" style="border:1px solid var(--color-border,#999);border-left:4px solid #b26a00;background:var(--color-surface-alt,#fff8e8);padding:10px 12px;margin-bottom:12px;font-size:13px;line-height:1.6">
-                <strong>【試作（サンプルデータ）】</strong>
-                この画面はサンプルアプリ（SampleShop）の画面の流れを再生する試作です。APK・.app の実解析、エミュレータ・実機での操作、未到達 Activity の洗い出しはまだ行いません（実解析は未対応）。<br>
-                できること: 出力の形を確かめる ／ できないこと: 自分のアプリの解析
-              </div>
               <label class="form-label">デモ用サンプルアプリ <span style="color:var(--color-critical)">*</span></label>
               <div class="discover-scope-chips" role="radiogroup" aria-label="プラットフォーム（試作のため使用しません）" style="margin-bottom:8px">
                 <label class="checkbox-chip"><input type="radio" name="app-platform" value="android" checked disabled> Android（.apk / .aab）</label>
@@ -62,7 +84,7 @@
               <div class="input-row" style="gap:8px">
                 <input type="url" id="url-input" class="url-input" placeholder="https://example.com" autocomplete="url" list="url-history-list" style="flex:1"{% if app_mode %} hidden{% endif %} />
                 <datalist id="url-history-list"></datalist>
-                <button type="button" id="discover-btn" class="btn-primary" style="height:40px;padding:0 16px;font-size:13px;white-space:nowrap">画面解析</button>
+                <button type="button" id="discover-btn" class="btn-primary" style="height:40px;padding:0 16px;font-size:13px;white-space:nowrap">{% if app_mode %}サンプルで出力を見る{% else %}画面解析{% endif %}</button>
               </div>
               <div id="url-input-message" class="input-field-message"></div>
 
@@ -290,7 +312,7 @@
                   </div>
 
                   <div class="wizard-footer" style="justify-content:flex-end">
-                    <button type="submit" class="btn-primary" id="submit-btn" style="height:44px;padding:0 28px;font-size:15px">解析開始</button>
+                    <button type="submit" class="btn-primary" id="submit-btn" style="height:44px;padding:0 28px;font-size:15px">{% if app_mode %}サンプルで出力を見る{% else %}解析開始{% endif %}</button>
                   </div>
                 </div>
               </form>
@@ -299,6 +321,7 @@
 
           <!-- ステップ3: 実行 -->
           <div id="execution-view" class="execution-view hidden">
+            {% if app_mode %}<p class="doc-app-band" role="status">サンプルデータの再生結果（実アプリの仕様ではありません）</p>{% endif %}
             <div class="execution-topbar">
               <div class="execution-topbar-head">
                 <h2 class="execution-title" id="exec-title">解析中…</h2>

@@ -379,3 +379,24 @@ a.btn{text-decoration:none}
   .stage-wrap,.spec-grid,.rep-wrap,#p-report .rep-wrap{grid-template-columns:minmax(0,1fr)}
   .stage-wrap,.spec-grid,.rep-wrap{overflow:auto}
 }
+
+/* System02 実行と結果 #p-run — リバース解析の観点（C. Hybrid）。816〜1920px で崩さない */
+#p-run #run-reaview,#p-run .rt-wrap{min-width:0;max-width:100%}
+#p-run .rt-wrap{display:flex;flex-direction:column;gap:12px}
+#p-run .rt-kpis{grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}
+#p-run .rt-kpis .c-kpi{min-width:0}
+#p-run .rt-split{min-width:0}
+#p-run .rt-tablehost{min-width:0;max-width:100%}
+#p-run .rt-tablehost .c-table-wrap{max-height:420px;max-width:100%;overflow:auto}
+#p-run .rt-tablehost .c-table td:first-child{min-width:220px}
+#p-run .rt-tablehost .c-table td{height:auto;padding-top:6px;padding-bottom:6px}
+#p-run .rt-run-target{font-weight:700}
+#p-run .rt-run-na,#p-run .rt-run-none{color:var(--tx3)}
+#p-run .rt-filterbar:empty{display:none}
+@media (max-width:1024px){
+  #p-run .rt-split{grid-template-columns:minmax(0,1fr)}
+}
+@media (max-width:816px){
+  #p-run .rt-tablehost .c-table-wrap{max-height:none;overflow:visible}
+  #p-run .rt-tablehost .c-table td:first-child{min-width:0}
+}

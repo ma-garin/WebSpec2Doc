@@ -1,4 +1,4 @@
-// CLI モードの案内ページ。実行はせず、貼り付けられるコマンドを組み立てるだけ。
+// CLI / API の案内ページ。実行はせず、貼り付けられるコマンドを組み立てるだけ。
 (function () {
   'use strict';
 
@@ -13,6 +13,7 @@
     doc:        ['url', 'depth', 'max'],
     autorun:    ['url', 'depth', 'max'],
     test:       ['domain'],
+    ci:         ['domain', 'failon'],
     sites:      [],
     show:       ['domain'],
     viewpoints: [],
@@ -26,12 +27,13 @@
   function build() {
     const cmd = cmdSel.value;
     const use = FIELDS[cmd] || [];
-    ['url', 'domain', 'depth', 'max'].forEach((k) => {
+    ['url', 'domain', 'depth', 'max', 'failon'].forEach((k) => {
       const el = $(`cli-${k}-field`);
       if (el) el.classList.toggle('cli-hidden', !use.includes(k));
     });
 
     const parts = ['python', 'src/cli.py', cmd];
+    if (cmd === 'ci') parts.push('gate');
     if (use.includes('url') && $('cli-url').value) parts.push('--url', shellQuote($('cli-url').value));
     if (use.includes('domain') && $('cli-domain').value) parts.push('--domain', shellQuote($('cli-domain').value));
     if (use.includes('depth') && $('cli-depth').value) parts.push('--depth', $('cli-depth').value);
@@ -39,25 +41,39 @@
       // ドキュメント作成側のフラグ名は本体 CLI に合わせる
       parts.push('--max-pages', $('cli-max').value);
     }
+    if (use.includes('failon') && $('cli-failon').value) parts.push('--fail-on', $('cli-failon').value);
     if ($('cli-json').checked) parts.push('--json');
     out.textContent = parts.join(' ');
   }
 
-  ['cli-cmd', 'cli-url', 'cli-domain', 'cli-depth', 'cli-max', 'cli-json'].forEach((id) => {
+  ['cli-cmd', 'cli-url', 'cli-domain', 'cli-depth', 'cli-max', 'cli-failon', 'cli-json'].forEach((id) => {
     const el = $(id);
     if (el) el.addEventListener(el.tagName === 'SELECT' || el.type === 'checkbox' ? 'change' : 'input', build);
   });
 
-  $('cli-copy')?.addEventListener('click', (e) => {
-    const btn = e.currentTarget;
-    navigator.clipboard.writeText(out.textContent).then(() => {
-      const orig = btn.textContent;
-      btn.textContent = 'コピーしました';
-      setTimeout(() => { btn.textContent = orig; }, 1500);
-    }).catch(() => {
-      // クリップボードが使えない環境でも、何が起きたか分かるようにする
-      btn.textContent = 'コピーできません（手で選択してください）';
-    });
+  function selectCommand() {
+    // クリップボードが使えないときは、手でコピーできるよう選択状態にする
+    const sel = window.getSelection && window.getSelection();
+    if (!sel) return;
+    const r = document.createRange();
+    r.selectNodeContents(out);
+    sel.removeAllRanges();
+    sel.addRange(r);
+    out.classList.add('is-selected');
+  }
+
+  function notify(msg, kind) {
+    if (window.WS2D && window.WS2D.toast) window.WS2D.toast(msg, kind);
+  }
+
+  $('cli-copy')?.addEventListener('click', () => {
+    const text = out.textContent;
+    const fail = () => { selectCommand(); notify('コピーできませんでした。手動でコピーしてください', 'warning'); };
+    if (!navigator.clipboard || !navigator.clipboard.writeText) { fail(); return; }
+    navigator.clipboard.writeText(text).then(() => {
+      out.classList.remove('is-selected');
+      notify('コピーしました（端末に貼り付けて実行してください）', 'success');
+    }).catch(fail);
   });
 
   build();

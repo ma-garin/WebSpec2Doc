@@ -18,7 +18,7 @@ def test_static_route_is_not_reached():
     assert "到達は未確認" in v["text"] and "到達済み" not in v["text"] and "実行済み" not in v["text"]
     assert v["source_label"] == "静的候補由来" and v["evidence_state"] == "inferred"
     assert out["metrics"] == {"before": 10, "after": 11, "new": 1, "with_evidence": 1,
-                              "runnable": 0, "probed": 0, "before_basis": "既存のテスト候補数"}  # fmt: skip
+                              "runnable": 0, "executed": None, "probed": 0, "before_basis": "既存のテスト候補数"}  # fmt: skip
 
 
 def test_null_method_is_not_filled_with_get():
@@ -135,3 +135,52 @@ def test_auth_attempted_auth_required_is_not_runnable():
     assert by["r1"]["reach_label"] == "保存済みの認証状態でも未確認" and by["r1"]["runnable"] is False
     assert by["r1"]["reach_authenticated"] is False
     assert by["r2"]["reach_label"] == "未探索" and by["r2"]["reach_authenticated"] is False
+
+
+# ---- 実行対象 ≠ 実行済み / 区分の語彙（C_CONTRACT と一致）----
+def _obs(*ids, auth=False):
+    return {i: {"status": "observed", "authenticated": auth, "observed_at": "2026-10-20"} for i in ids}
+
+
+def _routes():
+    return _ok([_ev("r1", "route", "static", "a", state="static"), _ev("r2", "route", "static", "b", state="static"),
+                _ev("r3", "route", "static", "c", state="inferred"), _ev("r4", "route", "static", "d", state="unverified")])  # fmt: skip
+
+
+def test_no_test_data_means_executed_is_null_not_zero():
+    out = build_viewpoints(_routes(), 0, _obs("r1", "r2"), tests=None)
+    assert out["metrics"]["runnable"] == 2 and out["metrics"]["executed"] is None
+    assert all(v["execution"]["measured"] is False and v["execution"]["count"] is None for v in out["viewpoints"])
+
+
+def test_runnable_is_not_executed_without_run_record():
+    tests = [{"id": "T1", "status": "new", "last": {}}, {"id": "T2", "status": "pass", "last": {"run_id": "x"}}]  # リンク無し
+    out = build_viewpoints(_routes(), 0, _obs("r1", "r2"), tests=tests)
+    assert out["metrics"]["runnable"] == 2 and out["metrics"]["executed"] == 0
+    r1 = next(v for v in out["viewpoints"] if v["evidence_id"] == "r1")
+    assert r1["execution"]["target"] is True and r1["execution"]["label"] == "未実行"
+
+
+def test_executed_only_when_test_linked_and_ran():
+    tests = [{"id": "T1", "evidence_id": "r1", "status": "pass", "last": {"run_id": "a", "at": "2026-10-20T01:00"}},
+             {"id": "T2", "evidence_id": "r1", "status": "fail", "last": {"run_id": "b", "at": "2026-10-20T02:00"}},
+             {"id": "T3", "evidence_id": "r2", "status": "new", "last": {}}]  # fmt: skip
+    out = build_viewpoints(_routes(), 0, _obs("r1", "r2"), tests=tests)
+    by = {v["evidence_id"]: v for v in out["viewpoints"]}
+    assert out["metrics"]["executed"] == 1 and out["metrics"]["runnable"] == 2
+    assert by["r1"]["execution"]["count"] == 2 and by["r1"]["execution"]["last_result"] == "fail"
+    assert by["r2"]["execution"]["count"] == 0
+
+
+def test_origin_vocabulary_matches_contract():
+    ev = [*_routes()["evidence"], _ev("rt", "api", "runtime", "/api/z", method="GET", state="observed")]
+    out = build_viewpoints(_ok(ev), 3, _obs("r1", auth=True), tests=[])
+    by = {v["evidence_id"]: v for v in out["viewpoints"]}
+    assert by["r1"]["origin_label"] == "認証済み実測" and by["r1"]["ev_code"] == "observed_auth"
+    assert by["r2"]["origin_label"] == "静的" and by["r2"]["ev_code"] == "static"
+    assert by["r3"]["origin_label"] == "REA 追加" and by["r3"]["ev_code"] == "inferred"
+    assert by["r4"]["origin_label"] == "未確認" and by["r4"]["ev_code"] == "unverified"
+    assert by["rt"]["origin_label"] == "元候補"
+    probe_noauth = build_viewpoints(_routes(), 0, _obs("r1"), tests=[])["viewpoints"][0]
+    assert probe_noauth["origin_label"] == "未認証実測" and probe_noauth["ev_code"] == "observed"
+    assert {v["origin_label"] for v in out["viewpoints"]} <= {"元候補", "REA 追加", "静的", "未認証実測", "認証済み実測", "未確認"}

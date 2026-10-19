@@ -22,8 +22,15 @@ from jinja2 import TemplateNotFound
 from web.audit_context import record_admin_event
 from web.auth import require_admin
 from web.config import OUTPUT_DIR
-from web.services.orchestration import conductor, goals, onboarding, run_store
-from web.services.orchestration import workflow_actions, workflow_view
+from web.services.orchestration import (
+    conductor,
+    goals,
+    home_summary,
+    onboarding,
+    run_store,
+    workflow_actions,
+    workflow_view,
+)
 from web.services.orchestration.workflow_actions import ActionError
 from web.tenancy import scoped_output_dir
 from web.validation import _domain_of
@@ -194,10 +201,24 @@ def orchestration_page():
     （開発・比較用）。ここは新画面のテンプレートが無ければ 404 を返す
     （別担当が同時に作っているため）。
     """
+    site = _site_arg()
+    # ?site= か ?mode=detail があれば個別実行詳細（5 工程）、無ければ日常運用ホーム。
+    mode = "detail" if (site or request.args.get("mode") == "detail") else "home"
     try:
-        return render_template("orchestration.html", site=_site_arg())
+        return render_template("orchestration.html", site=site, mode=mode)
     except TemplateNotFound:
         return {"error": "画面がまだありません。"}, 404
+
+
+@bp.get("/api/home/summary")
+def api_home_summary():
+    """指揮ホーム用の全サイト集計（読み取りのみ）。?view= は all/human/failed/unverified。"""
+    view = str(request.args.get("view", "all")).strip().lower()
+    try:
+        return home_summary.build(_out(), view)
+    except Exception:  # noqa: BLE001
+        logger.exception("orchestration: ホーム集計に失敗しました")
+        return {"error": "ホームの集計を読み込めませんでした。", "code": "summary_failed"}, 500
 
 
 @bp.get("/orchestration/<variant>")

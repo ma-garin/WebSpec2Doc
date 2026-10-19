@@ -979,4 +979,10 @@ def api_rea_test_viewpoints(domain: str) -> Any:
     from web.services import static_route_probe_store as probe_store
 
     probe = probe_store.by_evidence(probe_store.load(scoped_output_dir(OUTPUT_DIR), domain))
-    return build_viewpoints(site_evidence(domain), _existing_candidate_count(domain), probe)
+    try:
+        tests = (_store().load(domain) or {}).get("tests")
+        tests = tests if isinstance(tests, list) else []
+    except Exception:  # noqa: BLE001  実行記録が取れなければ「実行済み」は未計測(None)にする
+        logger.warning("テストの実行記録を取得できませんでした: %s", domain, exc_info=True)
+        tests = None
+    return build_viewpoints(site_evidence(domain), _existing_candidate_count(domain), probe, tests)

@@ -24,7 +24,7 @@
 
   <div class="app-main">
     {% set topbar_crumb = '指揮' %}
-    {% set topbar_title = 'サイト' %}
+    {% set topbar_title = '指揮ホーム' if mode == 'home' else '個別実行詳細' %}
     {% include 'partials/topbar.html' %}
 
     <main class="app-content" id="app-content">

@@ -319,13 +319,26 @@ textarea.cw-input { height: auto; padding: 7px 9px; resize: vertical; }
 /* ── 指揮ホーム（日常運用）。部品は c-hybrid.css。ここは配置だけ ── */
 .cw-home .app-content { overflow: auto; display: block; }
 .ch-home { max-width: 1280px; margin: 0 auto; padding-bottom: var(--space-6, 24px); }
-.ch-home .c-kpis { margin: var(--space-3, 12px) 0; }
+.ch-home .c-kpis { margin: var(--space-3, 12px) 0; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: var(--space-2, 8px); }
+/* 日常運用ホーム: サイト一覧が 1280px で最初の画面に入るよう、KPI を詰める */
+.ch-home .c-kpi { padding: var(--space-2, 8px) var(--space-3, 12px); }
+.ch-home .c-kpi__value { font-size: var(--text-xl, 20px); }
+.ch-home .c-kpi__sub { font-size: var(--text-xs, 11px); }
+/* サイト一覧: 名前を潰さず、操作リンクと日時を折り返さない（はみ出しは表の内側だけでスクロール） */
+.ch-home .c-table td:first-child { min-width: 200px; }
+.ch-home .c-table td[data-label="最終実行"] { white-space: nowrap; }
+.ch-home .c-table td[data-label="人の対応待ち"] { min-width: 150px; }
+.ch-site { display: flex; flex-direction: column; gap: var(--space-1, 4px); }
+.ch-site .ch-links { font-size: var(--text-xs, 12px); gap: var(--space-1, 4px); margin-left: calc(-1 * var(--space-1, 4px)); }
+/* 押せる大きさ 24px 以上（WCAG 2.2 2.5.8） */
+.ch-site .ch-links a, .ch-site .ch-link-off { display: inline-flex; align-items: center; min-height: 24px; min-width: 24px; padding: 0 var(--space-1, 4px); }
+.ch-cap { caption-side: top; padding: var(--space-2, 8px) var(--space-3, 12px); text-align: left; font-size: var(--text-xs, 12px); color: var(--color-text-secondary, #475569); }
 .ch-crumb { font-size: var(--text-sm, 13px); color: var(--color-text-secondary, #475569); margin: 0 0 var(--space-2, 8px); }
 .ch-ev { display: inline-flex; flex-wrap: wrap; gap: var(--space-1, 4px); }
 .ch-links { display: inline-flex; flex-wrap: wrap; gap: var(--space-2, 8px); align-items: center; }
-.ch-links a { color: var(--color-primary, #2563eb); font-weight: 600; text-decoration: none; }
-.ch-links a:hover { text-decoration: underline; }
-.ch-link-off { color: var(--color-text-disabled, #94a3b8); }
+.ch-links a { color: var(--color-primary, #2563eb); font-weight: 600; text-decoration: underline; text-underline-offset: 2px; }
+.ch-links a:hover { text-decoration-thickness: 2px; }
+.ch-link-off { position: relative; color: var(--color-text-secondary, #475569); text-decoration: line-through; cursor: not-allowed; }
 .ch-detail { margin-left: var(--space-2, 8px); }
 .ch-tab-n { font-variant-numeric: tabular-nums; color: var(--color-text-secondary, #475569); }
 .ch-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }

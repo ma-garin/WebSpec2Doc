@@ -1040,7 +1040,7 @@
       if (v === 'human') { return !!s.human_action; }
       if (v === 'failed') { return s.status === 'failed' || !!s.latest_failure; }
       if (v === 'unverified') {
-        return s.status === 'unverified' || !!(s.evidence && s.evidence.unverified > 0);
+        return s.status === 'unverified' || !s.evidence || s.evidence.unverified > 0;
       }
       return true;
     });
@@ -1068,7 +1068,7 @@
         sum.fact += s.evidence.fact; sum.inference += s.evidence.inference; sum.unverified += s.evidence.unverified;
       }
     });
-    [['fact', '事実（実測・記録）'], ['inference', '推論（静的・推論・曖昧）'], ['unverified', '未確認']].forEach(function (c) {
+    [['fact', '事実（実測・記録）'], ['inference', '推論（文書・静的・推論）'], ['unverified', '未確認（曖昧・未確認・利用不可）']].forEach(function (c) {
       var cell = el('div', 'c-split__cell c-split__cell--' + c[0]);
       cell.appendChild(el('span', 'c-split__label', c[1]));
       cell.appendChild(el('span', 'c-split__value', any ? String(sum[c[0]]) : '未計測'));
@@ -1086,7 +1086,8 @@
       { label: '失敗', value: c.failed, onClick: go('failed') },
       { label: '人の対応待ち', value: c.human_action, onClick: go('human') },
       { label: '承認待ち', value: c.awaiting_approval, sub: '修正案の報告書', onClick: go('human') },
-      { label: '未確認', value: c.unverified, sub: '解析結果があるサイトのみ', category: 'unverified', onClick: go('unverified') },
+      { label: '未確認', value: c.unverified, category: 'unverified', onClick: go('unverified'),
+        sub: '根拠の件数（解析結果があるサイトのみ）' + (c.unanalyzed ? '。未解析 ' + c.unanalyzed + ' サイト' : '') },
       { label: '今日の変更', value: c.changes_today, sub: '集計元なし' },
       { label: '今日のテスト', value: c.tests_today, sub: '実行の回数' },
       { label: '今日の修正', value: c.fixes_today, sub: '直す工程の回数' },
@@ -1179,16 +1180,21 @@
 
   function linkCell(site) {
     var box = el('span', 'ch-links');
-    [['s01', '01'], ['s02', '02'], ['s03', '03'], ['s09', '09'], ['s05', '05']].forEach(function (p) {
+    /* [キー, 番号, 名前, サイトを開いた状態で開けるか]。03・09・05 は入口へ行き、画面でサイトを選ぶ */
+    [['s01', '01', 'ドキュメント作成', true], ['s02', '02', 'テスト自動化', true], ['s03', '03', 'AutoRun', false],
+     ['s09', '09', '影響度分析', false], ['s05', '05', 'オートヒーリング', false]].forEach(function (p) {
       var href = site.links && site.links[p[0]];
       if (href) {
         var a = el('a', null, p[1]);
         a.href = href;
-        a.setAttribute('aria-label', 'System ' + p[1] + ' を開く（' + site.domain + '）');
+        var what = 'System ' + p[1] + ' ' + p[2] + ' を開く';
+        a.title = what + (p[3] ? '' : '（サイトは開いた画面で選びます）');
+        a.setAttribute('aria-label', what + (p[3] ? '（' + site.domain + '）' : '（入口。サイトは画面で選びます）'));
         box.appendChild(a);
       } else {
         var m = el('span', 'ch-link-off', p[1]);
-        m.title = '解析結果が無いため開けません';
+        m.title = 'System ' + p[1] + ' ' + p[2] + ': 解析結果が無いため開けません';
+        m.appendChild(el('span', 'ch-sr', '（' + p[2] + '。解析結果が無いため開けません）'));
         box.appendChild(m);
       }
     });
@@ -1232,17 +1238,22 @@
     }
     var wrap = el('div', 'c-table-wrap');
     var table = el('table', 'c-table');
-    var cap = el('caption', 'ch-sr', 'サイトごとの状態');
+    /* 何の記録から出した値かを表の上に書く（指揮の未実行を「未解析」と取り違えさせない） */
+    var cap = el('caption', 'ch-cap', 'サイトごとの状態。状態・工程・最終実行は指揮の実行記録、根拠の健全性はリバース解析の結果から。');
     table.appendChild(cap);
     var head = el('tr');
-    ['サイト', '現在の状態', '現在の工程', '最終実行', '根拠の健全性', '人の対応待ち', '最新の変更', '最新の失敗', '開く'].forEach(function (h) {
+    ['サイト・各 System へ', '現在の状態', '現在の工程', '最終実行', '根拠の健全性', '人の対応待ち', '最新の変更', '最新の失敗'].forEach(function (h) {
       var th = el('th', null, h); th.scope = 'col'; head.appendChild(th);
     });
     var thead = el('thead'); thead.appendChild(head); table.appendChild(thead);
     var tbody = el('tbody');
     rows.forEach(function (s) {
       var tr = el('tr');
-      cell(tr, 'サイト', el('strong', null, s.label || s.domain));
+      /* deep link はサイト名の直下に置く（列が増えて右端に隠れないように） */
+      var site = el('div', 'ch-site');
+      site.appendChild(el('strong', null, s.label || s.domain));
+      site.appendChild(linkCell(s));
+      cell(tr, 'サイト', site);
       cell(tr, '現在の状態', badge(W.status.html(s.status)));
       cell(tr, '現在の工程', s.stage ? s.stage.label : STAGE_NONE);
       cell(tr, '最終実行', s.last_run ? fmtAt(s.last_run.at) : '実行なし');
@@ -1250,7 +1261,6 @@
       cell(tr, '人の対応待ち', textOrNone(s.human_action));
       cell(tr, '最新の変更', textOrNone(s.latest_change));
       cell(tr, '最新の失敗', textOrNone(s.latest_failure));
-      cell(tr, '開く', linkCell(s));
       tbody.appendChild(tr);
     });
     table.appendChild(tbody);

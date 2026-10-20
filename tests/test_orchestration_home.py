@@ -9,7 +9,7 @@ from web.services.orchestration import home_summary
 
 COUNT_KEYS = {
     "sites", "ok", "running", "failed", "human_action", "awaiting_approval", "unverified",
-    "changes_today", "tests_today", "fixes_today", "reports_today",
+    "unanalyzed", "changes_today", "tests_today", "fixes_today", "reports_today",
 }
 SITE_KEYS = {
     "domain", "label", "status", "stage", "last_run", "evidence", "human_action",
@@ -94,7 +94,9 @@ def test_failure_and_view_filter(tmp_path, monkeypatch):
     assert res["counts"]["failed"] == 1
     assert res["counts"]["unverified"] == 3
     assert [s["domain"] for s in home_summary.build(tmp_path, "failed")["sites"]] == ["a.com"]
-    assert [s["domain"] for s in home_summary.build(tmp_path, "unverified")["sites"]] == ["b.com"]
+    # 根拠の結果が無い a.com も「未確認（解析結果なし）」なので未確認ビューに入る
+    assert sorted(s["domain"] for s in home_summary.build(tmp_path, "unverified")["sites"]) == ["a.com", "b.com"]
+    assert res["counts"]["unanalyzed"] == 1
     assert home_summary.build(tmp_path, "human")["sites"] == []
     # 未知の view は all
     assert len(home_summary.build(tmp_path, "zzz")["sites"]) == 2
@@ -103,8 +105,10 @@ def test_failure_and_view_filter(tmp_path, monkeypatch):
 
 def test_classify_evidence():
     got = home_summary.classify_evidence(
-        [{"state": "observed"}, {"state": "static"}, {"state": "inferred"}, {"state": "?"}])
-    assert got == {"fact": 1, "inference": 2, "unverified": 1}
+        [{"state": "observed"}, {"state": "static"}, {"state": "inferred"}, {"state": "?"},
+         {"state": "document"}, {"state": "ambiguous"}])
+    # 区分は WS2D.evidence.category と同じ（文書=推論・曖昧=未確認）
+    assert got == {"fact": 1, "inference": 3, "unverified": 2}
 
 
 def test_api_and_page_modes(client, tmp_path):

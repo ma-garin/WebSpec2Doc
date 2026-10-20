@@ -1,4 +1,4 @@
-// 初回オンボーディング（driver.js は static/vendor に固定版を同梱）。
+// 初回オンボーディング（ツアー部品は自前の static/js/wsd-tour.js）。
 (function () {
   'use strict';
 
@@ -82,12 +82,6 @@
   function addSkipButton(popover, opts) {
     popover.closeButton.setAttribute('aria-label', '操作ツアーをスキップ');
     popover.closeButton.setAttribute('title', 'スキップ');
-    // driver.js はポップオーバーのタイトルを <header> で描画するため、ページの
-    // banner ランドマークが2つになり axe の landmark-no-duplicate-banner に触れる。
-    // 見た目は変えずランドマークだけ無効化する（自製品の UX 監査で検出）。
-    if (popover.title && popover.title.tagName === 'HEADER') {
-      popover.title.setAttribute('role', 'presentation');
-    }
     if (popover.footerButtons.querySelector('.wsd-tour-skip')) return;
     const skip = document.createElement('button');
     skip.type = 'button';
@@ -95,14 +89,14 @@
     skip.textContent = 'スキップ';
     skip.addEventListener('click', () => {
       finishTour();
-      opts.driver.destroy();
+      opts.tour.destroy();
     });
     popover.footerButtons.prepend(skip);
   }
 
   function startTour() {
-    const driverFactory = window.driver && window.driver.js && window.driver.js.driver;
-    if (!driverFactory) {
+    const tourFactory = window.WsdTour && window.WsdTour.create;
+    if (!tourFactory) {
       if (typeof showToast === 'function') showToast('操作ツアーを読み込めませんでした', 'error');
       return;
     }
@@ -111,17 +105,8 @@
     if (typeof switchView === 'function') switchView('dashboard');
     setChecklistVisible(true);
 
-    activeTour = driverFactory({
-      animate: true,
-      allowClose: true,
-      allowKeyboardControl: true,
-      overlayClickBehavior: 'close',
-      popoverClass: 'wsd-onboarding-popover',
-      showProgress: true,
-      progressText: '{{current}} / {{total}}',
-      nextBtnText: '次へ',
-      prevBtnText: '戻る',
-      doneBtnText: '始める',
+    activeTour = tourFactory({
+      labels: { next: '次へ', prev: '戻る', done: '始める', close: '閉じる', progress: '{{current}} / {{total}}' },
       onPopoverRender: addSkipButton,
       onDestroyed: finishTour,
       steps: [

@@ -122,40 +122,6 @@ function _shortVisLabel(sc) {
   return (sc.title || sc.page_id).replace(/\s*[|｜]\s*.*/g, '').replace(/['"]/g, '').slice(0, 24) || sc.page_id;
 }
 
-// セルフホスト版のみを使用し、外部ネットワークへコードを取得しない。
-const _MERMAID_SOURCE = '/static/vendor/mermaid/mermaid.min.js';
-
-function _loadMermaid(cb) {
-  if (window.mermaid) {
-    cb();
-    return;
-  }
-  const existing = document.querySelector('script[data-lib="mermaid"]');
-  if (existing) {
-    existing.addEventListener('load', cb, { once: true });
-    return;
-  }
-  const tryLoad = () => {
-    const s = document.createElement('script');
-    s.src = _MERMAID_SOURCE;
-    s.dataset.lib = 'mermaid';
-    s.onload = cb;
-    s.onerror = () => {
-      s.remove();
-      const target = document.getElementById('uml-render-target');
-      if (target && typeof uiError === 'function') {
-        uiError(target, {
-          title: '遷移図ライブラリを読み込めませんでした',
-          message: 'ローカル資産が見つかりません。遷移表タブをご利用ください。',
-          onRetry: tryLoad,
-        });
-      }
-    };
-    document.head.appendChild(s);
-  };
-  tryLoad();
-}
-
 function _umlAlias(value) {
   return `N${String(value || '').replace(/[^a-zA-Z0-9_]/g, '_')}`;
 }
@@ -297,10 +263,8 @@ function _showUmlPanel(type, screens) {
     '<div class="hero-msg">テストケースを読み込んでいます…</div></div>' +
     '</div>';
   _renderUmlCasePane();
-  _loadMermaid(() => {
-    _renderUmlDiagram(type, screens, rows).then(() => {
-      setTimeout(_initUmlZoom, 100);
-    });
+  _renderUmlDiagram(type, screens, rows).then(() => {
+    setTimeout(_initUmlZoom, 100);
   });
 }
 
@@ -551,10 +515,8 @@ async function _renderUmlDiagram(type, screens, rows) {
     return;
   }
   try {
-    window.mermaid.initialize({ startOnLoad: false, theme: 'default', securityLevel: 'strict' });
-    const id = `uml-${type}-${Date.now()}`;
-    const rendered = await window.mermaid.render(id, source);
-    target.innerHTML = `<div class="uml-zoom-stage" id="uml-zoom-stage">${rendered.svg || rendered}</div>`;
+    const svg = window.WsdDiagram.render(_umlModel(type, screens, rows));
+    target.innerHTML = `<div class="uml-zoom-stage" id="uml-zoom-stage">${svg}</div>`;
     _prepareUmlZoom();
   } catch (e) {
     target.innerHTML = `<pre class="uml-source">${escHtml(source)}</pre>`;
@@ -634,6 +596,88 @@ function _umlSource(type, screens, rows) {
   if (type === 'activity') return _activityDiagram(rows);
   if (type === 'flowchart') return _flowchartDiagram(rows);
   return _sequenceDiagram(screens, rows);
+}
+
+// ---- 図モデル（WsdDiagram.render の入力。.mmd 文字列とは別に、同じ内容を構造で持つ）----
+function _diagText(value) {
+  return String(value || '').replace(/\s+/g, ' ').trim();
+}
+
+function _umlModel(type, screens, rows) {
+  if (type === 'communication') return _communicationModel(screens, rows);
+  if (type === 'activity') return _activityModel(rows);
+  if (type === 'flowchart') return _flowchartModel(rows);
+  return _sequenceModel(screens, rows);
+}
+
+function _sequenceModel(screens, rows) {
+  const diagramRows = rows.slice(0, 12);
+  const used = new Set();
+  diagramRows.forEach(r => { used.add(r.fromId); used.add(r.toId); });
+  return {
+    kind: 'sequence',
+    nodes: screens.filter(sc => used.has(sc.page_id))
+      .map(sc => ({ id: sc.page_id, label: `${_diagText(sc.page_id)}\n${_diagText(_shortVisLabel(sc))}`, shape: 'box' })),
+    edges: diagramRows.map(r => ({
+      from: r.fromId, to: r.toId, label: `${r.no} ${_diagText(r.event)}`,
+      style: r.event === 'フォーム送信' ? 'solid' : 'dashed',
+    })),
+  };
+}
+
+function _communicationModel(screens, rows) {
+  const used = new Set();
+  rows.forEach(r => { used.add(r.fromId); used.add(r.toId); });
+  return {
+    kind: 'flowchart',
+    direction: 'LR',
+    nodes: screens.filter(sc => used.has(sc.page_id))
+      .map(sc => ({ id: sc.page_id, label: `${_diagText(sc.page_id)}\n${_diagText(_shortVisLabel(sc))}`, shape: 'box' })),
+    edges: rows.map(r => ({
+      from: r.fromId, to: r.toId, label: `${r.no} ${_diagText(r.event)}`,
+      style: r.event === 'フォーム送信' ? 'dashed' : 'solid',
+    })),
+  };
+}
+
+function _flowchartModel(rows) {
+  const titleById = {};
+  const targets = new Set();
+  rows.forEach(r => {
+    titleById[r.fromId] = r.fromTitle;
+    titleById[r.toId] = r.toTitle;
+    targets.add(r.toId);
+  });
+  const ids = Object.keys(titleById);
+  const entries = ids.filter(id => !targets.has(id));
+  const nodes = [{ id: '__START__', label: '開始', shape: 'round', cls: 'start' }]
+    .concat(ids.map(id => ({ id, label: `${_diagText(id)}\n${_diagText(titleById[id])}`, shape: 'box' })));
+  const edges = (entries.length ? entries : rows.length ? [rows[0].fromId] : [])
+    .map(id => ({ from: '__START__', to: id, label: '', style: 'solid' }))
+    .concat(rows.map(r => ({
+      from: r.fromId, to: r.toId, label: `${r.no} ${_diagText(r.eventDetail || r.event)}`,
+      style: r.event === 'フォーム送信' ? 'thick' : 'solid',
+    })));
+  return { kind: 'flowchart', direction: 'TD', nodes, edges };
+}
+
+function _activityModel(rows) {
+  const nodes = [{ id: 'START', label: '開始', shape: 'round', cls: 'start' }];
+  const edges = [];
+  const list = rows.slice(0, 30);
+  list.forEach((r, i) => {
+    const prev = i === 0 ? 'START' : `CHECK${i - 1}`;
+    nodes.push({ id: `S${i}`, label: `${_diagText(r.fromId)}を表示`, shape: 'box' });
+    nodes.push({ id: `A${i}`, label: `${r.no} ${_diagText(r.eventDetail || r.event)}`, shape: 'box' });
+    nodes.push({ id: `CHECK${i}`, label: `${_diagText(r.toId)}へ到達?`, shape: 'diamond' });
+    nodes.push({ id: `T${i}`, label: `${_diagText(r.toId)}を確認`, shape: 'box' });
+    nodes.push({ id: `R${i}`, label: '遷移条件・リンク・入力値を確認', shape: 'box' });
+    edges.push({ from: prev, to: `S${i}` }, { from: `S${i}`, to: `A${i}` }, { from: `A${i}`, to: `CHECK${i}` },
+      { from: `CHECK${i}`, to: `T${i}`, label: 'OK' }, { from: `CHECK${i}`, to: `R${i}`, label: 'NG' });
+  });
+  nodes.push({ id: 'END', label: '終了', shape: 'round', cls: 'start' });
+  if (list.length) edges.push({ from: `CHECK${list.length - 1}`, to: 'END' });
+  return { kind: 'flowchart', direction: 'TD', nodes, edges };
 }
 
 function _sequenceDiagram(screens, rows) {

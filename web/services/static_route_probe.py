@@ -282,13 +282,11 @@ class _PlaywrightNavigator:
 
 @contextlib.contextmanager
 def playwright_navigator(storage_state: str | None = None) -> Iterator[_PlaywrightNavigator]:
-    from crawler.playwright_runtime import configure_playwright_browsers_path
-
-    configure_playwright_browsers_path()
+    from browser_detect import launch_browser
     from playwright.sync_api import sync_playwright
 
     with sync_playwright() as pw:
-        browser = pw.chromium.launch(headless=True)
+        browser = launch_browser(pw, headless=True)
         try:
             context = browser.new_context(storage_state=storage_state) if storage_state else browser.new_context()
             page = context.new_page()

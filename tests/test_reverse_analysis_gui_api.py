@@ -302,7 +302,10 @@ def test_run_end_to_end_native(client, monkeypatch):
     rows = {r["key"]: r for r in body["summary"]}
     assert rows["static"]["after"] > 0 and rows["static"]["before"] == 0
     assert rows["api_runtime"]["before"] == rows["api_runtime"]["after"] == 1
-    assert all(e["method"] is None for e in body["evidence"] if e["origin"] == "static")
+    # Native は HTTP method を静的に解決する（REA 6.7.0 は返さなかった）。少なくとも 1 件は具体的な method を持ち、値は既知の集合に限る
+    static_methods = [e["method"] for e in body["evidence"] if e["origin"] == "static"]
+    assert any(m in {"GET", "POST", "PUT", "PATCH", "DELETE"} for m in static_methods), static_methods
+    assert all(m in {None, "UNKNOWN", "GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"} for m in static_methods), static_methods
 
 
 # ------------------------------------------------------------------ C. Hybrid 統合（静的な契約）

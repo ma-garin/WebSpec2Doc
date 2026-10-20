@@ -20,13 +20,13 @@ def _calls(src):
     for ln, line in enumerate(src.splitlines(), 1):
         m = re.search(r"((?:[\w$]+\.)*[\w$]+)\((.*)\);", line)
         if m and m.group(1) not in ("XMLHttpRequest",) and "new " not in line:
-            calls.append(CallFact(m.group(1), ln, m.start(1), ln, m.end() - 1, line[m.start(1):m.end() - 1]))
+            calls.append(CallFact(file="a.js", callee=m.group(1), line=ln, col=m.start(1) + 1, end_line=ln, end_col=m.end()))
     return calls
 
 
 def _run(tmp_path):
     (tmp_path / "a.js").write_text(SRC)
-    pf = ParsedFile("a.js", "sha-a", calls=tuple(_calls(SRC)))
+    pf = ParsedFile(path="a.js", sha256="sha-a", calls=tuple(_calls(SRC)))
     return extract_api_candidates([pf], tmp_path)
 
 
@@ -63,7 +63,7 @@ def test_unresolved_is_partial_not_error(tmp_path):
 
 
 def test_without_js_input_method_unknown():
-    pf = ParsedFile("a.js", "s", calls=(CallFact("fetch", 1, 0, 1, 10, 'fetch("/x")'),
-                                         CallFact("axios.put", 2, 0, 2, 12, 'axios.put("/y")')))
+    pf = ParsedFile(path="a.js", sha256="s", calls=(CallFact(file="a.js", callee="fetch", line=1, col=1, end_line=1, end_col=11),
+                                         CallFact(file="a.js", callee="axios.put", line=2, col=1, end_line=2, end_col=13)))
     cands, diags = extract_api_candidates([pf])
     assert [c.method for c in cands] == ["UNKNOWN", "PUT"] and diags == ()

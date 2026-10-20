@@ -31,10 +31,10 @@
 | observed | 実測 | ● | 事実 |
 | observed_auth | 認証済み実測 | ●＋鍵 | 事実 |
 | record | 記録 | ▣ | 事実 |
-| document | 文書 | ▭ | 事実 |
+| document | 文書 | ▭ | 推論（文書の記述は動作の観測ではない・2026-10-20 改訂） |
 | static | 静的 | ○ | 推論 |
 | inferred | 推論 | ◐ | 推論 |
-| ambiguous | 曖昧 | ◇ | 推論 |
+| ambiguous | 曖昧 | ◇ | 未確認（確かめられていない・2026-10-20 改訂） |
 | unverified | 未確認 | ◌ | 未確認 |
 | unavailable | 利用不可 | ⊘ | 未確認 |
 Evidence バッジはピル型（`c-ev`）。形＋文字＋色の 3 つで示す（色だけにしない）。

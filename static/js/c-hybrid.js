@@ -113,8 +113,11 @@
     for (i = 0; i < list.length; i++) { if (!list[i].hidden && list[i].offsetParent !== null) { out.push(list[i]); } }
     return out;
   }
+  /* 重なったとき（ドロワーの上の確認など）は一番上だけが Esc・Tab を受ける */
+  var trapStack = [];
   function trap(container, onEsc) {
     function handler(ev) {
+      if (trapStack[trapStack.length - 1] !== handler) { return; }
       var key = ev.key || ev.keyCode;
       if (key === 'Escape' || key === 'Esc' || key === 27) { ev.preventDefault(); ev.stopPropagation(); onEsc(); return; }
       if (key !== 'Tab' && key !== 9) { return; }
@@ -126,7 +129,12 @@
       else if (!container.contains(a)) { ev.preventDefault(); first.focus(); }
     }
     doc.addEventListener('keydown', handler, true);
-    return function () { doc.removeEventListener('keydown', handler, true); };
+    trapStack.push(handler);
+    return function () {
+      doc.removeEventListener('keydown', handler, true);
+      var i = trapStack.indexOf(handler);
+      if (i >= 0) { trapStack.splice(i, 1); }
+    };
   }
   var uid = 0;
   function nextId(p) { uid += 1; return p + uid; }
@@ -293,6 +301,7 @@
 
   /* ---- トースト ---- */
   var toastHost = null;
+  var TOAST_KIND = { info: 'お知らせ：', success: '成功：', warning: '注意：', error: 'エラー：' };
   function toast(message, kind) {
     var k = { info: 1, success: 1, warning: 1, error: 1 }[kind] ? kind : 'info';
     if (!toastHost || !doc.body.contains(toastHost)) {
@@ -300,7 +309,10 @@
       toastHost.setAttribute('aria-live', 'polite'); toastHost.setAttribute('aria-atomic', 'false');
       doc.body.appendChild(toastHost);
     }
-    var t = el('div', 'c-toast c-toast--' + k, message);
+    /* 種類を色だけで伝えない: 先頭に種類の文字を出す */
+    var t = el('div', 'c-toast c-toast--' + k);
+    t.appendChild(el('span', 'c-toast__kind', TOAST_KIND[k]));
+    t.appendChild(el('span', 'c-toast__msg', message));
     toastHost.appendChild(t);
     root.setTimeout(function () { if (t.parentNode) { t.parentNode.removeChild(t); } }, k === 'error' ? 8000 : 4500);
   }

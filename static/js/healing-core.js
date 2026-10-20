@@ -12,8 +12,8 @@
 
   // エージェント表示名の対応表
   var AGENT_DISPLAY_NAMES = {
-    'claude': 'Claude Code',
-    'codex': 'Codex',
+    'claude': 'AI（旧エージェント）',
+    'codex': 'AI（旧エージェント）',
     'openai': 'OpenAI',
     'ollama': 'Ollama',
     'dryrun': '動作確認用'

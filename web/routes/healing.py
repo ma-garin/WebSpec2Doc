@@ -54,7 +54,7 @@ _PROJECT_DEFAULTS: dict[str, Any] = {
     "verify_command": "",
     "remote": "origin",
     "github_repo": "",
-    "agent": "claude",
+    "agent": "openai",
     "max_iterations": 3,
     "max_parallel_agents": 3,
     "agent_timeout_sec": 900,

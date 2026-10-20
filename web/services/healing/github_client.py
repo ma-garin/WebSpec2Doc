@@ -1,16 +1,14 @@
 """オートヒーリング（System 05）の GitHub 連携。
 
-gh CLI があればそれを優先し、無ければ GITHUB_TOKEN で REST API を直接叩く
-（依存追加を避けるため requests は使わず urllib のみを使う）。トークンは
-ログにもレスポンスにも生で出さない（エラーメッセージへ埋め込まない）。
+GITHUB_TOKEN で REST API を直接叩く（gh CLI は使わない。依存追加を避けるため
+requests は使わず urllib のみを使う）。トークンはログにもレスポンスにも
+生で出さない（エラーメッセージへ埋め込まない）。
 """
 
 from __future__ import annotations
 
 import json
 import os
-import shutil
-import subprocess
 import urllib.error
 import urllib.request
 from collections.abc import Sequence
@@ -24,26 +22,23 @@ ENV_GITHUB_TOKEN = "GITHUB_TOKEN"
 ENV_GITHUB_REPO = "GITHUB_REPO"
 
 _API_BASE = "https://api.github.com"
-#: gh CLI・REST API 呼び出し共通のタイムアウト秒数。PR 作成は重くないため短め。
+#: REST API 呼び出し共通のタイムアウト秒数。PR 作成は重くないため短め。
 _TIMEOUT = 30
 
 
 @dataclass(frozen=True)
 class GitHubConfig:
-    """GitHub 連携 1 件分の設定。token は REST API フォールバック時のみ使う。"""
+    """GitHub 連携 1 件分の設定。token は REST API の認証に使う（必須）。"""
 
     repo: str
     token: str = ""
-    use_cli: bool = True
 
 
 def github_config_from_env(repo: str = "") -> GitHubConfig:
     """環境変数 → .env の順で GITHUB_TOKEN / GITHUB_REPO を探して設定を組み立てる。
 
     env_store.py が既存の設定保存先（.env）なので、そこと同じ探索順序に
-    揃える。use_cli は gh コマンドの有無で自動判定する（無ければ REST に
-    フォールバックする合図として False にはしない。CLI が無ければ呼び出し側の
-    分岐で自然に REST 経路へ落ちる）。
+    揃える。
     """
     from web.env_store import _read_env
 
@@ -53,77 +48,35 @@ def github_config_from_env(repo: str = "") -> GitHubConfig:
         stored = _read_env()
         env_repo = env_repo or stored.get(ENV_GITHUB_REPO, "")
         env_token = env_token or stored.get(ENV_GITHUB_TOKEN, "")
-    return GitHubConfig(repo=repo or env_repo, token=env_token, use_cli=True)
+    return GitHubConfig(repo=repo or env_repo, token=env_token)
 
 
-def _gh_cli_path() -> str | None:
-    return shutil.which("gh")
+NO_TOKEN_MESSAGE = "GITHUB_TOKEN を設定してください（設定画面または環境変数。repo 権限のトークンが必要です）"
 
 
-def gh_cli_available() -> ConnectionCheck:
-    """gh CLI が入っていて認証済みかを確認する。"""
-    path = _gh_cli_path()
-    if path is None:
-        return ConnectionCheck(key="github", label="gh CLI", ok=False, detail="gh コマンドが見つかりません")
-    try:
-        proc = subprocess.run(  # nosec B603
-            [path, "auth", "status"], capture_output=True, text=True, timeout=15
-        )
-    except (subprocess.TimeoutExpired, OSError) as exc:
-        return ConnectionCheck(key="github", label="gh CLI", ok=False, detail=f"gh auth status の実行に失敗しました: {exc}")
-    if proc.returncode != 0:
-        return ConnectionCheck(key="github", label="gh CLI", ok=False, detail="gh CLI が未認証です（gh auth login が必要）")
-    return ConnectionCheck(key="github", label="gh CLI", ok=True, detail="認証済みです")
+def github_token_check(cfg: GitHubConfig) -> ConnectionCheck:
+    """トークンの有無を確認する（通信はしない）。"""
+    if not cfg.token:
+        return ConnectionCheck(key="github", label="GitHub", ok=False, detail=NO_TOKEN_MESSAGE)
+    return ConnectionCheck(key="github", label="GitHub", ok=True, detail="GITHUB_TOKEN が設定されています")
 
 
 def verify_connection(cfg: GitHubConfig, repo_path: Path) -> ConnectionCheck:
-    """「gh がある／認証済み／対象 repo にアクセスできる」を 1 つの結果に畳む。
+    """「トークンがある／対象 repo にアクセスできる」を 1 つの結果に畳む。
 
     画面には「押したら動くのか」を 1 項目で見せたいため、内部で複数回
     確認しても呼び出し側には ConnectionCheck 1 個だけを返す。
     """
     if not cfg.repo:
         return ConnectionCheck(key="github", label="GitHub", ok=False, detail="github_repo が未設定です")
-
-    if cfg.use_cli and _gh_cli_path() is not None:
-        cli_check = gh_cli_available()
-        if not cli_check.ok:
-            return ConnectionCheck(key="github", label="GitHub", ok=False, detail=cli_check.detail)
-        try:
-            proc = subprocess.run(  # nosec B603
-                ["gh", "repo", "view", cfg.repo, "--json", "name"],
-                cwd=str(repo_path),
-                capture_output=True,
-                text=True,
-                timeout=_TIMEOUT,
-            )
-        except (subprocess.TimeoutExpired, OSError) as exc:
-            return ConnectionCheck(key="github", label="GitHub", ok=False, detail=f"gh repo view の実行に失敗しました: {exc}")
-        if proc.returncode != 0:
-            return ConnectionCheck(
-                key="github", label="GitHub", ok=False, detail=f"リポジトリ {cfg.repo} にアクセスできません"
-            )
-        return ConnectionCheck(key="github", label="GitHub", ok=True, detail=f"gh CLI 経由で {cfg.repo} を確認しました")
-
-    if not cfg.token:
-        return ConnectionCheck(
-            key="github",
-            label="GitHub",
-            ok=False,
-            detail="GitHub 連携が未設定です。gh CLI か GITHUB_TOKEN が必要です",
-        )
+    token_check = github_token_check(cfg)
+    if not token_check.ok:
+        return token_check
     try:
         _api_request(cfg, "GET", f"/repos/{cfg.repo}")
     except HealingError as exc:
         return ConnectionCheck(key="github", label="GitHub", ok=False, detail=str(exc))
     return ConnectionCheck(key="github", label="GitHub", ok=True, detail=f"REST API 経由で {cfg.repo} を確認しました")
-
-
-def _pr_number_from_url(url: str) -> int:
-    if not url:
-        return 0
-    tail = url.rstrip("/").rsplit("/", 1)[-1]
-    return int(tail) if tail.isdigit() else 0
 
 
 def _pr_ref_from_api(data: dict[str, Any]) -> PullRequestRef:
@@ -148,42 +101,7 @@ def create_pull_request(
     body: str,
     draft: bool = False,
 ) -> PullRequestRef:
-    """PR を作る。gh CLI 優先、無ければ REST API。
-
-    body は標準入力（--body-file -）経由で渡す。引数に長文（不具合レポート
-    全文）を載せるとコマンド長制限に当たるため。
-    """
-    if cfg.use_cli and _gh_cli_path() is not None:
-        cmd = [
-            "gh",
-            "pr",
-            "create",
-            "--repo",
-            cfg.repo,
-            "--head",
-            head,
-            "--base",
-            base,
-            "--title",
-            title,
-            "--body-file",
-            "-",
-        ]
-        if draft:
-            cmd.append("--draft")
-        try:
-            proc = subprocess.run(  # nosec B603
-                cmd, cwd=str(repo_path), input=body, capture_output=True, text=True, timeout=_TIMEOUT
-            )
-        except (subprocess.TimeoutExpired, OSError) as exc:
-            raise HealingError(f"gh pr create の実行に失敗しました: {exc}") from exc
-        if proc.returncode != 0:
-            raise HealingError(f"PR 作成に失敗しました: {(proc.stderr or proc.stdout).strip()}")
-        url = proc.stdout.strip().splitlines()[-1] if proc.stdout.strip() else ""
-        return PullRequestRef(
-            number=_pr_number_from_url(url), url=url, state="draft" if draft else "open", title=title, branch=head
-        )
-
+    """PR を作る（REST API: POST /repos/{repo}/pulls）。"""
     payload = {"title": title, "head": head, "base": base, "body": body, "draft": draft}
     data = _api_request(cfg, "POST", f"/repos/{cfg.repo}/pulls", payload)
     return _pr_ref_from_api(data)
@@ -191,41 +109,6 @@ def create_pull_request(
 
 def get_pull_request(cfg: GitHubConfig, *, repo_path: Path, number: int) -> PullRequestRef | None:
     """PR の現在状態を取得する。取得できなければ None（例外は投げない）。"""
-    if cfg.use_cli and _gh_cli_path() is not None:
-        try:
-            proc = subprocess.run(  # nosec B603
-                [
-                    "gh",
-                    "pr",
-                    "view",
-                    str(number),
-                    "--repo",
-                    cfg.repo,
-                    "--json",
-                    "number,url,state,title,headRefName,isDraft,createdAt",
-                ],
-                cwd=str(repo_path),
-                capture_output=True,
-                text=True,
-                timeout=_TIMEOUT,
-            )
-        except (subprocess.TimeoutExpired, OSError):
-            return None
-        if proc.returncode != 0:
-            return None
-        try:
-            data = json.loads(proc.stdout)
-        except json.JSONDecodeError:
-            return None
-        return PullRequestRef(
-            number=int(data.get("number") or 0),
-            url=str(data.get("url") or ""),
-            state="draft" if data.get("isDraft") else str(data.get("state") or "open").lower(),
-            title=str(data.get("title") or ""),
-            branch=str(data.get("headRefName") or ""),
-            created_at=str(data.get("createdAt") or ""),
-        )
-
     try:
         data = _api_request(cfg, "GET", f"/repos/{cfg.repo}/pulls/{number}")
     except HealingError:
@@ -239,51 +122,20 @@ def merge_pull_request(cfg: GitHubConfig, *, repo_path: Path, number: int, metho
     人の明示操作（画面のマージボタン）からしか呼ばれない前提で、ここでは
     実行するだけ。呼び出し順序のガード（承認済みか等）は呼び出し側の責務。
     """
-    if cfg.use_cli and _gh_cli_path() is not None:
-        flag = {"squash": "--squash", "merge": "--merge", "rebase": "--rebase"}.get(method, "--squash")
-        try:
-            proc = subprocess.run(  # nosec B603
-                ["gh", "pr", "merge", str(number), "--repo", cfg.repo, flag],
-                cwd=str(repo_path),
-                capture_output=True,
-                text=True,
-                timeout=_TIMEOUT,
-            )
-        except (subprocess.TimeoutExpired, OSError) as exc:
-            raise HealingError(f"gh pr merge の実行に失敗しました: {exc}") from exc
-        if proc.returncode != 0:
-            raise HealingError(f"PR #{number} のマージに失敗しました: {(proc.stderr or proc.stdout).strip()}")
-        return get_pull_request(cfg, repo_path=repo_path, number=number) or PullRequestRef(number=number, state="merged")
-
     data = _api_request(cfg, "PUT", f"/repos/{cfg.repo}/pulls/{number}/merge", {"merge_method": method})
     return PullRequestRef(number=number, state="merged" if data.get("merged") else "open")
 
 
 def close_pull_request(cfg: GitHubConfig, *, repo_path: Path, number: int) -> PullRequestRef:
     """PR をクローズする（マージせず却下する用）。"""
-    if cfg.use_cli and _gh_cli_path() is not None:
-        try:
-            proc = subprocess.run(  # nosec B603
-                ["gh", "pr", "close", str(number), "--repo", cfg.repo],
-                cwd=str(repo_path),
-                capture_output=True,
-                text=True,
-                timeout=_TIMEOUT,
-            )
-        except (subprocess.TimeoutExpired, OSError) as exc:
-            raise HealingError(f"gh pr close の実行に失敗しました: {exc}") from exc
-        if proc.returncode != 0:
-            raise HealingError(f"PR #{number} のクローズに失敗しました: {(proc.stderr or proc.stdout).strip()}")
-        return get_pull_request(cfg, repo_path=repo_path, number=number) or PullRequestRef(number=number, state="closed")
-
     data = _api_request(cfg, "PATCH", f"/repos/{cfg.repo}/pulls/{number}", {"state": "closed"})
     return _pr_ref_from_api(data)
 
 
 def _api_request(cfg: GitHubConfig, method: str, path: str, payload: dict[str, Any] | None = None) -> dict[str, Any]:
-    """REST API フォールバック経路。トークンが無ければここで HealingError にする。"""
+    """REST API 呼び出し。トークンが無ければここで HealingError にする。"""
     if not cfg.token:
-        raise HealingError("GitHub 連携が未設定です。gh CLI か GITHUB_TOKEN が必要です")
+        raise HealingError(NO_TOKEN_MESSAGE)
     url = f"{_API_BASE}{path}"
     data = json.dumps(payload).encode("utf-8") if payload is not None else None
     request = urllib.request.Request(url, data=data, method=method)

@@ -11,8 +11,6 @@ from __future__ import annotations
 import json
 import os
 import re
-import shutil
-import subprocess  # nosec B404 - shell=False固定・固定コマンド列のみ実行
 import time
 import urllib.error
 import urllib.request
@@ -61,7 +59,7 @@ def build_prompt(task: AgentTask) -> str:
 - テストを通すためにテスト側を書き換えて逃げない。実装を直す。それが不可能なら理由を述べて何も変更しない。
 - 変更は最小にする。
 - コミットはしない（差分は呼び出し側が回収する）。
-- `{task.verify_command}` で検証できる。実行して確認してよい。
+- 検証は呼び出し側が `{task.verify_command}` で行う（あなたはコマンドを実行できない）。
 
 # 追加の指示
 {extra}
@@ -79,6 +77,7 @@ def build_prompt(task: AgentTask) -> str:
 """
 
 
+
 # ─────────────────────────── 共通ヘルパー ───────────────────────────
 
 
@@ -89,234 +88,19 @@ def _tail(text: str, limit: int = 4000) -> str:
 
 
 def _collect_worktree_change(workdir: str) -> tuple[str, tuple[str, ...]]:
-    """workdir の変更をコミットせずに git add + diff で回収する。
+    """workdir の変更（差分とファイル一覧）を git_ops 経由で回収する。
 
-    git_ops は import しない（他エージェントが並行実装中で未完成の可能性が
-    あるため）。ここだけ自前で最小限の 3 コマンドを呼ぶ。
+    差分は画面・レポート用の表示にだけ使い、再適用しない。
     """
     try:
-        subprocess.run(  # nosec B603 - shell=False固定・固定引数のみ
-            ["git", "-C", workdir, "add", "-A"],
-            capture_output=True,
-            text=True,
-            timeout=60,
-            check=False,
-        )
-        diff_proc = subprocess.run(  # nosec B603 - shell=False固定・固定引数のみ
-            ["git", "-C", workdir, "diff", "--cached"],
-            capture_output=True,
-            text=True,
-            timeout=60,
-            check=False,
-        )
-        names_proc = subprocess.run(  # nosec B603 - shell=False固定・固定引数のみ
-            ["git", "-C", workdir, "diff", "--cached", "--name-only"],
-            capture_output=True,
-            text=True,
-            timeout=60,
-            check=False,
-        )
-    except (OSError, subprocess.TimeoutExpired):
+        diff = git_ops.worktree_diff(Path(workdir))
+        files = tuple(f for f in git_ops.changed_files(Path(workdir)) if f.strip())
+    except Exception:  # noqa: BLE001 - 回収失敗は「変更なし」扱いにせず空で返し、呼び出し側が skipped にする
         return "", ()
-
-    diff = diff_proc.stdout or ""
-    files = tuple(f for f in (names_proc.stdout or "").splitlines() if f.strip())
     return diff, files
 
 
-def _extract_result_text(stdout: str) -> tuple[str, str]:
-    """claude CLI の --output-format json 出力から result フィールドを取り出す。
-
-    取得できない場合は空文字と、取れなかった理由の注記を返す（黙って諦めない）。
-    """
-    text = (stdout or "").strip()
-    if not text:
-        return "", "CLI標準出力が空でした。"
-    try:
-        data: Any = json.loads(text)
-    except json.JSONDecodeError:
-        lines = text.splitlines()
-        last_line = lines[-1] if lines else ""
-        try:
-            data = json.loads(last_line)
-        except json.JSONDecodeError:
-            return "", "CLI出力をJSONとして解釈できませんでした。"
-    if isinstance(data, dict):
-        result = data.get("result")
-        if isinstance(result, str) and result.strip():
-            return result.strip(), ""
-    return "", "JSON出力にresultフィールドが見つかりませんでした。"
-
-
 # ─────────────────────────── エージェント実装 ───────────────────────────
-
-
-class ClaudeCodeAgent:
-    """claude CLI に 1 件の Defect を丸ごと委任するエージェント。"""
-
-    name = "claude"
-
-    def is_available(self) -> ConnectionCheck:
-        path = shutil.which("claude")
-        if path:
-            return ConnectionCheck(key="agent", label="Claude Code（claude CLI）", ok=True, detail=path)
-        return ConnectionCheck(
-            key="agent",
-            label="Claude Code（claude CLI）",
-            ok=False,
-            detail="claude コマンドが見つかりません（PATH を確認してください）",
-        )
-
-    def propose_fix(self, task: AgentTask) -> FixProposal:
-        """例外は投げない。失敗時も必ず FixProposal を返す。"""
-        prompt = build_prompt(task)
-        start = time.monotonic()
-        try:
-            proc = subprocess.run(  # nosec B603 - shell=False固定・引数固定・プロンプトはstdinで渡す
-                ["claude", "-p", "--permission-mode", "acceptEdits", "--output-format", "json"],
-                cwd=task.workdir,
-                input=prompt,
-                capture_output=True,
-                text=True,
-                timeout=task.timeout_sec,
-            )
-        except subprocess.TimeoutExpired as exc:
-            duration = time.monotonic() - start
-            out = exc.stdout if isinstance(exc.stdout, str) else ""
-            err = exc.stderr if isinstance(exc.stderr, str) else ""
-            return FixProposal(
-                defect_id=task.defect.defect_id,
-                agent=self.name,
-                status="timeout",
-                summary=f"{task.timeout_sec} 秒で時間切れになりました",
-                duration_sec=duration,
-                log_tail=_tail(out + err),
-                error="timeout",
-            )
-        except OSError as exc:
-            duration = time.monotonic() - start
-            return FixProposal(
-                defect_id=task.defect.defect_id,
-                agent=self.name,
-                status="failed",
-                summary="claude CLI を起動できませんでした",
-                duration_sec=duration,
-                error=str(exc),
-            )
-
-        duration = time.monotonic() - start
-        raw_output = (proc.stdout or "") + (proc.stderr or "")
-        result_text, missing_note = _extract_result_text(proc.stdout or "")
-        diff, files = _collect_worktree_change(task.workdir)
-
-        if not diff:
-            return FixProposal(
-                defect_id=task.defect.defect_id,
-                agent=self.name,
-                status="skipped",
-                summary="変更なし（エージェントは修正不要と判断したか、失敗した）",
-                rationale=result_text or missing_note,
-                log_tail=_tail(raw_output),
-                duration_sec=duration,
-            )
-
-        if result_text:
-            summary = result_text
-            rationale = result_text
-        else:
-            summary = _tail(raw_output, 400)
-            rationale = f"{missing_note}（CLI出力からresultフィールドを取得できなかったため、log_tail末尾をsummaryに使用）"
-
-        return FixProposal(
-            defect_id=task.defect.defect_id,
-            agent=self.name,
-            status="applied",
-            summary=summary,
-            rationale=rationale,
-            diff=diff,
-            files_changed=files,
-            log_tail=_tail(raw_output),
-            duration_sec=duration,
-        )
-
-
-class CodexAgent:
-    """codex CLI に 1 件の Defect を丸ごと委任するエージェント。"""
-
-    name = "codex"
-
-    def is_available(self) -> ConnectionCheck:
-        path = shutil.which("codex")
-        if path:
-            return ConnectionCheck(key="agent", label="Codex（codex CLI）", ok=True, detail=path)
-        return ConnectionCheck(
-            key="agent",
-            label="Codex（codex CLI）",
-            ok=False,
-            detail="codex コマンドが見つかりません（PATH を確認してください）",
-        )
-
-    def propose_fix(self, task: AgentTask) -> FixProposal:
-        """例外は投げない。失敗時も必ず FixProposal を返す。"""
-        prompt = build_prompt(task)
-        start = time.monotonic()
-        try:
-            proc = subprocess.run(  # nosec B603 - shell=False固定・引数固定
-                ["codex", "exec", "--full-auto", prompt],
-                cwd=task.workdir,
-                capture_output=True,
-                text=True,
-                timeout=task.timeout_sec,
-            )
-        except subprocess.TimeoutExpired as exc:
-            duration = time.monotonic() - start
-            out = exc.stdout if isinstance(exc.stdout, str) else ""
-            err = exc.stderr if isinstance(exc.stderr, str) else ""
-            return FixProposal(
-                defect_id=task.defect.defect_id,
-                agent=self.name,
-                status="timeout",
-                summary=f"{task.timeout_sec} 秒で時間切れになりました",
-                duration_sec=duration,
-                log_tail=_tail(out + err),
-                error="timeout",
-            )
-        except OSError as exc:
-            duration = time.monotonic() - start
-            return FixProposal(
-                defect_id=task.defect.defect_id,
-                agent=self.name,
-                status="failed",
-                summary="codex CLI を起動できませんでした",
-                duration_sec=duration,
-                error=str(exc),
-            )
-
-        duration = time.monotonic() - start
-        raw_output = (proc.stdout or "") + (proc.stderr or "")
-        diff, files = _collect_worktree_change(task.workdir)
-
-        if not diff:
-            return FixProposal(
-                defect_id=task.defect.defect_id,
-                agent=self.name,
-                status="skipped",
-                summary="変更なし（エージェントは修正不要と判断したか、失敗した）",
-                log_tail=_tail(raw_output),
-                duration_sec=duration,
-            )
-
-        return FixProposal(
-            defect_id=task.defect.defect_id,
-            agent=self.name,
-            status="applied",
-            summary=_tail(raw_output, 400),
-            rationale="codex CLIの出力にはresult相当のフィールドが無いため、log_tail末尾をsummaryに使用。",
-            diff=diff,
-            files_changed=files,
-            log_tail=_tail(raw_output),
-            duration_sec=duration,
-        )
 
 
 class DryRunAgent:
@@ -340,6 +124,7 @@ class DryRunAgent:
         )
 
 
+
 # ─────────────────── LLM API エージェント共通（OpenAI / Ollama） ───────────────────
 
 _OPENAI_DEFAULT_MODEL = "gpt-4o-mini"
@@ -349,56 +134,136 @@ _OPENAI_ENDPOINT = "https://api.openai.com/v1/chat/completions"
 
 _SYSTEM_PROMPT = (
     "あなたは熟練のソフトウェアエンジニアです。"
-    "変更は unified diff だけで返し、説明文やファイル全文を出してはいけません。"
+    "変更は指定された JSON（edits）だけで返し、説明文やファイル全文を出してはいけません。"
 )
 
-# ファイル全文を JSON で返させると、モデルは長い出力の途中で JSON を壊す。
-# 壊れれば修正はまるごと失われ、しかも「何を直そうとしたか」も残らない。
-# diff なら出力が短く、当たらなければ git 自身が理由を教えてくれる。
-_DIFF_FORMAT_INSTRUCTIONS = """
+# 変更は「このテキストをこのテキストに置き換える」編集の列で返させる。
+# unified diff は行番号のずれで当たらず、ファイル全文は長い出力の途中で壊れる。
+# 完全一致の置換なら、当たる／当たらないが明確で、当たらない理由も言える。
+_EDITS_FORMAT_INSTRUCTIONS = """
 
 # 出力形式（厳守）
-変更は unified diff だけを ```diff で囲んで返してください。
-形式:
-```diff
---- a/相対パス
-+++ b/相対パス
-@@ -開始行,行数 +開始行,行数 @@
- 変えない行
--消す行
-+足す行
-```
-- diff 以外を出力しない。説明文・前置き・ファイル全文・JSON を付けない。
-- パスはリポジトリルートからの相対パスのみ。絶対パスや `..` を含めない。
-- 変更が必要ない場合は、空の ```diff ``` を返す。
+変更は次の JSON オブジェクトだけを返してください。
+{
+  "summary": "対応の要約（日本語 1 文）",
+  "rationale": "原因: ...（日本語 1〜2 文）\\n対応: ...（日本語 1〜2 文）",
+  "edits": [
+    {"path": "リポジトリルートからの相対パス", "old": "置換前のテキスト", "new": "置換後のテキスト"}
+  ]
+}
+- old は対象ファイル内で 1 箇所だけに一致する長さにする（前後の行を含めて一意にする）。空白・改行・インデントも含めて完全に一致させる。
+- 新しいファイルを作るときは old を空文字にする（既存ファイルには使えない）。
+- path に絶対パスや `..` を含めない。
+- 変更が必要ない場合は edits を空配列にする。
+- JSON 以外（前置き・コードフェンス・説明文）を出力しない。
 """
 
-#: 応答から diff を取り出す。フェンスが無い応答も拾う。
-_DIFF_FENCE_RE = re.compile(r"```(?:diff|patch)?\s*\n(.*?)```", re.DOTALL)
-#: diff の始まりらしい行。フェンスが無いときはここから末尾までを使う。
-_DIFF_START_RE = re.compile(r"^(?:diff --git |--- )", re.MULTILINE)
+#: 応答から JSON を取り出すためのフェンス。
+_JSON_FENCE_RE = re.compile(r"```(?:json)?\s*\n(.*?)```", re.DOTALL)
 
 
-def _extract_diff(text: str) -> str:
-    """モデルの応答から unified diff を取り出す。無ければ空文字。"""
-    for match in _DIFF_FENCE_RE.finditer(text or ""):
-        body = match.group(1)
-        if _DIFF_START_RE.search(body):
-            return body.strip("\n")
-    match = _DIFF_START_RE.search(text or "")
-    return (text[match.start():]).strip("\n") if match else ""
+class EditError(Exception):
+    """edits を適用できなかった理由（モデルに返して出し直させる文言）。"""
+
+
+def _parse_edits(text: str) -> dict[str, Any]:
+    """モデルの応答から {summary, rationale, edits} を取り出す。壊れていれば EditError。"""
+    raw = (text or "").strip()
+    candidates = [raw]
+    candidates += [m.group(1).strip() for m in _JSON_FENCE_RE.finditer(raw)]
+    start, end = raw.find("{"), raw.rfind("}")
+    if 0 <= start < end:
+        candidates.append(raw[start : end + 1])
+    for cand in candidates:
+        try:
+            data = json.loads(cand)
+        except (ValueError, TypeError):
+            continue
+        if isinstance(data, dict) and isinstance(data.get("edits"), list):
+            return data
+    raise EditError("応答が {\"edits\": [...]} 形式の JSON として読めませんでした")
+
+
+def _resolve_inside(root: Path, rel: str) -> Path:
+    """rel を root 配下の絶対パスにする。外へ出るパスは EditError（パストラバーサル防止）。"""
+    if not isinstance(rel, str) or not rel.strip():
+        raise EditError("path が空です")
+    if "\x00" in rel:
+        raise EditError(f"path が不正です: {rel!r}")
+    candidate = Path(rel)
+    if candidate.is_absolute() or ".." in candidate.parts:
+        raise EditError(f"path はリポジトリ内の相対パスだけ指定できます: {rel}")
+    root_resolved = root.resolve()
+    target = (root_resolved / candidate).resolve()  # シンボリックリンクも解決して判定する
+    if root_resolved != target and root_resolved not in target.parents:
+        raise EditError(f"path がリポジトリの外を指しています: {rel}")
+    if ".git" in target.relative_to(root_resolved).parts:
+        raise EditError(f".git 配下は変更できません: {rel}")
+    return target
+
+
+def apply_edits(workdir: Path, edits: list[Any]) -> list[str]:
+    """edits を完全一致置換で適用し、変更したファイルの相対パスを返す。
+
+    全 edits をメモリ上で適用して検証し、すべて成功したときだけ書き込む
+    （1 件でも不一致なら木は一切変わらない）。同じファイルへの複数 edit は
+    記載順に、直前の結果へ適用する。失敗は EditError（行き先と理由つき）。
+    """
+    pending: dict[Path, str] = {}
+    created: set[Path] = set()
+    for index, edit in enumerate(edits, start=1):
+        label = f"edit {index}"
+        if not isinstance(edit, dict):
+            raise EditError(f"{label}: オブジェクトではありません")
+        rel = edit.get("path")
+        old, new = edit.get("old"), edit.get("new")
+        if not isinstance(old, str) or not isinstance(new, str):
+            raise EditError(f"{label}: old と new は文字列で指定してください（{rel}）")
+        target = _resolve_inside(workdir, str(rel))
+        if target in pending:
+            content = pending[target]
+        elif target.is_file():
+            try:
+                with open(target, encoding="utf-8", newline="") as fh:
+                    content = fh.read()
+            except (OSError, UnicodeDecodeError) as exc:
+                raise EditError(f"{label}: {rel} を読めません（{type(exc).__name__}）") from exc
+        else:
+            content = None
+        if old == "":
+            if content is not None:
+                raise EditError(f"{label}: {rel} は既に存在します。old に置換前のテキストを指定してください")
+            pending[target] = new
+            created.add(target)
+            continue
+        if content is None:
+            raise EditError(f"{label}: {rel} が存在しません")
+        count = content.count(old)
+        if count == 0:
+            raise EditError(f"{label}: {rel} に old と一致する箇所がありません（空白・インデントを含め完全一致が必要です）")
+        if count > 1:
+            raise EditError(f"{label}: {rel} で old が {count} 箇所に一致します。前後の行を含めて 1 箇所に絞ってください")
+        pending[target] = content.replace(old, new, 1)
+
+    for target, content in pending.items():
+        target.parent.mkdir(parents=True, exist_ok=True)
+        with open(target, "w", encoding="utf-8", newline="") as fh:
+            fh.write(content)
+    root = workdir.resolve()
+    return sorted(str(t.relative_to(root)) for t in pending)
 
 
 def _llm_prompt(task: AgentTask) -> str:
-    """既存の指示文に diff 出力の縛りを足す。"""
-    return build_prompt(task) + _DIFF_FORMAT_INSTRUCTIONS
+    """既存の指示文に edits 出力の縛りを足す。"""
+    return build_prompt(task) + _EDITS_FORMAT_INSTRUCTIONS
 
 
 def _redact(text: str) -> str:
     """APIキーが混入していても外へ出さない。"""
-    key = os.environ.get("OPENAI_API_KEY", "").strip()
-    if key and len(key) >= 8:
-        return text.replace(key, "***")
+    for name in ("OPENAI_API_KEY", "GITHUB_TOKEN"):
+        key = os.environ.get(name, "").strip()
+        if key and len(key) >= 8:
+            text = text.replace(key, "***")
     return text
 
 
@@ -425,63 +290,59 @@ def _apply_with_retry(
     agent_name: str,
     task: AgentTask,
     call: Callable[[str, float], tuple[str, str]],
-) -> tuple[str, str, str]:
-    """モデルに diff を作らせて当てる。返すのは (応答, ログ, 失敗理由)。
+) -> tuple[dict[str, Any], str, str]:
+    """モデルに edits を作らせて適用する。返すのは (解析結果, ログ, 失敗理由)。
 
-    当たらなかったときは、git のエラーをそのまま添えて 1 度だけ聞き直す。
-    人が同じことをするからで、モデルは行番号のずれをこれで直せることが多い。
-    2 度目も当たらなければ諦める（3 度目が当たる見込みは薄く、時間だけ延びる）。
+    当たらなかったときは、不一致の理由をそのまま添えて 1 度だけ聞き直す。
+    人が同じことをするからで、モデルは一意性の不足などをこれで直せることが多い。
+    2 度目も失敗すれば諦める（3 度目が当たる見込みは薄く、時間だけ延びる）。
     """
+    workdir = Path(task.workdir)
     prompt = _llm_prompt(task)
     content, log = call(prompt, float(task.timeout_sec))
-    diff = _extract_diff(content)
-    if not diff:
-        return content, log, "差分が返ってきませんでした"
-
-    ok, detail = git_ops.apply_patch(Path(task.workdir), diff)
-    if ok:
-        return content, log, ""
+    try:
+        parsed = _parse_edits(content)
+        if not parsed["edits"]:
+            return parsed, log, ""
+        apply_edits(workdir, parsed["edits"])
+        return parsed, log, ""
+    except EditError as exc:
+        detail = str(exc)
 
     retry_prompt = (
         prompt
-        + "\n\n# 直前の差分が当たりませんでした\n"
-        + "git apply の出力:\n"
+        + "\n\n# 直前の edits は適用できませんでした\n"
+        + "理由:\n"
         + detail
-        + "\n同じ内容を、当たる形の unified diff で出し直してください。"
+        + "\n同じ内容を、1 箇所に完全一致する old を使った edits で出し直してください。"
     )
     content2, log2 = call(retry_prompt, float(task.timeout_sec))
-    diff2 = _extract_diff(content2)
-    if not diff2:
-        return content2, f"{log} / 再試行: {log2}", f"差分を当てられませんでした（{detail}）"
-    ok2, detail2 = git_ops.apply_patch(Path(task.workdir), diff2)
-    if ok2:
-        return content2, f"{log} / 再試行: {log2}", ""
-    return content2, f"{log} / 再試行: {log2}", f"差分を当てられませんでした（{detail2}）"
+    both_log = f"{log} / 再試行: {log2}"
+    try:
+        parsed2 = _parse_edits(content2)
+        if parsed2["edits"]:
+            apply_edits(workdir, parsed2["edits"])
+        return parsed2, both_log, ""
+    except EditError as exc2:
+        return {}, both_log, f"修正を適用できませんでした（{exc2}）"
 
 
-def _summary_from(content: str) -> tuple[str, str]:
-    """diff の前に書かれた文があれば、要約と説明として拾う。
-
-    出力形式では禁じているが、モデルは前置きを書くことがある。
-    捨てずに使う（人が読む「対応」の材料になる）。
-    """
-    match = _DIFF_FENCE_RE.search(content or "") or _DIFF_START_RE.search(content or "")
-    head = (content or "")[: match.start()].strip() if match else ""
-    if not head:
-        return "", ""
-    lines = [line.strip() for line in head.splitlines() if line.strip()]
-    if not lines:
-        return "", ""
-    return lines[0][:200], " ".join(lines)[:1000]
+def _summary_from(parsed: dict[str, Any]) -> tuple[str, str]:
+    """応答 JSON の summary / rationale を取り出す（人が読む「対応」の材料）。"""
+    summary = parsed.get("summary") if isinstance(parsed, dict) else ""
+    rationale = parsed.get("rationale") if isinstance(parsed, dict) else ""
+    summary = summary.strip()[:200] if isinstance(summary, str) else ""
+    rationale = rationale.strip()[:1000] if isinstance(rationale, str) else ""
+    return summary, rationale
 
 
 def _run_diff_fix(
     agent_name: str, task: AgentTask, call: Callable[[str, float], tuple[str, str]]
 ) -> FixProposal:
-    """LLM に unified diff を作らせて当て、差分を回収する。例外は投げない。"""
+    """LLM に edits を作らせて適用し、差分を回収する。例外は投げない。"""
     start = time.monotonic()
     try:
-        content, log, failure = _apply_with_retry(agent_name, task, call)
+        parsed, log, failure = _apply_with_retry(agent_name, task, call)
     except Exception as exc:  # noqa: BLE001 - どんな失敗も FixProposal へ畳む
         return FixProposal(
             defect_id=task.defect.defect_id,
@@ -493,7 +354,7 @@ def _run_diff_fix(
         )
 
     duration = time.monotonic() - start
-    summary, rationale = _summary_from(content)
+    summary, rationale = _summary_from(parsed)
     rationale = _redact(rationale)
     if failure:
         return FixProposal(
@@ -535,7 +396,7 @@ def _run_diff_fix(
 
 
 class OpenAIAgent:
-    """OpenAI Chat Completions API に修正後の全文を作らせるエージェント。"""
+    """OpenAI Chat Completions API に修正の edits を作らせるエージェント。"""
 
     name = "openai"
     label = "OpenAI API"
@@ -603,7 +464,7 @@ def _has_model(tags_body: str, model: str) -> bool:
 
 
 class OllamaAgent:
-    """ローカルの Ollama に修正後の全文を作らせるエージェント。"""
+    """ローカルの Ollama に修正の edits を作らせるエージェント。"""
 
     name = "ollama"
     label = "Ollama（ローカルLLM）"
@@ -672,8 +533,6 @@ class OllamaAgent:
 # ─────────────────────────── レジストリ ───────────────────────────
 
 _AGENT_CLASSES: dict[str, type[HealingAgent]] = {
-    "claude": ClaudeCodeAgent,
-    "codex": CodexAgent,
     "openai": OpenAIAgent,
     "ollama": OllamaAgent,
     "dryrun": DryRunAgent,
@@ -685,8 +544,14 @@ def available_agents() -> list[str]:
     return list(_AGENT_CLASSES.keys())
 
 
+#: 撤去済みの旧エージェント名。保存済みデータに残っていても openai として動かす。
+_LEGACY_AGENT_NAMES = frozenset({"claude", "codex"})
+
+
 def get_agent(name: str) -> HealingAgent:
     """名前からエージェントのインスタンスを得る。未知の名前は HealingError。"""
+    if name in _LEGACY_AGENT_NAMES:
+        name = "openai"
     cls = _AGENT_CLASSES.get(name)
     if cls is None:
         raise HealingError(f"未知のエージェントです: {name}")

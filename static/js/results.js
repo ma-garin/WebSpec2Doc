@@ -598,7 +598,9 @@ document.getElementById('completion-overlay')?.addEventListener('keydown', (e) =
     e.preventDefault();
     overlay.classList.add('hidden');
     const o = _completionOpener; _completionOpener = null;
-    if (o && o.isConnected && o !== document.body && o.focus) o.focus();
+    // 開いた元のボタンは完了時の画面切り替えで隠れることがある。そのときは「レポートを見る」へ戻す
+    const back = (o && o.isConnected && o !== document.body && o.offsetParent) ? o : document.getElementById('btn-view-report');
+    if (back && back.offsetParent && back.focus) back.focus();
     return;
   }
   if (e.key !== 'Tab') return;

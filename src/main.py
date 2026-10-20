@@ -347,9 +347,9 @@ def parse_args() -> argparse.Namespace:
     return args
 
 
-_REVERSE_ANALYSIS_INPUTS = ("js_input", "runtime_snapshot", "rea_command")
+_REVERSE_ANALYSIS_INPUTS = ("js_input", "runtime_snapshot")
 _REVERSE_ANALYSIS_KEYS = frozenset(
-    {"reverse_analysis", "output", "reverse_provider_evidence", *_REVERSE_ANALYSIS_INPUTS}
+    {"reverse_analysis", "output", "reverse_provenance", *_REVERSE_ANALYSIS_INPUTS}
 )
 
 
@@ -358,30 +358,29 @@ def _add_reverse_analysis_args(parser: argparse.ArgumentParser) -> None:
         "--reverse-analysis",
         action="store_true",
         help=(
-            "ローカル JS の静的候補（REA）と既存 snapshot の API 実測を限定的に対応付け、"
+            "ローカル JS の静的候補（Native 静的解析）と既存 snapshot の API 実測を限定的に対応付け、"
             "--output の専用ディレクトリへ reverse_analysis.json だけを保存する（クロールしない）"
         ),
     )
     parser.add_argument("--js-input", help="--reverse-analysis: 解析するローカル JS ディレクトリ")
     parser.add_argument("--runtime-snapshot", help="--reverse-analysis: 既存の snapshot.json")
     parser.add_argument(
-        "--rea-command", help="--reverse-analysis: 導入済み rea 実行ファイルの絶対パス"
-    )
-    parser.add_argument(
-        "--reverse-provider-evidence",
+        "--reverse-provenance",
+        "--reverse-provider-evidence",  # 旧名（非推奨の別名）
+        dest="reverse_provenance",
         action="store_true",
-        help="--reverse-analysis: REA の出典（route/API の上流 node・imports・source map 所見）も保存する",
+        help="--reverse-analysis: 解析の出典（route/API の出典・imports・source map 所見）も保存する",
     )
 
 
 def _validate_reverse_analysis_args(
     parser: argparse.ArgumentParser, args: argparse.Namespace
 ) -> None:
-    """--reverse-analysis は 3 入力と専用 --output を必須にし、他のモードとの併用を拒否する。"""
+    """--reverse-analysis は 2 入力と専用 --output を必須にし、他のモードとの併用を拒否する。"""
     if not args.reverse_analysis:
         given = [name for name in _REVERSE_ANALYSIS_INPUTS if getattr(args, name) is not None]
-        if getattr(args, "reverse_provider_evidence", False):
-            given.append("reverse_provider_evidence")
+        if getattr(args, "reverse_provenance", False):
+            given.append("reverse_provenance")
         if given:
             flags = ", ".join("--" + name.replace("_", "-") for name in given)
             parser.error(f"{flags} は --reverse-analysis と一緒に指定してください")
@@ -409,9 +408,8 @@ def _run_reverse_analysis(args: argparse.Namespace) -> int:
     request = ReverseAnalysisRequest(
         js_input=str(args.js_input),
         runtime_snapshot=str(args.runtime_snapshot),
-        rea_command=str(args.rea_command),
         output_dir=str(args.output),
-        include_provider_evidence=bool(args.reverse_provider_evidence),
+        include_provenance=bool(args.reverse_provenance),
     )
     try:
         outcome = run_reverse_analysis(request, cancel_event=_STOP_REQUESTED)

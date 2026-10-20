@@ -26,6 +26,26 @@ LOCATION_UNITS = frozenset({"line_column_utf16", "line_column_utf8", "byte_range
 
 QUERY_SCOPE_NOT_RETAINED = "not_retained"
 
+# 永続化キーの provider 非依存名と旧名（旧名の保存物は読込時だけ別名で受け、書込は新名のみ）
+ENGINE_VERSION_KEY = "engine_version"
+LEGACY_ENGINE_VERSION_KEY = "provider_version"
+ANALYSIS_SNAPSHOT_KEY = "analysis_snapshot_sha256"
+LEGACY_ANALYSIS_SNAPSHOT_KEY = "rea_snapshot_sha256"
+
+
+def read_engine_version(record: Any) -> Any:
+    """run.json・結果の producer から解析エンジン版を読む（新名優先・旧名を別名で受ける）。"""
+    if not isinstance(record, dict):
+        return None
+    return record.get(ENGINE_VERSION_KEY) or record.get(LEGACY_ENGINE_VERSION_KEY)
+
+
+def read_analysis_snapshot_sha(record: Any) -> Any:
+    """probe の確認結果から解析 snapshot の digest を読む（新名優先・旧名を別名で受ける）。"""
+    if not isinstance(record, dict):
+        return None
+    return record.get(ANALYSIS_SNAPSHOT_KEY) or record.get(LEGACY_ANALYSIS_SNAPSHOT_KEY)
+
 # 突合の根拠・制限の語彙（出力 JSON に現れる固定値）
 BASIS_METHOD_PATH_ONLY = "method_path_only"
 BASIS_STATIC_ONLY = "static_only"

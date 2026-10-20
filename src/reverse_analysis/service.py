@@ -1,4 +1,4 @@
-"""明示 CLI 用の reverse analysis 実行（runtime 読込 → REA 静的解析 → 正規化 → 突合 → 保存）。
+"""明示 CLI 用の reverse analysis 実行（runtime 読込 → Native 静的解析 → 突合 → 保存）。
 
 既存の report.json・snapshot は読み取りのみ。出力は専用ディレクトリの
 reverse_analysis.json だけで、入力 root 内・snapshot の親ディレクトリ内・symlink へは書かない。
@@ -17,8 +17,8 @@ from typing import Any
 
 from reverse_analysis import api_resolve
 from reverse_analysis.models import Coverage, Diagnostic
-from reverse_analysis.normalize import StaticNormalization, UnsupportedNode, normalize_static
-from reverse_analysis.rea_adapter import AdapterResult, run_static_analysis
+from reverse_analysis.native import run_static_analysis
+from reverse_analysis.normalize import StaticNormalization, UnsupportedNode
 from reverse_analysis.reconcile import reconcile, summarize
 from reverse_analysis.reporter import (
     EXIT_CODES,
@@ -33,28 +33,19 @@ from reverse_analysis.runtime import RuntimeInput, load_runtime_observations
 STAGE_OUTPUT = "output"
 STAGE_RECONCILE = "reconcile"
 
-# REA 6.7.0 の既知制限（対応できたと称さないため、毎回 JSON と CLI に明示する）
-LIMIT_PROVIDER_NO_HTTP_METHOD = "provider_endpoint_http_method_not_provided"
-LIMIT_PROVIDER_NO_ROUTE = "provider_route_nodes_not_provided"
+# Native 解析の既知制限（対応できたと称さないため、毎回 JSON と CLI に明示する）
 LIMIT_STATIC_SYNTAX_ONLY = "static_candidate_is_syntax_presence_only"
-PROVIDER_LIMITATIONS = (
-    LIMIT_PROVIDER_NO_HTTP_METHOD,
-    LIMIT_PROVIDER_NO_ROUTE,
+LIMIT_DYNAMIC_IMPORT_CANDIDATE_ONLY = "dynamic_import_or_unconventional_router_is_candidate_only"
+LIMIT_NO_RUNTIME_VALUE_EVALUATION = "runtime_values_not_evaluated_ast_syntax_only"
+ENGINE_LIMITATIONS = (
     LIMIT_STATIC_SYNTAX_ONLY,
+    LIMIT_DYNAMIC_IMPORT_CANDIDATE_ONLY,
+    LIMIT_NO_RUNTIME_VALUE_EVALUATION,
 )
-_ROUTE_ABSENT_CODE = "provider_route_not_provided"
+# 旧名（外部から参照されている場合の別名）
+PROVIDER_LIMITATIONS = ENGINE_LIMITATIONS
 
 _KNOWN_LIMIT_DIAGNOSTICS = (
-    Diagnostic(
-        "provider_endpoint_method_not_provided", "info", STAGE_RECONCILE,
-        "REA 6.7.0 の endpoint は HTTP method を返さないため、静的 API 候補と実測の対応は unknown に留めています。",
-        "対応付けが必要な候補は、表示された出典の位置を開いて呼び出しの method を目で確かめてください。",
-    ),
-    Diagnostic(
-        _ROUTE_ABSENT_CODE, "info", STAGE_RECONCILE,
-        "REA の出力に route 宣言（endpoint_kind=route）がありません。REA が route として出すのは対応するルーターの宣言だけで、独自の遷移処理からは取得できません（利用不可。0 件見つかったという意味ではありません）。",
-        "画面ルートは既存クロールの画面一覧で確認してください。",
-    ),
     Diagnostic(
         "runtime_origin_not_recorded", "info", STAGE_RECONCILE,
         "既存 snapshot は API の接続先 origin と query を記録していないため、一致しても同一の呼び出しとは断定しません。",
@@ -67,9 +58,8 @@ _KNOWN_LIMIT_DIAGNOSTICS = (
 class ReverseAnalysisRequest:
     js_input: str
     runtime_snapshot: str
-    rea_command: str
     output_dir: str
-    include_provider_evidence: bool = False
+    include_provenance: bool = False
 
 
 @dataclass(frozen=True)
@@ -83,14 +73,14 @@ class ReverseAnalysisOutcome:
     diagnostics: tuple[Diagnostic, ...]
 
 
-StaticRunner = Callable[..., AdapterResult]
+StaticRunner = Callable[..., Any]  # run_static_analysis(js_input, *, cancel_event) -> .normalization を持つ結果
 
 
 def run_reverse_analysis(
     request: ReverseAnalysisRequest,
     *,
     cancel_event: threading.Event | None = None,
-    static_runner: StaticRunner = run_static_analysis,
+    static_runner: StaticRunner | None = None,
 ) -> ReverseAnalysisOutcome:
     """全段を結線して reverse_analysis.json を保存する。保存できたときだけ output_path を返す。"""
     output_dir, problem = prepare_output_dir(
@@ -101,20 +91,23 @@ def run_reverse_analysis(
     cancel = cancel_event or threading.Event()
 
     runtime: RuntimeInput | None = None
-    adapter: AdapterResult | None = None
+    static: StaticNormalization | None = None
     try:
         runtime = load_runtime_observations(Path(request.runtime_snapshot))
         if cancel.is_set():
-            adapter = _cancelled_adapter()
+            static = _cancelled_static()
         else:
-            adapter = static_runner(request.rea_command, request.js_input, cancel_event=cancel)
+            runner = static_runner or run_static_analysis  # 既定は同一プロセス内の Native 解析
+            static = runner(request.js_input, cancel_event=cancel).normalization
     except KeyboardInterrupt:
         cancel.set()
-        adapter = _cancelled_adapter()
+        static = _cancelled_static()
     if runtime is None:
         runtime = _cancelled_runtime()
-    static = _with_provider_limits(normalize_static(adapter))
-    if static.status in ("complete", "partial"):  # REA が解析できた入力だけを補う（失敗・中止は候補を足さない）
+    if static is None:
+        static = _cancelled_static()
+    static = _with_engine_limits(static)
+    if static.status in ("complete", "partial"):  # 解析できた入力だけを補う（失敗・中止は候補を足さない）
         refined, extra = api_resolve.refine(static.candidates, Path(request.js_input), "",
                                             {a.path: a.sha256 for a in static.artifacts})
         static = replace(static, candidates=refined, diagnostics=(*static.diagnostics, *extra))
@@ -183,7 +176,7 @@ def _document(
     relations = reconcile(static.candidates, runtime.observations)
     return build_document(
         status=_overall_status(static.status, runtime.coverage.status),
-        provider_version=static.provider_version,
+        engine_version=static.engine_version,
         static_root_label=Path(request.js_input).name,
         static_artifact_sha256=static.root_artifact_sha256,
         runtime_snapshot_sha256=runtime.snapshot_sha256,
@@ -201,7 +194,7 @@ def _document(
                 "dependency_edges": static.dependency_edges,
                 "source_map_findings": static.source_map_findings,
             }
-            if request.include_provider_evidence
+            if request.include_provenance
             else None
         ),
     )
@@ -220,16 +213,8 @@ def _diagnostics(runtime: RuntimeInput, static: StaticNormalization) -> list[Dia
         *runtime.diagnostics,
         *static.diagnostics,
         *(_unsupported_diagnostic(node) for node in static.unsupported),
-        *(
-            diag
-            for diag in _KNOWN_LIMIT_DIAGNOSTICS
-            if diag.code != _ROUTE_ABSENT_CODE or not _has_route(static)
-        ),
+        *_KNOWN_LIMIT_DIAGNOSTICS,
     ]
-
-
-def _has_route(static: StaticNormalization) -> bool:
-    return any(c.kind == "route" for c in static.candidates)
 
 
 def _unsupported_diagnostic(node: UnsupportedNode) -> Diagnostic:
@@ -239,25 +224,23 @@ def _unsupported_diagnostic(node: UnsupportedNode) -> Diagnostic:
         "normalize",
         f"未対応の node を候補にしていません（kind={node.kind} node_id={node.node_id} "
         f"provider_pointer={node.json_pointer}）。",
-        "この node の内容が必要な場合は、REA の出力の該当位置を直接確認してください。",
+        "この node の内容が必要な場合は、--reverse-provenance で保存される出典（provenance）の該当位置を確認してください。",
     )
 
 
-def _with_provider_limits(static: StaticNormalization) -> StaticNormalization:
-    known = tuple(
-        lim for lim in PROVIDER_LIMITATIONS if lim != LIMIT_PROVIDER_NO_ROUTE or not _has_route(static)
-    )
-    limits = tuple(dict.fromkeys(static.coverage.limitations + known))
+def _with_engine_limits(static: StaticNormalization) -> StaticNormalization:
+    limits = tuple(dict.fromkeys(static.coverage.limitations + ENGINE_LIMITATIONS))
     return replace(static, coverage=replace(static.coverage, limitations=limits))
 
 
-def _cancelled_adapter() -> AdapterResult:
+def _cancelled_static() -> StaticNormalization:
     diag = Diagnostic(
-        "provider_cancelled", "warning", "provider",
+        "static_analysis_cancelled", "warning", "static_analysis",
         "静的解析を取り消しました。静的候補は保存されていません。",
         "必要なら同じ入力で再実行してください。",
     )  # fmt: skip
-    return AdapterResult("cancelled", None, (diag,))
+    coverage = Coverage("cancelled", False, None, (diag.code,))
+    return StaticNormalization("cancelled", None, None, (), (), coverage, (), (diag,))
 
 
 def _cancelled_runtime() -> RuntimeInput:

@@ -1,6 +1,6 @@
 """API 候補の呼び出し先と HTTP method を、配布済み JS の原文から有界に補う。
 
-REA は呼び出し位置（call 式の範囲）を返すが、ベース URL の定数・ヘルパー関数経由の呼び出し・
+Native 解析は呼び出し位置（call 式の範囲）を返すが、ベース URL の定数・ヘルパー関数経由の呼び出し・
 options の method を解決しない。ここでは次の範囲だけを静的に読む（JS は実行しない）:
 
 - 静的な文字列の定数（const / let / var の初期値が文字列・テンプレート・連結だけのもの）。
@@ -538,8 +538,8 @@ def refine(candidates: tuple[StaticCandidate, ...], js_input: Path, root_label: 
             inner.append((owner, c, f.text[start:end], start))  # 呼び出し位置を展開できたかで扱いを決める
             continue
         out.append(_apply(c, res.call_info(f.text[start:end], c.artifact_path, {}, 0, start)))
-    # ヘルパー関数（引数を呼び出し先へ渡す関数）の呼び出し位置を、REA が出していなければ加える
-    # REA が出さなかったネットワーク呼び出し（fetch・XMLHttpRequest#open・axios.<method>）も同じ方法で加える
+    # ヘルパー関数（引数を呼び出し先へ渡す関数）の呼び出し位置を、解析が出していなければ加える
+    # 解析が出さなかったネットワーク呼び出し（fetch・XMLHttpRequest#open・axios.<method>）も同じ方法で加える
     names = [rf"(?<![\w$]){re.escape(n)}" for n in sorted(wrappers)]  # obj.method( の呼び出しも含む
     names += [r"(?<![\w$.])fetch", r"\.open", r"(?<![\w$.])axios(?:\.(?:get|post|put|patch|delete|head))?"]
     for pattern in names:

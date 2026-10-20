@@ -211,7 +211,7 @@
     };
   } catch (e) { console.warn("[mock] innerHTML patch failed", e); }
 
-  /* 動的 <script src="/static/..."> を app ベースへ再ベース（mermaid 等） */
+  /* 動的 <script src="/static/..."> を app ベースへ再ベース */
   try {
     var sdesc = Object.getOwnPropertyDescriptor(HTMLScriptElement.prototype, "src");
     if (sdesc && sdesc.set) {

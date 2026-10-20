@@ -39,9 +39,8 @@ async function renderTestRuns() {
       '<div class="runs-unavailable-title">⚠ テストを実行できませんでした</div>' +
       `<p class="runs-unavailable-reason">${escHtml(r.error || '実行環境が見つかりません。')}</p>` +
       '<div class="runs-unavailable-help">' +
-      '<div class="runs-unavailable-help-title">セットアップ手順</div>' +
-      '<pre class="runs-setup-pre">cd output/.playwright_env\nnpm install -D @playwright/test\nnpx playwright install chromium</pre>' +
-      '<p class="muted-copy">セットアップ後、AutoRun から再実行してください。</p>' +
+      '<div class="runs-unavailable-help-title">対処</div>' +
+      '<p class="muted-copy">Google Chrome か Microsoft Edge を導入してから再実行してください。</p>' +
       '</div></div></div>';
     return;
   }

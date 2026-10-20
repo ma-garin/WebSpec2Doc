@@ -87,7 +87,6 @@ while IFS= read -r f; do
 done < <(
   find src web app.py tests static templates \
     -not -path '*/output/*' -not -path '*/__pycache__/*' \
-    -not -path 'static/vendor/*' \
     \( -name '*.py' -o -name '*.js' -o -name '*.css' -o -name '*.html' \) 2>/dev/null
 )
 if [ ${#OVER800[@]} -gt 0 ]; then

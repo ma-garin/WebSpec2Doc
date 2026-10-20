@@ -10,7 +10,7 @@ from flask import Response, request
 TRUSTED_HOSTS_ENV = "WEBSPEC2DOC_TRUSTED_HOSTS"
 
 # localhost 専用ツールとして実用的な CSP。
-# 'unsafe-inline' は生成済み report.html (Mermaid 初期化インラインスクリプト) のため必要。
+# 'unsafe-inline' は生成済み report.html のインラインスクリプトのため必要。
 _CSP = (
     "default-src 'self'; "
     "script-src 'self' 'unsafe-inline'; "

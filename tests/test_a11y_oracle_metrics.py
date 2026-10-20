@@ -77,7 +77,7 @@ def test_compare_sites():
 def test_native_by_axe_rule_and_markdown():
     from types import SimpleNamespace as N
     res = N(rules=[N(rule_id="name.image", status="violation", nodes=[N(status="violation", selector="img#v1"), N(status="pass", selector="img")])])
-    d = o.native_by_axe_rule(res, o.DEFAULT_NATIVE_TO_AXE)
+    d = o.native_by_axe_rule(res, o.native_axe_map())
     assert d["image-alt"]["violations"] == ["img#v1"]
     m = o.aggregate_fixture_metrics([_row("image-alt", ["#v1"], d["image-alt"], True)])
     assert "Precision" in o.render_markdown({"fixtures": m, "failures": []})

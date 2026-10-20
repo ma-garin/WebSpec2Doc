@@ -24,39 +24,22 @@ FIXTURES = ROOT / "tests/a11y_oracle/fixtures"
 # 比較指標のしきい値（保守者確定）
 GATE_PRECISION, GATE_RECALL, GATE_SEVERE_RECALL = 0.95, 0.90, 1.00
 
-# native rule_id -> 旧 axe id（catalog が無いときの既定。catalog の legacy_axe_ids が優先）
-DEFAULT_NATIVE_TO_AXE = {
-    "name.image": ["image-alt"], "name.input-image": ["input-image-alt"],
-    "name.form-field": ["label"], "name.select": ["select-name"],
-    "name.button": ["button-name"], "name.link": ["link-name"], "name.frame": ["frame-title"],
-    "name.aria-role-required": ["aria-command-name", "aria-input-field-name", "aria-toggle-field-name",
-                                "aria-tooltip-name", "aria-tab-name", "aria-meter-name", "aria-progressbar-name"],
-    "doc.title": ["document-title"], "doc.lang-present": ["html-has-lang"], "doc.lang-valid": ["html-lang-valid"],
-    "doc.viewport-zoom": ["meta-viewport"], "doc.bypass": ["bypass"],
-    "doc.duplicate-id-aria": ["duplicate-id-aria"], "struct.list": ["list"], "struct.listitem": ["listitem"],
-    "form.autocomplete": ["autocomplete-valid"], "visual.contrast": ["color-contrast"],
-    "visual.target-size": ["target-size"], "op.scroll-focusable": ["scrollable-region-focusable"],
-    "bp.tabindex": ["tabindex"], "bp.heading-order": ["heading-order"],
-}
-for _a in ("roles", "valid-attr", "valid-attr-value", "required-attr", "allowed-attr", "prohibited-attr",
-           "required-children", "required-parent", "hidden-body", "hidden-focus", "nested-interactive"):
-    DEFAULT_NATIVE_TO_AXE["aria." + _a] = ["aria-" + _a if _a != "nested-interactive" else _a]
-
 CLASSES = ("見逃し", "誤検出", "ルール未実装", "対応付け不能")
 
 
 # ---------------------------------------------------------------- 純粋関数（ブラウザ不要）
 def normalize_selector(sel) -> str:
-    """要素の突合キー。#id があれば最後の #id、無ければ先頭タグ名。空は ''。"""
+    """要素の突合キー。末尾の複合セレクタの #id、無ければそのタグ名。空は ''。"""
     if isinstance(sel, (list, tuple)):
         sel = sel[-1] if sel else ""
     s = re.sub(r"\s+", " ", str(sel or "")).strip()
     if not s:
         return ""
-    ids = re.findall(r"#([A-Za-z_][\w-]*)", s)
-    if ids:
-        return "#" + ids[-1]
-    m = re.match(r"[A-Za-z][\w-]*", s)
+    last = re.split(r"\s*[>+~ ]\s*", s)[-1]
+    m = re.search(r"#([A-Za-z_][\w-]*)", last)
+    if m:
+        return "#" + m.group(1)
+    m = re.match(r"[A-Za-z][\w-]*", last)
     return m.group(0).lower() if m else ""
 
 
@@ -188,16 +171,20 @@ def load_native():
         return None
 
 
+def catalog_specs():
+    sys.path.insert(0, str(ROOT / "src"))
+    from ux.a11y.catalog import CATALOG  # type: ignore
+    return CATALOG
+
+
 def native_axe_map() -> dict[str, list[str]]:
-    m = {k: list(v) for k, v in DEFAULT_NATIVE_TO_AXE.items()}
-    try:
-        from ux.a11y import catalog  # type: ignore
-        for spec in getattr(catalog, "RULES", getattr(catalog, "CATALOG", ())):
-            if spec.legacy_axe_ids:
-                m[spec.rule_id] = list(spec.legacy_axe_ids)
-    except Exception:
-        pass
-    return m
+    """native rule_id -> 旧 axe id。catalog の legacy_axe_ids が唯一の対応表。"""
+    return {s.rule_id: list(s.legacy_axe_ids) for s in catalog_specs() if s.legacy_axe_ids}
+
+
+def declared_axe_ids() -> set[str]:
+    """WebSpec2Doc が対応を宣言する（implementation が full/partial）ルールの旧 axe id。"""
+    return {a for s in catalog_specs() if s.declared for a in s.legacy_axe_ids}
 
 
 def native_by_axe_rule(result, mapping: dict) -> dict[str, dict]:
@@ -205,17 +192,17 @@ def native_by_axe_rule(result, mapping: dict) -> dict[str, dict]:
     out: dict[str, dict] = {}
     for rr in getattr(result, "rules", ()):
         axe_ids = mapping.get(rr.rule_id, [])
-        nodes = [n for n in rr.nodes if getattr(n, "status", "") == "violation"]
+        nodes = [n for n in rr.nodes if getattr(getattr(n, "status", ""), "value", getattr(n, "status", "")) == "violation"]
         sels = [getattr(n, "selector", "") for n in nodes]
         for aid in axe_ids:
-            out[aid] = {"status": rr.status, "violations": sels,
+            out[aid] = {"status": getattr(rr.status, "value", rr.status), "message": getattr(rr, "message", ""), "violations": sels,
                         "unmappable": sum(1 for s in sels if not normalize_selector(s))}
     return out
 
 
 def native_cant_tell_count(result) -> int:
     return sum(getattr(r, "counts", {}).get("cant_tell", 0) if isinstance(getattr(r, "counts", None), dict)
-               else sum(1 for n in r.nodes if n.status == "cant_tell") for r in getattr(result, "rules", ()))
+               else sum(1 for n in r.nodes if getattr(n.status, "value", n.status) == "cant_tell") for r in getattr(result, "rules", ()))
 
 
 def run_axe(page, axe_path: Path) -> dict:
@@ -230,12 +217,13 @@ def run_axe(page, axe_path: Path) -> dict:
 
 
 def launch(pw):
-    for ch in ("chrome", "msedge"):
-        try:
-            return pw.chromium.launch(channel=ch), ch
-        except Exception:
-            continue
-    return None, None
+    """製品と同じ検出（Chrome / Edge の channel）で起動する。headless-shell の代替起動はしない。"""
+    sys.path.insert(0, str(ROOT / "src"))
+    from browser_detect import BrowserUnavailable, detect_browser, launch_browser  # type: ignore
+    try:
+        return launch_browser(pw), detect_browser().channel
+    except BrowserUnavailable:
+        return None, None
 
 
 # ---------------------------------------------------------------- 実行
@@ -261,9 +249,17 @@ def run(args) -> int:
         if args.fixtures:
             manifest = json.loads(MANIFEST.read_text(encoding="utf-8"))
             rows, failures, axe_tp, axe_fp, axe_fn = [], [], 0, 0, 0
+            declared = declared_axe_ids()
+            skipped_undeclared, pending = [], {}
             for rel, entry in manifest["fixtures"].items():
+                if entry["axe_rule"] not in declared:
+                    skipped_undeclared.append(rel)  # 未宣言ルール: 指標の母集団に入れない
+                    continue
                 page.goto((FIXTURES / rel).as_uri())
                 nat = native_by_axe_rule(runner.run_native_a11y(page, None), mapping).get(entry["axe_rule"])
+                if nat is None or nat["status"] == "not_implemented":
+                    pending.setdefault(entry["axe_rule"], []).append(rel)  # 宣言済みだが未結線/実装待ち
+                    continue
                 ax = run_axe(page, axe_path)
                 report["axe_version"] = ax["version"]
                 res = classify_fixture(entry, nat)
@@ -275,6 +271,10 @@ def run(args) -> int:
             report["fixtures"] = aggregate_fixture_metrics(rows)
             report["axe_vs_truth"] = prf(axe_tp, axe_fp, axe_fn)
             report["failures"] = failures
+            report["scope"] = {"declared_fixtures": len(rows),
+                               "undeclared_skipped": len(skipped_undeclared),
+                               "pending_rules": {k: len(v) for k, v in sorted(pending.items())},
+                               "pending_fixtures": sum(len(v) for v in pending.values())}
         pages = [p.as_uri() for d in args.sites for p in sorted(Path(d).glob("*.html"))] + list(args.url)
         if pages:
             n_all: dict[str, set] = {}

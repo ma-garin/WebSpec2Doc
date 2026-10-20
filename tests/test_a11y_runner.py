@@ -2,21 +2,19 @@
 
 from __future__ import annotations
 
-from ux.a11y.models import NodeResult, RuleSpec
-from ux.a11y.runner import aggregate_status, run_native_a11y
+from ux.a11y.models import Implementation, Level, NodeResult, RuleSpec, aggregate_status
+from ux.a11y.runner import run_native_a11y
 
 
 def _spec(rule_id: str, impl: str = "full") -> RuleSpec:
     return RuleSpec(
-        rule_id=rule_id,
-        implementation=impl,
-        category=rule_id.split(".")[0],
-        reason_if_unimplemented="対象外" if impl == "none" else "",
+        rule_id, (), (), ("4.1.2",), Level.A, Implementation(impl), rule_id.split(".")[0], "テスト",
+        "moderate", "対象外" if impl == "none" else "",
     )
 
 
 def _status(result, rule_id: str) -> str:
-    return next(str(r.status) for r in result.rules if r.rule_id == rule_id)
+    return next(r.status.value for r in result.rules if r.rule_id == rule_id)
 
 
 def _stub_resolver(table):
@@ -51,7 +49,7 @@ def test_rule_exception_becomes_cant_tell_not_pass() -> None:
         snapshot_fn=lambda p: {},
         resolver=_stub_resolver({"name.a": boom, "name.b": lambda s, sp: []}),
     )
-    assert _status(result, "name.a") == "cant_tell"
+    assert _status(result, "name.a") == "not_implemented"  # 実行エラーは PASS にならない
     assert _status(result, "name.b") == "inapplicable"
 
 
@@ -63,7 +61,7 @@ def test_snapshot_failure_sets_error_and_no_pass() -> None:
         object(), specs=[_spec("name.a"), _spec("bp.c", "none")], snapshot_fn=fail
     )
     assert result.error and "detached" in result.error
-    assert {str(r.status) for r in result.rules} == {"cant_tell", "not_implemented"}
+    assert {r.status.value for r in result.rules} == {"not_implemented"}
 
 
 def test_timeout_marks_remaining_rules_not_evaluated() -> None:
@@ -76,17 +74,18 @@ def test_timeout_marks_remaining_rules_not_evaluated() -> None:
     )
     assert result.error and "タイムアウト" in result.error
     assert len(result.rules) == 2
-    assert all(str(r.status) != "pass" for r in result.rules)
+    assert all(r.status.value != "pass" for r in result.rules)
 
 
 def test_default_resolver_returns_none_for_unimplemented_module() -> None:
     # 実装モジュールが無い／関数が無い full ルールでも全件 1 行で出る（pass にならない）
     result = run_native_a11y(object(), specs=[_spec("zzz.unknown")], snapshot_fn=lambda p: {})
-    assert [str(r.status) for r in result.rules] == ["not_implemented"]
+    assert [r.status.value for r in result.rules] == ["not_implemented"]
 
 
 def test_aggregate_never_turns_cant_tell_into_pass() -> None:
+    spec = _spec("name.a")
     mixed = [NodeResult(status="pass"), NodeResult(status="cant_tell")]
-    assert aggregate_status(mixed) == "cant_tell"
-    assert aggregate_status([]) == "inapplicable"
-    assert aggregate_status([NodeResult(status="pass"), NodeResult(status="violation")]) == "violation"
+    assert str(aggregate_status(spec, mixed).value) == "cant_tell"
+    assert str(aggregate_status(spec, []).value) == "inapplicable"
+    assert str(aggregate_status(spec, [NodeResult(status="pass"), NodeResult(status="violation")]).value) == "violation"

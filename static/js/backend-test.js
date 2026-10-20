@@ -669,6 +669,8 @@
       ? api('PATCH', path, { action: 'configure_db_diff', keys: key, exclude: split(E('exclude').value), tolerance: tol ? Number(tol) : null })
           .then(function () { return api('PATCH', path, { action: 'confirm' }); })
       : api('PATCH', path, { action: 'confirm' });
+    // 期待値の API はケースだけを返すので、案件を読み直して表と件数を更新する
+    steps = steps.then(function () { return api('GET', jobPath()); });
     run(f.querySelector('[type=submit]'), steps, '期待値を確定しました')
       .then(function (d) { if (d && d.job) { state.oracleFor = ''; renderPanel(); } });
   }
@@ -694,6 +696,8 @@
     if (st.status === 'approved' && n < 8) return showStage(n + 1);
     var first = n === 1 && st.status !== 'generated' ? api('POST', jobPath('/stages/1/generate')) : Promise.resolve({ job: state.job });
     var p = first.then(function (d) { return api('POST', jobPath('/stages/' + n + '/approve'), { version: stageOf(d.job, n).version }); });
+    // 判定（期待値との照合）は段階 7（実行）の承認が前提。承認できたらここで判定まで進め、段階 8 に結果を出す
+    if (n === 7) p = p.then(function () { return api('POST', jobPath('/judge'), {}); }).then(function () { return api('GET', jobPath()); });
     return run(btn, p, '段階 ' + n + ' を承認しました').then(function (d) { if (d && d.job && n < 8) showStage(n + 1); });
   }
   function reject(btn) {

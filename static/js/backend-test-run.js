@@ -169,7 +169,10 @@
     S.opener = document.activeElement; S.pending = o; $('#bs-confirm').hidden = false; $('#bs-confirm-check').focus(); }
   // 閉じたら開いた元（実行する）へフォーカスを戻す
   function closeConfirm() { $('#bs-confirm').hidden = true; S.pending = null;
-    var o = S.opener; S.opener = null; if (o && o.isConnected && o.focus) o.focus(); }
+    // 確認は実行前の下見（非同期）の後に開くため、その間に元のボタンがフォーカスを失っていることがある
+    var o = S.opener; S.opener = null;
+    if (!(o && o.isConnected && o !== document.body && o.focus)) o = $('#bs-run');
+    if (o && o.focus) o.focus(); }
   function stopPoll() { clearTimeout(S.timer); S.timer = 0; }
   function poll() { stopPoll();
     if (!S.run || !ACTIVE[S.run.status]) return;
@@ -179,9 +182,8 @@
     }, POLL_MS); }
   function finishRun() { stopPoll(); $('#bs-secret').value = '';
     toast(END_MSG[S.run.status] || '実行が終わりました。');
-    // 実行の結果を判定（期待値との照合）まで進めてから表示する。判定しないと結果表が空のまま残る
-    api('POST', '/judge', {}).catch(function (e) { showError('判定できませんでした: ' + e.message + ' 画面を再読み込みして、もう一度実行してください。'); })
-      .then(function () { loadJob(); }); }
+    // 判定は段階 7 の承認後（backend-test.js の approve）に行う。ここでは結果を読み直すだけ
+    loadJob(); }
   function renderRun() { var r = S.run, card = $('#bs-run-card');
     card.hidden = !r;
     if (r) { var on = !!ACTIVE[r.status], pg = r.progress || {}, done = pg.done || 0, total = pg.total || 0;

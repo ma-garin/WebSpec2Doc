@@ -25,7 +25,7 @@ def test_modern_js_and_jsx():
     )
     assert p.complete and not p.limitations
     assert [(i.specifier, i.kind, i.names) for i in p.imports] == [
-        ("./x", "import", ("default", "b")), ("lib", "import", ("*",)), ("./y", "reexport", ())]
+        ("./x", "import", ("default", "a")), ("lib", "import", ("*",)), ("./y", "reexport", ())]
     assert {(e.name, e.kind) for e in p.exports} == {("default", "default"), ("z", "named"), ("*", "all")}
     c = next(c for c in p.calls if c.callee == "fetch")
     assert (c.line, c.col) == (7, 25)

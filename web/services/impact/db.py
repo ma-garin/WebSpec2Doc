@@ -101,6 +101,10 @@ def db_path() -> Path:
 
 def migrate(conn: sqlite3.Connection) -> None:
     conn.executescript(_SCHEMA)
+    # 追加列（既存の DB にも足す）。code_site = 人が関連付けたコード依存のサイト（空 = 未設定。自動では埋めない）
+    cols = {r[1] for r in conn.execute("PRAGMA table_info(systems)")}
+    if "code_site" not in cols:
+        conn.execute("ALTER TABLE systems ADD COLUMN code_site TEXT DEFAULT ''")
     row = conn.execute("SELECT MAX(version) FROM schema_version").fetchone()
     if row[0] is None:
         conn.execute("INSERT INTO schema_version(version) VALUES (?)", (SCHEMA_VERSION,))

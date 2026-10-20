@@ -146,6 +146,23 @@ def test_it006_analyze_job_produces_impacts_with_risk(client, monkeypatch):
     assert any(n["kind"] == "change" for n in g["nodes"]) and g["edges"]
 
 
+def test_it002b_code_site_is_set_only_by_hand_and_audited(client, as_actor):
+    """IT-002b コード依存のサイトは既定で未設定（自動で同一視しない）。人が設定・解除でき、監査に残る。不正値は 400。"""
+    as_actor("admin@x")
+    sid = client.post(f"{API}/systems", json={"name": "s"}).get_json()["system"]["id"]
+    assert client.get(f"{API}/systems/{sid}").get_json()["system"]["code_site"] == ""
+    assert client.patch(f"{API}/systems/{sid}", json={"code_site": "../etc"}).status_code == 400
+    r = client.patch(f"{API}/systems/{sid}", json={"code_site": "127.0.0.1:18802"})
+    assert r.status_code == 200 and r.get_json()["system"]["code_site"] == "127.0.0.1:18802"
+    # 他の設定の保存で関連付けが消えない
+    assert client.patch(f"{API}/systems/{sid}", json={"policy": "local"}).get_json()["system"]["code_site"] == "127.0.0.1:18802"
+    log = client.get(f"{API}/systems/{sid}/audit").get_json()["audit"]
+    assert any("127.0.0.1:18802" in str(a.get("after")) for a in log)
+    assert client.patch(f"{API}/systems/{sid}", json={"code_site": ""}).get_json()["system"]["code_site"] == ""
+    as_actor("viewer@x")
+    assert client.patch(f"{API}/systems/{sid}", json={"code_site": "127.0.0.1:18802"}).status_code in (403, 404)
+
+
 def test_it007_review_resolve_approve_roles(client, as_actor):
     """IT-007 要確認が残ると提出できず、解消は理由必須、承認は承認者だけ（起票者本人は不可）。"""
     as_actor("analyst@x")

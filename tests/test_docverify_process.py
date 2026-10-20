@@ -1,7 +1,7 @@
 """System 06 R4 のテスト（WS2D-DD-006 R4 9 章）。受入基準（RD-006 の G/W/T）を 1 件ずつ確かめる。
 
 Blueprint の登録（web/__init__.py）は wire で行うため、ここでは R4 の Blueprint だけを載せた
-Flask アプリで API を叩く。画面（docverify-r4.js）は Playwright MCP で別に確かめる（本テストの範囲外）。
+Flask アプリで API を叩く。画面（docverify-process.js）は Playwright MCP で別に確かめる（本テストの範囲外）。
 """
 from __future__ import annotations
 
@@ -14,7 +14,7 @@ import pytest
 from flask import Flask
 
 from web import config
-from web.routes import doc_verify_r4 as r4route
+from web.routes import doc_verify_process as r4route
 from web.services.docverify import perm, presets, process, store
 
 P = "/api/docverify/r4"
@@ -293,7 +293,7 @@ def test_no_certification_claims(client, app):
     texts += [str(c) for ws in wb.worksheets for r in ws.iter_rows(values_only=True) for c in r]
     from pathlib import Path
     root = Path(__file__).resolve().parents[1]
-    texts += [(root / p).read_text(encoding="utf-8") for p in ("templates/docverify/_r4.html", "static/js/docverify-r4.js")]
+    texts += [(root / p).read_text(encoding="utf-8") for p in ("templates/docverify/_process.html", "static/js/docverify-process.js")]
     joined = json.loads(texts[0]).__repr__() + "".join(texts[1:])
     assert "認証済み" not in joined and "規格に準拠" not in joined
     assert "ISO/IEC 20246" in joined and "2017" in joined

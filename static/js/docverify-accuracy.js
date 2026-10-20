@@ -15,11 +15,18 @@
       }).join('') + '</tbody></table>';
   }
 
+  // 評価セットの内部名（例: ja_v1）は利用者に出さず「日本語 第 1 版」のように読み替える
+  function dsLabel(name) {
+    var m = /^([a-z]{2})_v(\d+)$/.exec(String(name || ''));
+    var LANG = { ja: '日本語', en: '英語' };
+    return m ? (LANG[m[1]] || m[1]) + ' 第 ' + m[2] + ' 版' : String(name || '');
+  }
+
   function renderMeta(d) {
     var ds = d.dataset || {};
     var lines = [
       ['測定日', esc(v(d.measured_on))],
-      ['データセット', d.dataset ? esc(ds.name) + '（' + esc(ds.language) + '・' + esc(ds.n) + ' 文・' + esc(ds.license) + '）' : '未測定'],
+      ['データセット', d.dataset ? esc(dsLabel(ds.name)) + '（' + esc(ds.language) + '・' + esc(ds.n) + ' 文・' + esc(ds.license) + '）' : '未測定'],
       ['注釈者数', esc(v(ds.annotators))],
       ["Cohen's kappa", esc(v(d.kappa))],
       ['規則の版', esc(v(d.rules_version))],

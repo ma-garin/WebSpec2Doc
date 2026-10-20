@@ -16,7 +16,7 @@ from flask import Blueprint, Response, jsonify, request
 
 from web.services.docverify import audit, llm_assist, llm_settings
 
-bp = Blueprint("doc_verify_r2", __name__)
+bp = Blueprint("doc_verify_ai", __name__)
 log = logging.getLogger(__name__)
 
 _IID = re.compile(r"^[0-9a-f]{12}$")

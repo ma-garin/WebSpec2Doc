@@ -113,7 +113,7 @@
   var state = { sid: '', cr: '', tab: '', view: '', system: null };
   function readUrl() {
     var q = new URLSearchParams(location.search);
-    return { sid: q.get('sys') || '', cr: q.get('cr') || '', tab: q.get('tab') || '', view: q.get('view') || '' };
+    return { sid: q.get('sys') || '', cr: q.get('cr') || '', tab: q.get('tab') || '', view: q.get('view') || '', site: q.get('site') || '' };
   }
   function go(p, replace) {
     var q = {};
@@ -121,6 +121,7 @@
     if (p.sid) q.sys = p.sid;
     if (p.cr) q.cr = p.cr;
     if (p.tab) q.tab = p.tab;
+    if (p.site) q.site = p.site;  // 指揮などから渡されたサイト（候補の提示とコード依存の初期選択だけに使う）
     var url = '/impact' + api.query(q);
     history[replace ? 'replaceState' : 'pushState'](q, '', url);
     render();
@@ -197,8 +198,8 @@
   function heroHtml() {
     return '<div class="dash-hero"><div class="dash-hero-main"><h1 class="dash-hero-title">仕様の変更から、テストすべき影響範囲を洗い出す</h1>' +
       '<p class="dash-hero-sub">対象システムごとに文書・ベースライン・項目のつながりを持ち、変更要求ごとに影響・リスク・確かめるテストを根拠つきで示します。</p>' +
-      '<div class="dash-hero-steps" aria-label="影響度分析の流れ"><span class="dash-hero-step"><b>1</b> 文書を取り込む</span><span class="dash-hero-arrow">→</span>' +
-      '<span class="dash-hero-step"><b>2</b> 変更要求を起票して分析</span><span class="dash-hero-arrow">→</span><span class="dash-hero-step"><b>3</b> 影響を解消して承認</span></div>' +
+      '<div class="dash-hero-steps" aria-label="影響度分析の流れ"><span class="dash-hero-step"><b>1</b> 文書を取り込む</span><span class="dash-hero-arrow" aria-hidden="true">→</span>' +
+      '<span class="dash-hero-step"><b>2</b> 変更要求を起票して分析</span><span class="dash-hero-arrow" aria-hidden="true">→</span><span class="dash-hero-step"><b>3</b> 影響を解消して承認</span></div>' +
       '<div class="im-hero-actions"><button type="button" class="btn-primary dash-hero-start" data-act="new-sys">新しい対象システム</button>' +
       '<button type="button" class="btn-sample-report" data-act="sample">見本で試す<span class="sample-zero">文書なし</span></button></div></div></div>';
   }
@@ -211,16 +212,35 @@
     var body = $('#im-home-body'); loading(body);
     api.systems().then(function (d) {
       var rows = api.list(d, 'systems');
+      var site = state.site;
       if (!rows.length) {
         body.innerHTML = empty({ title: 'まだ対象システムがありません', desc: '対象システムを作って文書を取り込むと、変更要求ごとに影響を分析できます。',
           steps: [['対象システムを作る', '名前と説明を入れる'], ['文書を取り込む', '要件・設計書・テストケース'], ['変更要求を分析する', '影響とテストを確認']],
           actions: '<button type="button" class="btn-primary im-bigbtn" data-act="new-sys">新しい対象システム</button>' +
             '<button type="button" class="btn-sample-report" data-act="sample">見本で試す<span class="sample-zero">文書なし</span></button>' });
+        if (site) body.insertBefore(siteCandidates(site, rows), body.firstChild);
         bindHome(body); return;
       }
       body.innerHTML = '<ul class="im-cards">' + rows.map(sysCard).join('') + '</ul>';
-      $$('[data-sid]', body).forEach(function (b) { b.addEventListener('click', function () { go({ sid: b.dataset.sid }); }); });
+      if (site) body.insertBefore(siteCandidates(site, rows), body.firstChild);
+      // サイトを渡されて開いたときは、選んだ対象システムの「コード依存」をそのサイトで開く（関連付けはしない）
+      $$('[data-sid]', body).forEach(function (b) { b.addEventListener('click', function () { go(site ? { sid: b.dataset.sid, tab: 'rea', site: site } : { sid: b.dataset.sid }); }); });
     }, function (e) { failed(body, e, function () { renderHome(root); }); });
+  }
+  /* サイト（指揮などからの deep link）に対応する対象システムの候補。人が関連付けたもの（code_site）だけを候補にし、
+     名前の一致などで自動に同一視しない。選ぶのは人。 */
+  function siteCandidates(site, rows) {
+    var cands = rows.filter(function (r) { return r.code_site && r.code_site === site; });
+    var box = document.createElement('section');
+    box.className = 'bt-card im-site-cand';
+    box.setAttribute('aria-labelledby', 'im-site-cand-t');
+    box.innerHTML = '<h2 class="dash-section-title" id="im-site-cand-t">サイト <code>' + esc(site) + '</code> から開きました</h2>' +
+      '<p class="bt-hint">サイトと対象システムは自動で同一視しません。候補から選ぶか、下の一覧から選んでください。選ぶと、その対象システムの「コード依存」をこのサイトで開きます。</p>' +
+      (cands.length ? '<p>このサイトを人が関連付けた対象システム（候補 ' + cands.length + ' 件）:</p><ul class="im-site-cand-list">' + cands.map(function (r) {
+        return '<li><button type="button" class="btn-outline-sm" data-cand="' + esc(r.id) + '">' + esc(r.name) + ' のコード依存を開く</button></li>'; }).join('') + '</ul>'
+        : '<p>このサイトを関連付けた対象システムはありません（候補 0 件）。一覧から選び、「コード依存」で管理者が関連付けられます。</p>');
+    $$('[data-cand]', box).forEach(function (b) { b.addEventListener('click', function () { go({ sid: b.dataset.cand, tab: 'rea', site: site }); }); });
+    return box;
   }
   function bindHome(el) {
     $$('[data-act=new-sys]', el).forEach(function (b) { b.addEventListener('click', newSystem); });

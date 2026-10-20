@@ -55,6 +55,8 @@ def test_site_without_run_is_not_unregistered(tmp_path):
     assert site["links"]["s01"] == "/sites/example.com/spec"
     assert site["links"]["s03"] == "/auto-run?site=example.com"  # 入口でサイトを選び直させない
     assert set(site["links"]) == {"s01", "s02", "s03", "s09", "s05"}
+    # System09 へはサイトを渡す（対象システムは自動で決めず、/impact が候補を示して人が選ぶ）
+    assert site["links"]["s09"] == "/impact?site=example.com"
     assert res["counts"]["sites"] == 1 and res["counts"]["failed"] == 0
 
 

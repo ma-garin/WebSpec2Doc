@@ -17,7 +17,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
 
 import docverify_eval as ev  # noqa: E402
-from web.routes import doc_verify_r5  # noqa: E402
+from web.routes import doc_verify_accuracy  # noqa: E402
 from web.services.docverify import accuracy as acc  # noqa: E402
 
 LEAK = re.compile(r"Traceback|Exception|\.py\b|/Users/|/tmp/|/private/")
@@ -36,7 +36,7 @@ def _write(tmp_path, data) -> Path:
 @pytest.fixture
 def client(monkeypatch):
     app = Flask(__name__, template_folder=str(ROOT / "templates"))
-    app.register_blueprint(doc_verify_r5.bp)
+    app.register_blueprint(doc_verify_accuracy.bp)
     return app, app.test_client()
 
 
@@ -171,7 +171,7 @@ def test_committed_result_matches_dataset():
 def test_partial_has_dom_contract(client):
     app, _ = client
     with app.app_context():
-        html = app.jinja_env.get_template("docverify/_r5.html").render()
+        html = app.jinja_env.get_template("docverify/_accuracy.html").render()
     for i in ("dvAccMeta", "dvAccTable", "dvAccMethods", "dvAccLimits", "dvAccReload"):
         assert f'id="{i}"' in html
     assert 'data-view="accuracy"' in html

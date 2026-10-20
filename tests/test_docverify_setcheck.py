@@ -11,7 +11,7 @@ import pytest
 
 import app as appmod
 from web import config
-from web.routes import doc_verify_r3
+from web.routes import doc_verify_setcheck
 from web.services.docverify import ingest, ingest_r3, setcheck, trace
 
 ORIGIN = {"Origin": "http://localhost"}
@@ -214,10 +214,10 @@ def client(tmp_path, monkeypatch):
     monkeypatch.setenv("WEBSPEC2DOC_ALLOW_LOCAL", "1")
     monkeypatch.setenv("WEBSPEC2DOC_AUTH_MODE", "off")
     app = appmod.app
-    if "doc_verify_r3" not in app.blueprints:  # 結線（web/__init__.py）は本線が行う。テストでは自分で登録する
+    if "doc_verify_setcheck" not in app.blueprints:  # 結線（web/__init__.py）は本線が行う。テストでは自分で登録する
         got = getattr(app, "_got_first_request", False)
         app._got_first_request = False
-        app.register_blueprint(doc_verify_r3.bp)
+        app.register_blueprint(doc_verify_setcheck.bp)
         app._got_first_request = got
     return app.test_client()
 

@@ -1,5 +1,5 @@
 /* ドキュメント検証 R4: 種別・役割・工程・工数と指標・プリセット・判定と記録（WS2D-DD-006 R4 7 章）。
- * templates/docverify/_r4.html の部品を各画面へ差し込む。更新は必ず rev を送り、409 は再読み込みを促す。 */
+ * templates/docverify/_process.html の部品を各画面へ差し込む。更新は必ず rev を送り、409 は再読み込みを促す。 */
 (() => {
   'use strict';
   if (!window.DV) return;

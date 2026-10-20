@@ -13,7 +13,7 @@ import pytest
 from flask import Flask, g
 
 from web import config
-from web.routes import doc_verify, doc_verify_r2
+from web.routes import doc_verify, doc_verify_ai
 from web.services.docverify import audit, llm_assist, llm_settings, questions, store
 
 EMAIL = "yamada.taro@example.co.jp"
@@ -45,7 +45,7 @@ def env(tmp_path, monkeypatch):
     app = Flask(__name__)
     app.config.update(TESTING=True, TEST_USER=None)
     app.register_blueprint(doc_verify.bp)
-    app.register_blueprint(doc_verify_r2.bp)
+    app.register_blueprint(doc_verify_ai.bp)
 
     @app.before_request
     def _user():

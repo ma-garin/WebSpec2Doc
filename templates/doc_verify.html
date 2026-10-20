@@ -12,11 +12,11 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='css/user-menu.css') }}?v={{ _ver }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/ta2.css') }}?v={{ _ver }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/docverify.css') }}?v={{ dv_ver }}">
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/docverify-tier.css') }}?v={{ dv_ver }}">
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/docverify-tier-1.css') }}?v={{ dv_ver }}">
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/docverify-tier-2.css') }}?v={{ dv_ver }}">
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/docverify-tier-3.css') }}?v={{ dv_ver }}">
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/docverify-r4.css') }}?v={{ dv_ver }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/docverify-trace.css') }}?v={{ dv_ver }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/docverify-trace-docs.css') }}?v={{ dv_ver }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/docverify-trace-check.css') }}?v={{ dv_ver }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/docverify-trace-report.css') }}?v={{ dv_ver }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/docverify-process.css') }}?v={{ dv_ver }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/c-hybrid.css') }}?v={{ _ver }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/c-shell.css') }}?v={{ _ver }}">
 </head>
@@ -49,9 +49,9 @@
       <div class="dv-toast" id="dv-toast" role="status" hidden></div>
       {% include 'docverify/_global.html' %}
       {% include 'docverify/_review.html' %}
-      {% include 'docverify/_tier.html' %}
-      {% include 'docverify/_r4.html' %}
-      {% include 'docverify/_r5.html' %}
+      {% include 'docverify/_trace.html' %}
+      {% include 'docverify/_process.html' %}
+      {% include 'docverify/_accuracy.html' %}
       <dialog class="dv-modal" id="dv-modal" aria-labelledby="dv-modal-title"><h2 class="dv-modal-title" id="dv-modal-title"></h2><div class="dv-modal-body" id="dv-modal-body"></div><div class="dv-modal-actions"><button type="button" class="b" data-modal="cancel"></button><button type="button" class="b p" data-modal="ok"></button></div></dialog>
     </main>
   </div>
@@ -62,13 +62,13 @@
 <script src="{{ url_for('static', filename='js/docverify-global.js') }}?v={{ dv_ver }}"></script>
 <script src="{{ url_for('static', filename='js/docverify-viewpoints.js') }}?v={{ dv_ver }}"></script>
 <script src="{{ url_for('static', filename='js/docverify-review.js') }}?v={{ dv_ver }}"></script>
-<script src="{{ url_for('static', filename='js/docverify-r2.js') }}?v={{ dv_ver }}"></script>
-<script src="{{ url_for('static', filename='js/docverify-tier.js') }}?v={{ dv_ver }}"></script>
-<script src="{{ url_for('static', filename='js/docverify-tier-1.js') }}?v={{ dv_ver }}"></script>
-<script src="{{ url_for('static', filename='js/docverify-tier-2.js') }}?v={{ dv_ver }}"></script>
-<script src="{{ url_for('static', filename='js/docverify-tier-3.js') }}?v={{ dv_ver }}"></script>
-<script src="{{ url_for('static', filename='js/docverify-r4.js') }}?v={{ dv_ver }}"></script>
-<script src="{{ url_for('static', filename='js/docverify-r5.js') }}?v={{ dv_ver }}"></script>
+<script src="{{ url_for('static', filename='js/docverify-ai.js') }}?v={{ dv_ver }}"></script>
+<script src="{{ url_for('static', filename='js/docverify-trace.js') }}?v={{ dv_ver }}"></script>
+<script src="{{ url_for('static', filename='js/docverify-trace-docs.js') }}?v={{ dv_ver }}"></script>
+<script src="{{ url_for('static', filename='js/docverify-trace-check.js') }}?v={{ dv_ver }}"></script>
+<script src="{{ url_for('static', filename='js/docverify-trace-report.js') }}?v={{ dv_ver }}"></script>
+<script src="{{ url_for('static', filename='js/docverify-process.js') }}?v={{ dv_ver }}"></script>
+<script src="{{ url_for('static', filename='js/docverify-accuracy.js') }}?v={{ dv_ver }}"></script>
 <script>DV.start();</script>
 </body>
 </html>

@@ -3,6 +3,10 @@
 2026-10-18 時点の main（9039483）の docverify 関連 73 ファイルを全行読んで作成。ファイルごとの役割・主な要素・依存・注意。
 要点は `.claude/rules/docverify-map.md`（docverify のファイルを扱うと自動で読み込まれる）。
 
+> 2026-10-20 改名（G5）: 世代名ファイルを役割名に改名した（本文のファイル名は追従済み）。旧 r3 画面
+> （`templates/docverify/_r3.html`・`static/js/docverify-r3.js`・`static/css/docverify-r3.css`）はどのテンプレートからも
+> 読み込まれていなかったため削除した。本文に残る r3 画面の節は履歴として読む。
+
 ### `templates/doc_verify.html`（78 行）
 - 役割: System 06 の単一ページ殻。サイドバー（data-nav）と本文領域に各 partial を include し、CSS/JS を読み込んで `DV.start()` を呼ぶ。
 - 主な要素:
@@ -11,12 +15,12 @@
   - data-nav 一覧: 全体 `home`(28) `mine`(29) `reviews`(30) `findings`(31)／レビュー内（`#dv-review-nav` 35 の中、`#dv-review-name` 33 がレビュー名）`plan` `read` `triage` `questions` `followup` `screen` `gate` `setcheck`(36-42)／管理 `checklists` `metrics` `accuracy` `settings`(46-49)
   - 件数バッジ `[data-count]`: `mine`(29)、`open`(31、class red)、`candidates`(read)、`adopted`(triage)
   - `#dv-banner`（57、role=alert）、`#dv-toast`（58）、`dialog#dv-modal`（64。`#dv-modal-title` `#dv-modal-body`、`[data-modal=cancel|ok]`）
-  - include: `partials/topbar.html`（55、`topbar_crumb`/`topbar_title` を set）、`docverify/_global.html` `_review.html` `_r3.html` `_r4.html` `_r5.html`（59-63）
+  - include: `partials/topbar.html`（55、`topbar_crumb`/`topbar_title` を set）、`docverify/_global.html` `_review.html` `_r3.html` `_process.html` `_accuracy.html`（59-63）
 - 依存: CSS は tokens / app / app-components / css/components / user-menu / ta2 は `?v={{ _ver }}`、docverify / -r3 / -r4 は `?v={{ dv_ver }}`（8-16）。JS は user-menu → docverify-core → -global → -review → -r2 → -r3 → -r4 → -r5 の順（68-75）、最後に `DV.start()`（76）。ルートは `web/routes/doc_verify.py:66-67` が `dv_ver`（静的ファイル mtime の最大）を渡す。
 - 注意:
   - 読み込み順が重要: core が `window.DV` を作り、以降が `DV.on(view, fn)` で登録する。順序を変えると global 等は `if (!DV) return` で黙って何もしない。
-  - `docverify-r2.js` はこの担当範囲外で、対応する CSS/partial は無い（R2 は review 系の拡張と思われる。未確認）。
-  - `accuracy` に対応する DOM は `_r5.html`。`followup`/`screen` 等は `_review.html` の共通殻のみ。
+  - `docverify-ai.js` はこの担当範囲外で、対応する CSS/partial は無い（R2 は review 系の拡張と思われる。未確認）。
+  - `accuracy` に対応する DOM は `_accuracy.html`。`followup`/`screen` 等は `_review.html` の共通殻のみ。
   - トップバーの `topbar_title` は静的に「ホーム」、実際は core の `show()` が `#topbar-title` を書き換える。
   - favicon は `/static/favicon.svg` 直書き（7）。
 
@@ -42,20 +46,20 @@
 - 依存: docverify-r3.js、docverify-r3.css。
 - 注意: setcheck は core の REVIEW_VIEWS に含まれ、レビュー未選択だと `reviews` に飛ぶ。「規則と組織の語彙」はテナント共通（レビュー単位ではない）。`_review.html` の共通殻（steps / dvr-msg / dvr-body）を使わず独自構造。
 
-### `templates/docverify/_r4.html`（84 行）
-- 役割: R4 の部品（種別・工程・工数・指標・回答取り込み・判定）を `#dvR4Parts`（hidden）に置く。docverify-r4.js が各画面（plan / triage / questions / gate）の本体へ差し込む（r4.js:221 で存在確認）。
+### `templates/docverify/_process.html`（84 行）
+- 役割: R4 の部品（種別・工程・工数・指標・回答取り込み・判定）を `#dvR4Parts`（hidden）に置く。docverify-process.js が各画面（plan / triage / questions / gate）の本体へ差し込む（r4.js:221 で存在確認）。
 - 主な要素（`data-r4-view` ごと）:
   - `plan`（`#dvR4-plan`）: `#dvR4Legacy`、`#dvR4Type` `#dvR4Required`、参加者表 `#dvR4People` `#dvR4AddPerson`、チェック `#dvR4Independent` `#dvR4ExitVerified` `#dvR4ExitDone`、プリセット `#dvR4Preset` `#dvR4PresetUse/Copy/Delete`、`#dvR4PlanSave`、工程 `#dvR4Entry`（errors）`#dvR4Advance` `#dvR4Log`、工数 `#dvR4Prep` `#dvR4Meeting` `#dvR4Pages` `#dvR4Kind`（比較しない/basic/detail）`#dvR4EffortSave`、指標 `#dvR4Metrics`
   - `triage`（`#dvR4-triage`）: `#dvR4Hidden`（個別レビュー中の非表示注記）`#dvR4Kinds`
   - `questions`（`#dvR4-questions`）: `#dvR4AnsFile`（.csv .xlsx）`#dvR4AnsImport` `#dvR4AnsResult`
   - `gate`（`#dvR4-gate`）: `#dvR4Stale` `#dvR4Verdict` `#dvR4Approver` `#dvR4Decided` `#dvR4VerdictSave` `#dvR4Unchecked` `#dvR4Record` `#dvR4RecordXlsx` `#dvR4AuditVerify` `#dvR4AuditResult` `#dvR4Standards` `#dvR4StandardsNote`
-- 依存: docverify-r4.js、docverify-r4.css（.dv-r4-*）。
+- 依存: docverify-process.js、docverify-process.css（.dv-r4-*）。
 - 注意: `#dvR4Parts` 自体は hidden のため、JS が移動しないと表示されない。承認者・日時は自由入力 text（日時の書式は placeholder のみ）。`dvR4Kind` の option 値は HTML ハードコード。
 
-### `templates/docverify/_r5.html`（10 行）
-- 役割: `data-view="accuracy"`（精度）の静的 DOM。描画は docverify-r5.js。
+### `templates/docverify/_accuracy.html`（10 行）
+- 役割: `data-view="accuracy"`（精度）の静的 DOM。描画は docverify-accuracy.js。
 - 主な要素: `#dvAccReload`（4）、`#dvAccMeta`（6、初期「読み込み中…」）、`#dvAccTable`（7）、`#dvAccMethods`（8）、`#dvAccLimits`（9）
-- 依存: docverify-r5.js。
+- 依存: docverify-accuracy.js。
 - 注意: ID 接頭辞が `dvAcc*`（他は dvg / dv3 / dvR4）で不統一。section は `dvr-view` ではなく `dv-view` のみ。レビュー未選択でも開ける管理画面（REVIEW_VIEWS 外）。
 
 ### `templates/docverify/_review.html`（9 行）
@@ -86,7 +90,7 @@
 - 依存: tokens.css のみ。
 - 注意: `.dv3-coverage` は固定の黄系バッジ。`.dv3-table` は docverify.css の `.dv-t` とは別系統（表の見た目が二系統）。JS 側（docverify-r3.js）が使う class と一致するか未確認。
 
-### `static/css/docverify-r4.css`（24 行）
+### `static/css/docverify-process.css`（24 行）
 - 役割: R4 部品（`.dv-r4*`）のスタイル。
 - 主な要素: `.dv-r4`(2)、`-title` `-row` `-hint` `-warn` `-muted` `-result` `-table` `-fieldset` `-errors`(:empty は非表示) `-list` `-grid` `-metrics` `-dl`(dt/dd) と `:focus-visible`(24)
 - 依存: tokens.css のみ。
@@ -162,7 +166,7 @@
   - renderRead の checkbox 変更は PATCH 後に全体再描画。findings 追加は 2 段階（POST→checklist_item を別 POST、391）で途中失敗すると項目なしで残る。
   - 'warning'/'info' を major/minor に読み替える旧値互換(23)。questions の CSV/Excel は a href 直リンク（失敗時の表示なし）。
 
-### `static/js/docverify-r2.js`（207 行）
+### `static/js/docverify-ai.js`（207 行）
 - 役割: R2「AI の説明」: 送信前確認→送信→採否・質問票へ送る、と設定画面の AI 送信先・監査ログ。
 - 主な要素:
   - decorate(15): `[data-fa="ask"]` の親と `tr[data-fid]` の最終 td に `data-r2="explain"` ボタンを注入。MutationObserver(132) で body 全体を監視し再注入。
@@ -197,8 +201,8 @@
   - 失敗時 catch は空（DV.api が帯に出す前提）。upload の catch は msg('') で消すだけ。
   - bind 済み判定 `bound` はページ生存中のみ。ボタン busy は DV.busy で二重送信防止。
 
-### `static/js/docverify-r4.js`（229 行）
-- 役割: R4 レビュー種別・役割・工程の進行・工数と指標・観点プリセット・指摘の種別・回答取込・判定と記録を、_r4.html の部品として既存の plan/triage/questions/gate 画面へ差し込む。
+### `static/js/docverify-process.js`（229 行）
+- 役割: R4 レビュー種別・役割・工程の進行・工数と指標・観点プリセット・指摘の種別・回答取込・判定と記録を、_process.html の部品として既存の plan/triage/questions/gate 画面へ差し込む。
 - 主な要素:
   - 登録（DOMContentLoaded 内, 220）: `#dvR4Parts` が無ければ何もしない。DV.on('plan', showPlan)、('triage', showTriage)、('questions', showQuestions=mount のみ)、('gate', showGate)。bindPlan(144)/bindOthers(191)。
   - mount(17): `#dvR4-{view}` を `.dv-view[data-view]` へ appendChild。
@@ -206,7 +210,7 @@
   - 描画: renderPeople(48)、renderPlanFields(56)、renderFlow(69)、renderEffort(78)、showTriage(112)、showGate(126)。
   - API（P=/api/docverify/r4）: GET {P}/meta、GET {P}/inspections/{id}、GET {P}/presets、PUT …/plan、POST …/advance、PUT …/effort、POST …/preset、POST {P}/presets/{id}/copy、DELETE {P}/presets/{id}、POST …/findings/{fid}/kind、POST …/answers（form: file, rev）、POST …/verdict、GET …/record.xlsx、GET {P}/audit/verify。
   - DOM id: #dvR4Parts #dvR4People #dvR4AddPerson #dvR4Type #dvR4Legacy #dvR4Required #dvR4Independent #dvR4ExitVerified #dvR4ExitDone #dvR4Preset(+Use/Copy/Delete) #dvR4PlanSave #dvR4Entry #dvR4Advance #dvR4Log #dvR4Prep #dvR4Meeting #dvR4Pages #dvR4Kind #dvR4EffortSave #dvR4Metrics #dvR4Hidden #dvR4Kinds #dvR4AnsFile/#dvR4AnsImport/#dvR4AnsResult #dvR4Stale #dvR4Verdict #dvR4Approver #dvR4Decided #dvR4VerdictSave #dvR4Unchecked #dvR4Record #dvR4RecordXlsx #dvR4Standards #dvR4StandardsNote #dvR4AuditVerify #dvR4AuditResult。
-- 依存: DV.api/esc/toast/banner/download/PHASES/state.review。templates/docverify/_r4.html と `.dv-view` 4 画面。review.js が先に描く plan/triage/gate/questions の枠。
+- 依存: DV.api/esc/toast/banner/download/PHASES/state.review。templates/docverify/_process.html と `.dv-view` 4 画面。review.js が先に描く plan/triage/gate/questions の枠。
 - 注意:
   - review.js と同じ 4 画面に重ねて登録。review.js 側 renderPlan が body を innerHTML で作り直しても r4 部品は host 直下に別途 mount されるので残るが、描画順・二重の保存ボタン（計画保存 PATCH と /r4/plan PUT）と承認欄の二重に注意。
   - 承認: showGate は #dvR4Approver / #dvR4Decided に値を入れない（入力欄は空のまま。保存済み承認を表示しない）。review.js 側 #dvr-apn は ap.approver を表示。
@@ -215,7 +219,7 @@
   - showQuestions は mount のみ（回答取込のイベントは bindOthers 側）。DOMContentLoaded 前提のため、動的読込にすると動かない。
   - guard は例外握りつぶし（文言は DV.api の帯）。renderEffort の保存後は load し直さず st を使用。
 
-### `static/js/docverify-r5.js`（89 行）
+### `static/js/docverify-accuracy.js`（89 行）
 - 役割: R5 精度ページ（SCR-06-10, `#accuracy`）。GET /api/docverify/accuracy を 4 つの表（メタ・規則・測定方法別・限界）に描く。
 - 主な要素:
   - load(70): fetch('/api/docverify/accuracy')。renderMeta(18)、renderRules(36)、renderMethods(47)、renderLimits(59)、fail(65)、table(11)、esc/v（未測定表示, 5/10）。
@@ -275,7 +279,7 @@
   - 状態名・重大度・工程・役割の文字列定数が R1・R4・perm に分散。
   - `update_finding` の severity は `normalize_severity` 経由（旧語彙の吸収）。add_finding も同じ。
 
-### `web/routes/doc_verify_r2.py`（331 行）
+### `web/routes/doc_verify_ai.py`（331 行）
 - 役割: R2。AI（LLM）の説明を人の承諾つきで 1 件の指摘に付ける。送信前確認、送信、取りやめ、採否、未決定事項の質問票への送り込み、送信先設定、監査ログ。LLM が失敗しても規則の検出・判定には影響しない（FR-06-115）。
 - 共通の型: 応答は `_respond`（R1 と同じ `{inspection, summary, ...}`）。検査 ID の形式不正・不在は 404（M_INSP）。メッセージ定数 `M_*` を先頭に集約。
 - 権限: R1 の `perm.require` は使わず、モジュール内の `is_admin()`（`web.tenancy.current_auth_user()` が None か role=="admin"。認証オフは全員 admin 扱い）と `is_approver()`（全検査の participants に自分が approver で入っているか）で判定。
@@ -289,7 +293,7 @@
   - POST …/ai/questions → `to_questions`（272）→ 選んだ未決定事項を origin=ai・certainty=要確認・status=candidate の指摘として追加（`AI_QUESTION`）。`audit.append("ai_question")` → `{inspection, summary, added:[ID]}` 201 → indexes 不正/空 400、指摘なし/`ai` なし 404/400。送信済み（`sent_questions`）は再追加しない。
   - GET /api/docverify/r2/audit → `audit_list`（310）→ `audit.query`/`read_all`/`describe`/`ACTIONS` → `{rows[+action_label, summary], users, actions}` → admin でも approver でもなければ 403、期間形式/操作名不正 400。
   - GET /api/docverify/r2/audit.csv → `audit_csv`（323）→ `audit.to_csv` → text/csv 添付 → 403/400。
-- 依存: `web.services.docverify` の `audit`・`llm_assist`・`llm_settings`（先頭 import）、遅延で `store`・`metrics`・`settings`。`web.tenancy.current_auth_user`。Blueprint 名 `doc_verify_r2`、登録は `web/__init__.py` 36 行 import・148 行。
+- 依存: `web.services.docverify` の `audit`・`llm_assist`・`llm_settings`（先頭 import）、遅延で `store`・`metrics`・`settings`。`web.tenancy.current_auth_user`。Blueprint 名 `doc_verify_ai`、登録は `web/__init__.py` 36 行 import・148 行。
 - 注意:
   - 同意トークン（`_consents`）と実行中イベント（`_running`）はプロセス内メモリ。複数ワーカーや再起動で preview→explain が 400（M_CONSENT）になる。
   - 監査が 2 系統: R2 は `audit.append`（`audit` モジュール）、R1・R4 は `perm.record`（ハッシュ連鎖ログ）。閲覧は R2 の /r2/audit と R4 の /r4/audit/verify に分かれる。
@@ -299,7 +303,7 @@
   - `is_approver` は全検査を走査。`_IID`・`_load`・`_respond`・`_err` が R1・R3・R4 と重複。
   - 指摘 ID 採番が R1 `_renumber` と別に `_question_findings` にある。
 
-### `web/routes/doc_verify_r3.py`（208 行）
+### `web/routes/doc_verify_setcheck.py`（208 行）
 - 役割: R3。複数文書（要件・設計・テスト）の登録・削除、集合の検査（文書間の突き合わせ）、候補の組の判定、追跡表（trace）とその形式設定、規則と語彙の設定。既存 Blueprint は変えない。
 - 共通の型: 状態応答は `_state(insp)`（53 行）= `{documents（passages を除く）, kinds[{id,label}], set_check(setcheck.view), trace(trace.build), formats, trace_format, findings(件数。一覧ではない), coverage}`。更新系は `_save_respond`（保存して `_state` を返す。保存失敗 500）。
 - 権限: なし（`perm.require`・rev 照合・管理者判定のいずれも使わない）。
@@ -312,7 +316,7 @@
   - POST …/<iid>/r3/trace → `set_trace_format`（165）body.format → `trace.pattern` で検証して `trace_format` を保存 → `_state` → 400。
   - GET …/<iid>/r3/trace.xlsx → `trace_xlsx`（179）→ `trace.to_xlsx(trace.build(...))` → xlsx 添付 → 404/500。
   - GET/PUT /api/docverify/r3/settings → `r3_settings`（193）→ `setcheck.load_settings`/`save_settings`（規則と語彙）→ 設定そのもの（`{settings:…}` で包まない）→ PUT の ValueError 400、他 500。
-- 依存: `flask`、遅延 import で `web.services.docverify` の `store`・`ingest`・`ingest_r3`・`trace`・`setcheck`・`checks`、`settings.current_user`。Blueprint 名 `doc_verify_r3`、登録は `web/__init__.py` 35 行 import・147 行。
+- 依存: `flask`、遅延 import で `web.services.docverify` の `store`・`ingest`・`ingest_r3`・`trace`・`setcheck`・`checks`、`settings.current_user`。Blueprint 名 `doc_verify_setcheck`、登録は `web/__init__.py` 35 行 import・147 行。
 - 注意:
   - 権限・楽観ロックなし。認証ありでも誰でも文書の追加削除・設定 PUT ができる（R4 の tenant_settings を迂回）。複数人が同時に保存すると後勝ち。
   - 応答形が R1/R2 と違う（`{inspection, summary}` でなく `_state`）。`findings` キーは件数で、一覧ではない。r3/settings は包みなしで返し、R1 の settings（`{settings}`）と形が違う。
@@ -320,7 +324,7 @@
   - 文書の全断片を検査 JSON に保存するため、サイズが増える。アップロードにサイズ上限なし（`file.read()` 全量）。
   - 削除 API は ID 形式を検査してから存在確認。set_trace_format は検証のみで権限なし。
 
-### `web/routes/doc_verify_r4.py`（382 行）
+### `web/routes/doc_verify_process.py`（382 行）
 - 役割: R4。レビューの工程（plan→…→closed）、権限、楽観ロック、種別、工数、判定と承認欄、質問票の回答取り込み（CSV/xlsx）、チェックリストのプリセット、参考範囲、レビュー記録の出力、監査の連鎖検証。
 - 共通の型:
   - 定数 `_P="/api/docverify/r4"`。例外 `_Stop(message, status, **extra)` を投げ、デコレータ `_guard` が `{error, ...extra}` に変換（`_err`）。
@@ -344,7 +348,7 @@
   - PUT|DELETE /presets/<pid> → `edit_preset`（345）権限 tenant_settings → `presets.update`/`delete(pid, _in_use)` → PUT は `{preset}`、DELETE は `{presets}` → 不在 404、使用中などの PermissionError 409、検証 400。
   - GET|PUT /reference → `reference`（365）→ PUT は `perm.check("tenant_settings")` 後に `presets.save_reference` → `{reference, override, limit}` → PUT 非管理者 403、検証 400。GET は権限なし。
   - GET /audit/verify → `audit_verify`（379）権限 audit_view → `perm.verify_log()` → その戻り値 → 403。
-- 依存: `web.services.docverify` の `perm`・`presets`・`process`（先頭 import）、遅延で `store`・`metrics`・`settings.load_checklists`。Blueprint 名 `doc_verify_r4`、登録は `web/__init__.py` 37 行 import・149 行。
+- 依存: `web.services.docverify` の `perm`・`presets`・`process`（先頭 import）、遅延で `store`・`metrics`・`settings.load_checklists`。Blueprint 名 `doc_verify_process`、登録は `web/__init__.py` 37 行 import・149 行。
 - 注意:
   - R1 の同名機能（作成・回答取り込み・承認・検査の取得）と並存する。画面がどちらを呼ぶかで権限・rev の扱いが変わる（R1 は権限・rev なし）。
   - 更新系は rev 必須。未指定は 409（メッセージは M_NO_REV だが code は "conflict"）。フロントが rev を持ち回れていないと全更新が 409。
@@ -353,10 +357,10 @@
   - `M_MAX_BYTES` は数値なのに `M_` 接頭辞（メッセージ定数と紛らわしい）。`view` は公開名（他モジュールから使われているかは未確認）。`_guard` の後ろに `@perm.require` が来る順序（`@bp.route` → `@perm.require` → `@_guard`）に依存。
   - `perm._context()`（プライベート関数）を直接呼ぶ。テストは差し替え前提（perm 側の docstring）。
 
-### `web/routes/doc_verify_r5.py`（25 行）
+### `web/routes/doc_verify_accuracy.py`（25 行）
 - 役割: R5。精度ページ用 API。規則別の適合率・再現率・n・測定日・限界（未測定は「未測定」）。
 - 主な要素: GET /api/docverify/accuracy → `accuracy`（16）→ `accuracy.page()` → その戻り値（キーは担当外 `web/services/docverify/accuracy.py`）→ ValueError は `{error: 例外文}` 500、その他は固定文 `{error}` 500。権限なし。
-- 依存: `web.services.docverify.accuracy`（遅延 import）。Blueprint 名 `doc_verify_r5`、登録は `web/__init__.py` 34 行 import・146 行。測定は `scripts/docverify_eval.py`（docstring 記載）。
+- 依存: `web.services.docverify.accuracy`（遅延 import）。Blueprint 名 `doc_verify_accuracy`、登録は `web/__init__.py` 34 行 import・146 行。測定は `scripts/docverify_eval.py`（docstring 記載）。
 - 注意: ValueError の文言をそのまま利用者に返す（実装語が出る恐れ）。権限なし（認証ありでも誰でも読める）。測定の実行 API は無い（スクリプトのみ）。
 
 ### `web/services/docverify/__init__.py`（0 行）
@@ -556,7 +560,7 @@
 - 依存: zipfile, xml.etree.ElementTree.iterparse, pdfminer, pypdf（遅延 import）、`ingest.has_xml_declarations`（docx/xlsx のみ・遅延 import）。
 - 注意: `except Exception` で全握りつぶしだが warning ログを出し scanned=False に。XML 宣言付き(has_xml_declarations)の docx/xlsx は数えずに scanned=False を返す。DOCTYPE/ENTITY 検出はバイト列の単純包含（XXE 対策）。xlsx の hidden_cols は列範囲の幅と hidden 行も加算。docx は本文・ヘッダ・フッタのみ走査（脚注・テキストボックス内は未対応）。PDF の画像数は pdfminer のレイアウト解析のため大きい PDF では遅い。
 
-### `tests/test_docverify_r1_integration.py`（224 行）
+### `tests/test_docverify_api_integration.py`（224 行）
 - 役割: R1 の結合テスト。Flask テストクライアントで API の応答だけを見る（画面側は Playwright MCP で別途）。
 - 主な要素:
   - フィクスチャ client（13 行目付近 32）: config.DATA_DIR を tmp_path に差し替え、FLASK_TESTING / ALLOW_LOCAL / AUTH_MODE=off を設定し、本物の `app.app.test_client()` を使う。LLM は使わない。
@@ -573,7 +577,7 @@
 - 依存: app.app、web.config、web.services.docverify.home / metrics。ルート /api/docverify/inspections(/…/document, /findings/<id>, /report.xlsx)、/api/docverify/home。データは tmp_path 上の inspection.json。
 - 注意: 画像/コメント件数や LEAK の正規表現は文言完全一致（M-04/M-13/M-20/M-40/M-41 の定数）に依存。test_old_json_compat は tmp_path.rglob で inspection.json の保存位置を探索。skip・外部依存なし。
 
-### `tests/test_docverify_r1_unit.py`（640 行）
+### `tests/test_docverify_unit.py`（640 行）
 - 役割: R1 の単体テスト（RD-006 受入基準・DD-006 12.1 章から導出）。checks・readers・unread・ingest・store・metrics・home を関数単位で検証。
 - 主な要素:
   - 定数: M01〜M05/M20/M13/M30/M31/M33 の固定文、ZERO 辞書。ヘルパ: build_xlsx（画像/コメント/非表示/チャート/図形注入）、_inject_shapes・_rewrite_zip（zip 内 XML 書き換え）、build_docx_unread / build_docx_structure（python-docx+生 XML でコメント・SmartArt・テキストボックス・入れ子表）、_insp / _f / _v / _review / _ask / _summ（検査 dict の手組み）。LLM は不使用。
@@ -590,11 +594,11 @@
 - 依存: web.services.docverify の checks / home / ingest / metrics / store / unread、web.vendor.reverse_doc.docs_ingest.readers。openpyxl・python-docx・PIL・pypdf で tmp_path にデータ生成。
 - 注意: 規則 ID（REQ.*、RD.AMBIGUOUS）や固定文言・列幅に厳密一致する脆い assert が多い。test_open_ended_suppressed… は集合の和で緩く判定。test_incomplete_… は件数1と severity 範囲のみ。_inline_drawing は hash() で docPr id を作る（実行ごとに変動しうるが衝突しなければ無害）。test_next_actions… は日付固定（2026-10-xx）の期限順でソートに依存。skip・環境変数なし（monkeypatch は config.DATA_DIR のみ）。
 
-### `tests/test_docverify_r2.py`（332 行）
+### `tests/test_docverify_ai.py`（332 行）
 - 役割: R2（LLM 補助・伏せ字・送信先設定・監査ログ）の単体＋結合テスト。docstring なし、FR/NFR 番号はコメント見出しのみ。
 - 主な要素:
   - Stub（24）: OpenAICompatClient.request の差し替え。(client._base, prompt, schema_name) を calls に記録し、interp/fail/delay を指定可。schema_name が docverify_interpret なら解釈文字列、他は reason/rewrite/open_questions を返す。
-  - フィクスチャ env（42）: DATA_DIR を tmp_path、Flask アプリに doc_verify.bp と doc_verify_r2.bp だけ登録、g.auth_user を TEST_USER で制御、llm_settings.check_ollama を True に、OPENAI_API_KEY をダミー設定。
+  - フィクスチャ env（42）: DATA_DIR を tmp_path、Flask アプリに doc_verify.bp と doc_verify_ai.bp だけ登録、g.auth_user を TEST_USER で制御、llm_settings.check_ollama を True に、OPENAI_API_KEY をダミー設定。
   - ヘルパ: _insp（保存済み検査+指摘 F1）、_use（送信先設定）、_preview / _explain（preview→consent_token→explain）。
   - 伏せ字: test_mask_recall_per_kind（100、KINDS 全種 parametrize、再現率≥0.95）／test_mask_removes_email_and_marks_span（107）／test_card_requires_luhn_and_manual_range（114）／test_wobble_split_and_not_split（122）／test_three_sentences_and_timeout_cancel（127、タイムアウト・キャンセルは time.sleep 使用）。
   - 接続先: test_ollama_url_rejected（140、6 URL）／test_ollama_url_allowed（147、5 URL）／test_disclosure_override_needs_source（153）。
@@ -602,22 +606,22 @@
   - 送信前確認・説明: test_preview_has_five_items_and_sends_nothing（204）／test_explain_with_ollama_only_and_state_unchanged（214、openai に送らない・メール漏れなし・状態 candidate 維持）／test_consent_token_is_single_use（229）／test_failure_degrades_and_other_ops_continue（240、503・他操作継続・監査 llm_send_failed）／test_timeout_is_user_readable（253、504）／test_wobble_flag（261、送信4回）。
   - 採否・質問票: test_adopt_records_and_keeps_original（273）／test_decision_without_ai_is_rejected（288）／test_send_one_question_adds_one_row（294）。
   - 監査: test_audit_filter_csv_and_permission（307、絞込・CSV・403）／test_audit_csv_formula_guard（323）／test_preview_extra_words_are_masked（328）。
-- 依存: web.routes.doc_verify / doc_verify_r2、web.services.docverify の audit / llm_assist / llm_settings / questions / store。ルート /api/docverify/r2/…（llm-settings, findings/F1/ai/{preview,explain,decision,questions}, audit, audit.csv）。
+- 依存: web.routes.doc_verify / doc_verify_ai、web.services.docverify の audit / llm_assist / llm_settings / questions / store。ルート /api/docverify/r2/…（llm-settings, findings/F1/ai/{preview,explain,decision,questions}, audit, audit.csv）。
 - 注意: 本物のアプリでなく最小 Flask に Blueprint 登録（本線の結線は未確認）。timeout テストは実時間 sleep(2)/(3) を含み遅い。test_mask_recall_per_kind は assert が割合のみ。test_disclosure_override_needs_source は env を受けるが未使用。test_audit_csv_formula_guard は env 不要でグローバル DATA_DIR を使う可能性。ホーム検証なし。
 
-### `tests/test_docverify_r3.py`（329 行）
+### `tests/test_docverify_setcheck.py`（329 行）
 - 役割: R3（集合の検査＝重複・矛盾、追跡表、取り込み拡張、規則・語彙）の単体＋結合テスト。
 - 主な要素:
-  - ヘルパ: _doc（断片付き文書 dict）、_xlsx（行リスト+非表示シート）、_trace_docs、_insp_with_pair。フィクスチャ client（210）: 本物の app.app を使い doc_verify_r3 が未登録なら _got_first_request を一時退避して登録する。LLM は不使用。
+  - ヘルパ: _doc（断片付き文書 dict）、_xlsx（行リスト+非表示シート）、_trace_docs、_insp_with_pair。フィクスチャ client（210）: 本物の app.app を使い doc_verify_setcheck が未登録なら _got_first_request を一時退避して登録する。LLM は不使用。
   - 集合検査: test_120_near_duplicate_is_one_pair（43）／test_120_normalizes_space_width_and_punctuation（50）／test_120_different_sentences_no_pair（54）／test_121_numbers_with_same_unit_are_contradiction（59）／test_121_negation_vs_affirmation_is_contradiction（66）／test_121_different_subject_not_contradiction（72）／test_122_decide_contradiction_adds_finding（82、入力不変・F4 追加・ok で rejected）／test_122_invalid_decision_and_unknown_pair（94）／test_122_decision_carried_over_on_rerun（102）／test_123_zero_candidates_shows_coverage_unverified（110）。
   - 追跡表: test_131_132_trace_rows_rate_and_orphans（123、率 67%）／test_132_orphan_downstream_id（131）／test_134_format_picks_only_that_form（138）／test_135_document_without_ids_is_excluded_with_reason（145）／test_133_xlsx_has_same_rows（152）。
   - 取り込み拡張: test_016_table_row_is_one_passage（161）／test_017_hidden_sheet_is_marked（167）／test_018_encrypted_office_is_not_called_broken（175、OLE ヘッダの偽データ）。
   - 規則・語彙: test_026_missing_verification_column（184）／test_026_full_columns_no_candidate_and_non_requirement_table_ignored（189）／test_027_term_variant（194）／test_025_forbidden_and_allowed_words（201）。
   - 結合(API): test_130_register_two_documents_with_kinds（237）／test_130_bad_kind_and_missing_inspection（247）／test_018_api_encrypted_message（253）／test_025_disabled_rule_suppresses_candidate（259、設定 PUT で UNIVERSAL 無効化）／test_026_027_api_candidates（270）／test_017_api_hidden_excluded_from_detection（280）／test_120_123_122_api_setcheck_flow（287、空→矛盾→判定→finding 反映）／test_setcheck_without_documents_is_400（306）／test_133_134_api_trace_format_and_xlsx（311）／test_delete_document（325）。
-- 依存: web.services.docverify の ingest / ingest_r3 / setcheck / trace、web.routes.doc_verify_r3。ルート /api/docverify/inspections/<id>/r3/{documents,setcheck,trace,trace.xlsx}、/api/docverify/r3/settings、/inspections/<id>/r3。
+- 依存: web.services.docverify の ingest / ingest_r3 / setcheck / trace、web.routes.doc_verify_setcheck。ルート /api/docverify/inspections/<id>/r3/{documents,setcheck,trace,trace.xlsx}、/api/docverify/r3/settings、/inspections/<id>/r3。
 - 注意: client フィクスチャが Flask 内部属性 _got_first_request を書き換える（Flask 版依存で壊れやすい）。DATA_DIR は monkeypatch するが app.app はプロセス共有のため登録状態が他テストと共有。test_130_register… の `trace.complete.rate == 100` など、固定数値・固定文言に依存。docstring なし（ID はテスト名の番号のみ）。ホーム検証なし。
 
-### `tests/test_docverify_r4.py`（325 行）
+### `tests/test_docverify_process.py`（325 行）
 - 役割: R4（レビュー種別・役割・工程・工数指標・監査ハッシュ連鎖・プリセット・楽観ロック・権限）の API 結合＋単体テスト。
 - 主な要素:
   - フィクスチャ app（24）: DATA_DIR を tmp_path、AUTH_MODE=off、最小 Flask に r4route.bp のみ登録。client（34）。as_user（39）で perm._context を差し替え（名前・管理者・認証オン）。seed（43）で store.new に rev=0 と上書きを入れて保存、load（50）。fnd（60）= 指摘 dict。DOC/PS 定数。LLM 不使用。
@@ -627,12 +631,12 @@
   - プリセット: test_preset_select_screen（178）／test_preset_copy_keeps_original（188、組込は 409）／test_unchecked_items（199）／test_preset_in_use_cannot_delete（204）。
   - 独立個別レビュー・種別: test_independent_individual_review（214、自分の完了まで他人の指摘は見えない）／test_finding_kind_in_list_and_report（225、record.xlsx の「種別」列=欠落）。
   - 回答取り込み: test_answers_xlsx_same_as_csv（245）／test_answers_unknown_row_reported（256、スキップ行 3・5）。
-  - 承認・記録: test_approval_stale_after_new_version（266）／test_record_has_all_items（277）／test_no_certification_claims（289、「認証済み」「規格に準拠」が無く「ISO/IEC 20246」「2017」が有る。templates/docverify/_r4.html と static/js/docverify-r4.js を読む）。
+  - 承認・記録: test_approval_stale_after_new_version（266）／test_record_has_all_items（277）／test_no_certification_claims（289、「認証済み」「規格に準拠」が無く「ISO/IEC 20246」「2017」が有る。templates/docverify/_process.html と static/js/docverify-process.js を読む）。
   - 楽観ロック・権限: test_optimistic_lock（304、後の更新は 409）／test_reviewer_forbidden（313、403・LEAK なし・perm.can 判定）。
-- 依存: web.routes.doc_verify_r4、web.services.docverify の perm / presets / process / store。ルート /api/docverify/r4/…（inspections, plan, advance, effort, reference, presets, preset, answers, verdict, record.xlsx, meta, findings/<id>/kind）。ファイル直読み: templates/docverify/_r4.html、static/js/docverify-r4.js。
+- 依存: web.routes.doc_verify_process、web.services.docverify の perm / presets / process / store。ルート /api/docverify/r4/…（inspections, plan, advance, effort, reference, presets, preset, answers, verdict, record.xlsx, meta, findings/<id>/kind）。ファイル直読み: templates/docverify/_process.html、static/js/docverify-process.js。
 - 注意: 最小 Flask なので本物の app の結線は検証しない（R4 wire 側で補う）。perm._context・perm._audit_path・presets.BUILTIN[0] など内部（アンダースコア）APIに依存。指標・参考範囲は固定数値。test_no_certification_claims は静的ファイル内容に依存し、文言変更で壊れる。ホーム検証なし。
 
-### `tests/test_docverify_r4_wire.py`（105 行）
+### `tests/test_docverify_process_wire.py`（105 行）
 - 役割: R4 を既存ルートへ結線した部分の結合テスト（本物の app.app、wire_R4 の受入基準）。
 - 主な要素:
   - フィクスチャ client（24）: DATA_DIR を tmp_path、FLASK_TESTING / ALLOW_LOCAL / AUTH_MODE=off。ヘルパ _create_legacy / _create_r4 / _upload（txt 2 行）/ _audit_ops（audit ファイルの (op,target) 一覧）。LLM 不使用。
@@ -642,16 +646,16 @@
 - 依存: app.app、web.services.docverify の perm / process。ルート /api/docverify/inspections(…/document, /findings, /findings/<id>, PATCH)、/api/docverify/r4/inspections。ファイル直読み: static/js/docverify-global.js。
 - 注意: JS の存在確認は文字列一致のみ（挙動未検証）。_audit_ops は監査ファイルの保存位置（perm._audit_path）に依存。app.app が共有プロセス内で他テストの状態と重なる可能性。ホーム検証なし。
 
-### `tests/test_docverify_r5.py`（177 行）
+### `tests/test_docverify_accuracy.py`（177 行）
 - 役割: R5（規則の精度測定スクリプト・精度ページ）の単体＋API＋テンプレート契約テスト。
 - 主な要素:
-  - 準備: sys.path に scripts/ を追加し docverify_eval を import。_rule / _write ヘルパ、client フィクスチャ（36）は最小 Flask に doc_verify_r5.bp を登録（template_folder=templates）。LLM は不使用（評価は LLM 対象外）。
+  - 準備: sys.path に scripts/ を追加し docverify_eval を import。_rule / _write ヘルパ、client フィクスチャ（36）は最小 Flask に doc_verify_accuracy.bp を登録（template_folder=templates）。LLM は不使用（評価は LLM 対象外）。
   - 評価セット: test_dataset_has_80_or_more_sentences_with_valid_labels（44、80 文以上・id 一意・空集合を含む・全 RULES を網羅）／test_dataset_rejects_unknown_label（52）。
   - 測定: test_score_counts_tp_fp_fn_per_rule（60、ev.predict を差し替え。検出0件は precision None）／test_eval_is_deterministic_and_records_regression（69、2回実行で同一出力・previous/delta・規則版変更で差分）／test_cli_runs_with_venv_python（93、subprocess で scripts/docverify_eval.py を実行、timeout 120 秒）。
   - 精度ページ: test_low_precision_rule_is_disabled_with_reason（102、0.600 は既定無効・理由文）／test_three_measured_two_unmeasured（111）／test_methods_are_separate_columns（120）／test_no_result_file_shows_unmeasured（129）／test_zero_detections_not_disabled（136）。
   - API: test_api_returns_page（143、acc.RESULT_PATH を差し替え）／test_api_broken_file_returns_user_message（154、500 と acc.MSG_BROKEN）。
-  - 整合: test_committed_result_matches_dataset（165、quality/docverify_eval/result.json の n と sha256 がデータセットと一致）／test_partial_has_dom_contract（171、_r5.html に dvAccMeta・dvAccTable・dvAccMethods・dvAccLimits・dvAccReload の id と data-view="accuracy"）。
-- 依存: scripts/docverify_eval.py（ev.DEFAULT_DATASET, RULES, score, predict, main, load_dataset, _sha）、web.routes.doc_verify_r5、web.services.docverify.accuracy、quality/docverify_eval/result.json、templates/docverify/_r5.html。
+  - 整合: test_committed_result_matches_dataset（165、quality/docverify_eval/result.json の n と sha256 がデータセットと一致）／test_partial_has_dom_contract（171、_accuracy.html に dvAccMeta・dvAccTable・dvAccMethods・dvAccLimits・dvAccReload の id と data-view="accuracy"）。
+- 依存: scripts/docverify_eval.py（ev.DEFAULT_DATASET, RULES, score, predict, main, load_dataset, _sha）、web.routes.doc_verify_accuracy、web.services.docverify.accuracy、quality/docverify_eval/result.json、templates/docverify/_accuracy.html。
 - 注意: test_committed_result_matches_dataset は評価セットを編集して result.json を再生成しないと落ちる（運用上の関門）。test_cli… は subprocess・実ファイル出力で遅め。sys.executable に依存。test_eval_is_deterministic… は ev.main が実データセットを走らせる。ev._sha はプライベート関数。ホーム検証なし。
 
 ### `docs/design/docverify/home-v1.html`（120 行）

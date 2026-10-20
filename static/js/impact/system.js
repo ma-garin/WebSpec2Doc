@@ -278,6 +278,7 @@
       '<label class="bt-field">P2 の下限リスク値<input type="number" name="p2_min" min="1" max="12" value="' + esc(s.p2_min || 6) + '"' + dis + '></label>' +
       '<label class="bt-field">既定の波及段数<select name="depth_default"' + dis + '>' + [1, 2, 3].map(function (n) { return '<option' + (n === (s.depth_default || 2) ? ' selected' : '') + '>' + n + '</option>'; }).join('') + '</select></label></div>' +
       '<p class="bt-hint">縮退時（LLM・埋め込みなし）の精度: 再現率 ' + pct(s.degraded_recall) + ' ・ 適合率 ' + pct(s.degraded_precision) + '</p>' +
+      '<p class="bt-hint">コード依存のサイト: ' + (s.code_site ? esc(s.code_site) + '（人が関連付け）' : '未設定（自動では関連付けません）') + '。関連付けと解除は「コード依存」で行います。</p>' +
       (edit ? '<div class="bt-actions"><span class="sp"></span><button type="submit" class="btn-primary">保存する</button></div>' : '') + '</form>' +
       (edit ? '<div class="bt-card im-danger"><h3>対象システムを削除</h3><p class="bt-hint">文書・ベースライン・変更要求をすべて削除します。監査ログは残ります。</p><button type="button" class="btn-outline-sm im-btn-danger" data-act="del-sys">削除する</button></div>' : '');
     if (!edit) return;

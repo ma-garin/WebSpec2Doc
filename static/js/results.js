@@ -39,6 +39,19 @@ let currentResultRunId = '';
 let activeResultTab = 'overview', activeResultSub = '';
 const _renderedPanels = new Set(); // "tab/sub" 単位の描画済みフラグ（dirty 管理）
 
+// レポートパネルは .view の外にあり（generate と run-result で共有するため）、
+// hidden を外すだけだと今いる画面の上に出てしまう。所属するビューでなければ
+// 先に移動する。テスト実行の完了時など、別の画面にいる間に呼ばれる経路がある。
+// 取得に失敗した経路（エラー表示）も同じ扱いにする。
+function _revealResultPanel() {
+  executionView.classList.add('hidden');
+  const owner = (resultPanel.dataset.views || '').split(/\s+/);
+  const active = [...document.querySelectorAll('.view.is-active')][0];
+  const activeName = active ? active.id.replace(/^view-/, '') : '';
+  if (owner.length && !owner.includes(activeName)) switchView('generate');
+  resultPanel.classList.remove('hidden');
+}
+
 async function showResults(domain, tab, sub, runId) {
   currentResultRunId = runId || '';
   let data;
@@ -50,7 +63,7 @@ async function showResults(domain, tab, sub, runId) {
     if (!res.ok) throw new Error(data.error || '結果の取得に失敗しました');
   } catch (e) {
     // 実行ビューが隠れている（履歴から開いた）場合は結果領域にエラーを表示
-    executionView.classList.add('hidden'); resultPanel.classList.remove('hidden');
+    _revealResultPanel();
     appContent.classList.remove('is-executing');
     appContent.classList.add('is-reporting');
     setHeader(['ダッシュボード', domain], domain);
@@ -132,15 +145,7 @@ async function showResults(domain, tab, sub, runId) {
   const recrawlBtn = document.getElementById('r-recrawl-btn');
   if (recrawlBtn) recrawlBtn.hidden = Boolean(data.is_sample);
 
-  executionView.classList.add('hidden');
-  // レポートパネルは .view の外にあり（generate と run-result で共有するため）、
-  // hidden を外すだけだと今いる画面の上に出てしまう。所属するビューでなければ
-  // 先に移動する。テスト実行の完了時など、別の画面にいる間に呼ばれる経路がある。
-  const owner = (resultPanel.dataset.views || '').split(/\s+/);
-  const active = [...document.querySelectorAll('.view.is-active')][0];
-  const activeName = active ? active.id.replace(/^view-/, '') : '';
-  if (owner.length && !owner.includes(activeName)) switchView('generate');
-  resultPanel.classList.remove('hidden');
+  _revealResultPanel();
   appContent.classList.add('is-reporting');
   _buildExportDropdown(data);
   showWizardStep(4);

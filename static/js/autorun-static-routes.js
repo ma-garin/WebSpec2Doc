@@ -107,7 +107,7 @@
     var site = state.domain
       ? '<strong>' + esc(state.domain) + '</strong>'
       : '<input type="text" class="asr-domain-input" id="asr-domain-input" placeholder="例: example.com" aria-label="対象サイトのドメイン">' +
-        ' <button type="button" class="c-btn c-btn--secondary c-btn--sm asr-set" id="asr-set">設定</button>';
+        ' <button type="button" class="c-btn c-btn--secondary c-btn--sm asr-set" id="asr-set">対象サイトに指定</button>';
     return '<header class="c-page-head asr-head"><div class="c-page-head__main">' +
       '<h3 class="c-page-head__title asr-title">静的候補の探索</h3>' +
       '<p class="c-page-head__desc">リバース解析で見つけた到達未確認の画面ルートを、閲覧（GET）だけで開いて到達を確かめます。送信・入力・削除は行いません。</p>' +

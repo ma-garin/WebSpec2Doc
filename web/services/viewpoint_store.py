@@ -31,6 +31,23 @@ VERSION_STATES = {"draft", "published", "archived"}
 PROPOSAL_STATES = {"pending", "adopted", "rejected"}
 
 
+
+@contextmanager
+def _init_file_lock(db_path: Path) -> Iterator[None]:
+    """DB と同じ場所のロックファイルで、プロセスをまたいで初期化を 1 つずつにする。"""
+    try:
+        import fcntl
+    except ImportError:  # Windows。単一プロセス運用では _init_lock で足りる
+        yield
+        return
+    lock_path = db_path.with_name(db_path.name + ".init.lock")
+    with open(lock_path, "a+") as handle:
+        fcntl.flock(handle.fileno(), fcntl.LOCK_EX)
+        try:
+            yield
+        finally:
+            fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
+
 class ViewpointStoreError(RuntimeError):
     status_code = 400
 
@@ -150,15 +167,18 @@ class ViewpointStoreBase:
             if self._initialized:
                 return
             self.db_path.parent.mkdir(parents=True, exist_ok=True)
-            self._backup_before_migration()
-            with self._connect() as conn:
-                self._migrate(conn)
-            self._initialized = True
-            try:
-                self._seed_standard_set()
-            except Exception:
-                self._initialized = False
-                raise
+            # 移行と seed は「無ければ作る」の連続で、別の接続（他スレッドの別インスタンス・
+            # 他プロセス）と同時に走ると UNIQUE 競合になる。初期化の全体をファイルロックで直列化する。
+            with _init_file_lock(self.db_path):
+                self._backup_before_migration()
+                with self._connect() as conn:
+                    self._migrate(conn)
+                self._initialized = True
+                try:
+                    self._seed_standard_set()
+                except Exception:
+                    self._initialized = False
+                    raise
 
     def _backup_before_migration(self) -> None:
         if not self.db_path.exists() or self.db_path.stat().st_size == 0:

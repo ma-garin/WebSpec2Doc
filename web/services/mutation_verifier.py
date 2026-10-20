@@ -22,7 +22,7 @@ from typing import Any
 from web.services.playwright_executor import run_playwright
 
 MUTATION_SUBDIR = "mutation_check"
-MUTANT_SPEC_NAME = "mutant.spec.ts"
+MUTANT_SPEC_NAME = "mutant_spec.py"
 
 # 変異体応答（対象サイトへは一切アクセスしない。完全にローカルな合成応答）。
 _MUTANT_ROUTE_SNIPPET = (
@@ -72,6 +72,35 @@ _PARTIAL_MUTANT_SNIPPETS: dict[str, str] = {
 }
 
 
+def _py_init_script(js_body: str) -> str:
+    return (
+        "    page.add_init_script(\"document.addEventListener('DOMContentLoaded', () => {"
+        + js_body
+        + "});\")\n"
+    )
+
+
+_PY_TOTAL_SNIPPET = (
+    "    page.route(\"**/*\", lambda route: route.fulfill(status=500, content_type=\"text/html\", "
+    "body=\"<html><body>MUTATED_BY_AUTORUN_SELF_CHECK</body></html>\"))\n"
+)
+_PY_PARTIAL_SNIPPETS: dict[str, str] = {
+    MUTANT_REQUIRED: _py_init_script(
+        "document.querySelectorAll('[required]').forEach((el) => el.removeAttribute('required'));"
+    ),
+    MUTANT_TEXT: _py_init_script(
+        "document.title = 'MUTATED_TITLE';"
+        "document.querySelectorAll('h1,h2,h3').forEach((el) => { el.textContent = 'MUTATED_HEADING'; });"
+    ),
+    MUTANT_OPTIONS: _py_init_script(
+        "document.querySelectorAll('select').forEach((sel) => {"
+        "while (sel.options.length > 1) sel.remove(1);});"
+    ),
+}
+
+_PY_CASE_OPEN_PATTERN = re.compile(r"(@case\((?:[^\n]*)\)\n)(def \w+\(page\):\n)")
+
+
 def mutant_kinds() -> tuple[str, ...]:
     """利用可能な変異体の種類（テスト・レビュー用に公開）。"""
     return (MUTANT_TOTAL, *sorted(_PARTIAL_MUTANT_SNIPPETS))
@@ -96,6 +125,24 @@ def build_mutant_spec(spec_path: Path, mutant_path: Path, kind: str = MUTANT_TOT
     """
     content = spec_path.read_text(encoding="utf-8")
     injected = 0
+    if spec_path.suffix == ".py":
+        py_snippet = (
+            _PY_TOTAL_SNIPPET
+            if kind == MUTANT_TOTAL
+            else _PY_PARTIAL_SNIPPETS.get(kind, _PY_TOTAL_SNIPPET)
+        )
+
+        def _inject_py(match: re.Match[str]) -> str:
+            nonlocal injected
+            if "skip=True" in match.group(1):
+                return match.group(0)
+            injected += 1
+            return match.group(0) + py_snippet
+
+        mutated_py = _PY_CASE_OPEN_PATTERN.sub(_inject_py, content)
+        mutant_path.parent.mkdir(parents=True, exist_ok=True)
+        mutant_path.write_text(mutated_py, encoding="utf-8")
+        return injected
     snippet = (
         _MUTANT_ROUTE_SNIPPET
         if kind == MUTANT_TOTAL

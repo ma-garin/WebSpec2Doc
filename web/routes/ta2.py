@@ -470,9 +470,11 @@ def api_ta2_run() -> dict:
     ids = body.get("ids") or []
     if not isinstance(ids, list):
         raise Ta2Error("ids は配列で指定してください", 400)
-    browser = str(body.get("browser") or "chromium")
-    if browser not in ("chromium", "firefox", "webkit"):
-        raise Ta2Error("browser は chromium / firefox / webkit のいずれかです", 400)
+    browser = str(body.get("browser") or "auto")
+    if browser == "chromium":  # 旧クライアント互換
+        browser = "auto"
+    if browser not in ("auto", "chrome", "msedge"):
+        raise Ta2Error("browser は auto / chrome / msedge のいずれかです", 400)
 
     tests = _tests_of(domain)
     if ids:

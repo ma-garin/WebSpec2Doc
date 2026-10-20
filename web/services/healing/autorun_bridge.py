@@ -113,7 +113,7 @@ def _spec_path_for_report(report_path: Path) -> str:
     見つからなければ空にする（フォールバック探索は script_fix.find_spec 側が持つ）。
     """
     folder = report_path.parent
-    for name in ("testcases.spec.ts", "autorun.spec.ts"):
+    for name in ("testcases_spec.py", "autorun_spec.py", "testcases.spec.ts", "autorun.spec.ts"):
         candidate = folder / name
         if candidate.is_file():
             return str(candidate)

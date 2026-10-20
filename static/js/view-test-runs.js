@@ -42,8 +42,9 @@ async function renderTestRuns() {
       '<div class="runs-unavailable-title">⚠ テストを実行できませんでした</div>' +
       `<p class="runs-unavailable-reason">${escHtml(r.error || '実行環境が見つかりません。')}</p>` +
       '<div class="runs-unavailable-help">' +
-      '<div class="runs-unavailable-help-title">対処</div>' +
-      '<p class="muted-copy">Google Chrome か Microsoft Edge を導入してから再実行してください。</p>' +
+      '<div class="runs-unavailable-help-title">ブラウザの準備</div>' +
+      '<p class="runs-setup-pre">Google Chrome または Microsoft Edge をインストールしてください。</p>' +
+      '<p class="muted-copy">インストール後に再実行してください。' + (r.blocked ? '（状態: BLOCKED / browser unavailable。実行は成功扱いになっていません）' : '') + '</p>' +
       '</div></div></div>';
     return;
   }

@@ -47,7 +47,7 @@ _APPROVE_ACTION = "{subject}を承認してください"
 #: 誰も承認していないまま作ったことを、成果物の外へ出すための 1 文。
 _UNAPPROVED_NOTE = "テスト観点・設計の承認は経ていません（03 AutoRun の画面で確認できます）"
 
-_SPEC_RELPATH = "testcases/testcases.spec.ts"
+_SPEC_RELPATH = "testcases/testcases_spec.py"
 _CANCEL_NOTE = "テスト作成を中止しました"
 
 

@@ -18,6 +18,7 @@ from urllib.parse import urljoin, urlparse, urlunparse
 from urllib.robotparser import RobotFileParser
 
 from playwright.sync_api import Browser, Page, sync_playwright
+from browser_detect import launch_browser
 from playwright.sync_api import Error as PlaywrightError
 
 from crawler.playwright_runtime import configure_playwright_browsers_path
@@ -273,7 +274,7 @@ def _browser_page(auth_state: Path | None, viewport: Any | None = None) -> Itera
         # メッセージが日本語で得られるようにする（context の locale だけでは
         # validationMessage の言語は変わらないため launch 引数で指定する）。
         # 基底言語コード（BROWSER_UI_LANG="ja"）を渡す点に注意（"ja-JP" は不可）。
-        browser = playwright.chromium.launch(headless=True, args=[f"--lang={BROWSER_UI_LANG}"])
+        browser = launch_browser(playwright, headless=True, args=[f"--lang={BROWSER_UI_LANG}"])
         try:
             context_options: dict[str, Any] = {
                 "user_agent": USER_AGENT,

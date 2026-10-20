@@ -24,6 +24,7 @@ from pathlib import Path
 from typing import Any
 
 from playwright.sync_api import Browser, sync_playwright
+from browser_detect import launch_browser
 
 from analyzer.login_wall import PageAuthSignals, detect_login_wall
 
@@ -73,7 +74,7 @@ def record_auth_session(
     """
     with sync_playwright() as playwright:
         try:
-            browser = playwright.chromium.launch(headless=headless)
+            browser = launch_browser(playwright, headless=headless)
         except Exception as exc:  # noqa: BLE001  # DISPLAY なし等、環境要因の起動失敗
             logger.error("ブラウザ起動に失敗しました: %s", exc)
             status = RecorderStatus(
@@ -260,7 +261,7 @@ def verify_auth_state(
 def _verify_with_driver(playwright: Any, login_url: str, auth_path: Path) -> bool | None:
     """既存の Playwright ドライバでブラウザを1つ起動して検証する（verify_auth_state のコア）。"""
     try:
-        browser = playwright.chromium.launch(headless=True)
+        browser = launch_browser(playwright, headless=True)
     except Exception as exc:  # noqa: BLE001
         logger.warning("検証用ブラウザの起動に失敗しました（未確認）: %s", exc)
         return None

@@ -159,19 +159,19 @@ class TestAutoRunJob:
 class TestExecuteTests:
     def test_no_spec_path_sets_failed(self, tmp_path: Path) -> None:
         job = _make_job()
-        job.outputs = {}  # spec_ts なし
+        job.outputs = {}  # spec_py なし
         _execute_tests(job)
         assert job.status == "failed"
-        assert "spec.ts" in job.error
+        assert "Python" in job.error
 
     def test_cancel_during_run_keeps_cancelled_status(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         # 実行中に中止 → 完走後も complete/failed で上書きされないこと
         job = _make_job()
-        spec = tmp_path / "x.spec.ts"
+        spec = tmp_path / "x_spec.py"
         spec.write_text("test('a', () => {});", encoding="utf-8")
-        job.outputs = {"spec_ts": str(spec)}
+        job.outputs = {"spec_py": str(spec)}
 
         def fake_run(*args: Any, **kwargs: Any) -> dict[str, Any]:
             job.cancel()
@@ -184,18 +184,18 @@ class TestExecuteTests:
 
     def test_spec_path_not_found_sets_failed(self, tmp_path: Path) -> None:
         job = _make_job()
-        job.outputs = {"spec_ts": str(tmp_path / "nonexistent.spec.ts")}
+        job.outputs = {"spec_py": str(tmp_path / "nonexistent_spec.py")}
         _execute_tests(job)
         # run_playwright を呼ぼうとするが spec_path は存在 → それ自体は問題ない
         # ただし実際には mock なので今回はパス存在チェックなし
-        # spec_ts があれば run_playwright が呼ばれる
+        # spec_py があれば run_playwright が呼ばれる
         assert job.status in ("complete", "failed")
 
     def test_success_sets_complete(self, tmp_path: Path) -> None:
-        spec_path = tmp_path / "autorun.spec.ts"
+        spec_path = tmp_path / "autorun_spec.py"
         spec_path.write_text("", encoding="utf-8")
         job = _make_job(domain="example.com")
-        job.outputs = {"spec_ts": str(spec_path)}
+        job.outputs = {"spec_py": str(spec_path)}
         job.run_policy = {"filter_mode": "all", "per_test_timeout_sec": 30}
 
         mock_result = {
@@ -217,10 +217,10 @@ class TestExecuteTests:
         """個々のテストが失敗しても（実行自体は正常完走）job.status は 'complete'。
         実行結果に error/interrupted が無いのが「正常完走・一部失敗」の実データ形状
         （_parse_results は parse 不能時のみ error を載せる）。"""
-        spec_path = tmp_path / "autorun.spec.ts"
+        spec_path = tmp_path / "autorun_spec.py"
         spec_path.write_text("", encoding="utf-8")
         job = _make_job(domain="example.com")
-        job.outputs = {"spec_ts": str(spec_path)}
+        job.outputs = {"spec_py": str(spec_path)}
         job.run_policy = {"filter_mode": "all", "per_test_timeout_sec": 30}
 
         mock_result = {
@@ -241,10 +241,10 @@ class TestExecuteTests:
         """実行結果が解析不能・未セットアップ等で error を伴う場合、'complete' を
         偽装せず job.status='failed' にする（AutoRunで188件実行して0/0/0が
         無言で成功表示された致命的UX破綻の再発防止）。"""
-        spec_path = tmp_path / "autorun.spec.ts"
+        spec_path = tmp_path / "autorun_spec.py"
         spec_path.write_text("", encoding="utf-8")
         job = _make_job(domain="example.com")
-        job.outputs = {"spec_ts": str(spec_path)}
+        job.outputs = {"spec_py": str(spec_path)}
         job.run_policy = {"filter_mode": "all", "per_test_timeout_sec": 30}
 
         mock_result = {
@@ -266,10 +266,10 @@ class TestExecuteTests:
     def test_interrupted_with_partial_results_sets_job_failed(self, tmp_path: Path) -> None:
         """全体タイムアウトで中断され部分結果が回収された場合も 'complete' を
         偽装せず job.status='failed' とし、部分結果件数をログに残す。"""
-        spec_path = tmp_path / "autorun.spec.ts"
+        spec_path = tmp_path / "autorun_spec.py"
         spec_path.write_text("", encoding="utf-8")
         job = _make_job(domain="example.com")
-        job.outputs = {"spec_ts": str(spec_path)}
+        job.outputs = {"spec_py": str(spec_path)}
         job.run_policy = {"filter_mode": "all", "per_test_timeout_sec": 30}
 
         mock_result = {
@@ -290,10 +290,10 @@ class TestExecuteTests:
         assert job.test_results["total"] == 42
 
     def test_run_playwright_exception_sets_failed(self, tmp_path: Path) -> None:
-        spec_path = tmp_path / "autorun.spec.ts"
+        spec_path = tmp_path / "autorun_spec.py"
         spec_path.write_text("", encoding="utf-8")
         job = _make_job(domain="example.com")
-        job.outputs = {"spec_ts": str(spec_path)}
+        job.outputs = {"spec_py": str(spec_path)}
         job.run_policy = {"filter_mode": "all", "per_test_timeout_sec": 30}
 
         with patch(
@@ -305,10 +305,10 @@ class TestExecuteTests:
         assert "予期しないエラー" in job.error
 
     def test_cancelled_job_skips_execution(self, tmp_path: Path) -> None:
-        spec_path = tmp_path / "autorun.spec.ts"
+        spec_path = tmp_path / "autorun_spec.py"
         spec_path.write_text("", encoding="utf-8")
         job = _make_job(domain="example.com")
-        job.outputs = {"spec_ts": str(spec_path)}
+        job.outputs = {"spec_py": str(spec_path)}
         job._cancelled = True
 
         mock_pw = MagicMock()
@@ -318,7 +318,7 @@ class TestExecuteTests:
         mock_pw.assert_not_called()
 
     def test_filter_mode_regenerates_spec(self, tmp_path: Path) -> None:
-        spec_path = tmp_path / "autorun.spec.ts"
+        spec_path = tmp_path / "autorun_spec.py"
         spec_path.write_text("", encoding="utf-8")
         candidates = {
             "candidates": [
@@ -339,7 +339,7 @@ class TestExecuteTests:
         cands_path.write_text(json.dumps(candidates), encoding="utf-8")
 
         job = _make_job(domain="example.com")
-        job.outputs = {"spec_ts": str(spec_path)}
+        job.outputs = {"spec_py": str(spec_path)}
         job.run_policy = {"filter_mode": "smoke", "per_test_timeout_sec": 30}
 
         mock_result = {"ok": True, "passed": 1, "failed": 0, "skipped": 0, "total": 1, "tests": []}
@@ -361,7 +361,7 @@ class TestExecuteTests:
         with (
             patch("web.services.auto_run_pipeline.run_playwright", return_value=mock_result),
             patch("web.services.auto_run_job.OUTPUT_DIR", tmp_path),
-            patch("web.services.auto_run_pipeline.generate_spec_ts", side_effect=fake_gen),
+            patch("web.services.auto_run_pipeline.generate_spec_py", side_effect=fake_gen),
         ):
             _execute_tests(job)
 
@@ -371,10 +371,10 @@ class TestExecuteTests:
         assert captured_submit == [False]
 
     def test_per_test_timeout_passed_to_run_playwright(self, tmp_path: Path) -> None:
-        spec_path = tmp_path / "autorun.spec.ts"
+        spec_path = tmp_path / "autorun_spec.py"
         spec_path.write_text("", encoding="utf-8")
         job = _make_job(domain="example.com")
-        job.outputs = {"spec_ts": str(spec_path)}
+        job.outputs = {"spec_py": str(spec_path)}
         job.run_policy = {"filter_mode": "all", "per_test_timeout_sec": 45}
 
         mock_result = {"ok": True, "passed": 1, "failed": 0, "skipped": 0, "total": 1, "tests": []}
@@ -390,10 +390,10 @@ class TestExecuteTests:
         assert captured_kwargs[0].get("per_test_timeout_sec") == 45
 
     def test_playwright_report_html_saved_in_outputs(self, tmp_path: Path) -> None:
-        spec_path = tmp_path / "autorun.spec.ts"
+        spec_path = tmp_path / "autorun_spec.py"
         spec_path.write_text("", encoding="utf-8")
         job = _make_job(domain="example.com")
-        job.outputs = {"spec_ts": str(spec_path)}
+        job.outputs = {"spec_py": str(spec_path)}
         job.run_policy = {"filter_mode": "all", "per_test_timeout_sec": 30}
 
         # playwright-report/index.html を作成して outputs に登録されるかテスト
@@ -416,10 +416,10 @@ class TestExecuteTests:
     def test_report_outputs_prefers_ja_report(self, tmp_path: Path) -> None:
         """R3-03/04/05: 主導線 playwright_report_html は自前の日本語サマリを指し、
         Playwright ネイティブ（英語）は playwright_native_html に分離される。"""
-        spec_path = tmp_path / "autorun.spec.ts"
+        spec_path = tmp_path / "autorun_spec.py"
         spec_path.write_text("", encoding="utf-8")
         job = _make_job(domain="example.com")
-        job.outputs = {"spec_ts": str(spec_path)}
+        job.outputs = {"spec_py": str(spec_path)}
         job.run_policy = {"filter_mode": "all", "per_test_timeout_sec": 30}
 
         qa_dir = tmp_path / "example.com" / "qa_process"
@@ -443,10 +443,10 @@ class TestExecuteTests:
     def test_report_outputs_native_only_does_not_become_primary(self, tmp_path: Path) -> None:
         """自前の日本語レポートが無くネイティブのみ存在する場合、主キーには
         昇格させない（開発者向けの副導線のみ提供する）。"""
-        spec_path = tmp_path / "autorun.spec.ts"
+        spec_path = tmp_path / "autorun_spec.py"
         spec_path.write_text("", encoding="utf-8")
         job = _make_job(domain="example.com")
-        job.outputs = {"spec_ts": str(spec_path)}
+        job.outputs = {"spec_py": str(spec_path)}
         job.run_policy = {"filter_mode": "all", "per_test_timeout_sec": 30}
 
         qa_dir = tmp_path / "example.com" / "qa_process"
@@ -646,7 +646,7 @@ class TestPhaseGenerateScripts:
         assert job.status == "failed"
         assert "playwright_candidates.json" in job.error
 
-    def test_success_sets_spec_ts_output(self, tmp_path: Path) -> None:
+    def test_success_sets_spec_py_output(self, tmp_path: Path) -> None:
         qa_dir = tmp_path / "example.com" / "qa_process"
         qa_dir.mkdir(parents=True)
         cands = qa_dir / "playwright_candidates.json"
@@ -656,14 +656,15 @@ class TestPhaseGenerateScripts:
         with patch("web.services.auto_run_job.OUTPUT_DIR", tmp_path):
             _phase_generate_scripts(job)
 
-        assert "spec_ts" in job.outputs
+        assert "spec_py" in job.outputs
+        assert "spec_ts" in job.outputs  # エクスポート専用（実行しない）
         assert job.status != "failed"
 
     def test_cancelled_skips_phase(self, tmp_path: Path) -> None:
         job = _make_job(domain="example.com")
         job._cancelled = True
         mock_gen = MagicMock()
-        with patch("web.services.auto_run_pipeline.generate_spec_ts", mock_gen):
+        with patch("web.services.auto_run_pipeline.generate_spec_py", mock_gen):
             _phase_generate_scripts(job)
         mock_gen.assert_not_called()
 

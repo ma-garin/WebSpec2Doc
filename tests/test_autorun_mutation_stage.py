@@ -33,8 +33,8 @@ def job() -> AutoRunJob:
 
 class TestMutationSelfCheckPhase:
     def test_writes_result_file_and_logs_score(self, job: AutoRunJob, tmp_path: Path) -> None:
-        spec_path = tmp_path / "autorun.spec.ts"
-        spec_path.write_text("import { test } from '@playwright/test';\n", encoding="utf-8")
+        spec_path = tmp_path / "autorun_spec.py"
+        spec_path.write_text("from web.services.pw_spec_api import case\n", encoding="utf-8")
 
         fake = {
             "ok": True,
@@ -57,8 +57,8 @@ class TestMutationSelfCheckPhase:
         assert any("弱いテスト" in line for line in job.log)
 
     def test_not_applicable_is_logged_without_error(self, job: AutoRunJob, tmp_path: Path) -> None:
-        spec_path = tmp_path / "autorun.spec.ts"
-        spec_path.write_text("import { test } from '@playwright/test';\n", encoding="utf-8")
+        spec_path = tmp_path / "autorun_spec.py"
+        spec_path.write_text("from web.services.pw_spec_api import case\n", encoding="utf-8")
 
         fake = {"ok": True, "applicable": False, "note": "対象がありません。"}
         with patch("web.services.mutation_verifier.run_self_check", return_value=fake):
@@ -67,8 +67,8 @@ class TestMutationSelfCheckPhase:
         assert any("対象がありません" in line for line in job.log)
 
     def test_exception_is_logged_not_raised(self, job: AutoRunJob, tmp_path: Path) -> None:
-        spec_path = tmp_path / "autorun.spec.ts"
-        spec_path.write_text("import { test } from '@playwright/test';\n", encoding="utf-8")
+        spec_path = tmp_path / "autorun_spec.py"
+        spec_path.write_text("from web.services.pw_spec_api import case\n", encoding="utf-8")
 
         with patch(
             "web.services.mutation_verifier.run_self_check", side_effect=RuntimeError("boom")

@@ -15,6 +15,8 @@ from collections.abc import Callable, Iterator
 from pathlib import Path
 from urllib.parse import urlsplit
 
+from web.services import sample_marker
+
 FIXTURE_DIR = Path(__file__).resolve().parents[2] / "demo" / "sample_report_app"
 
 # 発見する画面（demo/sample_report_app/report.json の P001〜P006 と同じ順・同じ URL）
@@ -136,6 +138,8 @@ def run_stream(
         if index == len(steps):
             shutil.copytree(FIXTURE_DIR, domain_dir, dirs_exist_ok=True)
             _mark_report_as_sample(domain_dir / "report.html")
+            if (domain_dir / "report.json").is_file():
+                sample_marker.mark_report_json(domain_dir / "report.json")
         yield ev(
             {
                 "event": "generate_completed",

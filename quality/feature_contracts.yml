@@ -2756,7 +2756,8 @@
         "web/routes/crawl.py"
       ],
       "core_files": [
-        "web/services/app_mock.py"
+        "web/services/app_mock.py",
+        "web/services/sample_marker.py"
       ],
       "symbols": [
         "is_app_target",

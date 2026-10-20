@@ -242,7 +242,7 @@ def launch(pw):
 def run(args) -> int:
     axe_path = Path(os.environ.get("A11Y_ORACLE_AXE_PATH", DEFAULT_AXE))
     if not axe_path.is_file():
-        print("オラクル未取得: %s がありません。`npm ci --prefix tools/a11y-oracle` を実行してください。" % axe_path)
+        print("オラクル未取得: %s がありません。`npm install --prefix tools/a11y-oracle` を実行してください。" % axe_path)
         return 2
     runner = load_native()
     if runner is None or not hasattr(runner, "run_native_a11y"):

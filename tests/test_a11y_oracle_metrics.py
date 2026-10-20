@@ -31,7 +31,7 @@ def _entry(v, severe=False):
 def test_classify_classes():
     r = o.classify_fixture(_entry(["#v1", "#v2"]), {"status": "violation", "violations": ["#v1", "#x"]})
     classes = sorted(f["class"] for f in r["failures"])
-    assert classes == ["誤検出", "見逃し"] and (r["tp"], r["fp"], r["fn"]) == (1, 1, 1)
+    assert classes == sorted(["誤検出", "見逃し"]) and (r["tp"], r["fp"], r["fn"]) == (1, 1, 1)
     r = o.classify_fixture(_entry(["#v1"]), None)
     assert not r["evaluated"] and r["failures"][0]["class"] == "ルール未実装"
     r = o.classify_fixture(_entry(["#v1"]), {"status": "violation", "violations": ["#v1", ""], "unmappable": 1})
@@ -87,7 +87,6 @@ def test_manifest_consistent():
     man = json.loads((ROOT / "tests/a11y_oracle/manifest.json").read_text(encoding="utf-8"))
     for rel, e in man["fixtures"].items():
         assert (ROOT / "tests/a11y_oracle/fixtures" / rel).is_file()
-        assert e["severe"] == bool(e["violations"] and e["level"] in ("A", "AA") and e["severe"]) or not e["severe"]
         if e["severe"]:
             assert e["violations"] and e["level"] in ("A", "AA")
     assert any(e["severe"] for e in man["fixtures"].values())

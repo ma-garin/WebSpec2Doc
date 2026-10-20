@@ -194,19 +194,19 @@ def test_document_phase_runs_before_script_generation() -> None:
 
 def test_filter_keeps_document_candidates(tmp_path: Path) -> None:
     qa_dir = tmp_path / "example.com" / "qa_process"
-    spec_path = qa_dir / "autorun.spec.ts"
+    spec_path = qa_dir / "autorun_spec.py"
     document_candidates = qa_dir / "document_playwright_candidates.json"
     _write_json(document_candidates, {"candidates": []})
     _write_json(qa_dir / "playwright_candidates.json", {"candidates": [{"id": "URL"}]})
     spec_path.write_text("", encoding="utf-8")
     job = _make_job(mode="document")
-    job.outputs = {"spec_ts": str(spec_path)}
+    job.outputs = {"spec_py": str(spec_path)}
     job.run_policy = {"filter_mode": "smoke", "per_test_timeout_sec": 30}
     generated_from: list[Path] = []
 
     with (
         patch("web.services.auto_run_job.OUTPUT_DIR", tmp_path),
-        patch("web.services.auto_run_pipeline.generate_spec_ts") as generate,
+        patch("web.services.auto_run_pipeline.generate_spec_py") as generate,
         patch(
             "web.services.auto_run_pipeline.run_playwright",
             return_value={"ok": True, "passed": 0, "failed": 0, "total": 0, "tests": []},
@@ -235,7 +235,7 @@ def test_script_generation_uses_document_candidates(tmp_path: Path) -> None:
     with patch("web.services.auto_run_job.OUTPUT_DIR", tmp_path):
         _phase_generate_scripts(job)
 
-    content = Path(job.outputs["spec_ts"]).read_text(encoding="utf-8")
+    content = Path(job.outputs["spec_py"]).read_text(encoding="utf-8")
     assert "文書駆動候補" in content
     assert "URL駆動候補" not in content
 

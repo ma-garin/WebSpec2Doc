@@ -23,16 +23,17 @@ from web.services.mutation_verifier import (
     mutant_kinds,
 )
 
-_SPEC = """import { test, expect } from './_autorun_egress';
+_SPEC = """from web.services.pw_spec_api import case, expect
 
-test('PW-0001 必須入力 [P011-F01-I01]', async ({ page }) => {
-  await page.goto('https://example.com/');
-  await page.locator('#date').fill('');
-  const v = await page.locator('#date').evaluate((el) => el.checkValidity());
-  expect(v).toBe(false);
-});
+@case('PW-0001 必須入力 [P011-F01-I01]')
+def case_001(page):
+    page.goto('https://example.com/')
+    page.locator('#date').fill('')
+    expect(page.locator('#date')).to_have_value('')
 
-test.skip('PW-0002 手動 [A11Y-ALL]', async () => {});
+@case('PW-0002 手動 [A11Y-ALL]', skip=True)
+def case_002(page):
+    pass
 """
 
 
@@ -115,40 +116,40 @@ class TestPartialMutants:
 
     def test_required_mutant_removes_required_attribute(self, tmp_path: Path) -> None:
         """必須入力テストが required 除去を検出できなければ、それは形だけのテスト。"""
-        spec = tmp_path / "spec.ts"
+        spec = tmp_path / "spec_py.py"
         spec.write_text(_SPEC, encoding="utf-8")
-        out = tmp_path / "mutant.spec.ts"
+        out = tmp_path / "mutant_spec.py"
         assert build_mutant_spec(spec, out, kind=MUTANT_REQUIRED) == 1
         body = out.read_text(encoding="utf-8")
         assert "removeAttribute('required')" in body
-        assert "addInitScript" in body
+        assert "add_init_script" in body
 
     def test_text_mutant_alters_headings(self, tmp_path: Path) -> None:
-        spec = tmp_path / "spec.ts"
+        spec = tmp_path / "spec_py.py"
         spec.write_text(_SPEC, encoding="utf-8")
-        out = tmp_path / "mutant.spec.ts"
+        out = tmp_path / "mutant_spec.py"
         build_mutant_spec(spec, out, kind=MUTANT_TEXT)
         assert "MUTATED_TITLE" in out.read_text(encoding="utf-8")
 
     def test_options_mutant_reduces_select_choices(self, tmp_path: Path) -> None:
-        spec = tmp_path / "spec.ts"
+        spec = tmp_path / "spec_py.py"
         spec.write_text(_SPEC, encoding="utf-8")
-        out = tmp_path / "mutant.spec.ts"
+        out = tmp_path / "mutant_spec.py"
         build_mutant_spec(spec, out, kind=MUTANT_OPTIONS)
         assert "sel.remove(1)" in out.read_text(encoding="utf-8")
 
     def test_skip_tests_are_never_mutated(self, tmp_path: Path) -> None:
-        spec = tmp_path / "spec.ts"
+        spec = tmp_path / "spec_py.py"
         spec.write_text(_SPEC, encoding="utf-8")
-        out = tmp_path / "mutant.spec.ts"
+        out = tmp_path / "mutant_spec.py"
         build_mutant_spec(spec, out, kind=MUTANT_REQUIRED)
         content = out.read_text(encoding="utf-8")
-        skip_at = content.index("test.skip(")
-        assert "addInitScript" not in content[skip_at : skip_at + 100]
+        skip_at = content.index("skip=True")
+        assert "add_init_script" not in content[skip_at : skip_at + 100]
 
     def test_total_mutant_is_still_the_default(self, tmp_path: Path) -> None:
-        spec = tmp_path / "spec.ts"
+        spec = tmp_path / "spec_py.py"
         spec.write_text(_SPEC, encoding="utf-8")
-        out = tmp_path / "mutant.spec.ts"
+        out = tmp_path / "mutant_spec.py"
         build_mutant_spec(spec, out)
         assert "route.fulfill" in out.read_text(encoding="utf-8")

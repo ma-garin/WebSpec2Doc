@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>注文情報の入力 | みらい商店</title><link rel="stylesheet" href="css/style.css"></head>
+<body>
+<header class="hdr"><a href="index.html">メニュー</a></header>
+<main>
+<h1>ご注文情報の入力</h1>
+<form id="order" action="#" method="post" novalidate>
+<h2>お届け先</h2>
+<div class="row"><label for="recipient">お届け先氏名</label><input type="text" id="recipient" name="recipient" required maxlength="40"></div>
+<div class="row"><label for="zip">郵便番号</label><input type="text" id="zip" name="zip" required maxlength="8" pattern="^\d{3}-?\d{4}$"></div>
+<div class="row"><label for="address">住所</label><input type="text" id="address" name="address" required maxlength="100"></div>
+<div class="row"><label for="phone">電話番号</label><input type="tel" id="phone" name="phone" maxlength="13"></div>
+<div class="row"><label for="delivery">配達希望日</label><input type="date" id="delivery" name="delivery" min="2026-10-21" max="2026-12-31"></div>
+<h2>お支払い方法</h2>
+<div class="row"><input type="radio" id="pay-card" name="pay" value="card"><label for="pay-card">クレジットカード</label></div>
+<div class="row"><input type="radio" id="pay-cod" name="pay" value="cod"><label for="pay-cod">代金引換</label></div>
+<div class="row"><input type="radio" id="pay-bank" name="pay" value="bank"><label for="pay-bank">銀行振込</label></div>
+<h3>クレジットカード情報</h3>
+<div class="row"><input type="text" id="card_no" name="card_no" maxlength="16" pattern="^\d{16}$" aria-label="カード番号"></div>
+<div class="row"><label><input type="checkbox" id="gift" name="gift"> ギフト包装にする</label></div>
+<input type="hidden" name="order_token" value="ord-4421">
+<div id="order-errors" aria-live="polite"></div>
+<input type="submit" value="確認画面へ">
+<button type="button">戻る</button>
+</form>
+<a href="p05.html">カートに戻る</a>
+</main>
+<footer><p><small>&copy; 2026 みらい商店 (評価用サンプル)</small></p></footer>
+<script>
+(function(){var f=document.getElementById("order");var box=document.getElementById("order-errors");f.addEventListener("submit",function(ev){ev.preventDefault();var errs=[];if(f.elements["recipient"].value===''){errs.push("お届け先氏名を入力してください");}if(!/^\d{3}-?\d{4}$/.test(f.elements["zip"].value)){errs.push("郵便番号は7桁の数字で入力してください");}if(!f.querySelector('input[name="pay"]:checked')){errs.push("お支払い方法を選択してください");}box.innerHTML="";errs.forEach(function(m){var q=document.createElement("p");q.className="error";q.textContent=m;box.appendChild(q);});if(!errs.length){fetch("/api/orders",{method:"POST",body:new FormData(f)}).then(function(r){if(!r.ok){throw new Error("http "+r.status);}return r.json();}).catch(function(){var q=document.createElement("p");q.className="error";q.textContent="注文情報を送信できませんでした";box.appendChild(q);});}});})();
+</script>
+</body></html>

@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>マイページ | みらい商店</title><link rel="stylesheet" href="css/style.css"></head>
+<body>
+<header class="hdr"><a href="index.html">メニュー</a></header>
+<main>
+<h1>マイページ</h1>
+<p class="error" role="alert">ログインが必要です。ログインしてから再度アクセスしてください。</p>
+<h2>会員情報</h2>
+<p>会員情報はログイン後に表示されます。</p>
+<div id="member-area"></div>
+<button type="button">ログインする</button>
+<a href="p02.html">ログイン</a>
+<a href="p01.html">会員登録</a>
+</main>
+<footer><p><small>&copy; 2026 みらい商店 (評価用サンプル)</small></p></footer>
+<script>
+fetch("/api/me").then(function(r){if(!r.ok){throw new Error("http "+r.status);}return r.json();}).then(function(d){var a=document.getElementById("member-area");var h=document.createElement("h2");h.textContent="会員限定情報";a.appendChild(h);var b=document.createElement("button");b.type="button";b.textContent="ポイントを使う";a.appendChild(b);}).catch(function(){});
+</script>
+</body></html>

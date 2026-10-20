@@ -1,0 +1,14 @@
+<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>経費申請</title><style>body{font-family:sans-serif;max-width:640px;margin:2em auto;padding:0 1em}label{display:block;margin:.6em 0}.n{color:#555;font-size:.9em}button{margin:.4em .3em .4em 0}</style></head><body>
+<p><a href="index.html">一覧へ戻る</a></p><h1>経費申請</h1>
+<p>状態の流れ：下書き → 申請中 → 承認済み → 完了。承認者は「差戻し」もできます（差戻し → 下書きに戻る）。</p>
+<p>現在の状態：<strong>下書き</strong></p>
+<form action="#" method="post">
+<label>金額 ※ <input type="number" required min="1"></label>
+<button>申請する</button>
+<button>承認する</button> <span class="n">※ 承認者のみ</span>
+<label>差戻し理由 ※（差戻し時） <input type="text" name="reason" required></label>
+<button>差戻す</button> <span class="n">※ 承認者のみ</span>
+<button>完了にする</button></form>
+<p class="n">承認済みの申請は編集できません。</p>
+</body></html>

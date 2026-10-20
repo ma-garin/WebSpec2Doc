@@ -1094,7 +1094,7 @@
   outline-offset: -1px;
 }
 .autorun-chat-actions { display: flex; align-items: center; gap: 10px; }
-.autorun-chat-note { flex: 1; font-size: 10.5px; color: var(--color-text-disabled); line-height: 1.5; }
+.autorun-chat-note { flex: 1; font-size: 10.5px; color: var(--color-text-secondary); line-height: 1.5; }
 .autorun-chat-send { height: 32px; padding: 0 16px; font-size: var(--text-sm); white-space: nowrap; }
 
 /* 画面が狭い環境ではチャットを畳んで作業エリアを優先する（PC前提の下限対応） */
@@ -1992,7 +1992,7 @@
 /* 「解析なし」バッジつきの導線。解析を待たずに開けることが一目で分かるようにする。 */
 .sample-zero {
   display: inline-block; margin-left: 6px; padding: 1px 7px; border-radius: 999px;
-  background: var(--ok); color: #fff; font-size: 10.5px; font-weight: 800; vertical-align: middle;
+  background: #2e7d32; color: #fff; font-size: 10.5px; font-weight: 800; vertical-align: middle;  /* 白文字で 4.5:1 以上 */
 }
 .btn-sample-report {
   display: inline-flex; align-items: center; gap: 2px; margin-top: 8px;

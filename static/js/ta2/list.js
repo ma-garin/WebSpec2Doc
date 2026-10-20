@@ -148,6 +148,20 @@
   T.on('select', draw);
 
   /* ------------------------------------------------------------ bindings */
+  // 件数の下の導線（失敗 N 件から直す など）は #items の外（#list-sub）にあるため、そこで受ける
+  var subEl = $('#list-sub');
+  if (subEl) {
+    subEl.addEventListener('click', function (e) {
+      var want = e.target.closest('#go-fail') ? 'fail' : e.target.closest('#go-flaky') ? 'flaky' : '';
+      if (want) {
+        S.filter = want; draw();
+        // 絞り込んだ先頭のテストを開く（その詳細から実行・修正へ進める）
+        var first = S.tests.filter(function (t) { return t.status === want; })[0];
+        if (first) T.select(first.id);
+      }
+      // #go-run（全件実行）は panels.js が受ける
+    });
+  }
   var items = $('#items');
   if (items) {
     items.addEventListener('click', function (e) {

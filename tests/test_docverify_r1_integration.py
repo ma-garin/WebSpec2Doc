@@ -131,7 +131,8 @@ def test_no_document_shows_dash_not_zero(client):
 def test_home_average_and_items(client, tmp_path):
     """IT-06R1-04 FR-06-101・FR-06-102 G 進行中 2 件（片方は指摘を全て却下） W GET /api/docverify/home
     T quality.overall は 2 件の総合の四捨五入平均、特性別も同じ平均、n_reviews 2、active 2 行。"""
-    lines = ["システムは、適切に処理すること。", "システムは、ログを保存すること。"]
+    # 指摘が出る行は、既定で有効な規則（未決定の記述）で作る。曖昧語は検証用セットの適合率で既定無効になりうる
+    lines = ["システムは、保存期間をTBDとすること。", "システムは、ログを保存すること。"]
     ids = [_create(client, "ホーム A"), _create(client, "ホーム B")]
     for iid in ids:
         assert _upload(client, iid, _xlsx_bytes(tmp_path, images=0, comments=0, lines=lines)).status_code == 200

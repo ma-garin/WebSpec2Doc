@@ -157,6 +157,12 @@ function _runsHeadedPref() {
 
 // 実行ボタンとヘッド表示トグル。未実行の空状態と実行済みヘッダの両方で使う。
 function _runsControlsHtml() {
+  // 試作（サンプルデータ）では実在しないホストに対して実行してしまうため、実行させない
+  if (document.body && document.body.dataset.appMode === '1') {
+    return '<span class="runs-controls"><button type="button" class="btn-primary btn-run" id="runs-run-btn" disabled' +
+      ' aria-describedby="runs-run-off">▶ テストを実行</button>' +
+      '<span id="runs-run-off" class="runs-note">試作（サンプルデータ）のため実行できません。実際のサイトは「ドキュメント作成」で解析してから実行してください。</span></span>';
+  }
   const checked = _runsHeadedPref() ? ' checked' : '';
   return '<span class="runs-controls">' +
     '<label class="checkbox-chip" title="ブラウザ画面を表示して実行します（このアプリが動くマシンに開きます）">' +
@@ -280,6 +286,7 @@ function _startRunsPolling(domain, started) {
 }
 
 async function runTestsFromRunsTab() {
+  if (document.body && document.body.dataset.appMode === '1') return; // 試作では実行しない（_runsControlsHtml と同じ理由）
   const domain = _runsDomain();
   if (!domain) { showToast('対象サイトを特定できませんでした', 'error'); return; }
   const headed = !!document.getElementById('runs-headed')?.checked;

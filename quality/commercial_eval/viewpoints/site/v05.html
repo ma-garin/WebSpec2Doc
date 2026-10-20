@@ -1,0 +1,11 @@
+<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>在庫更新</title><style>body{font-family:sans-serif;max-width:640px;margin:2em auto;padding:0 1em}label{display:block;margin:.6em 0}.n{color:#555;font-size:.9em}button{margin:.4em .3em .4em 0}</style></head><body>
+<p><a href="index.html">一覧へ戻る</a></p><h1>在庫更新</h1>
+<p>現在の状態：<strong>在庫あり</strong>。在庫数が 0 になると状態が「欠品」に変わります。保存するとサーバに送信されます（PUT /api/stock/{sku}）。</p>
+<form action="/api/stock" method="post">
+<label>SKU ※ <input type="text" name="sku" required pattern="[A-Z]{3}-[0-9]{4}" placeholder="ABC-1234"></label>
+<label>在庫数 ※ <input type="number" name="stock" required min="0" max="9999"></label>
+<label>更新理由 <input type="text" name="reason" maxlength="100"></label>
+<button type="submit">保存</button></form>
+<p class="n">保存後に画面を再読み込みすると、更新後の在庫数と状態が表示されます。</p>
+</body></html>

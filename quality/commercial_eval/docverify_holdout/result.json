@@ -1,0 +1,171 @@
+{
+ "n": 183,
+ "rules": {
+  "AMBIGUOUS": {
+   "precision": 0.452,
+   "recall": 0.667,
+   "f1": 0.538,
+   "tp": 14,
+   "fp": 17,
+   "fn": 7,
+   "n": 183,
+   "n_gold": 21,
+   "n_predicted": 31
+  },
+  "REQ.INCOMPLETE": {
+   "precision": 0.846,
+   "recall": 0.688,
+   "f1": 0.759,
+   "tp": 11,
+   "fp": 2,
+   "fn": 5,
+   "n": 183,
+   "n_gold": 16,
+   "n_predicted": 13
+  },
+  "REQ.OPEN_ENDED": {
+   "precision": 1.0,
+   "recall": 0.529,
+   "f1": 0.692,
+   "tp": 9,
+   "fp": 0,
+   "fn": 8,
+   "n": 183,
+   "n_gold": 17,
+   "n_predicted": 9
+  },
+  "REQ.UNIVERSAL": {
+   "precision": 0.933,
+   "recall": 0.778,
+   "f1": 0.848,
+   "tp": 14,
+   "fp": 1,
+   "fn": 4,
+   "n": 183,
+   "n_gold": 18,
+   "n_predicted": 15
+  },
+  "REQ.AND_OR": {
+   "precision": 1.0,
+   "recall": 0.643,
+   "f1": 0.783,
+   "tp": 9,
+   "fp": 0,
+   "fn": 5,
+   "n": 183,
+   "n_gold": 14,
+   "n_predicted": 9
+  },
+  "REQ.MEASURABILITY": {
+   "precision": 0.786,
+   "recall": 0.55,
+   "f1": 0.647,
+   "tp": 11,
+   "fp": 3,
+   "fn": 9,
+   "n": 183,
+   "n_gold": 20,
+   "n_predicted": 14
+  },
+  "REQ.MULTIPLE_REQUIREMENTS": {
+   "precision": 0.733,
+   "recall": 0.579,
+   "f1": 0.647,
+   "tp": 11,
+   "fp": 4,
+   "fn": 8,
+   "n": 183,
+   "n_gold": 19,
+   "n_predicted": 15
+  }
+ },
+ "misses": {
+  "AMBIGUOUS": [
+   "FP H-002",
+   "FN H-008",
+   "FP H-019",
+   "FP H-022",
+   "FN H-023",
+   "FP H-024",
+   "FN H-028",
+   "FP H-034",
+   "FP H-041",
+   "FP H-051",
+   "FP H-063",
+   "FP H-065",
+   "FP H-066",
+   "FP H-077",
+   "FN H-079",
+   "FP H-081",
+   "FP H-108",
+   "FN H-134",
+   "FP H-136",
+   "FP H-138",
+   "FN H-159",
+   "FP H-160",
+   "FP H-174",
+   "FN H-178"
+  ],
+  "REQ.INCOMPLETE": [
+   "FP H-025",
+   "FN H-033",
+   "FN H-086",
+   "FP H-119",
+   "FN H-132",
+   "FN H-156",
+   "FN H-166"
+  ],
+  "REQ.OPEN_ENDED": [
+   "FN H-022",
+   "FN H-031",
+   "FN H-065",
+   "FN H-108",
+   "FN H-136",
+   "FN H-138",
+   "FN H-160",
+   "FN H-174"
+  ],
+  "REQ.UNIVERSAL": [
+   "FN H-069",
+   "FP H-078",
+   "FN H-113",
+   "FN H-124",
+   "FN H-170"
+  ],
+  "REQ.AND_OR": [
+   "FN H-012",
+   "FN H-044",
+   "FN H-064",
+   "FN H-080",
+   "FN H-168"
+  ],
+  "REQ.MEASURABILITY": [
+   "FN H-021",
+   "FP H-055",
+   "FP H-074",
+   "FN H-075",
+   "FN H-081",
+   "FP H-107",
+   "FN H-110",
+   "FN H-116",
+   "FN H-118",
+   "FN H-137",
+   "FN H-172",
+   "FN H-181"
+  ],
+  "REQ.MULTIPLE_REQUIREMENTS": [
+   "FN H-004",
+   "FP H-007",
+   "FN H-018",
+   "FN H-040",
+   "FN H-057",
+   "FP H-072",
+   "FN H-091",
+   "FP H-101",
+   "FN H-111",
+   "FN H-125",
+   "FN H-129",
+   "FP H-163"
+  ]
+ }
+}

@@ -157,9 +157,9 @@
       { key: 'exported', code: ex.length ? 'preparing' : 'unverified', label: ex.length ? '書き出し済み（未実行）' : '未確認',
         note: ex.length ? ex.map(function (k) { return EXPORT_NAME[k]; }).join('・') + '。この画面の操作中だけの記録（リロード後は未確認）' : '書き出しの記録はサーバにありません' },
       { key: 'executed', code: ran ? 'done' : 'not_started', label: ran ? '実行済み' : '未実行',
-        note: ran ? j.results.length + ' 件の実行結果を取り込み済み' : '実行結果を取り込むまで表示しません' },
+        note: ran ? j.results.length + ' 件の実行結果を取り込み済み' : 'この画面ではテストを実行しません。書き出したコードを手元の pytest で実行してください（結果の取り込みは未対応）' },
       { key: 'verified', code: ver ? 'done' : 'unverified', label: ver ? '確認済み' : '未確認',
-        note: ver ? '人が結果を確認済み' : '実行結果を人が確かめるまで確認済みにしません' }
+        note: ver ? '人が結果を確認済み' : '実行結果を取り込めないため、この画面では確認済みになりません' }
     ];
   }
   function renderStages() {

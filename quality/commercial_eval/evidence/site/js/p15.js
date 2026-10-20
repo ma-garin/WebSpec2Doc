@@ -1,0 +1,2 @@
+(function(){var el=document.getElementById("sku");var s=document.getElementById("sku-err");el.addEventListener("blur",function(){var v=el.value;s.textContent=(v!==''&&!/^[A-Z]{3}-\d{4}$/.test(v))?"SKUの形式は AAA-0000 です":"";});})();
+fetch("/api/stock/history").then(function(r){return r.json();}).then(function(d){var tb=document.getElementById("history");d.forEach(function(x){var tr=document.createElement("tr");tr.innerHTML="<td>"+x.at+"</td><td>"+x.sku+"</td><td>"+x.diff+"</td>";tb.appendChild(tr);});}).catch(function(){});

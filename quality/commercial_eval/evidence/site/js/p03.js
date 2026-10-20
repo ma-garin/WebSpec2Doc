@@ -1,0 +1,2 @@
+document.addEventListener("DOMContentLoaded",function(){var c=document.getElementById("dyn6");var h2=document.createElement("h2");h2.textContent="最近見た商品";c.appendChild(h2);var b=document.createElement("button");b.type="button";b.textContent="履歴を消去";c.appendChild(b);});
+fetch("/api/products").then(function(r){if(!r.ok){throw new Error("http "+r.status);}return r.json();}).catch(function(){var b=document.getElementById("st7");var q=document.createElement("p");q.className="error";q.textContent="商品情報を取得できませんでした";b.appendChild(q);});

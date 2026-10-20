@@ -71,7 +71,7 @@ def load_dataset(path: Path) -> list[dict]:
 
 def predict(text: str) -> set[str]:
     """1 文を 1 段落として検査し、出た規則を評価単位に読み替える。"""
-    found = {f["rule"] for f in checks.candidates([{"id": "p1", "location": "eval", "text": text}])}
+    found = {f["rule"] for f in checks.candidates([{"id": "p1", "location": "eval", "text": text}], apply_disabled=False)}
     return {rid for rid, members in RULES.items() if found & set(members)}
 
 

@@ -135,7 +135,7 @@
     if (!$('#bs-bizdate').value) $('#bs-bizdate').value = new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10);
     var hasCode = ((S.job.code || {}).files || []).length > 0;
     $('#bs-run').disabled = !envs.length || !hasCode || !!(S.run && ACTIVE[S.run.status]);
-    $('#bs-env-status').textContent = !envs.length ? '接続先がまだありません。対象の読み取りの段階で接続先を登録してください。'
+    $('#bs-env-status').textContent = !envs.length ? '接続先がまだありません。下の「接続先を登録する」から登録してください。'
       : !hasCode ? 'テストコードがまだありません。テストコードの段階でコードを作ってください。' : '';
     renderProd(envById(sel.value)); }
   function renderProd(env, reasons) { var b = $('#bs-prod-banner'); if (!b) return;
@@ -166,8 +166,13 @@
     (o.tables || []).forEach(function (t) { var li = document.createElement('li'); li.textContent = t; ul.appendChild(li); });
     if (!(o.tables || []).length) ul.innerHTML = '<li>（テーブル名を特定できませんでした）</li>';
     $('#bs-confirm-check').checked = false; $('#bs-confirm-ok').disabled = true;
-    S.pending = o; $('#bs-confirm').hidden = false; $('#bs-confirm-check').focus(); }
-  function closeConfirm() { $('#bs-confirm').hidden = true; S.pending = null; }
+    S.opener = document.activeElement; S.pending = o; $('#bs-confirm').hidden = false; $('#bs-confirm-check').focus(); }
+  // 閉じたら開いた元（実行する）へフォーカスを戻す
+  function closeConfirm() { $('#bs-confirm').hidden = true; S.pending = null;
+    // 確認は実行前の下見（非同期）の後に開くため、その間に元のボタンがフォーカスを失っていることがある
+    var o = S.opener; S.opener = null;
+    if (!(o && o.isConnected && o !== document.body && o.focus)) o = $('#bs-run');
+    if (o && o.focus) o.focus(); }
   function stopPoll() { clearTimeout(S.timer); S.timer = 0; }
   function poll() { stopPoll();
     if (!S.run || !ACTIVE[S.run.status]) return;
@@ -177,7 +182,9 @@
     }, POLL_MS); }
   function finishRun() { stopPoll(); $('#bs-secret').value = '';
     toast(END_MSG[S.run.status] || '実行が終わりました。');
-    loadJob(); }
+    // 判定は段階 7 の承認後（backend-test.js の approve）に行う。ここでは結果を読み直し、
+    // 承認の可否と結果表を持つ本体（backend-test.js）にも読み直させる
+    loadJob().then(function () { document.dispatchEvent(new CustomEvent('bs:run-finished')); }); }
   function renderRun() { var r = S.run, card = $('#bs-run-card');
     card.hidden = !r;
     if (r) { var on = !!ACTIVE[r.status], pg = r.progress || {}, done = pg.done || 0, total = pg.total || 0;
@@ -203,7 +210,20 @@
     $('#bs-run-none').hidden = rows.length > 0;
     $('#bs-run-summary').textContent = rows.length ? Object.keys(count).map(function (k) { return (STATE_JA[k] || k) + ' ' + count[k];
     }).join('・') : ''; }
-  function bindRun() { $('#bs-env').addEventListener('change', function () { renderProd(envById(this.value)); });
+  // 接続先の登録（POST /envs）。パスワードは接続確認にだけ使われ、サーバは保存しない
+  function bindEnvAdd() { var f = $('#bs-envadd-form'); if (!f) return;
+    f.addEventListener('submit', function (e) { e.preventDefault();
+      var v = function (n) { return (f.elements.namedItem(n).value || '').trim(); }, st = $('#bs-envadd-status');
+      var body = { name: v('name'), declared_production: f.elements.namedItem('declared_production').checked,
+        db: { host: v('host'), port: Number(v('port') || 5432), dbname: v('dbname'), user: v('user') } };
+      if (v('password')) body.password = v('password');
+      st.textContent = '登録しています…';
+      api('POST', '/envs', body).then(function (d) {
+        var c = d && d.check; f.elements.namedItem('password').value = '';
+        st.textContent = '登録しました。' + (c ? (c.reachable && c.auth ? '接続を確かめました。' : '接続できませんでした: ' + (c.message || '到達または認証に失敗しました')) : 'パスワードが無いため接続はまだ確かめていません。');
+        loadJob(); })
+        .catch(function (err) { st.textContent = '登録できませんでした: ' + err.message; }); }); }
+  function bindRun() { bindEnvAdd(); $('#bs-env').addEventListener('change', function () { renderProd(envById(this.value)); });
     $('#bs-run').addEventListener('click', startRun);
     $('#bs-env-check').addEventListener('click', function () { var btn = this, eid = $('#bs-env').value; clearError();
       if (!eid) return showError('接続先が選ばれていません。接続先を選んでから確かめてください。');

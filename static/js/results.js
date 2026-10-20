@@ -584,8 +584,32 @@ function _showCompletionPopup(elapsedSec) {
   const m = Math.floor(elapsedSec / 60);
   const s = elapsedSec % 60;
   elapsedEl.textContent = `${m}:${String(s).padStart(2, '0')}`;
+  _completionOpener = document.activeElement;
   overlay.classList.remove('hidden');
+  // aria-modal のダイアログなので、開いたら中の主ボタンへフォーカスを移す（背面を先に巡回させない）
+  document.getElementById('popup-view-report-btn')?.focus();
 }
+
+// 完了ダイアログ: Esc で閉じ、Tab はダイアログ内で巡回させ、閉じたら開く前の場所へ戻す
+let _completionOpener = null;
+document.getElementById('completion-overlay')?.addEventListener('keydown', (e) => {
+  const overlay = e.currentTarget;
+  if (e.key === 'Escape') {
+    e.preventDefault();
+    overlay.classList.add('hidden');
+    const o = _completionOpener; _completionOpener = null;
+    // 開いた元のボタンは完了時の画面切り替えで隠れることがある。そのときは「レポートを見る」へ戻す
+    const back = (o && o.isConnected && o !== document.body && o.offsetParent) ? o : document.getElementById('btn-view-report');
+    if (back && back.offsetParent && back.focus) back.focus();
+    return;
+  }
+  if (e.key !== 'Tab') return;
+  const items = [...overlay.querySelectorAll('button:not([disabled]), a[href]')].filter((x) => x.offsetParent);
+  if (!items.length) return;
+  const first = items[0], last = items[items.length - 1];
+  if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+  else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+});
 
 document.getElementById('popup-close-btn').addEventListener('click', () => {
   document.getElementById('completion-overlay').classList.add('hidden');

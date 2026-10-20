@@ -1,0 +1,2127 @@
+{
+ "pages": {
+  "p01.html": {
+   "title": "会員登録 | みらい商店",
+   "headings": [
+    "会員登録",
+    "基本情報",
+    "ご注意"
+   ],
+   "dynamic_headings": [],
+   "buttons": [
+    "登録する",
+    "登録する",
+    "キャンセル"
+   ],
+   "dynamic_buttons": [],
+   "fields": [
+    {
+     "name": "full_name",
+     "type": "text",
+     "required": true,
+     "maxlength": 40,
+     "minlength": 2,
+     "min": null,
+     "max": null,
+     "pattern": null,
+     "label": "氏名"
+    },
+    {
+     "name": "kana",
+     "type": "text",
+     "required": true,
+     "maxlength": 60,
+     "minlength": null,
+     "min": null,
+     "max": null,
+     "pattern": "^[ァ-ヶー　]+$",
+     "label": "フリガナ"
+    },
+    {
+     "name": "email",
+     "type": "email",
+     "required": true,
+     "maxlength": 100,
+     "minlength": null,
+     "min": null,
+     "max": null,
+     "pattern": null,
+     "label": "メールアドレス"
+    },
+    {
+     "name": "pw",
+     "type": "password",
+     "required": true,
+     "maxlength": 64,
+     "minlength": 8,
+     "min": null,
+     "max": null,
+     "pattern": "^(?=.*[A-Za-z])(?=.*\\d).{8,64}$",
+     "label": "パスワード"
+    },
+    {
+     "name": "pw2",
+     "type": "password",
+     "required": true,
+     "maxlength": null,
+     "minlength": null,
+     "min": null,
+     "max": null,
+     "pattern": null,
+     "label": "パスワード（確認）"
+    },
+    {
+     "name": "tel",
+     "type": "tel",
+     "required": false,
+     "maxlength": 11,
+     "minlength": null,
+     "min": null,
+     "max": null,
+     "pattern": "^0\\d{9,10}$",
+     "label": "電話番号"
+    },
+    {
+     "name": "birth",
+     "type": "date",
+     "required": false,
+     "maxlength": null,
+     "minlength": null,
+     "min": "1900-01-01",
+     "max": "2010-12-31",
+     "pattern": null,
+     "label": "生年月日"
+    },
+    {
+     "name": "pref",
+     "type": "select",
+     "required": true,
+     "maxlength": null,
+     "minlength": null,
+     "min": null,
+     "max": null,
+     "pattern": null,
+     "label": "都道府県"
+    },
+    {
+     "name": "gender",
+     "type": "radio",
+     "required": false,
+     "maxlength": null,
+     "minlength": null,
+     "min": null,
+     "max": null,
+     "pattern": null,
+     "label": "男性"
+    },
+    {
+     "name": "gender",
+     "type": "radio",
+     "required": false,
+     "maxlength": null,
+     "minlength": null,
+     "min": null,
+     "max": null,
+     "pattern": null,
+     "label": "女性"
+    },
+    {
+     "name": "gender",
+     "type": "radio",
+     "required": false,
+     "maxlength": null,
+     "minlength": null,
+     "min": null,
+     "max": null,
+     "pattern": null,
+     "label": "回答しない"
+    },
+    {
+     "name": "note",
+     "type": "textarea",
+     "required": false,
+     "maxlength": 200,
+     "minlength": null,
+     "min": null,
+     "max": null,
+     "pattern": null,
+     "label": "自己紹介"
+    },
+    {
+     "name": "agree",
+     "type": "checkbox",
+     "required": true,
+     "maxlength": null,
+     "minlength": null,
+     "min": null,
+     "max": null,
+     "pattern": null,
+     "label": "利用規約に同意する"
+    }
+   ],
+   "links": [
+    "index.html",
+    "p02.html"
+   ],
+   "dynamic_links": [],
+   "tables": [],
+   "error_messages": [],
+   "deferred_error_messages": [
+    "氏名を入力してください",
+    "メールアドレスの形式が正しくありません",
+    "パスワードは8文字以上で入力してください",
+    "パスワードが一致しません",
+    "利用規約への同意が必要です",
+    "登録に失敗しました。時間をおいて再度お試しください"
+   ],
+   "api_endpoints": [
+    {
+     "method": "POST",
+     "path": "/api/members"
+    }
+   ],
+   "must_not_appear": [
+    "管理者として登録"
+   ],
+   "unavailable": [],
+   "external_links": [
+    "https://example.com/privacy"
+   ],
+   "anchor_links": [],
+   "hidden_fields": [
+    "csrf_token"
+   ]
+  },
+  "p02.html": {
+   "title": "ログイン | みらい商店",
+   "headings": [
+    "ログイン"
+   ],
+   "dynamic_headings": [],
+   "buttons": [
+    "ログイン",
+    "ログイン"
+   ],
+   "dynamic_buttons": [],
+   "fields": [
+    {
+     "name": "login_id",
+     "type": "text",
+     "required": true,
+     "maxlength": 30,
+     "minlength": null,
+     "min": null,
+     "max": null,
+     "pattern": null,
+     "label": "ログインID"
+    },
+    {
+     "name": "pw",
+     "type": "password",
+     "required": true,
+     "maxlength": null,
+     "minlength": 8,
+     "min": null,
+     "max": null,
+     "pattern": null,
+     "label": "パスワード"
+    },
+    {
+     "name": "remember",
+     "type": "checkbox",
+     "required": false,
+     "maxlength": null,
+     "minlength": null,
+     "min": null,
+     "max": null,
+     "pattern": null,
+     "label": "ログイン状態を保持する"
+    }
+   ],
+   "links": [
+    "index.html",
+    "p01.html",
+    "p22.html"
+   ],
+   "dynamic_links": [],
+   "tables": [],
+   "error_messages": [
+    "セッションの有効期限が切れました。再度ログインしてください。"
+   ],
+   "deferred_error_messages": [
+    "ログインIDを入力してください",
+    "パスワードを入力してください",
+    "ログインに失敗しました"
+   ],
+   "api_endpoints": [
+    {
+     "method": "POST",
+     "path": "/api/auth/login"
+    }
+   ],
+   "must_not_appear": [
+    "管理者ログイン",
+    "パスワードをお忘れの方"
+   ],
+   "unavailable": [],
+   "external_links": [],
+   "anchor_links": [],
+   "hidden_fields": []
+  },
+  "p03.html": {
+   "title": "商品検索 | みらい商店",
+   "headings": [
+    "商品検索",
+    "検索条件",
+    "検索結果"
+   ],
+   "dynamic_headings": [
+    "最近見た商品"
+   ],
+   "buttons": [
+    "検索",
+    "検索",
+    "条件をクリア"
+   ],
+   "dynamic_buttons": [
+    "履歴を消去"
+   ],
+   "fields": [
+    {
+     "name": "keyword",
+     "type": "text",
+     "required": false,
+     "maxlength": 50,
+     "minlength": null,
+     "min": null,
+     "max": null,
+     "pattern": null,
+     "label": "キーワード"
+    },
+    {
+     "name": "category",
+     "type": "select",
+     "required": false,
+     "maxlength": null,
+     "minlength": null,
+     "min": null,
+     "max": null,
+     "pattern": null,
+     "label": "カテゴリ"
+    },
+    {
+     "name": "price_min",
+     "type": "number",
+     "required": false,
+     "maxlength": null,
+     "minlength": null,
+     "min": 0,
+     "max": 1000000,
+     "pattern": null,
+     "label": "最低価格"
+    },
+    {
+     "name": "price_max",
+     "type": "number",
+     "required": false,
+     "maxlength": null,
+     "minlength": null,
+     "min": 0,
+     "max": 1000000,
+     "pattern": null,
+     "label": "最高価格"
+    },
+    {
+     "name": "in_stock",
+     "type": "checkbox",
+     "required": false,
+     "maxlength": null,
+     "minlength": null,
+     "min": null,
+     "max": null,
+     "pattern": null,
+     "label": "在庫ありのみ"
+    }
+   ],
+   "links": [
+    "index.html",
+    "p04.html?id=1",
+    "p04.html?id=2",
+    "p04.html?id=3"
+   ],
+   "dynamic_links": [],
+   "tables": [
+    {
+     "headers": [
+      "商品名",
+      "価格",
+      "在庫"
+     ],
+     "rows": 3
+    }
+   ],
+   "error_messages": [],
+   "deferred_error_messages": [
+    "商品情報を取得できませんでした"
+   ],
+   "api_endpoints": [
+    {
+     "method": "GET",
+     "path": "/api/products"
+    }
+   ],
+   "must_not_appear": [
+    "検索結果は0件です"
+   ],
+   "unavailable": [],
+   "external_links": [],
+   "anchor_links": [],
+   "hidden_fields": []
+  },
+  "p04.html": {
+   "title": "ワイヤレスマウス M-200 | みらい商店",
+   "headings": [
+    "ワイヤレスマウス M-200",
+    "商品説明",
+    "仕様",
+    "サイズと重量",
+    "レビュー"
+   ],
+   "dynamic_headings": [
+    "関連商品"
+   ],
+   "buttons": [
+    "カートに入れる",
+    "カートに入れる"
+   ],
+   "dynamic_buttons": [
+    "お気に入りに追加"
+   ],
+   "fields": [
+    {
+     "name": "qty",
+     "type": "number",
+     "required": true,
+     "maxlength": null,
+     "minlength": null,
+     "min": 1,
+     "max": 99,
+     "pattern": null,
+     "label": "数量"
+    }
+   ],
+   "links": [
+    "index.html",
+    "p03.html",
+    "p05.html"
+   ],
+   "dynamic_links": [],
+   "tables": [
+    {
+     "headers": [
+      "項目",
+      "内容"
+     ],
+     "rows": 3
+    }
+   ],
+   "error_messages": [],
+   "deferred_error_messages": [],
+   "api_endpoints": [
+    {
+     "method": "GET",
+     "path": "/api/reviews"
+    }
+   ],
+   "must_not_appear": [
+    "在庫を確認"
+   ],
+   "unavailable": [
+    "レビュー一覧は /api/reviews から読み込む想定でサーバが無いため取得できない"
+   ],
+   "external_links": [],
+   "anchor_links": [],
+   "hidden_fields": []
+  },
+  "p05.html": {
+   "title": "カート | みらい商店",
+   "headings": [
+    "カート"
+   ],
+   "dynamic_headings": [],
+   "buttons": [
+    "削除",
+    "削除",
+    "削除",
+    "注文へ進む"
+   ],
+   "dynamic_buttons": [],
+   "fields": [
+    {
+     "name": "qty_1",
+     "type": "number",
+     "required": false,
+     "maxlength": null,
+     "minlength": null,
+     "min": 1,
+     "max": 99,
+     "pattern": null,
+     "label": null
+    },
+    {
+     "name": "qty_2",
+     "type": "number",
+     "required": false,
+     "maxlength": null,
+     "minlength": null,
+     "min": 1,
+     "max": 99,
+     "pattern": null,
+     "label": null
+    },
+    {
+     "name": "qty_3",
+     "type": "number",
+     "required": false,
+     "maxlength": null,
+     "minlength": null,
+     "min": 1,
+     "max": 99,
+     "pattern": null,
+     "label": null
+    }
+   ],
+   "links": [
+    "index.html",
+    "p06.html",
+    "p03.html"
+   ],
+   "dynamic_links": [],
+   "tables": [
+    {
+     "headers": [
+      "商品名",
+      "単価",
+      "数量",
+      "操作"
+     ],
+     "rows": 3
+    }
+   ],
+   "error_messages": [
+    "在庫切れの商品が含まれています"
+   ],
+   "deferred_error_messages": [],
+   "api_endpoints": [
+    {
+     "method": "DELETE",
+     "path": "/api/cart/items"
+    }
+   ],
+   "must_not_appear": [],
+   "unavailable": [],
+   "external_links": [],
+   "anchor_links": [],
+   "hidden_fields": []
+  },
+  "p06.html": {
+   "title": "注文情報の入力 | みらい商店",
+   "headings": [
+    "ご注文情報の入力",
+    "お届け先",
+    "お支払い方法",
+    "クレジットカード情報"
+   ],
+   "dynamic_headings": [],
+   "buttons": [
+    "確認画面へ",
+    "戻る"
+   ],
+   "dynamic_buttons": [],
+   "fields": [
+    {
+     "name": "recipient",
+     "type": "text",
+     "required": true,
+     "maxlength": 40,
+     "minlength": null,
+     "min": null,
+     "max": null,
+     "pattern": null,
+     "label": "お届け先氏名"
+    },
+    {
+     "name": "zip",
+     "type": "text",
+     "required": true,
+     "maxlength": 8,
+     "minlength": null,
+     "min": null,
+     "max": null,
+     "pattern": "^\\d{3}-?\\d{4}$",
+     "label": "郵便番号"
+    },
+    {
+     "name": "address",
+     "type": "text",
+     "required": true,
+     "maxlength": 100,
+     "minlength": null,
+     "min": null,
+     "max": null,
+     "pattern": null,
+     "label": "住所"
+    },
+    {
+     "name": "phone",
+     "type": "tel",
+     "required": false,
+     "maxlength": 13,
+     "minlength": null,
+     "min": null,
+     "max": null,
+     "pattern": null,
+     "label": "電話番号"
+    },
+    {
+     "name": "delivery",
+     "type": "date",
+     "required": false,
+     "maxlength": null,
+     "minlength": null,
+     "min": "2026-10-21",
+     "max": "2026-12-31",
+     "pattern": null,
+     "label": "配達希望日"
+    },
+    {
+     "name": "pay",
+     "type": "radio",
+     "required": false,
+     "maxlength": null,
+     "minlength": null,
+     "min": null,
+     "max": null,
+     "pattern": null,
+     "label": "クレジットカード"
+    },
+    {
+     "name": "pay",
+     "type": "radio",
+     "required": false,
+     "maxlength": null,
+     "minlength": null,
+     "min": null,
+     "max": null,
+     "pattern": null,
+     "label": "代金引換"
+    },
+    {
+     "name": "pay",
+     "type": "radio",
+     "required": false,
+     "maxlength": null,
+     "minlength": null,
+     "min": null,
+     "max": null,
+     "pattern": null,
+     "label": "銀行振込"
+    },
+    {
+     "name": "card_no",
+     "type": "text",
+     "required": false,
+     "maxlength": 16,
+     "minlength": null,
+     "min": null,
+     "max": null,
+     "pattern": "^\\d{16}$",
+     "label": "カード番号"
+    },
+    {
+     "name": "gift",
+     "type": "checkbox",
+     "required": false,
+     "maxlength": null,
+     "minlength": null,
+     "min": null,
+     "max": null,
+     "pattern": null,
+     "label": "ギフト包装にする"
+    }
+   ],
+   "links": [
+    "index.html",
+    "p05.html"
+   ],
+   "dynamic_links": [],
+   "tables": [],
+   "error_messages": [],
+   "deferred_error_messages": [
+    "お届け先氏名を入力してください",
+    "郵便番号は7桁の数字で入力してください",
+    "お支払い方法を選択してください",
+    "注文情報を送信できませんでした"
+   ],
+   "api_endpoints": [
+    {
+     "method": "POST",
+     "path": "/api/orders"
+    }
+   ],
+   "must_not_appear": [],
+   "unavailable": [],
+   "external_links": [],
+   "anchor_links": [],
+   "hidden_fields": [
+    "order_token"
+   ]
+  },
+  "p07.html": {
+   "title": "注文内容の確認 | みらい商店",
+   "headings": [
+    "注文内容の確認",
+    "お届け先",
+    "ご注文商品"
+   ],
+   "dynamic_headings": [],
+   "buttons": [
+    "注文を確定する",
+    "戻る"
+   ],
+   "dynamic_buttons": [],
+   "fields": [],
+   "links": [
+    "index.html",
+    "p06.html",
+    "p08.html"
+   ],
+   "dynamic_links": [],
+   "tables": [
+    {
+     "headers": [
+      "商品名",
+      "数量",
+      "小計"
+     ],
+     "rows": 2
+    }
+   ],
+   "error_messages": [],
+   "deferred_error_messages": [
+    "注文を確定できませんでした"
+   ],
+   "api_endpoints": [
+    {
+     "method": "POST",
+     "path": "/api/orders/confirm"
+    }
+   ],
+   "must_not_appear": [
+    "デバッグ情報",
+    "クーポンが適用されました（テスト）"
+   ],
+   "unavailable": [],
+   "external_links": [],
+   "anchor_links": [],
+   "hidden_fields": []
+  },
+  "p08.html": {
+   "title": "ご注文完了 | みらい商店",
+   "headings": [
+    "ご注文ありがとうございました",
+    "次のステップ"
+   ],
+   "dynamic_headings": [
+    "おすすめ商品"
+   ],
+   "buttons": [],
+   "dynamic_buttons": [
+    "もっと見る"
+   ],
+   "fields": [],
+   "links": [
+    "index.html",
+    "p09.html",
+    "p03.html"
+   ],
+   "dynamic_links": [],
+   "tables": [],
+   "error_messages": [],
+   "deferred_error_messages": [],
+   "api_endpoints": [
+    {
+     "method": "GET",
+     "path": "/api/recommendations"
+    }
+   ],
+   "must_not_appear": [
+    "エラー: 決済失敗"
+   ],
+   "unavailable": [],
+   "external_links": [],
+   "anchor_links": [],
+   "hidden_fields": []
+  },
+  "p09.html": {
+   "title": "注文履歴 | みらい商店",
+   "headings": [
+    "注文履歴",
+    "絞り込み",
+    "注文一覧"
+   ],
+   "dynamic_headings": [],
+   "buttons": [
+    "絞り込む",
+    "リセット"
+   ],
+   "dynamic_buttons": [],
+   "fields": [
+    {
+     "name": "from",
+     "type": "date",
+     "required": false,
+     "maxlength": null,
+     "minlength": null,
+     "min": null,
+     "max": null,
+     "pattern": null,
+     "label": "開始日"
+    },
+    {
+     "name": "to",
+     "type": "date",
+     "required": false,
+     "maxlength": null,
+     "minlength": null,
+     "min": null,
+     "max": null,
+     "pattern": null,
+     "label": "終了日"
+    },
+    {
+     "name": "status",
+     "type": "select",
+     "required": false,
+     "maxlength": null,
+     "minlength": null,
+     "min": null,
+     "max": null,
+     "pattern": null,
+     "label": "状態"
+    }
+   ],
+   "links": [
+    "index.html",
+    "p07.html?order=1001",
+    "p07.html?order=1002",
+    "p07.html?order=1003",
+    "p07.html?order=1004",
+    "p10.html"
+   ],
+   "dynamic_links": [],
+   "tables": [
+    {
+     "headers": [
+      "注文番号",
+      "注文日",
+      "金額",
+      "状態",
+      "操作"
+     ],
+     "rows": 4
+    }
+   ],
+   "error_messages": [],
+   "deferred_error_messages": [],
+   "api_endpoints": [],
+   "must_not_appear": [],
+   "unavailable": [],
+   "external_links": [],
+   "anchor_links": [],
+   "hidden_fields": []
+  },
+  "p10.html": {
+   "title": "管理ダッシュボード | みらい商店",
+   "headings": [
+    "管理ダッシュボード",
+    "本日の売上",
+    "アクセス解析",
+    "管理者メニュー",
+    "未処理の注文"
+   ],
+   "dynamic_headings": [],
+   "buttons": [
+    "更新",
+    "更新"
+   ],
+   "dynamic_buttons": [],
+   "fields": [],
+   "links": [
+    "index.html",
+    "p11.html",
+    "p15.html",
+    "p16.html"
+   ],
+   "dynamic_links": [],
+   "tables": [
+    {
+     "headers": [
+      "指標",
+      "値"
+     ],
+     "rows": 3
+    }
+   ],
+   "error_messages": [],
+   "deferred_error_messages": [
+    "管理者権限が必要です"
+   ],
+   "api_endpoints": [
+    {
+     "method": "GET",
+     "path": "/api/admin/summary"
+    }
+   ],
+   "must_not_appear": [
+    "システム設定（非公開）"
+   ],
+   "unavailable": [
+    "アクセス解析の iframe(外部 https://example.com/embed/analytics) の中身は取得できない",
+    "管理者ログイン後にだけ出る領域(#admin-only の中身)。/api/admin/summary はサーバが無く取得できない"
+   ],
+   "external_links": [],
+   "anchor_links": [],
+   "hidden_fields": []
+  },
+  "p11.html": {
+   "title": "ユーザー管理 | みらい商店",
+   "headings": [
+    "ユーザー管理",
+    "ユーザー一覧"
+   ],
+   "dynamic_headings": [],
+   "buttons": [
+    "検索",
+    "削除",
+    "削除",
+    "削除",
+    "削除",
+    "削除"
+   ],
+   "dynamic_buttons": [
+    "CSV出力",
+    "一括削除"
+   ],
+   "fields": [
+    {
+     "name": "q",
+     "type": "text",
+     "required": false,
+     "maxlength": 30,
+     "minlength": null,
+     "min": null,
+     "max": null,
+     "pattern": null,
+     "label": "ユーザー検索"
+    },
+    {
+     "name": "sel",
+     "type": "checkbox",
+     "required": false,
+     "maxlength": null,
+     "minlength": null,
+     "min": null,
+     "max": null,
+     "pattern": null,
+     "label": null
+    },
+    {
+     "name": "sel",
+     "type": "checkbox",
+     "required": false,
+     "maxlength": null,
+     "minlength": null,
+     "min": null,
+     "max": null,
+     "pattern": null,
+     "label": null
+    },
+    {
+     "name": "sel",
+     "type": "checkbox",
+     "required": false,
+     "maxlength": null,
+     "minlength": null,
+     "min": null,
+     "max": null,
+     "pattern": null,
+     "label": null
+    },
+    {
+     "name": "sel",
+     "type": "checkbox",
+     "required": false,
+     "maxlength": null,
+     "minlength": null,
+     "min": null,
+     "max": null,
+     "pattern": null,
+     "label": null
+    },
+    {
+     "name": "sel",
+     "type": "checkbox",
+     "required": false,
+     "maxlength": null,
+     "minlength": null,
+     "min": null,
+     "max": null,
+     "pattern": null,
+     "label": null
+    }
+   ],
+   "links": [
+    "index.html",
+    "p12.html?id=1",
+    "p12.html?id=2",
+    "p12.html?id=3",
+    "p12.html?id=4",
+    "p12.html?id=5",
+    "p10.html"
+   ],
+   "dynamic_links": [],
+   "tables": [
+    {
+     "headers": [
+      "選択",
+      "ID",
+      "氏名",
+      "権限",
+      "操作"
+     ],
+     "rows": 5
+    }
+   ],
+   "error_messages": [],
+   "deferred_error_messages": [],
+   "api_endpoints": [
+    {
+     "method": "POST",
+     "path": "/api/users/delete"
+    }
+   ],
+   "must_not_appear": [
+    "全ユーザー削除"
+   ],
+   "unavailable": [],
+   "external_links": [],
+   "anchor_links": [],
+   "hidden_fields": []
+  },
+  "p12.html": {
+   "title": "ユーザー編集 | みらい商店",
+   "headings": [
+    "ユーザー編集",
+    "基本情報",
+    "権限"
+   ],
+   "dynamic_headings": [],
+   "buttons": [
+    "保存",
+    "キャンセル",
+    "削除"
+   ],
+   "dynamic_buttons": [],
+   "fields": [
+    {
+     "name": "user_id",
+     "type": "text",
+     "required": true,
+     "maxlength": 10,
+     "minlength": null,
+     "min": null,
+     "max": null,
+     "pattern": null,
+     "label": "ユーザーID"
+    },
+    {
+     "name": "name",
+     "type": "text",
+     "required": true,
+     "maxlength": 40,
+     "minlength": 2,
+     "min": null,
+     "max": null,
+     "pattern": null,
+     "label": "氏名"
+    },
+    {
+     "name": "email",
+     "type": "email",
+     "required": true,
+     "maxlength": 100,
+     "minlength": null,
+     "min": null,
+     "max": null,
+     "pattern": null,
+     "label": "メールアドレス"
+    },
+    {
+     "name": "tel",
+     "type": "tel",
+     "required": false,
+     "maxlength": 13,
+     "minlength": null,
+     "min": null,
+     "max": null,
+     "pattern": "^0\\d{1,4}-\\d{1,4}-\\d{4}$",
+     "label": "電話番号"
+    },
+    {
+     "name": "emp_no",
+     "type": "number",
+     "required": true,
+     "maxlength": null,
+     "minlength": null,
+     "min": 1,
+     "max": 99999,
+     "pattern": null,
+     "label": "社員番号"
+    },
+    {
+     "name": "role",
+     "type": "select",
+     "required": true,
+     "maxlength": null,
+     "minlength": null,
+     "min": null,
+     "max": null,
+     "pattern": null,
+     "label": "権限"
+    },
+    {
+     "name": "status",
+     "type": "radio",
+     "required": false,
+     "maxlength": null,
+     "minlength": null,
+     "min": null,
+     "max": null,
+     "pattern": null,
+     "label": "有効"
+    },
+    {
+     "name": "status",
+     "type": "radio",
+     "required": false,
+     "maxlength": null,
+     "minlength": null,
+     "min": null,
+     "max": null,
+     "pattern": null,
+     "label": "無効"
+    },
+    {
+     "name": "memo",
+     "type": "textarea",
+     "required": false,
+     "maxlength": 500,
+     "minlength": null,
+     "min": null,
+     "max": null,
+     "pattern": null,
+     "label": "備考"
+    }
+   ],
+   "links": [
+    "index.html",
+    "p11.html"
+   ],
+   "dynamic_links": [],
+   "tables": [],
+   "error_messages": [],
+   "deferred_error_messages": [
+    "氏名は必須です",
+    "社員番号は数字で入力してください",
+    "権限を選択してください",
+    "ユーザーを更新できませんでした"
+   ],
+   "api_endpoints": [
+    {
+     "method": "PUT",
+     "path": "/api/users"
+    }
+   ],
+   "must_not_appear": [],
+   "unavailable": [],
+   "external_links": [],
+   "anchor_links": [],
+   "hidden_fields": [
+    "id",
+    "version"
+   ]
+  },
+  "p13.html": {
+   "title": "お問い合わせ | みらい商店",
+   "headings": [
+    "お問い合わせ"
+   ],
+   "dynamic_headings": [],
+   "buttons": [
+    "送信"
+   ],
+   "dynamic_buttons": [],
+   "fields": [
+    {
+     "name": "name",
+     "type": "text",
+     "required": true,
+     "maxlength": 40,
+     "minlength": null,
+     "min": null,
+     "max": null,
+     "pattern": null,
+     "label": "お名前"
+    },
+    {
+     "name": "email",
+     "type": "email",
+     "required": true,
+     "maxlength": 100,
+     "minlength": null,
+     "min": null,
+     "max": null,
+     "pattern": null,
+     "label": "メールアドレス"
+    },
+    {
+     "name": "subject",
+     "type": "select",
+     "required": true,
+     "maxlength": null,
+     "minlength": null,
+     "min": null,
+     "max": null,
+     "pattern": null,
+     "label": "お問い合わせ種別"
+    },
+    {
+     "name": "body",
+     "type": "textarea",
+     "required": true,
+     "maxlength": 1000,
+     "minlength": 10,
+     "min": null,
+     "max": null,
+     "pattern": null,
+     "label": "お問い合わせ内容"
+    },
+    {
+     "name": "privacy",
+     "type": "checkbox",
+     "required": true,
+     "maxlength": null,
+     "minlength": null,
+     "min": null,
+     "max": null,
+     "pattern": null,
+     "label": "個人情報の取り扱いに同意する"
+    }
+   ],
+   "links": [
+    "index.html",
+    "p17.html"
+   ],
+   "dynamic_links": [],
+   "tables": [],
+   "error_messages": [
+    "前回の送信内容を保存できませんでした。もう一度ご入力ください。"
+   ],
+   "deferred_error_messages": [
+    "お名前を入力してください",
+    "お問い合わせ内容は10文字以上で入力してください",
+    "お問い合わせを送信できませんでした"
+   ],
+   "api_endpoints": [
+    {
+     "method": "POST",
+     "path": "/api/contact"
+    }
+   ],
+   "must_not_appear": [
+    "ウェブサイト（スパム対策用・入力しないでください）"
+   ],
+   "unavailable": [
+    "店舗地図の iframe(外部 https://example.com/map) の中身は取得できない"
+   ],
+   "external_links": [],
+   "anchor_links": [],
+   "hidden_fields": [
+    "website"
+   ]
+  },
+  "p14.html": {
+   "title": "設定 | みらい商店",
+   "headings": [
+    "設定",
+    "通知",
+    "表示",
+    "セキュリティ"
+   ],
+   "dynamic_headings": [
+    "接続中のデバイス"
+   ],
+   "buttons": [
+    "保存",
+    "保存",
+    "キャンセル"
+   ],
+   "dynamic_buttons": [],
+   "fields": [
+    {
+     "name": "notify_mail",
+     "type": "checkbox",
+     "required": false,
+     "maxlength": null,
+     "minlength": null,
+     "min": null,
+     "max": null,
+     "pattern": null,
+     "label": "メール通知を受け取る"
+    },
+    {
+     "name": "notify_push",
+     "type": "checkbox",
+     "required": false,
+     "maxlength": null,
+     "minlength": null,
+     "min": null,
+     "max": null,
+     "pattern": null,
+     "label": "プッシュ通知を受け取る"
+    },
+    {
+     "name": "theme",
+     "type": "radio",
+     "required": false,
+     "maxlength": null,
+     "minlength": null,
+     "min": null,
+     "max": null,
+     "pattern": null,
+     "label": "ライト"
+    },
+    {
+     "name": "theme",
+     "type": "radio",
+     "required": false,
+     "maxlength": null,
+     "minlength": null,
+     "min": null,
+     "max": null,
+     "pattern": null,
+     "label": "ダーク"
+    },
+    {
+     "name": "page_size",
+     "type": "number",
+     "required": false,
+     "maxlength": null,
+     "minlength": null,
+     "min": 10,
+     "max": 100,
+     "pattern": null,
+     "label": "1ページの表示件数"
+    },
+    {
+     "name": "cur_pw",
+     "type": "password",
+     "required": true,
+     "maxlength": null,
+     "minlength": null,
+     "min": null,
+     "max": null,
+     "pattern": null,
+     "label": "現在のパスワード"
+    },
+    {
+     "name": "new_pw",
+     "type": "password",
+     "required": false,
+     "maxlength": 64,
+     "minlength": 8,
+     "min": null,
+     "max": null,
+     "pattern": null,
+     "label": "新しいパスワード"
+    }
+   ],
+   "links": [
+    "index.html"
+   ],
+   "dynamic_links": [],
+   "tables": [],
+   "error_messages": [],
+   "deferred_error_messages": [
+    "表示件数は10〜100の範囲で指定してください",
+    "設定を保存できませんでした"
+   ],
+   "api_endpoints": [
+    {
+     "method": "PUT",
+     "path": "/api/settings"
+    }
+   ],
+   "must_not_appear": [],
+   "unavailable": [],
+   "external_links": [],
+   "anchor_links": [],
+   "hidden_fields": []
+  },
+  "p15.html": {
+   "title": "在庫一覧 | みらい商店",
+   "headings": [
+    "在庫一覧",
+    "絞り込み",
+    "現在庫",
+    "在庫履歴"
+   ],
+   "dynamic_headings": [],
+   "buttons": [
+    "検索"
+   ],
+   "dynamic_buttons": [],
+   "fields": [
+    {
+     "name": "warehouse",
+     "type": "select",
+     "required": false,
+     "maxlength": null,
+     "minlength": null,
+     "min": null,
+     "max": null,
+     "pattern": null,
+     "label": "倉庫"
+    },
+    {
+     "name": "sku",
+     "type": "text",
+     "required": false,
+     "maxlength": 8,
+     "minlength": null,
+     "min": null,
+     "max": null,
+     "pattern": "^[A-Z]{3}-\\d{4}$",
+     "label": "SKU"
+    },
+    {
+     "name": "min_qty",
+     "type": "number",
+     "required": false,
+     "maxlength": null,
+     "minlength": null,
+     "min": 0,
+     "max": null,
+     "pattern": null,
+     "label": "最小在庫数"
+    }
+   ],
+   "links": [
+    "index.html",
+    "p10.html"
+   ],
+   "dynamic_links": [],
+   "tables": [
+    {
+     "headers": [
+      "SKU",
+      "商品名",
+      "在庫数"
+     ],
+     "rows": 3
+    },
+    {
+     "headers": [
+      "日時",
+      "SKU",
+      "増減"
+     ],
+     "rows": 0
+    }
+   ],
+   "error_messages": [],
+   "deferred_error_messages": [
+    "SKUの形式は AAA-0000 です"
+   ],
+   "api_endpoints": [
+    {
+     "method": "GET",
+     "path": "/api/stock/history"
+    }
+   ],
+   "must_not_appear": [
+    "原価一覧",
+    "仕入先A"
+   ],
+   "unavailable": [
+    "在庫履歴の表(#history)の行は /api/stock/history から読み込む想定でサーバが無く取得できない(静的な行は0)"
+   ],
+   "external_links": [],
+   "anchor_links": [],
+   "hidden_fields": []
+  },
+  "p16.html": {
+   "title": "レポート出力 | みらい商店",
+   "headings": [
+    "レポート出力",
+    "出力条件"
+   ],
+   "dynamic_headings": [
+    "出力履歴"
+   ],
+   "buttons": [
+    "出力",
+    "出力",
+    "プレビュー"
+   ],
+   "dynamic_buttons": [
+    "再出力"
+   ],
+   "fields": [
+    {
+     "name": "from",
+     "type": "date",
+     "required": true,
+     "maxlength": null,
+     "minlength": null,
+     "min": null,
+     "max": null,
+     "pattern": null,
+     "label": "開始日"
+    },
+    {
+     "name": "to",
+     "type": "date",
+     "required": true,
+     "maxlength": null,
+     "minlength": null,
+     "min": null,
+     "max": null,
+     "pattern": null,
+     "label": "終了日"
+    },
+    {
+     "name": "kind",
+     "type": "select",
+     "required": true,
+     "maxlength": null,
+     "minlength": null,
+     "min": null,
+     "max": null,
+     "pattern": null,
+     "label": "レポート種別"
+    },
+    {
+     "name": "fmt",
+     "type": "radio",
+     "required": false,
+     "maxlength": null,
+     "minlength": null,
+     "min": null,
+     "max": null,
+     "pattern": null,
+     "label": "CSV"
+    },
+    {
+     "name": "fmt",
+     "type": "radio",
+     "required": false,
+     "maxlength": null,
+     "minlength": null,
+     "min": null,
+     "max": null,
+     "pattern": null,
+     "label": "Excel"
+    },
+    {
+     "name": "fmt",
+     "type": "radio",
+     "required": false,
+     "maxlength": null,
+     "minlength": null,
+     "min": null,
+     "max": null,
+     "pattern": null,
+     "label": "PDF"
+    },
+    {
+     "name": "with_header",
+     "type": "checkbox",
+     "required": false,
+     "maxlength": null,
+     "minlength": null,
+     "min": null,
+     "max": null,
+     "pattern": null,
+     "label": "見出し行を含める"
+    }
+   ],
+   "links": [
+    "index.html",
+    "p10.html"
+   ],
+   "dynamic_links": [],
+   "tables": [],
+   "error_messages": [],
+   "deferred_error_messages": [
+    "開始日を入力してください",
+    "終了日は開始日以降を指定してください",
+    "レポートを出力できませんでした"
+   ],
+   "api_endpoints": [
+    {
+     "method": "POST",
+     "path": "/api/reports"
+    }
+   ],
+   "must_not_appear": [],
+   "unavailable": [],
+   "external_links": [],
+   "anchor_links": [],
+   "hidden_fields": []
+  },
+  "p17.html": {
+   "title": "ヘルプ・よくある質問 | みらい商店",
+   "headings": [
+    "ヘルプ・よくある質問",
+    "会員登録について",
+    "登録に費用はかかりますか",
+    "お支払いについて",
+    "ご注文について",
+    "お支払いについて",
+    "キャンセルはできますか"
+   ],
+   "dynamic_headings": [],
+   "buttons": [
+    "役に立った",
+    "役に立った"
+   ],
+   "dynamic_buttons": [
+    "チャットで質問する"
+   ],
+   "fields": [],
+   "links": [
+    "index.html",
+    "p13.html",
+    "p01.html"
+   ],
+   "dynamic_links": [],
+   "tables": [],
+   "error_messages": [],
+   "deferred_error_messages": [],
+   "api_endpoints": [],
+   "must_not_appear": [
+    "社内向け: 返品時の裏ルール",
+    "Internal FAQ"
+   ],
+   "unavailable": [],
+   "external_links": [
+    "https://example.com/terms"
+   ],
+   "anchor_links": [
+    "#reg",
+    "#order"
+   ],
+   "hidden_fields": []
+  },
+  "p18.html": {
+   "title": "登録住所の変更 | みらい商店",
+   "headings": [
+    "登録住所の変更",
+    "ご自宅",
+    "勤務先"
+   ],
+   "dynamic_headings": [],
+   "buttons": [
+    "住所を検索",
+    "住所を検索",
+    "変更を保存"
+   ],
+   "dynamic_buttons": [],
+   "fields": [
+    {
+     "name": "home_zip",
+     "type": "text",
+     "required": false,
+     "maxlength": 8,
+     "minlength": null,
+     "min": null,
+     "max": null,
+     "pattern": "^\\d{3}-?\\d{4}$",
+     "label": "郵便番号"
+    },
+    {
+     "name": "home_pref",
+     "type": "select",
+     "required": false,
+     "maxlength": null,
+     "minlength": null,
+     "min": null,
+     "max": null,
+     "pattern": null,
+     "label": "都道府県（自宅）"
+    },
+    {
+     "name": "home_addr",
+     "type": "text",
+     "required": false,
+     "maxlength": 100,
+     "minlength": null,
+     "min": null,
+     "max": null,
+     "pattern": null,
+     "label": "住所"
+    },
+    {
+     "name": "home_tel",
+     "type": "tel",
+     "required": false,
+     "maxlength": 13,
+     "minlength": null,
+     "min": null,
+     "max": null,
+     "pattern": null,
+     "label": "電話番号"
+    },
+    {
+     "name": "same_as_home",
+     "type": "checkbox",
+     "required": false,
+     "maxlength": null,
+     "minlength": null,
+     "min": null,
+     "max": null,
+     "pattern": null,
+     "label": "勤務先は自宅と同じ"
+    },
+    {
+     "name": "work_zip",
+     "type": "text",
+     "required": false,
+     "maxlength": 8,
+     "minlength": null,
+     "min": null,
+     "max": null,
+     "pattern": "^\\d{3}-?\\d{4}$",
+     "label": "郵便番号"
+    },
+    {
+     "name": "work_addr",
+     "type": "text",
+     "required": false,
+     "maxlength": 100,
+     "minlength": null,
+     "min": null,
+     "max": null,
+     "pattern": null,
+     "label": "住所"
+    },
+    {
+     "name": "work_tel",
+     "type": "tel",
+     "required": false,
+     "maxlength": 13,
+     "minlength": null,
+     "min": null,
+     "max": null,
+     "pattern": null,
+     "label": "電話番号"
+    },
+    {
+     "name": null,
+     "type": "text",
+     "required": false,
+     "maxlength": 50,
+     "minlength": null,
+     "min": null,
+     "max": null,
+     "pattern": null,
+     "label": "備考"
+    }
+   ],
+   "links": [
+    "index.html",
+    "p14.html"
+   ],
+   "dynamic_links": [],
+   "tables": [],
+   "error_messages": [],
+   "deferred_error_messages": [
+    "自宅の郵便番号は7桁の数字で入力してください",
+    "自宅の住所を入力してください",
+    "住所を変更できませんでした"
+   ],
+   "api_endpoints": [
+    {
+     "method": "PATCH",
+     "path": "/api/members/address"
+    }
+   ],
+   "must_not_appear": [],
+   "unavailable": [],
+   "external_links": [],
+   "anchor_links": [],
+   "hidden_fields": [
+    "member_id",
+    "mode"
+   ]
+  },
+  "p19.html": {
+   "title": "クーポンの利用 | みらい商店",
+   "headings": [
+    "クーポンの利用",
+    "クーポンコード入力",
+    "利用可能なクーポン"
+   ],
+   "dynamic_headings": [],
+   "buttons": [
+    "適用",
+    "適用"
+   ],
+   "dynamic_buttons": [],
+   "fields": [
+    {
+     "name": "code",
+     "type": "text",
+     "required": true,
+     "maxlength": 8,
+     "minlength": 8,
+     "min": null,
+     "max": null,
+     "pattern": "^[A-Z0-9]{8}$",
+     "label": "クーポンコード"
+    }
+   ],
+   "links": [
+    "index.html",
+    "p05.html"
+   ],
+   "dynamic_links": [],
+   "tables": [
+    {
+     "headers": [
+      "コード",
+      "割引",
+      "期限"
+     ],
+     "rows": 2
+    }
+   ],
+   "error_messages": [
+    "クーポンの有効期限が切れています"
+   ],
+   "deferred_error_messages": [
+    "クーポンコードは英大文字と数字8桁です",
+    "クーポンを適用できませんでした"
+   ],
+   "api_endpoints": [
+    {
+     "method": "POST",
+     "path": "/api/coupons/apply"
+    }
+   ],
+   "must_not_appear": [
+    "SECRET2026 は社内用コードです"
+   ],
+   "unavailable": [],
+   "external_links": [],
+   "anchor_links": [],
+   "hidden_fields": []
+  },
+  "p20.html": {
+   "title": "404 ページが見つかりません | みらい商店",
+   "headings": [
+    "ページが見つかりません",
+    "考えられる原因"
+   ],
+   "dynamic_headings": [],
+   "buttons": [
+    "前のページに戻る"
+   ],
+   "dynamic_buttons": [],
+   "fields": [],
+   "links": [
+    "index.html",
+    "p03.html",
+    "p17.html"
+   ],
+   "dynamic_links": [],
+   "tables": [],
+   "error_messages": [
+    "お探しのページは存在しないか、移動した可能性があります。"
+   ],
+   "deferred_error_messages": [],
+   "api_endpoints": [],
+   "must_not_appear": [
+    "Stack trace"
+   ],
+   "unavailable": [],
+   "external_links": [],
+   "anchor_links": [],
+   "hidden_fields": []
+  },
+  "p21.html": {
+   "title": "ご利用アンケート | みらい商店",
+   "headings": [
+    "ご利用アンケート",
+    "満足度",
+    "ご利用の理由"
+   ],
+   "dynamic_headings": [
+    "所要時間：約2分"
+   ],
+   "buttons": [
+    "回答を送信"
+   ],
+   "dynamic_buttons": [],
+   "fields": [
+    {
+     "name": "sat",
+     "type": "radio",
+     "required": false,
+     "maxlength": null,
+     "minlength": null,
+     "min": null,
+     "max": null,
+     "pattern": null,
+     "label": "とても満足"
+    },
+    {
+     "name": "sat",
+     "type": "radio",
+     "required": false,
+     "maxlength": null,
+     "minlength": null,
+     "min": null,
+     "max": null,
+     "pattern": null,
+     "label": "満足"
+    },
+    {
+     "name": "sat",
+     "type": "radio",
+     "required": false,
+     "maxlength": null,
+     "minlength": null,
+     "min": null,
+     "max": null,
+     "pattern": null,
+     "label": "どちらでもない"
+    },
+    {
+     "name": "sat",
+     "type": "radio",
+     "required": false,
+     "maxlength": null,
+     "minlength": null,
+     "min": null,
+     "max": null,
+     "pattern": null,
+     "label": "不満"
+    },
+    {
+     "name": "sat",
+     "type": "radio",
+     "required": false,
+     "maxlength": null,
+     "minlength": null,
+     "min": null,
+     "max": null,
+     "pattern": null,
+     "label": "とても不満"
+    },
+    {
+     "name": "reason_price",
+     "type": "checkbox",
+     "required": false,
+     "maxlength": null,
+     "minlength": null,
+     "min": null,
+     "max": null,
+     "pattern": null,
+     "label": "価格"
+    },
+    {
+     "name": "reason_speed",
+     "type": "checkbox",
+     "required": false,
+     "maxlength": null,
+     "minlength": null,
+     "min": null,
+     "max": null,
+     "pattern": null,
+     "label": "配送の速さ"
+    },
+    {
+     "name": "reason_support",
+     "type": "checkbox",
+     "required": false,
+     "maxlength": null,
+     "minlength": null,
+     "min": null,
+     "max": null,
+     "pattern": null,
+     "label": "サポート"
+    },
+    {
+     "name": "age",
+     "type": "select",
+     "required": false,
+     "maxlength": null,
+     "minlength": null,
+     "min": null,
+     "max": null,
+     "pattern": null,
+     "label": "年代"
+    },
+    {
+     "name": "visits",
+     "type": "number",
+     "required": false,
+     "maxlength": null,
+     "minlength": null,
+     "min": 0,
+     "max": 31,
+     "pattern": null,
+     "label": "月間の利用回数"
+    },
+    {
+     "name": "email",
+     "type": "email",
+     "required": false,
+     "maxlength": 100,
+     "minlength": null,
+     "min": null,
+     "max": null,
+     "pattern": null,
+     "label": "メールアドレス（任意）"
+    },
+    {
+     "name": "comment",
+     "type": "textarea",
+     "required": false,
+     "maxlength": null,
+     "minlength": null,
+     "min": null,
+     "max": null,
+     "pattern": null,
+     "label": null
+    }
+   ],
+   "links": [
+    "index.html"
+   ],
+   "dynamic_links": [],
+   "tables": [],
+   "error_messages": [],
+   "deferred_error_messages": [
+    "満足度を選択してください",
+    "回答を送信できませんでした"
+   ],
+   "api_endpoints": [
+    {
+     "method": "POST",
+     "path": "/api/surveys"
+    }
+   ],
+   "must_not_appear": [],
+   "unavailable": [],
+   "external_links": [],
+   "anchor_links": [],
+   "hidden_fields": []
+  },
+  "p22.html": {
+   "title": "マイページ | みらい商店",
+   "headings": [
+    "マイページ",
+    "会員情報"
+   ],
+   "dynamic_headings": [],
+   "buttons": [
+    "ログインする"
+   ],
+   "dynamic_buttons": [],
+   "fields": [],
+   "links": [
+    "index.html",
+    "p02.html",
+    "p01.html"
+   ],
+   "dynamic_links": [],
+   "tables": [],
+   "error_messages": [
+    "ログインが必要です。ログインしてから再度アクセスしてください。"
+   ],
+   "deferred_error_messages": [],
+   "api_endpoints": [
+    {
+     "method": "GET",
+     "path": "/api/me"
+    }
+   ],
+   "must_not_appear": [],
+   "unavailable": [
+    "ログイン後にだけ出る会員限定情報(h2「会員限定情報」とボタン「ポイントを使う」)。/api/me が成功しないと生成されない"
+   ],
+   "external_links": [],
+   "anchor_links": [],
+   "hidden_fields": []
+  },
+  "index.html": {
+   "title": "メニュー | みらい商店",
+   "headings": [
+    "サイトメニュー",
+    "画面一覧"
+   ],
+   "dynamic_headings": [],
+   "buttons": [],
+   "dynamic_buttons": [],
+   "fields": [],
+   "links": [
+    "p01.html",
+    "p02.html",
+    "p03.html",
+    "p04.html",
+    "p05.html",
+    "p06.html",
+    "p07.html",
+    "p08.html",
+    "p09.html",
+    "p10.html",
+    "p11.html",
+    "p12.html",
+    "p13.html",
+    "p14.html",
+    "p15.html",
+    "p16.html",
+    "p17.html",
+    "p18.html",
+    "p19.html",
+    "p20.html",
+    "p21.html",
+    "p22.html"
+   ],
+   "dynamic_links": [],
+   "tables": [],
+   "error_messages": [],
+   "deferred_error_messages": [],
+   "api_endpoints": [],
+   "must_not_appear": [],
+   "unavailable": [],
+   "external_links": [],
+   "anchor_links": [],
+   "hidden_fields": []
+  }
+ }
+}

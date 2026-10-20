@@ -57,6 +57,10 @@ _OPEN_END = re.compile(rf"(?:(?<![{_K}])(?:等|他)|など|ほか)(?:の|を|に
 _UNIVERSAL = re.compile(rf"(?<![{_K}])(?:すべて|全て|常に|必ず|絶対に|決して|いかなる)")
 _AND_OR = re.compile(r"および/または|及び/又は|and/or|又は/及び", re.I)
 _MULTI = re.compile(r"(?:し|でき|とし)、.{4,}?(?:する|できる|とする|しない)[。]?$")
+# 「〜し、〜を…する」型の連用形の連結。短い文でも要求が 2 つ以上並ぶ（ja_v1 の FN 9 件はすべてこの型）
+_MULTI_CLAUSE = re.compile(r"(?:し|でき|とし|け)、[^。]{1,}?を[^。]{1,}?(?:する|できる|とする|しない)[。]?$")
+# 数字の有無に関係なく合否を決められない量・時間の言い方（29148 5.2.5 verifiable）
+_VAGUE_QUANT = re.compile(r"十分な|一定(?:期間|時間|回数|の)|当面|高速に|最小限|数(?:か月|ヶ月|カ月|日|時間|分|秒|回|件)|できるだけ|可能な限り|定期的に|しばらく|若干|長い期間|夜間")
 
 
 def _finding(rule, severity, item, viewpoint, message, passage, quote, certainty):
@@ -104,13 +108,16 @@ def _check_sentence(p: dict, s: str) -> list[dict]:
         found.append(_finding("REQ.INCOMPLETE", "critical" if crit else "major", "complete", "完全性",
                               f"「{tbd.group(0)}」が残っています。決めた内容を書くか、決める人と期限を書いてください。",
                               p, s[:80], "要確認"))
+    oe = _OPEN_END.search(s)
+    if oe and (_is_req(s) or s.endswith("る。")):
+        # 列挙の後ろの「等」「など」「ほか」は曖昧語ではなく「列挙が閉じていない」指摘にする（重ねない）
+        word = oe.group(0)[:-1] or oe.group(0)
+        found = [f for f in found if not (f["rule"] in ("RD.AMBIGUOUS", "REQ.AMBIGUOUS_TERM") and f"「{word}」" in f["message"])]
+        found.append(_finding("REQ.OPEN_ENDED", "minor", "unambiguous", "曖昧さ",
+                              f"「{word}」で列挙が閉じていません。対象をすべて挙げてください。",
+                              p, s[:80], "推定"))
     if not _is_req(s):
         return found
-    oe = _OPEN_END.search(s)
-    if oe and not any(w in oe.group(0) for _, w in amb):  # 曖昧語として指摘済みの「等」「など」は重ねない
-        found.append(_finding("REQ.OPEN_ENDED", "minor", "unambiguous", "曖昧さ",
-                              f"「{oe.group(0)[:-1] or oe.group(0)}」で列挙が閉じていません。対象をすべて挙げてください。",
-                              p, s[:80], "推定"))
     un = _UNIVERSAL.search(s)
     if un:
         found.append(_finding("REQ.UNIVERSAL", "minor", "verifiable", "検証可能性",
@@ -120,12 +127,12 @@ def _check_sentence(p: dict, s: str) -> list[dict]:
         found.append(_finding("REQ.AND_OR", "minor", "unambiguous", "曖昧さ",
                               "「および/または」はどちらを求めるかが定まりません。片方に決めて書いてください。",
                               p, s[:80], "推定"))
-    q = _QUANT.search(s)
-    if q and not _NUM.search(s):
+    q = _VAGUE_QUANT.search(s) or (_QUANT.search(s) if not _NUM.search(s) else None)
+    if q and not tbd:  # 未決定（TBD・XXX）は完全性の指摘に任せ、検証可能性と重ねない
         found.append(_finding("REQ.MEASURABILITY", "critical" if crit else "major", "verifiable", "検証可能性",
                               f"「{q.group(0)}」に数値がありません。合否を判定できる値を書いてください。",
                               p, s[:80], "推定"))
-    if len(_REQ_CORE.findall(s)) >= 3 or _MULTI.search(s) and len(s) > 60:
+    if len(_REQ_CORE.findall(s)) >= 3 or _MULTI.search(s) and len(s) > 60 or _MULTI_CLAUSE.search(s):
         found.append(_finding("REQ.MULTIPLE_REQUIREMENTS", "minor", "singular", "単一性",
                               "1 文に複数の要求があります。要求ごとに分けてください。", p, s[:80], "推定"))
     return found
@@ -139,9 +146,10 @@ def _check_passage(p: dict) -> list[dict]:
     return found
 
 
-def candidates(passages: list[dict]) -> list[dict]:
+def candidates(passages: list[dict], *, apply_disabled: bool = True) -> list[dict]:
+    """規則の候補。apply_disabled=False は精度の測定用（既定で無効の規則も出す。無効化の判断を測定に混ぜない）。"""
     from web.services.docverify.accuracy import disabled_rules
-    _disabled = disabled_rules()
+    _disabled = disabled_rules() if apply_disabled else frozenset()
     seen: set[tuple[str, str, str]] = set()
     result = []
     for p in passages:

@@ -1,0 +1,32 @@
+{
+ "mode": "rule",
+ "cases": 37,
+ "precision": 0.206,
+ "recall": 0.73,
+ "f1": 0.321,
+ "found": 656,
+ "expected": 185,
+ "per_domain": {
+  "cases_hospital": {
+   "cases": 14,
+   "items": 67,
+   "recall": 0.741,
+   "precision": 0.12,
+   "candidate_rate": 0.383
+  },
+  "cases_kintai": {
+   "cases": 13,
+   "items": 67,
+   "recall": 0.789,
+   "precision": 0.333,
+   "candidate_rate": 0.207
+  },
+  "cases_library": {
+   "cases": 10,
+   "items": 71,
+   "recall": 0.627,
+   "precision": 0.271,
+   "candidate_rate": 0.166
+  }
+ }
+}

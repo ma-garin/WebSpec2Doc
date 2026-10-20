@@ -1,0 +1,232 @@
+{
+  "categories": [
+    "normal",
+    "abnormal",
+    "boundary",
+    "required",
+    "format",
+    "state_transition",
+    "permission",
+    "error",
+    "api",
+    "persistence"
+  ],
+  "screens": {
+    "v01.html": {
+      "required_viewpoints": [
+        "normal",
+        "required",
+        "abnormal",
+        "boundary",
+        "format",
+        "error",
+        "api"
+      ],
+      "notes": "必須・桁数・年齢範囲・電話形式・記号禁止・エラー表示・POST 送信が全て明記されている。"
+    },
+    "v02.html": {
+      "required_viewpoints": [
+        "normal",
+        "required",
+        "error",
+        "api"
+      ],
+      "notes": "2 項目の必須、認証失敗メッセージと再入力、認証 API 呼び出し。"
+    },
+    "v03.html": {
+      "required_viewpoints": [
+        "normal",
+        "required",
+        "boundary"
+      ],
+      "notes": "必須 2 項目と 500 文字上限のみの単純なフォーム。"
+    },
+    "v04.html": {
+      "required_viewpoints": [
+        "normal",
+        "required",
+        "boundary",
+        "format",
+        "abnormal",
+        "error",
+        "api",
+        "persistence"
+      ],
+      "notes": "数量範囲・郵便番号形式・必須・在庫不足エラー・注文 API・履歴保存が明記。"
+    },
+    "v05.html": {
+      "required_viewpoints": [
+        "normal",
+        "required",
+        "boundary",
+        "format",
+        "state_transition",
+        "api",
+        "persistence"
+      ],
+      "notes": "在庫 0〜9999、SKU 形式、0 で欠品に遷移、PUT 保存と再表示。"
+    },
+    "v06.html": {
+      "required_viewpoints": [
+        "normal",
+        "permission",
+        "error"
+      ],
+      "notes": "ロールで管理機能の表示が変わり、直接 URL では 403 を表示。"
+    },
+    "v07.html": {
+      "required_viewpoints": [
+        "normal",
+        "state_transition",
+        "permission",
+        "required"
+      ],
+      "notes": "4 状態の遷移と差戻し、承認は承認者のみ、差戻し理由は必須。"
+    },
+    "v08.html": {
+      "required_viewpoints": [
+        "normal",
+        "format",
+        "api",
+        "persistence",
+        "error"
+      ],
+      "notes": "メール形式、PUT 保存、再読み込みでの維持、失敗時の再試行。"
+    },
+    "v09.html": {
+      "required_viewpoints": [
+        "normal",
+        "boundary",
+        "abnormal",
+        "api"
+      ],
+      "notes": "検索語 50 文字上限と特殊文字、10 件/ページ境界、検索 API。"
+    },
+    "v10.html": {
+      "required_viewpoints": [
+        "normal",
+        "required",
+        "boundary",
+        "format",
+        "error",
+        "api"
+      ],
+      "notes": "桁数 8〜32、英数混在、確認不一致エラー、変更 API。"
+    },
+    "v11.html": {
+      "required_viewpoints": [
+        "normal",
+        "boundary",
+        "abnormal"
+      ],
+      "notes": "金額 0〜10,000,000 の境界と、日付逆転・上限下限逆転などの不正な組合せ。"
+    },
+    "v12.html": {
+      "required_viewpoints": [
+        "normal",
+        "boundary",
+        "abnormal"
+      ],
+      "notes": "数量 1〜999・割引 0〜50 の境界と範囲外・非数値入力。"
+    },
+    "v13.html": {
+      "required_viewpoints": [
+        "normal",
+        "format",
+        "boundary",
+        "api",
+        "error"
+      ],
+      "notes": "拡張子制限、5MB 上限、アップロード API、エラー表示と選び直し。"
+    },
+    "v14.html": {
+      "required_viewpoints": [
+        "normal",
+        "required",
+        "boundary",
+        "persistence"
+      ],
+      "notes": "表示名必須・20/200 文字上限・再読み込み後の再表示。"
+    },
+    "v15.html": {
+      "required_viewpoints": [
+        "normal",
+        "state_transition",
+        "permission",
+        "api"
+      ],
+      "notes": "4 状態遷移とキャンセル可能条件、キャンセルは管理者のみ、PATCH 送信。"
+    },
+    "v16.html": {
+      "required_viewpoints": [
+        "normal",
+        "required"
+      ],
+      "notes": "満足度のラジオが必須。他は任意で単純。"
+    },
+    "v17.html": {
+      "required_viewpoints": [
+        "normal",
+        "required",
+        "format",
+        "error",
+        "api"
+      ],
+      "notes": "8 桁英数字形式、サーバ検証、無効時のエラーと再入力。"
+    },
+    "v18.html": {
+      "required_viewpoints": [
+        "normal",
+        "required",
+        "boundary",
+        "state_transition",
+        "persistence",
+        "api"
+      ],
+      "notes": "人数 1〜10、予約済み→キャンセル済み、保存と一覧表示、POST 送信。"
+    },
+    "v19.html": {
+      "required_viewpoints": [
+        "normal",
+        "permission",
+        "api"
+      ],
+      "notes": "3 ロールで操作列の表示が変わる。保存は PUT。"
+    },
+    "v20.html": {
+      "required_viewpoints": [
+        "normal"
+      ],
+      "notes": "入力も操作もない表示専用画面。"
+    },
+    "v21.html": {
+      "required_viewpoints": [
+        "normal",
+        "required",
+        "api",
+        "error"
+      ],
+      "notes": "期間必須、出力 API、30 秒タイムアウトと再試行。"
+    },
+    "v22.html": {
+      "required_viewpoints": [
+        "normal",
+        "required",
+        "format",
+        "boundary",
+        "persistence"
+      ],
+      "notes": "必須 3 項目、郵便番号形式、最大 5 件の上限、保存後の一覧表示。"
+    },
+    "v23.html": {
+      "required_viewpoints": [
+        "required",
+        "format",
+        "error",
+        "state_transition",
+        "api"
+      ],
+      "notes": "6 桁数字、誤りエラー、認証待ち→ロック中の遷移、検証 API。"
+    }
+  }
+}

@@ -661,10 +661,22 @@
     var split = function (s) { return s.split(/[,、]/).map(function (x) { return x.trim(); }).filter(Boolean); };
     var method = E('method').value, key = split(E('key').value);
     if (method === 'db_diff' && !key.length) { notify('行を突き合わせる列が空です。例のように列名をカンマで区切って入れてください。', '確定できませんでした'); E('key').focus(); return; }
-    var tol = E('tolerance').value.trim().replace(/[，,]/g, ''), body = { method: method, config: { key: key, exclude: split(E('exclude').value) }, confirm: true };
+    var tol = E('tolerance').value.trim().replace(/[，,]/g, '');
     if (tol && !isFinite(Number(tol))) { notify('許す差は数で入れてください（例: 1）。数を直してもう一度「確定する」を押してください。', '確定できませんでした'); E('tolerance').focus(); return; }
-    if (tol) body.tolerance = Number(tol);
-    run(f.querySelector('[type=submit]'), api('PATCH', jobPath('/cases/' + encodeURIComponent(f.dataset.case) + '/oracle'), body), '期待値を確定しました')
+    // API は「前後比較の設定（configure_db_diff）」と「確定（confirm）」を別の操作として受ける。順に送る
+    var path = jobPath('/cases/' + encodeURIComponent(f.dataset.case) + '/oracle');
+    var altSql = E('alt_sql') ? E('alt_sql').value.trim() : '';
+    if (method === 'alt_sql' && !altSql) { notify('別の計算の SQL が空です。比べる値を求める SQL を入れてください。', '確定できませんでした'); E('alt_sql').focus(); return; }
+    var steps = method === 'db_diff'
+      ? api('PATCH', path, { action: 'configure_db_diff', keys: key, exclude: split(E('exclude').value), tolerance: tol ? Number(tol) : null })
+          .then(function () { return api('PATCH', path, { action: 'confirm' }); })
+      : method === 'alt_sql'
+        ? api('PATCH', path, { action: 'set_alt_sql', sql: altSql })
+            .then(function () { return api('PATCH', path, { action: 'confirm' }); })
+        : api('PATCH', path, { action: 'confirm' });
+    // 期待値の API はケースだけを返すので、案件を読み直して表と件数を更新する
+    steps = steps.then(function () { return api('GET', jobPath()); });
+    run(f.querySelector('[type=submit]'), steps, '期待値を確定しました')
       .then(function (d) { if (d && d.job) { state.oracleFor = ''; renderPanel(); } });
   }
 
@@ -689,6 +701,8 @@
     if (st.status === 'approved' && n < 8) return showStage(n + 1);
     var first = n === 1 && st.status !== 'generated' ? api('POST', jobPath('/stages/1/generate')) : Promise.resolve({ job: state.job });
     var p = first.then(function (d) { return api('POST', jobPath('/stages/' + n + '/approve'), { version: stageOf(d.job, n).version }); });
+    // 判定（期待値との照合）は段階 7（実行）の承認が前提。承認できたらここで判定まで進め、段階 8 に結果を出す
+    if (n === 7) p = p.then(function () { return api('POST', jobPath('/judge'), {}); }).then(function () { return api('GET', jobPath()); });
     return run(btn, p, '段階 ' + n + ' を承認しました').then(function (d) { if (d && d.job && n < 8) showStage(n + 1); });
   }
   function reject(btn) {
@@ -778,6 +792,11 @@
   ['dragenter', 'dragover'].forEach(function (n) { drop.addEventListener(n, function (e) { e.preventDefault(); drop.classList.add('over'); }); });
   ['dragleave', 'drop'].forEach(function (n) { drop.addEventListener(n, function (e) { e.preventDefault(); drop.classList.remove('over'); }); });
   drop.addEventListener('drop', function (e) { upload(e.dataTransfer.files); });
+  // 実行が終わったら案件を読み直す（再読み込みしなくても段階 7 の承認と結果表が最新になる）
+  document.addEventListener('bs:run-finished', function () {
+    if (!state.job) return;
+    api('GET', jobPath()).then(function (d) { if (d && d.job) { setJob(d.job); renderPanel(); } }).catch(function () {});
+  });
   window.addEventListener('popstate', route);   // 戻る・進む・ハッシュの手入力。pushState では hashchange が出ないため popstate で受ける
 
   /* 段階 6〜8 の担当（backend-test-run.js）が使う共通の入口。role は setJob のたびに更新する文字列 */

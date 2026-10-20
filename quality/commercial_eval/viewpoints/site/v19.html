@@ -1,0 +1,8 @@
+<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ユーザー権限一覧</title><style>body{font-family:sans-serif;max-width:640px;margin:2em auto;padding:0 1em}label{display:block;margin:.6em 0}.n{color:#555;font-size:.9em}button{margin:.4em .3em .4em 0}</style></head><body>
+<p><a href="index.html">一覧へ戻る</a></p><h1>ユーザー権限一覧</h1>
+<p>ログイン中ロール：<select id="r"><option>管理者</option><option>編集者</option><option>閲覧者</option></select></p>
+<table><tr><th>ユーザー</th><th>ロール</th><th>操作</th></tr><tr><td>田中</td><td>編集者</td><td><button>編集</button> <button>削除</button></td></tr></table>
+<p class="n">管理者：編集・削除・ロール変更ができます。編集者：編集のみ。閲覧者：閲覧のみ（操作列は非表示）。</p>
+<p class="n">変更はサーバに保存されます（PUT /api/users/{id}）。</p>
+</body></html>

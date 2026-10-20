@@ -64,7 +64,7 @@
 
   DVT.setState = function (s) {
     DVT.state = norm(s);
-    if (s && s.conclusion && DVT.iid && last() && last().id === DVT.iid) forget();
+    // 確定した実行も覚えておく（確定後に再読み込みしても、確定済みのレポートへ戻れるように）
     renderHead();
     document.dispatchEvent(new CustomEvent('dvt:state'));
   };
@@ -117,7 +117,15 @@
   };
 
   // サイドから開くたびに新しい実行。履歴から開いたときだけ、その実行を表示する
+  // 読み込み直後の 1 回目（#trace のまま再読み込みした場合）だけ、前回の実行を開き直す。
+  // サイドから開いたときは従来どおり新しい実行にする
+  var firstStart = true;
   function start() {
+    if (firstStart) {
+      firstStart = false;
+      var prev = last();
+      if (!opening && prev && location.hash === '#trace') opening = { id: prev.id, name: prev.name };
+    }
     DVT.iid = opening ? opening.id : null; DVT.runName = opening ? opening.name : ''; opening = null; DVT.state = null; DVT.cur = 1;
     renderResume();
     return DVT.refresh();

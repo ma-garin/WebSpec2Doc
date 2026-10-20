@@ -1,7 +1,7 @@
 {
  "schema": 1,
- "measured_on": "2026-10-15",
- "rules_version": "7be8dab6efa6",
+ "measured_on": "2026-10-20",
+ "rules_version": "59f6a2bbcb9c",
  "scope": "規則ベースの検出のみ（LLM は対象外）",
  "dataset": {
   "name": "ja_v1",
@@ -20,12 +20,12 @@
   "AMBIGUOUS": {
    "n": 99,
    "n_gold": 37,
-   "n_predicted": 30,
-   "tp": 26,
-   "fp": 4,
-   "fn": 11,
-   "precision": 0.867,
-   "recall": 0.703
+   "n_predicted": 26,
+   "tp": 25,
+   "fp": 1,
+   "fn": 12,
+   "precision": 0.962,
+   "recall": 0.676
   },
   "REQ.INCOMPLETE": {
    "n": 99,
@@ -40,12 +40,12 @@
   "REQ.OPEN_ENDED": {
    "n": 99,
    "n_gold": 7,
-   "n_predicted": 1,
-   "tp": 1,
+   "n_predicted": 6,
+   "tp": 6,
    "fp": 0,
-   "fn": 6,
+   "fn": 1,
    "precision": 1.0,
-   "recall": 0.143
+   "recall": 0.857
   },
   "REQ.UNIVERSAL": {
    "n": 99,
@@ -70,22 +70,22 @@
   "REQ.MEASURABILITY": {
    "n": 99,
    "n_gold": 18,
-   "n_predicted": 8,
-   "tp": 6,
-   "fp": 2,
-   "fn": 12,
-   "precision": 0.75,
-   "recall": 0.333
+   "n_predicted": 14,
+   "tp": 14,
+   "fp": 0,
+   "fn": 4,
+   "precision": 1.0,
+   "recall": 0.778
   },
   "REQ.MULTIPLE_REQUIREMENTS": {
    "n": 99,
    "n_gold": 9,
-   "n_predicted": 0,
-   "tp": 0,
+   "n_predicted": 9,
+   "tp": 9,
    "fp": 0,
-   "fn": 9,
-   "precision": null,
-   "recall": 0.0
+   "fn": 0,
+   "precision": 1.0,
+   "recall": 1.0
   }
  },
  "by_method": {
@@ -95,11 +95,11 @@
     "AMBIGUOUS": {
      "n": 65,
      "n_gold": 27,
-     "n_predicted": 21,
+     "n_predicted": 18,
      "tp": 17,
-     "fp": 4,
+     "fp": 1,
      "fn": 10,
-     "precision": 0.81,
+     "precision": 0.944,
      "recall": 0.63
     },
     "REQ.INCOMPLETE": {
@@ -115,12 +115,12 @@
     "REQ.OPEN_ENDED": {
      "n": 65,
      "n_gold": 5,
-     "n_predicted": 1,
-     "tp": 1,
+     "n_predicted": 4,
+     "tp": 4,
      "fp": 0,
-     "fn": 4,
+     "fn": 1,
      "precision": 1.0,
-     "recall": 0.2
+     "recall": 0.8
     },
     "REQ.UNIVERSAL": {
      "n": 65,
@@ -145,22 +145,22 @@
     "REQ.MEASURABILITY": {
      "n": 65,
      "n_gold": 16,
-     "n_predicted": 7,
-     "tp": 5,
-     "fp": 2,
-     "fn": 11,
-     "precision": 0.714,
-     "recall": 0.312
+     "n_predicted": 12,
+     "tp": 12,
+     "fp": 0,
+     "fn": 4,
+     "precision": 1.0,
+     "recall": 0.75
     },
     "REQ.MULTIPLE_REQUIREMENTS": {
      "n": 65,
      "n_gold": 6,
-     "n_predicted": 0,
-     "tp": 0,
+     "n_predicted": 6,
+     "tp": 6,
      "fp": 0,
-     "fn": 6,
-     "precision": null,
-     "recall": 0.0
+     "fn": 0,
+     "precision": 1.0,
+     "recall": 1.0
     }
    }
   },
@@ -170,12 +170,12 @@
     "AMBIGUOUS": {
      "n": 34,
      "n_gold": 10,
-     "n_predicted": 9,
-     "tp": 9,
+     "n_predicted": 8,
+     "tp": 8,
      "fp": 0,
-     "fn": 1,
+     "fn": 2,
      "precision": 1.0,
-     "recall": 0.9
+     "recall": 0.8
     },
     "REQ.INCOMPLETE": {
      "n": 34,
@@ -190,12 +190,12 @@
     "REQ.OPEN_ENDED": {
      "n": 34,
      "n_gold": 2,
-     "n_predicted": 0,
-     "tp": 0,
+     "n_predicted": 2,
+     "tp": 2,
      "fp": 0,
-     "fn": 2,
-     "precision": null,
-     "recall": 0.0
+     "fn": 0,
+     "precision": 1.0,
+     "recall": 1.0
     },
     "REQ.UNIVERSAL": {
      "n": 34,
@@ -220,29 +220,134 @@
     "REQ.MEASURABILITY": {
      "n": 34,
      "n_gold": 2,
-     "n_predicted": 1,
-     "tp": 1,
+     "n_predicted": 2,
+     "tp": 2,
      "fp": 0,
-     "fn": 1,
+     "fn": 0,
      "precision": 1.0,
-     "recall": 0.5
+     "recall": 1.0
     },
     "REQ.MULTIPLE_REQUIREMENTS": {
      "n": 34,
      "n_gold": 3,
-     "n_predicted": 0,
-     "tp": 0,
+     "n_predicted": 3,
+     "tp": 3,
      "fp": 0,
-     "fn": 3,
-     "precision": null,
-     "recall": 0.0
+     "fn": 0,
+     "precision": 1.0,
+     "recall": 1.0
     }
    }
   },
   "real": null
  },
- "previous": null,
- "delta": null,
+ "previous": {
+  "measured_on": "2026-10-20",
+  "rules_version": "fd0f7016daea",
+  "dataset_sha256": "dd858576b51b",
+  "rules": {
+   "AMBIGUOUS": {
+    "n": 99,
+    "n_gold": 37,
+    "n_predicted": 0,
+    "tp": 0,
+    "fp": 0,
+    "fn": 37,
+    "precision": null,
+    "recall": 0.0
+   },
+   "REQ.INCOMPLETE": {
+    "n": 99,
+    "n_gold": 9,
+    "n_predicted": 8,
+    "tp": 8,
+    "fp": 0,
+    "fn": 1,
+    "precision": 1.0,
+    "recall": 0.889
+   },
+   "REQ.OPEN_ENDED": {
+    "n": 99,
+    "n_gold": 7,
+    "n_predicted": 6,
+    "tp": 6,
+    "fp": 0,
+    "fn": 1,
+    "precision": 1.0,
+    "recall": 0.857
+   },
+   "REQ.UNIVERSAL": {
+    "n": 99,
+    "n_gold": 5,
+    "n_predicted": 6,
+    "tp": 5,
+    "fp": 1,
+    "fn": 0,
+    "precision": 0.833,
+    "recall": 1.0
+   },
+   "REQ.AND_OR": {
+    "n": 99,
+    "n_gold": 2,
+    "n_predicted": 2,
+    "tp": 2,
+    "fp": 0,
+    "fn": 0,
+    "precision": 1.0,
+    "recall": 1.0
+   },
+   "REQ.MEASURABILITY": {
+    "n": 99,
+    "n_gold": 18,
+    "n_predicted": 14,
+    "tp": 14,
+    "fp": 0,
+    "fn": 4,
+    "precision": 1.0,
+    "recall": 0.778
+   },
+   "REQ.MULTIPLE_REQUIREMENTS": {
+    "n": 99,
+    "n_gold": 9,
+    "n_predicted": 9,
+    "tp": 9,
+    "fp": 0,
+    "fn": 0,
+    "precision": 1.0,
+    "recall": 1.0
+   }
+  }
+ },
+ "delta": {
+  "AMBIGUOUS": {
+   "precision": null,
+   "recall": 0.676
+  },
+  "REQ.INCOMPLETE": {
+   "precision": 0.0,
+   "recall": 0.0
+  },
+  "REQ.OPEN_ENDED": {
+   "precision": 0.0,
+   "recall": 0.0
+  },
+  "REQ.UNIVERSAL": {
+   "precision": 0.0,
+   "recall": 0.0
+  },
+  "REQ.AND_OR": {
+   "precision": 0.0,
+   "recall": 0.0
+  },
+  "REQ.MEASURABILITY": {
+   "precision": 0.0,
+   "recall": 0.0
+  },
+  "REQ.MULTIPLE_REQUIREMENTS": {
+   "precision": 0.0,
+   "recall": 0.0
+  }
+ },
  "limits": [
   "評価セットは自作の日本語要求文だけで、実文書（real）の測定はまだ無い。",
   "注釈者は 1 名（AI）で、2 名独立注釈・裁定・Cohen's kappa は未実施。",

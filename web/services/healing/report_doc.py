@@ -161,6 +161,8 @@ class Bundle:
     needs_review: bool = False
     #: needs_review の理由を 1 文で。False のときも「なぜ止めなくてよいか」を書く。
     review_reason: str = ""
+    #: 送る修正（差分）があるか。無い束で「PR を送る」と見せないために使う
+    has_diff: bool = True
 
 
 # ─────────────────────────── 人の言葉にする ───────────────────────────
@@ -752,11 +754,17 @@ def _effective_statuses(members: Sequence["MaintenanceReport"]) -> list[str]:
 
 def _heaviest_status(statuses: Sequence[str]) -> str:
     ranked = sorted(statuses, key=lambda s: _BUNDLE_STATUS_RANK.get(s, 99))
-    return ranked[0] if ranked else "awaiting"
+    if not ranked:
+        return "awaiting"
+    # 承認待ちが無く、承認と却下などの確定状態が混ざっているときは片方に寄せない
+    decided = {s for s in statuses if s in ("approved", "rejected", "submitted")}
+    if "awaiting" not in statuses and len(decided) > 1:
+        return "mixed"
+    return ranked[0]
 
 
 def _bundle_review(
-    *, fix_targets: frozenset[str], unverified_count: int, attention_high: int
+    *, fix_targets: frozenset[str], unverified_count: int, attention_high: int, has_diff: bool = True
 ) -> tuple[bool, str]:
     """要確認かどうかと、その理由を 1 文で返す（T4「人が止まるのは例外だけ」）。
 
@@ -766,8 +774,11 @@ def _bundle_review(
     優先順（review_queue が「AI 由来」を「リスク」より先に見るのと揃えた）。
     どれにも当たらなければ、テスト側だけの修正で検証も通っている——止める理由がない。
     """
+    if "repo" in fix_targets and has_diff:
+        return True, "AI が製品コードの修正を提案しています（適用は承認の後。ドライランでは変更しません）。"
     if "repo" in fix_targets:
-        return True, "AI がコードを変えています。"
+        # 差分が無いのに「修正を提案」とは言わない（提案は存在しない）
+        return True, "修正の提案はありません（差分 0）。原因と検証の結果を確認してください。"
     if unverified_count > 0:
         return True, f"検証が通っていない個票が{unverified_count}件あります。"
     if attention_high > 0:
@@ -807,6 +818,7 @@ def list_bundles(
             fix_targets=fix_targets,
             unverified_count=count - verify_after_ok_count,
             attention_high=attention_high,
+            has_diff=any(bool(m.action_diff_stats) for m in members),
         )
         bundles.append(
             Bundle(
@@ -829,6 +841,7 @@ def list_bundles(
                 updated_at=ordered[0].updated_at or ordered[0].created_at if ordered else "",
                 needs_review=needs_review,
                 review_reason=review_reason,
+                has_diff=any(bool(m.action_diff_stats) for m in members),
             )
         )
 
@@ -868,6 +881,7 @@ def bundle_to_dict(bundle: Bundle) -> dict[str, Any]:
         "updated_at": bundle.updated_at,
         "needs_review": bundle.needs_review,
         "review_reason": bundle.review_reason,
+        "has_diff": bundle.has_diff,
     }
 
 

@@ -1,0 +1,10 @@
+<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>予約フォーム</title><style>body{font-family:sans-serif;max-width:640px;margin:2em auto;padding:0 1em}label{display:block;margin:.6em 0}.n{color:#555;font-size:.9em}button{margin:.4em .3em .4em 0}</style></head><body>
+<p><a href="index.html">一覧へ戻る</a></p><h1>予約フォーム</h1>
+<p>予約が確定すると状態は「予約済み」になり、前日までは「キャンセル済み」に変更できます。予約内容は保存され、予約一覧に表示されます（POST /api/reservations）。</p>
+<form action="/api/reservations" method="post">
+<label>来店日 ※ <input type="date" name="d" required min="2026-10-21"></label>
+<label>人数 ※ <input type="number" name="n" required min="1" max="10"></label>
+<label>時間帯 ※ <select name="t" required><option value="">選択</option><option>12:00</option><option>18:00</option></select></label>
+<button>予約する</button> <button type="button">予約をキャンセルする</button></form>
+</body></html>

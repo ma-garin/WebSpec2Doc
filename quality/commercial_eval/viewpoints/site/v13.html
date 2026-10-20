@@ -1,0 +1,9 @@
+<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ファイル提出</title><style>body{font-family:sans-serif;max-width:640px;margin:2em auto;padding:0 1em}label{display:block;margin:.6em 0}.n{color:#555;font-size:.9em}button{margin:.4em .3em .4em 0}</style></head><body>
+<p><a href="index.html">一覧へ戻る</a></p><h1>ファイル提出</h1>
+<p>PDF または PNG ファイルをアップロードします。1 ファイル 5MB まで。アップロードは POST /api/upload に送信されます。</p>
+<form action="/api/upload" method="post" enctype="multipart/form-data">
+<label>ファイル ※ <input type="file" name="f" required accept=".pdf,.png"></label>
+<button>アップロード</button></form>
+<p class="n">5MB を超える場合は「ファイルが大きすぎます」、対応外の形式は「形式が対応していません」を表示し、選び直せます。</p>
+</body></html>

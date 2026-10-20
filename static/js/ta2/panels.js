@@ -129,7 +129,9 @@
     if (t.status === 'fixed') return '<span class="pill p-fixed">修正済 · 未実行</span>';
     if (t.status === 'new') return '<span class="pill p-new">未実行</span>';
     if (t.status === 'running') return '<span class="pill p-running">実行中</span>';
-    return '<span class="pill p-pass">成功</span>';
+    if (t.status === 'pass') return '<span class="pill p-pass">成功</span>';
+    // 知らない状態を既定で「成功」にしない（成功を確かめていないものを成功と表示しない）
+    return '<span class="pill p-new">状態不明</span>';
   }
   function renderRun() {
     var el = $('#p-run');
@@ -616,7 +618,8 @@
     TA2.panels = {
       render: render, renderRun: renderRun, renderDrift: renderDrift, renderSite: renderSite,
       runAll: runAll, rerunFailed: rerunFailed, startPolling: startPolling, stopPolling: stopPolling,
-      ensureMap: ensureMap, ensureDrift: ensureDrift, refreshTests: refreshTests
+      ensureMap: ensureMap, ensureDrift: ensureDrift, refreshTests: refreshTests,
+      resultCell: resultCell  // 状態表示の評価（scripts/commercial_eval/product_truth_eval.py）から呼ぶ
     };
     render();
   }

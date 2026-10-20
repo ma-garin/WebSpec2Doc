@@ -138,11 +138,16 @@
 - **今すぐ再開できる**: リバース解析・オートヒーリング設定・テスト実行設定・初回ガイド・UX 検査結果・図を含むレポート表示を除く全画面
 - **残りの画面**: 該当する Native 化（順 1・3・4・6・7・8）の「出力契約の確定」段のマージ後。画面が依存するのは出力の契約で、エンジンの中身ではない
 
-## 要判断
+## 設計決定（2026-10-20 保守者確定）
 
-1. 生成テストの言語: TypeScript（`@playwright/test`）を成果物として出し続けるか。製品の中で実行するには Python 版が必須になる（Node を要求できないため）
-2. ブラウザ: 顧客 PC の既存 Chrome／Edge を使う方式でよいか（ブラウザの同梱も実行時取得もできないため、残る手段はこれだけ）
-3. アクセシビリティ検査の網羅範囲: Native では決定論で判定できる達成基準に絞る。axe より件数が減ることを許容するか
+本番で許可: WebSpec2Doc 自身の実装／requirements 等の通常依存ライブラリ／OpenAI API／Ollama／顧客環境に既にある Chrome・Edge。
+禁止: 外部 OSS 製品・CLI・runtime の別途導入／OSS のコード・バイナリの vendor 同梱／外部解析製品の runtime 呼び出し／Node・npm・npx の runtime 前提／CDN の runtime 依存／実行時ダウンロード。
+REA・axe-core・Schemathesis 等は、開発・研究・精度比較用のオラクルとしてのみ使ってよい（製品の runtime 依存にしない）。
+
+1. **System 02**: 製品内で実行する正式な形式は Python Playwright。TypeScript Playwright は成果物のエクスポートとして残し、generated／not executed／not verified を区別して表示する。Node・npm・npx の自動導入は禁止
+2. **ブラウザ**: Python Playwright から、顧客環境にある Google Chrome／Microsoft Edge を自動検出して使う。見つからなければ成功扱いにせず `BLOCKED / browser unavailable` と明示する。実行時ダウンロードとインストーラでの取得は禁止
+3. **Accessibility**: vendor 同梱の axe-core は runtime から除去する。対応する WCAG／ACT の観点を先に定義し、対象ルールについて Native と axe-core（開発時のオラクル）を fixture と実サイトで比較する。未実装のルールは明示し、PASS 扱いにしない。「axe より少なくてよい」とはしない
+4. **JS 解析**: パーサを自作する前に、pip で管理できる JavaScript パーサライブラリ（tree-sitter 系など）を調査する。条件は、vendor コピーしない・runtime で外部 CLI／server を起動しない・商用利用可能なライセンス・import／export／`import()`、fetch／XHR／axios、route 宣言、source location を取得できること。条件を満たすものがあれば使う。完全なパーサの自作は最後の手段（§5.1 の自作方針はこれで置き換える）
 
 ## 未検証
 

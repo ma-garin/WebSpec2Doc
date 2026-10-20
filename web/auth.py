@@ -58,8 +58,15 @@ _TENANT_EXEMPT_PATHS = frozenset(
 )
 
 
+def _externally_bound() -> bool:
+    """WEBSPEC2DOC_TRUSTED_HOSTS が設定され、ループバック以外から到達できる構成か。"""
+    return bool(os.environ.get("WEBSPEC2DOC_TRUSTED_HOSTS", "").strip())
+
+
 def effective_auth_mode() -> str:
-    mode = os.environ.get(AUTH_MODE_ENV, "auto").strip().lower()
+    # 外部から到達できる構成で未設定なら required に倒す（設定漏れで認証なし公開にしない）
+    default = "required" if _externally_bound() else "auto"
+    mode = os.environ.get(AUTH_MODE_ENV, default).strip().lower()
     return mode if mode in ("auto", "required", "off") else "auto"
 
 
@@ -68,8 +75,10 @@ def mock_auth_enabled() -> bool:
 
     社内モックとしての利用が前提なので既定で有効。パスワードを必須にしたい場合は
     WEBSPEC2DOC_AUTH_MOCK=0 を設定する。有効時はログイン画面にその旨を表示する。
+    外部から到達できる構成（WEBSPEC2DOC_TRUSTED_HOSTS 設定時）で未設定なら無効に倒す。
     """
-    return os.environ.get(AUTH_MOCK_ENV, "1").strip().lower() not in ("0", "off", "false")
+    default = "0" if _externally_bound() else "1"
+    return os.environ.get(AUTH_MOCK_ENV, default).strip().lower() not in ("0", "off", "false")
 
 
 def auth_enabled() -> bool:

@@ -5,9 +5,8 @@ import ast
 import io
 import zipfile
 
-import pytest
-
 import app as appmod
+import pytest
 from web import config
 from web.services.batchtest import codegen, design, parse
 

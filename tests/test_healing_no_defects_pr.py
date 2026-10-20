@@ -4,7 +4,6 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
-
 from web.services.healing import orchestrator
 from web.services.healing.types import HealingError, HealingRun
 

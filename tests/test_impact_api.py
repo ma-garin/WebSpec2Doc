@@ -8,10 +8,9 @@ import io
 import time
 import urllib.request
 
+import app as appmod
 import pytest
 from openpyxl import load_workbook
-
-import app as appmod
 from web import config
 from web.routes import impact_api
 

@@ -147,6 +147,7 @@ def upload_document(iid: str):
         return _err("指摘の候補を作れませんでした。もう一度取り込んでください。", 500)
 
     from datetime import datetime, timezone
+
     from web.services.docverify import metrics
     versions = metrics.freeze_current(insp)  # 旧の断片・指摘で前の版のスコアを確定する
     # document は ingest の unread（読めなかった要素の数）をそのまま持つ

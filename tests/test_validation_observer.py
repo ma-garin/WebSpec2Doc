@@ -6,6 +6,7 @@ import json
 from collections.abc import Iterator
 from contextlib import contextmanager
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -297,6 +298,10 @@ def test_session_closes_browser_when_context_creation_fails() -> None:
 
     with (
         patch("playwright.sync_api.sync_playwright", return_value=manager),
+        patch(
+            "browser_detect.detect_browser",
+            return_value=SimpleNamespace(channel="chrome", path="/x/chrome", source="auto"),
+        ),
         pytest.raises(RuntimeError, match="context failed"),
         playwright_validation_session(None),
     ):

@@ -19,6 +19,8 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import urlparse, urlunparse
 
+from browser_detect import launch_browser
+
 logger = logging.getLogger(__name__)
 
 REPLAYS_DIR_NAME = "replays"
@@ -56,7 +58,7 @@ def replay_user_flow(
     started = datetime.now(UTC)
 
     with sync_playwright() as playwright:
-        browser = playwright.chromium.launch(headless=headless, args=[f"--lang={BROWSER_LOCALE}"])
+        browser = launch_browser(playwright, headless=headless, args=[f"--lang={BROWSER_LOCALE}"])
         try:
             context_kwargs: dict[str, Any] = {"user_agent": USER_AGENT, "locale": BROWSER_LOCALE}
             if auth_state is not None and auth_state.exists():

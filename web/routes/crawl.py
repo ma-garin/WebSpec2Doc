@@ -11,6 +11,7 @@ from flask import Blueprint, Response, request, send_file
 from web.config import MAX_DEPTH, MAX_PAGES_LIMIT, MAX_PARALLELISM, OUTPUT_DIR
 from web.process import _RUNNING_PROCS, _terminate_proc
 from web.services import app_mock
+from web.services.browser_blocked import BLOCKED_MESSAGE, is_browser_unavailable
 from web.summary import _summary_for_domain
 from web.tenancy import scoped_output_dir
 from web.validation import (
@@ -175,8 +176,11 @@ def run() -> Response:
             yield f"RUN_ID:{run_id}\n"
             # 行は一切加工せずそのまま流す（クライアントの表示・パースを壊さないため）。
             # 横でスキップ件数だけ数え、実行条件と一緒に履歴へ残す。
+            tail_lines: list[str] = []
             for line in proc.stdout:
                 skipped_count += _skipped_delta(line)
+                tail_lines.append(line)
+                del tail_lines[:-40]
                 yield line
             proc.wait()
             if proc.returncode is not None and proc.returncode < 0:
@@ -210,7 +214,10 @@ def run() -> Response:
                     scope={**scope_record, "skipped_count": skipped_count},
                 )
             if proc.returncode != 0:
-                yield "\nエラーが発生しました。\n"
+                if is_browser_unavailable("".join(tail_lines)):
+                    yield f"\n{BLOCKED_MESSAGE}\n"
+                else:
+                    yield "\nエラーが発生しました。\n"
         finally:
             _RUNNING_PROCS.pop(run_id, None)
             _terminate_proc(proc)

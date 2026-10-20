@@ -85,7 +85,7 @@ def test_classify_failure_env_setup_browser_launch() -> None:
     )
     assert result.failure_type == FAILURE_ENV_ISSUE
     assert result.confidence == 0.95
-    assert "npx playwright install chromium" in result.suggested_action
+    assert "Chrome" in result.suggested_action and "Edge" in result.suggested_action
 
 
 def test_classify_failure_env_setup_executable_not_exist_only() -> None:

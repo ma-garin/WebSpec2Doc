@@ -27,6 +27,7 @@ from typing import Any
 
 from web.config import DISCOVER_TIMEOUT_SEC
 from web.services.auto_run_job import AutoRunJob, _job_out, logger
+from web.services.browser_blocked import BLOCKED_MESSAGE, BrowserBlocked, is_browser_unavailable
 from web.services.document_autorun import candidate_filename, run_document_autorun_phase
 from web.services.evidence_pack_service import attach_evidence_pack
 from web.services.failure_classifier import (
@@ -373,13 +374,15 @@ def _run_child_process(
     )
     job.register_proc(proc)
     try:
-        stdout, _ = proc.communicate(input=input_text, timeout=timeout)
+        stdout, stderr = proc.communicate(input=input_text, timeout=timeout)
     except subprocess.TimeoutExpired:
         proc.kill()
         proc.communicate()
         raise
     finally:
         job._proc = None
+    if proc.returncode and is_browser_unavailable(stderr, stdout):
+        raise BrowserBlocked(BLOCKED_MESSAGE)
     return stdout
 
 
@@ -413,6 +416,9 @@ def _phase_discover(job: AutoRunJob, depth: int, max_pages: int) -> None:
         pages: list[dict[str, Any]] = data.get("pages", [])
     except subprocess.TimeoutExpired:
         job.add_log("到達確認タイムアウト。そのまま観測を続行します。")
+        return
+    except BrowserBlocked as exc:
+        _mark_job_failed(job, str(exc))
         return
     except Exception as exc:
         if job._cancelled:
@@ -515,6 +521,7 @@ def _phase_crawl(job: AutoRunJob, depth: int, max_pages: int) -> None:
             cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, bufsize=1
         )
         job._proc = proc
+        out_tail: list[str] = []
         for line in proc.stdout or []:
             if job._cancelled:
                 proc.terminate()
@@ -522,6 +529,8 @@ def _phase_crawl(job: AutoRunJob, depth: int, max_pages: int) -> None:
             line = line.rstrip()
             if not line:
                 continue
+            out_tail.append(line)
+            del out_tail[:-40]
             # クロールの進捗イベントは、いま何を取得しているか・何が取れたかを
             # その場で見せる形に整える。生ログのままだと中身が読み取れない。
             readable = _format_crawl_event(line)
@@ -532,6 +541,9 @@ def _phase_crawl(job: AutoRunJob, depth: int, max_pages: int) -> None:
             job.add_log(f"[cli] {line}")
         proc.wait(timeout=600)
         job._proc = None
+        if proc.returncode and is_browser_unavailable("\n".join(out_tail)):
+            _mark_job_failed(job, BLOCKED_MESSAGE)
+            return
     except subprocess.TimeoutExpired:
         if proc:
             proc.kill()

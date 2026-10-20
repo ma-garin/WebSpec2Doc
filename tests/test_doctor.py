@@ -76,7 +76,7 @@ class TestRunAllChecks:
         names = [r.name for r in results]
         assert "Python バージョン" in names
         assert "仮想環境" in names
-        assert "Chromium ランタイム" in names
+        assert "ブラウザ（Chrome / Edge）" in names
         assert "ローカルURLガード" in names
         for result in results:
             if not result.ok:

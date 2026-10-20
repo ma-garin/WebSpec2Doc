@@ -41,3 +41,9 @@ python-docx>=1.1  # System 06（ドキュメント検証）の docx 読み取り
 pdfminer.six>=20231228  # System 06 の PDF 読み取り（pypdf は日本語 CID フォントで文字化けする）
 psycopg[binary]==3.3.6  # System 08 バッチ・バックエンドのテスト: PostgreSQL 接続（2026-10-15）
 Faker==40.43.0  # System 08 テストデータ生成（2026-10-15）
+
+# Native Reverse Analysis の JS 構文解析（MIT・pip 通常依存。外部 CLI を起動しない）
+tree-sitter==0.26.0
+tree-sitter-javascript==0.25.0
+# オートヒーリングの Git 操作（Apache-2.0・pip 通常依存。git CLI を要求しない）
+dulwich==1.2.17

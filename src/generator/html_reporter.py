@@ -24,7 +24,10 @@ from crawler.page_crawler import (
     FieldData,
     FormData,
 )
+from generator.accessibility_reporter import coverage_notice, unevaluated_rules
 from generator.coverage_gap import CoverageGap
+from generator.mermaid_generator import build_transition_model
+from generator.svg_diagram import render_svg
 from generator.test_design import (
     EVIDENCE_MEASURED,
     BvaCase,
@@ -65,7 +68,7 @@ def generate_html_report(
 ) -> str:
     from analyzer.stack_detector import StackInfo
     from generator.architecture_generator import (
-        generate_architecture_mermaid,
+        build_architecture_model,
         merge_api_endpoints,
         merge_stack_infos,
     )
@@ -79,7 +82,10 @@ def generate_html_report(
     merged_stack = merge_stack_infos(stacks)
     merged_endpoints = merge_api_endpoints([p.page_data.api_calls for p in pages])
     domain = _url_domain(target_url)
-    arch_mermaid = generate_architecture_mermaid(domain, merged_stack, merged_endpoints)
+    arch_svg = render_svg(
+        build_architecture_model(domain, merged_stack, merged_endpoints), "TD", "アーキテクチャ図"
+    )
+    transition_svg = render_svg(build_transition_model(graph, pages), "LR", "画面遷移図")
     test_design_page_ids = (
         frozenset(screen.page_id for screen in test_design.screens) if test_design else frozenset()
     )
@@ -106,9 +112,9 @@ def generate_html_report(
                 _summary_cards(len(pages), forms_count, fields_count, buttons_count),
                 "summary",
             ),
-            _section("アーキテクチャ図", _mermaid_block(arch_mermaid), "architecture"),
+            _section("アーキテクチャ図", _diagram_block(arch_svg), "architecture"),
             _tech_stack_section(merged_stack, merged_endpoints),
-            _section("画面遷移図", _mermaid_block(mermaid_content), "transition"),
+            _section("画面遷移図", _diagram_block(transition_svg), "transition"),
             _coverage_section(transition_coverage, business_flows),
             _impact_section(impact_report),
             _exploration_section(exploration_coverage),
@@ -128,7 +134,6 @@ def generate_html_report(
             "</main></div></div>",
             _scrollspy_script(),
             _evidence_script(),
-            _mermaid_script(),
             "</body></html>",
         ]
     )
@@ -200,7 +205,7 @@ th{background:var(--primary);color:#fff;padding:.5rem .7rem;text-align:left;whit
 td{padding:.5rem .7rem;border-bottom:1px solid #eef;vertical-align:top}
 tr:nth-child(even) td{background:var(--surface-soft)}
 .badge-yes{color:var(--critical);font-weight:600}
-.mermaid-wrap{overflow-x:auto;padding:.5rem}
+.wsd-diagram-wrap{overflow-x:auto;padding:.5rem}
 .screen{border:1px solid var(--border);border-radius:var(--radius);margin-bottom:1.3rem;overflow:hidden}
 .screen-head{display:flex;align-items:baseline;gap:.8rem;background:var(--info-bg);
 padding:.6rem 1rem;border-bottom:1px solid var(--border);flex-wrap:wrap}
@@ -393,6 +398,28 @@ def _technical_health_section(technical_health: dict | None) -> str:
     return _section("技術ヘルス", body, "technical-health")
 
 
+_UNEVALUATED_LABELS = {"not_implemented": "未実装", "cant_tell": "判定不能"}
+
+
+def _unevaluated_rules_table(accessibility_audit: dict) -> str:
+    rows = unevaluated_rules(accessibility_audit)
+    if not rows:
+        return ""
+    body = "".join(
+        "<tr>"
+        f"<td><code>{html.escape(str(r.get('rule_id') or ''))}</code></td>"
+        f"<td>{html.escape(_UNEVALUATED_LABELS.get(str(r.get('status')), str(r.get('status') or '')))}</td>"
+        f"<td>{html.escape(str(r.get('reason') or r.get('description') or ''))}</td>"
+        "</tr>"
+        for r in rows
+    )
+    return (
+        '<div class="subhead">自動判定できなかったルール（手動確認が必要）</div>'
+        '<div class="table-wrap"><table><thead><tr><th>ルール</th><th>状態</th><th>理由</th>'
+        f"</tr></thead><tbody>{body}</tbody></table></div>"
+    )
+
+
 def _accessibility_audit_section(accessibility_audit: dict | None) -> str:
     if not accessibility_audit:
         return ""
@@ -445,14 +472,17 @@ def _accessibility_audit_section(accessibility_audit: dict | None) -> str:
         )
     disclaimer = html.escape(str(meta.get("disclaimer") or "手動確認が必要です。"))
     body = (
-        f'<p class="note"><b>{html.escape(str(meta.get("engine") or "axe-core"))}</b>: '
+        '<p class="note">'
         + disclaimer
         + "</p>"
         + f'<div class="summary-grid">{cards}</div>'
         + (
             "".join(details)
-            or '<p class="note">機械判定で違反ノードは記録されませんでした。手動確認は必要です。</p>'
+            or '<p class="note">機械判定で違反ノードは記録されませんでした。'
+            + html.escape(coverage_notice(accessibility_audit))
+            + "</p>"
         )
+        + _unevaluated_rules_table(accessibility_audit)
     )
     return _section("アクセシビリティ監査", body, "accessibility-audit")
 
@@ -489,8 +519,8 @@ def _section(title: str, body: str, anchor: str = "") -> str:
     return f'<section class="block"{aid}><h2>{html.escape(title)}</h2><div class="block-body">{body}</div></section>'
 
 
-def _mermaid_block(content: str) -> str:
-    return f'<div class="mermaid-wrap"><pre class="mermaid">{html.escape(content)}</pre></div>'
+def _diagram_block(svg: str) -> str:
+    return f'<div class="wsd-diagram-wrap">{svg}</div>'
 
 
 def _screen_cards(
@@ -931,7 +961,7 @@ def _ux_screen_detail(page_id: str, title: str, axe_violations: list, ux_finding
             for v in axe_violations
         )
         axe_table = (
-            f'<div class="subhead" style="margin-top:0.5rem">{page_id} {title} — axe 違反</div>'
+            f'<div class="subhead" style="margin-top:0.5rem">{page_id} {title} — アクセシビリティ違反</div>'
             "<table><thead><tr><th>ルール</th><th>影響度</th><th>セレクタ</th>"
             "<th>confidence</th></tr></thead>"
             f"<tbody>{axe_rows}</tbody></table>"
@@ -1137,30 +1167,6 @@ def _evidence_script() -> str:
         "hl.style.display='block';"
         "wrap.scrollIntoView({behavior:'smooth',block:'center'});"
         "});});"
-        "</script>"
-    )
-
-
-def _mermaid_script() -> str:
-    """アプリ内(/preview、CSP script-src 'self' 配下)では同梱版を読み込む。
-
-    `static/vendor/mermaid/mermaid.min.js`（SHA-256 は同ディレクトリの ASSET.md に記録、
-    ライセンスは同梱の LICENSE）を `'self'` から読み込むため CSP 変更は不要（R3-18a）。
-    本レポートはダウンロードして単体で開かれることもあるため、その場合（Flask 非経由・
-    `/static/...` が解決できない）に限り `window.mermaid` が未定義かを確認したうえで
-    CDN からのフォールバック読み込みを試みる。`securityLevel:'strict'` を明示し
-    Mermaid 側の XSS 対策を有効化する。
-    """
-    return (
-        '<script src="/static/vendor/mermaid/mermaid.min.js"></script>\n'
-        "<script>\n"
-        "(function boot(){\n"
-        "  if (window.mermaid) { mermaid.initialize({startOnLoad:true, securityLevel:'strict'}); return; }\n"
-        "  var s = document.createElement('script');\n"
-        "  s.src = 'https://cdn.jsdelivr.net/npm/mermaid@10.9.3/dist/mermaid.min.js';\n"
-        "  s.onload = function(){ mermaid.initialize({startOnLoad:true, securityLevel:'strict'}); };\n"
-        "  document.head.appendChild(s);\n"
-        "})();\n"
         "</script>"
     )
 

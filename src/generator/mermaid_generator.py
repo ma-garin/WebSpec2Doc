@@ -37,6 +37,31 @@ def generate_mermaid(
     return "\n".join(lines) + "\n"
 
 
+def build_transition_model(
+    graph: nx.DiGraph,
+    pages: list[AnalyzedPage],
+    suppress_nav: bool = True,
+) -> dict:
+    """画面遷移図の描画モデル（svg_diagram 用）。generate_mermaid と同じ辺の選別を使う。"""
+    page_by_id = {page.page_id: page for page in pages}
+    nodes = []
+    for node_id in graph.nodes:
+        page = page_by_id.get(str(node_id))
+        path = _url_path(page.page_data.url) if page else "/"
+        nodes.append({"id": str(node_id), "label": f"{node_id}\n{path}", "shape": "box"})
+    edges = list(graph.edges(data=True))
+    if suppress_nav:
+        edges = _filter_nav_edges(edges, graph)
+    return {
+        "nodes": nodes,
+        "edges": [
+            {"from": str(s), "to": str(t), "label": str(d.get("link_text") or DEFAULT_LINK_TEXT)}
+            for s, t, d in edges
+        ],
+        "groups": [],
+    }
+
+
 def _filter_nav_edges(
     edges: list[tuple],
     graph: nx.DiGraph,

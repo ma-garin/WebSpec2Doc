@@ -182,8 +182,9 @@
     }, POLL_MS); }
   function finishRun() { stopPoll(); $('#bs-secret').value = '';
     toast(END_MSG[S.run.status] || '実行が終わりました。');
-    // 判定は段階 7 の承認後（backend-test.js の approve）に行う。ここでは結果を読み直すだけ
-    loadJob(); }
+    // 判定は段階 7 の承認後（backend-test.js の approve）に行う。ここでは結果を読み直し、
+    // 承認の可否と結果表を持つ本体（backend-test.js）にも読み直させる
+    loadJob().then(function () { document.dispatchEvent(new CustomEvent('bs:run-finished')); }); }
   function renderRun() { var r = S.run, card = $('#bs-run-card');
     card.hidden = !r;
     if (r) { var on = !!ACTIVE[r.status], pg = r.progress || {}, done = pg.done || 0, total = pg.total || 0;

@@ -665,10 +665,15 @@
     if (tol && !isFinite(Number(tol))) { notify('許す差は数で入れてください（例: 1）。数を直してもう一度「確定する」を押してください。', '確定できませんでした'); E('tolerance').focus(); return; }
     // API は「前後比較の設定（configure_db_diff）」と「確定（confirm）」を別の操作として受ける。順に送る
     var path = jobPath('/cases/' + encodeURIComponent(f.dataset.case) + '/oracle');
+    var altSql = E('alt_sql') ? E('alt_sql').value.trim() : '';
+    if (method === 'alt_sql' && !altSql) { notify('別の計算の SQL が空です。比べる値を求める SQL を入れてください。', '確定できませんでした'); E('alt_sql').focus(); return; }
     var steps = method === 'db_diff'
       ? api('PATCH', path, { action: 'configure_db_diff', keys: key, exclude: split(E('exclude').value), tolerance: tol ? Number(tol) : null })
           .then(function () { return api('PATCH', path, { action: 'confirm' }); })
-      : api('PATCH', path, { action: 'confirm' });
+      : method === 'alt_sql'
+        ? api('PATCH', path, { action: 'set_alt_sql', sql: altSql })
+            .then(function () { return api('PATCH', path, { action: 'confirm' }); })
+        : api('PATCH', path, { action: 'confirm' });
     // 期待値の API はケースだけを返すので、案件を読み直して表と件数を更新する
     steps = steps.then(function () { return api('GET', jobPath()); });
     run(f.querySelector('[type=submit]'), steps, '期待値を確定しました')
@@ -787,6 +792,11 @@
   ['dragenter', 'dragover'].forEach(function (n) { drop.addEventListener(n, function (e) { e.preventDefault(); drop.classList.add('over'); }); });
   ['dragleave', 'drop'].forEach(function (n) { drop.addEventListener(n, function (e) { e.preventDefault(); drop.classList.remove('over'); }); });
   drop.addEventListener('drop', function (e) { upload(e.dataTransfer.files); });
+  // 実行が終わったら案件を読み直す（再読み込みしなくても段階 7 の承認と結果表が最新になる）
+  document.addEventListener('bs:run-finished', function () {
+    if (!state.job) return;
+    api('GET', jobPath()).then(function (d) { if (d && d.job) { setJob(d.job); renderPanel(); } }).catch(function () {});
+  });
   window.addEventListener('popstate', route);   // 戻る・進む・ハッシュの手入力。pushState では hashchange が出ないため popstate で受ける
 
   /* 段階 6〜8 の担当（backend-test-run.js）が使う共通の入口。role は setJob のたびに更新する文字列 */

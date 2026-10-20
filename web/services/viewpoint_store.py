@@ -201,10 +201,11 @@ class ViewpointStoreBase:
         切り替え中なので続行する。切り替わらなくても既定のジャーナルで
         動作は正しく、同時実行性が落ちるだけ。
         """
-        current = str(conn.execute("PRAGMA journal_mode").fetchone()[0]).lower()
-        if current == "wal":
-            return
+        # 現在値の読み取りも、他プロセスの切り替え中は SQLITE_BUSY で即座に落ちる
         try:
+            current = str(conn.execute("PRAGMA journal_mode").fetchone()[0]).lower()
+            if current == "wal":
+                return
             conn.execute("PRAGMA journal_mode = WAL")
         except sqlite3.OperationalError:
             pass  # 他の接続が切り替え中。既定のジャーナルでも動作は正しい

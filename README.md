@@ -200,7 +200,7 @@ python src/main.py --url https://example.com --auth auth.json
 
 ### CI で仕様ドリフトをゲートする
 
-同梱の [`.github/workflows/spec-drift.yml`](.github/workflows/spec-drift.yml) は、前回スナップショットだけを GitHub Actions cache に保存し、2回目以降の実行で実際の差分を検出します。
+ドリフト検出を CI に組み込む方法は [`docs/guide/CI_INTEGRATION.md`](docs/guide/CI_INTEGRATION.md) を参照してください（本リポジトリにワークフローは同梱していません）。
 
 1. Repository variable `WEBSPEC_TARGET_URL` に監視URLを設定します（手動実行時は `target_url` 入力で上書き可能）。
 2. Slack通知を使う場合だけ Repository secret `SLACK_WEBHOOK_URL` を設定します。未設定・送信失敗でもドリフト判定結果は変わりません。

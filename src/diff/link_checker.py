@@ -13,7 +13,7 @@ from collections.abc import Callable, Iterable
 from dataclasses import dataclass
 from pathlib import Path
 from urllib.error import HTTPError, URLError
-from urllib.request import Request, urlopen
+from urllib.request import Request
 
 from crawler.politeness import (
     RETRYABLE_STATUS_CODES,
@@ -22,6 +22,7 @@ from crawler.politeness import (
     backoff_delays,
     build_user_agent,
 )
+from crawler.url_safety import UnsafeUrlError, safe_urlopen
 
 logger = logging.getLogger(__name__)
 
@@ -50,9 +51,9 @@ def _default_opener(url: str, timeout_sec: float) -> int:
     """urllib で HEAD リクエストを送り HTTP ステータスコードを返す。"""
     request = Request(url, method="HEAD", headers={"User-Agent": build_user_agent()})
     try:
-        # 検査対象は呼び出し側（新側クロール結果）が指定した URL のみ。file:// 等の
-        # 任意スキームは想定しないが、bandit/ruff の抑制コメントは別物のため両方併記する。
-        with urlopen(request, timeout=timeout_sec) as response:  # nosec B310  # noqa: S310
+        # 検査対象はクロール先ページ内のリンク（外部入力）。内部アドレスへの到達と
+        # 内部へのリダイレクトを safe_urlopen で拒否する。
+        with safe_urlopen(request, timeout=timeout_sec) as response:
             return int(response.status)
     except HTTPError as exc:
         # 404 等は例外だが「切れ」判定に必要な正規のステータスコードなのでそのまま返す
@@ -85,6 +86,16 @@ def check_link(
             active_sleeper(delay)
         try:
             status_code = active_opener(url, timeout_sec)
+        except UnsafeUrlError as exc:
+            result = LinkCheckResult(
+                url=url,
+                source_page_id=source_page_id,
+                status=STATUS_UNCONFIRMED,
+                http_status=None,
+                reason=f"安全でない宛先のため検査しない: {exc}",
+            )
+            _record_audit(output_dir, result)
+            return result
         except (URLError, TimeoutError, OSError) as exc:
             last_error = exc
             continue

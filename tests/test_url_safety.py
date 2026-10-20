@@ -80,3 +80,44 @@ def test_local_rejected_by_default(monkeypatch: pytest.MonkeyPatch) -> None:
 )
 def test_domain_key_matches_browser_url_host(url: str, expected: str) -> None:
     assert domain_key_from_url(url) == expected
+
+
+def test_hostname_resolving_to_private_ip_is_rejected(monkeypatch) -> None:
+    import socket
+
+    from crawler import url_safety
+
+    monkeypatch.delenv(url_safety.ALLOW_LOCAL_ENV, raising=False)
+    monkeypatch.setattr(
+        socket, "getaddrinfo", lambda *a, **kw: [(2, 1, 6, "", ("169.254.169.254", 0))]
+    )
+    with pytest.raises(url_safety.UnsafeUrlError):
+        url_safety.validate_target_url("http://metadata.attacker.example/")
+
+
+def test_redirect_to_private_ip_is_rejected(monkeypatch) -> None:
+    from crawler import url_safety
+
+    monkeypatch.delenv(url_safety.ALLOW_LOCAL_ENV, raising=False)
+    handler = url_safety._ValidatingRedirectHandler()
+    with pytest.raises(url_safety.UnsafeUrlError):
+        handler.redirect_request(None, None, 302, "Found", {}, "http://127.0.0.1/admin")
+
+
+def test_link_checker_does_not_open_private_targets(monkeypatch) -> None:
+    from crawler import url_safety
+    from diff.link_checker import STATUS_UNCONFIRMED, check_link
+
+    monkeypatch.delenv(url_safety.ALLOW_LOCAL_ENV, raising=False)
+    result = check_link("http://10.0.0.1/secret", "P001", sleeper=lambda _s: None)
+    assert result.status == STATUS_UNCONFIRMED
+    assert "安全でない宛先" in result.reason
+
+
+def test_notifier_rejects_private_webhook(monkeypatch) -> None:
+    from web.services import notifier
+
+    from crawler import url_safety
+
+    monkeypatch.delenv(url_safety.ALLOW_LOCAL_ENV, raising=False)
+    assert notifier._post_json("http://192.168.0.10/hook", {"text": "x"}) is False

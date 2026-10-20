@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import ipaddress
 import os
+import socket
+import urllib.request
 from urllib.parse import urlparse
 
 ALLOWED_SCHEMES = frozenset({"http", "https"})
@@ -65,6 +67,12 @@ def validate_target_url(url: str) -> None:
     if ip is not None and not ip.is_global:
         raise UnsafeUrlError(f"プライベート/予約済みアドレスへのアクセスは禁止です: {host}")
 
+    # 公開名がプライベート IP に解決される DNS 経由の SSRF（169.254.169.254 等）を防ぐ。
+    # 解決できない名前は到達不能なので通す（実行時に接続失敗になる）。
+    for resolved in _resolve_host(host):
+        if not resolved.is_global:
+            raise UnsafeUrlError(f"プライベート/予約済みアドレスに解決されるホストは禁止です: {host}")
+
 
 def is_local_target(url_or_host: str) -> bool:
     """ループバック / プライベート / ローカル名前空間のホストかどうかを返す。
@@ -104,3 +112,34 @@ def _as_ip_address(host: str) -> ipaddress.IPv4Address | ipaddress.IPv6Address |
         return ipaddress.ip_address(host)
     except ValueError:
         return None
+
+
+def _resolve_host(host: str) -> list[ipaddress.IPv4Address | ipaddress.IPv6Address]:
+    if _as_ip_address(host) is not None:
+        return []
+    try:
+        infos = socket.getaddrinfo(host, None)
+    except (OSError, UnicodeError):
+        return []
+    addresses = []
+    for info in infos:
+        candidate = _as_ip_address(str(info[4][0]).split("%", 1)[0])
+        if candidate is not None:
+            addresses.append(candidate)
+    return addresses
+
+
+class _ValidatingRedirectHandler(urllib.request.HTTPRedirectHandler):
+    """リダイレクト先も ``validate_target_url`` で検証する（公開 URL → 内部への転送を防ぐ）。"""
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):  # type: ignore[no-untyped-def]
+        validate_target_url(newurl)
+        return super().redirect_request(req, fp, code, msg, headers, newurl)
+
+
+def safe_urlopen(request: urllib.request.Request | str, timeout: float):  # type: ignore[no-untyped-def]
+    """宛先とリダイレクト先を検証してから開く ``urlopen``。不正なら ``UnsafeUrlError``。"""
+    url = request.full_url if isinstance(request, urllib.request.Request) else request
+    validate_target_url(url)
+    opener = urllib.request.build_opener(_ValidatingRedirectHandler())
+    return opener.open(request, timeout=timeout)  # nosec B310  # noqa: S310

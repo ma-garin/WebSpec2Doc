@@ -17,6 +17,7 @@ from jinja2.sandbox import SandboxedEnvironment
 if TYPE_CHECKING:
     pass
 
+from crawler.url_safety import UnsafeUrlError, safe_urlopen
 from web.services.metrics import record_notification
 
 logger = logging.getLogger(__name__)
@@ -313,8 +314,11 @@ def _post_json(url: str, payload: dict[str, Any]) -> bool:
         method="POST",
     )
     try:
-        with urllib.request.urlopen(req, timeout=_TIMEOUT_SECONDS):  # nosec B310
+        with safe_urlopen(req, timeout=_TIMEOUT_SECONDS):
             return True
+    except UnsafeUrlError as exc:
+        logger.error("Notification endpoint rejected: %s", exc)
+        return False
     except (urllib.error.HTTPError, urllib.error.URLError) as exc:
         logger.error(
             "Notification HTTP request failed: kind=%s status=%s",

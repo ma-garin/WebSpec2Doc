@@ -174,7 +174,7 @@
   async function openReview(iid, view = 'read') {
     const data = await api(`/api/docverify/inspections/${encodeURIComponent(iid)}`);
     DV.state.review = data.inspection;
-    DV.state.summary = data.summary;
+    DV.state.summary = data.summary; DV.state.can = data.can || null;
     try { sessionStorage.setItem('dv-review', iid); } catch (e) { /* 保存できない環境では復元しないだけ */ }
     renderReviewNav();
     show(view);
@@ -182,7 +182,7 @@
 
   function setReview(data) {
     DV.state.review = data.inspection;
-    DV.state.summary = data.summary;
+    DV.state.summary = data.summary; DV.state.can = data.can || null;
     renderReviewNav();
   }
 

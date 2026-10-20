@@ -88,3 +88,19 @@ def test_auth_off_keeps_working(monkeypatch):
     job = c.get(f"/api/batch-test/jobs/{jid}", headers=H).get_json()["job"]
     assert job["updated_by"] == "local"
     assert c.post("/api/impact/jobs", json={"name": "旧"}, headers=H).status_code == 201
+
+
+def test_s07_get_job_reports_can_edit_for_viewer_owner_admin():
+    """閲覧のみの人には can_edit=false を返し、画面が書き込みの操作を無効化できる。"""
+    users = _users()
+    alice, bob, admin = users["alice"], users["bob"], users["admin"]
+    jid = alice.post("/api/batch-test/jobs", json={"name": "月次"}, headers=H).get_json()["job"]["id"]
+    get = lambda c: c.get(f"/api/batch-test/jobs/{jid}", headers=H).get_json()["can_edit"]
+    assert get(alice) is True and get(admin) is True and get(bob) is False
+
+
+def test_s07_get_job_can_edit_true_when_auth_off(monkeypatch):
+    monkeypatch.setenv("WEBSPEC2DOC_AUTH_MODE", "off")
+    c = appmod.app.test_client()
+    jid = c.post("/api/batch-test/jobs", json={"name": "開発"}, headers=H).get_json()["job"]["id"]
+    assert c.get(f"/api/batch-test/jobs/{jid}", headers=H).get_json()["can_edit"] is True

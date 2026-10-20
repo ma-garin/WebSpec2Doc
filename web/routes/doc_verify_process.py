@@ -157,6 +157,10 @@ def create():
     role = "author" if "author" in process.REVIEW_TYPES[body["review_type"]]["required"] else "moderator"
     insp = {**store.new(name[:200]), "goal": str(body.get("goal") or "").strip(), "rev": 0,
             "participants": [{"name": me, "role": role, "done": False}]}
+    if body["review_type"] == "informal":
+        # 非公式レビューは 1 人で回す。作成者だけだと指摘を追加できず（finding_edit は議長・レビュアー・記録者）詰まるため、レビュアーも兼ねる
+        insp["participants"] += [{"name": me, "role": "reviewer", "done": False},
+                                 {"name": me, "role": "approver", "done": False}]  # 1 人で判定まで完結できる（承認欄は approver のみ）
     insp = process.with_r4(insp, review_type=body["review_type"], phase_log=[
         {"phase": "plan", "started_at": _now(), "started_by": perm._context()[0], "ended_at": None, "ended_by": None}])
     store.save(insp)

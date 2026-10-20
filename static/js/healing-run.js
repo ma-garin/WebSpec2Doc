@@ -411,7 +411,13 @@
     var kind = run.status === 'failed' ? 'error'
       : (run.status === 'awaiting_human' ? 'warning'
         : (run.status === 'succeeded' || run.status === 'no_defects' ? 'success' : 'info'));
-    window.WS2D.reason(reasonHost, WS_REASONS[run.status] || '状態の理由を取得できませんでした。', kind);
+    var decList = run.decisions || [];
+    var lastDec = decList.length ? decList[decList.length - 1] : null;
+    var reasonText = WS_REASONS[run.status] || '状態の理由を取得できませんでした。';
+    if (run.status === 'awaiting_human' && lastDec && lastDec.action === 'approve') {
+      reasonText = '承認済みです。次は「PR を作成」です。PR を作るまで外部のリポジトリは変わりません。やり直すときは「再検証」か「却下」を選びます。';
+    }
+    window.WS2D.reason(reasonHost, reasonText, kind);
   }
 
   function renderStatusBadge(run) {
@@ -476,7 +482,7 @@
     }
     map['hl-rerun'] = true;
     // 不具合なし（直す対象が無い）の実行には PR にする変更が無い。押せると「何かを直した」ように見える。
-    map['hl-create-pr'] = !hasPr && run.status !== 'no_defects';
+    map['hl-create-pr'] = !hasPr && run.status !== 'no_defects' && !(run.status === 'failed' && !(run.fixed_count > 0));
     map['hl-merge'] = hasPr;
     if (isAwaiting) {
       map['hl-approve'] = true;

@@ -76,8 +76,8 @@
 
   /* ---- 案件一覧 ---- */
   function loadJobs() {
-    return api('GET', API).then(function (d) { state.jobs = d.jobs; renderJobs(); })
-      .catch(function (e) { banner(e.message); });
+    return api('GET', API).then(function (d) { state.jobs = d.jobs; state.listErr = false; renderJobs(); })
+      .catch(function (e) { state.listErr = true; banner(e.message); renderJobs(); });
   }
   function renderJobs() {
     var q = ($('#bt-q').value || '').trim();
@@ -94,7 +94,7 @@
         + '<i class="' + (j.case_count ? (j.ask_count ? 'i-flaky' : 'i-new') : 'i-new') + '"></i>'
         + '<span class="grow"><b>' + esc(j.name) + '</b><small>' + esc(script) + '</small><small>' + esc(foot) + ' · ' + esc(fmtTime(j.updated_at)) + '</small></span></button>'
         + '<button type="button" class="del" data-deljob="' + esc(j.id) + '" title="「' + esc(j.name) + '」を削除" aria-label="「' + esc(j.name) + '」を削除">✕</button></div>';
-    }).join('') : '<div class="it empty">' + (state.jobs.length ? '一致する案件はありません' : 'まだ案件がありません') + '</div>';
+    }).join('') : (state.listErr && !state.jobs.length ? '<div class="it empty" role="alert">案件の一覧を読めませんでした。<br><button type="button" class="btn sm" id="bt-reload">もう一度読み込む</button></div>' : '<div class="it empty">' + (state.jobs.length ? '一致する案件はありません' : 'まだ案件がありません') + '</div>');
   }
   /* URL は ?job=<id>#<step>。案件を開く・段階を変えるのは pushState、起動時と戻る・進むの復元は積まない */
   function syncUrl(push) {
@@ -105,7 +105,9 @@
   function openJob(id, noPush) {
     banner('');
     return api('GET', API + '/' + id).then(function (d) {
+      state.ro = d.can_edit === false;
       setJob(d.job);
+      if (state.ro) banner('閲覧のみです。この案件を変更する権限がありません。変更したいときは案件の作成者か管理者に権限の付与を依頼してください。');
       syncUrl(!noPush);
     }).catch(function (e) { banner(e.message); });
   }
@@ -173,7 +175,7 @@
     var host = $('#bt-stages'), j = state.job;
     host.hidden = !j;
     if (!j) { host.innerHTML = ''; return; }
-    var names = ['Generated', 'Exported', 'Executed', 'Verified'];
+    var names = ['生成', '書き出し', '実行', '確認'];
     host.innerHTML = stages(j).map(function (g, i) {
       var badge = W ? W.status.html(g.code, g.label) : esc(g.label);
       return '<li class="bt-stage" data-stage="' + g.key + '"><small>' + names[i] + '</small>' + badge + '<span>' + esc(g.note) + '</span></li>';
@@ -300,6 +302,7 @@
     var s = srcs[state.src];
     $('#bt-src-name').textContent = s ? s.name : 'テストコード';
     $('#bt-src-map').textContent = s ? s.map : '';
+    var nx = $('#bt-code-next'); nx.disabled = !state.job.sources.length; nx.title = nx.disabled ? '先にテストコードを生成してください' : '';
     $('#bt-src').textContent = s ? s.body : 'ケース表で「テストコードを生成」を押すと、ここにコードが出ます。';
     $('#bt-code-wrap').hidden = !srcs.length;
     paintNotice('bt-code-state', srcs.length ? null : {
@@ -344,6 +347,16 @@
     renderJobs(); renderSteps();
     if (!state.job) return;
     renderIntake(); renderCases(); renderCode(); renderExport();
+    applyReadOnly();
+  }
+  /* 権限が無い人には書き込みの操作を出さない（押して 403 になる経路を作らない） */
+  function applyReadOnly() {
+    document.body.classList.toggle('bt-ro', !!state.ro);
+    if (!state.ro) return;
+    ['#bt-analyze', '#bt-make-cases', '#bt-make-code', '#bt-redesign', '#bt-add-open'].forEach(function (sel) {
+      var b = $(sel); if (b) { b.disabled = true; b.title = '閲覧のみのため使えません'; }
+    });
+    var f = $('#bt-file'); if (f) f.disabled = true;
   }
 
   function go(step, noPush) {
@@ -414,6 +427,10 @@
       .then(function () { a.classList.remove('bt-busy'); });
   }
 
+  document.addEventListener('click', function (e) {
+    var r = e.target.closest('#bt-reload'); if (!r) return;
+    banner(''); busy(r, true); loadJobs();
+  });
   /* ---- 操作 ---- */
   document.addEventListener('click', function (e) {
     var t = e.target.closest('[data-go],[data-step],[data-obs],[data-src],[data-job],[data-deljob],[data-delfile],[data-edit],#bt-new,#bt-newcancel,#bt-analyze,#bt-make-cases,#bt-redesign,#bt-make-code,#bt-add-open,#bt-add-cancel,#bt-dl-cases,#bt-dl-code,#bt-dl-q');
@@ -477,7 +494,7 @@
       var name = $('#bt-newname').value.trim();
       if (!name) return;
       return run(f.querySelector('button'), api('POST', API, { name: name }), '案件を作りました').then(function (d) {
-        if (d && d.job) { f.hidden = true; $('#bt-newname').value = ''; go('intake', true); state.job = d.job; syncUrl(true); }
+        if (d && d.job) { f.hidden = true; $('#bt-newname').value = ''; go('intake', true); state.ro = false; banner(''); state.job = d.job; syncUrl(true); }
       });
     }
     if (f.id === 'bt-addform') {

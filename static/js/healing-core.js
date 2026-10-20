@@ -385,6 +385,7 @@
      そうでない実行の修正件数は別に持って補助テキストへ出す。 */
   var statFixedValue = 0;
   var statFixedUnverified = 0;
+  var statFixedPending = 0;
 
   /* 「直した不具合 N」は件数だけで質を示さない。要確認が残っていること、
      再検証が通らず数に入れなかった修正があることを同じカードに出す。 */
@@ -393,6 +394,10 @@
     var high = riskCounts().high;
     if (statFixedValue > 0 && high > 0) { parts.push('うち要確認 ' + high + ' 件'); }
     var title = '';
+    if (statFixedPending > 0) {
+      title = '再検証は通りましたが、人の承認がまだの修正 ' + statFixedPending + ' 件は数えていません';
+      parts.push('承認待ち ' + statFixedPending + ' 件');
+    }
     if (statFixedUnverified > 0) {
       title = '再検証が通っていない修正 ' + statFixedUnverified + ' 件は数えていません';
       parts.push(parts.length ? ('未計上 ' + statFixedUnverified + ' 件')
@@ -438,10 +443,12 @@
       // 実行回数だけを出すと、成功しなかった回が画面から消える。
       var lost = 0;
       statFixedUnverified = 0;
+      statFixedPending = 0;
       runs.forEach(function (r) {
         var applied = r.fixed_count || 0;
         if (applied > 0) {
           if (r.status === 'succeeded') { fixed += applied; }
+          else if (r.status === 'awaiting_human') { statFixedPending += applied; }
           else { statFixedUnverified += applied; }
         }
         if (r.status === 'awaiting_human') { awaiting += 1; }

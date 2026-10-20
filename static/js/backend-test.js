@@ -353,7 +353,7 @@
       return;
     }
     var nm = j.name || '名前のない案件', why = runBlock(j), env = envName(j), tg = targetText(j), rb = $('#s8-run-head');
-    crumb.innerHTML = '<span><a href="#" data-nav="home">ホーム</a></span><span class="sep">/</span><span><a href="#" data-nav="jobs">案件</a></span><span class="sep">/</span><span></span>';
+    crumb.innerHTML = '<span><a href="#" data-nav="home">WebSpec2Doc</a></span><span class="sep">/</span><span><a href="#" data-nav="jobs">案件</a></span><span class="sep">/</span><span></span>';
     crumb.lastChild.textContent = nm; $('#topbar-title').textContent = nm; document.title = nm + ' - バッチ・バックエンドのテスト - WebSpec2Doc';
     chips.innerHTML = '';
     [['badge-info', LEVEL_FULL[j.level] || ''], ['badge-muted', '対象: ' + (tg || '未設定')], ['badge-muted', '接続先: ' + (env || '未設定')]].forEach(function (c) {
@@ -729,7 +729,7 @@
     var nameEl = $('#s8-name'), name = nameEl.value.trim();
     if (!name) { notify('バッチ名が空です。テストするバッチの名前を入れてから「案件を作る」を押してください。', '案件を作れませんでした'); nameEl.focus(); return; }
     run(btn, api('POST', API, { name: name, target_kind: 'batch', level: $('#s8-level').value, purpose: '', scope: '' }), '案件を作りました')
-      .then(function (d) { if (d && d.job) { nameEl.value = ''; resetFlt(); state.view = 'job'; setView('job'); showStage(1); renderTop(); } });
+      .then(function (d) { if (d && d.job) { nameEl.value = ''; resetFlt(); openJob(d.job.id, 1); } });
   }
   function delJob(id, btn) {
     var j = state.jobs.filter(function (x) { return x.id === id; })[0] || {};

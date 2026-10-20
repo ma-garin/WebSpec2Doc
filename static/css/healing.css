@@ -1009,3 +1009,6 @@ table.hl-projects-table td { padding-top: 6px; padding-bottom: 6px; }
 @media (min-width: 817px) {
   .hl-table-wrap > table.hl-projects-table, .hl-table-wrap > table.hl-runs-table { min-width: 0; }
 }
+
+/* 接続先の一覧: 名前は省略せず折り返して読めるようにする（全文は title にも出る） */
+.hl-projects-table td .hl-proj-name { white-space: normal; overflow-wrap: anywhere; overflow: visible; text-overflow: clip; }

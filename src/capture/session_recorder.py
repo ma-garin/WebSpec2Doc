@@ -21,6 +21,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 from urllib.parse import urlparse
 
+from browser_detect import launch_browser
 from crawler.action_explorer import _live_state, state_signature
 
 if TYPE_CHECKING:
@@ -508,7 +509,7 @@ def record_exploration_session(
     session_path = _next_session_path(output_dir)
     shots_dir = output_dir / SESSIONS_DIR_NAME / "shots" / session_path.stem
     with sync_playwright() as playwright:
-        browser = playwright.chromium.launch(headless=headless, args=[f"--lang={BROWSER_LOCALE}"])
+        browser = launch_browser(playwright, headless=headless, args=[f"--lang={BROWSER_LOCALE}"])
         recorder: SessionRecorder | None = None
         try:
             context_kwargs: dict[str, Any] = {"user_agent": USER_AGENT, "locale": BROWSER_LOCALE}

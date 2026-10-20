@@ -4,6 +4,8 @@ import json
 import os
 import signal as signal_module
 import subprocess
+
+from web.services.browser_blocked import BLOCKED_MESSAGE, is_browser_unavailable
 import sys
 import time
 from pathlib import Path
@@ -98,6 +100,8 @@ def _run_stage(cmd: list[str]) -> tuple[bool, str]:
         return False, f"実行に失敗しました: {exc}"
     if proc.returncode == 0:
         return True, ""
+    if is_browser_unavailable(proc.stderr, proc.stdout):
+        return False, BLOCKED_MESSAGE
     tail = (proc.stderr or proc.stdout or "").strip()
     return False, tail[-400:] if tail else f"exit code {proc.returncode}"
 

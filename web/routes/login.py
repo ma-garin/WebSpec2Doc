@@ -11,6 +11,7 @@ from typing import Any
 from flask import Blueprint, request
 
 from web.config import OUTPUT_DIR
+from web.services.browser_blocked import blocked_payload, is_browser_unavailable
 from web.tenancy import scoped_output_dir
 from web.validation import _valid_domain
 
@@ -71,6 +72,8 @@ def api_login_simple() -> tuple[dict, int] | dict:
         )
     except subprocess.TimeoutExpired:
         return {"success": False, "error": "ログイン処理がタイムアウトしました"}, 504
+    if proc.returncode != 0 and is_browser_unavailable(proc.stderr, proc.stdout):
+        return blocked_payload(), 503
     try:
         data = json.loads(proc.stdout.strip() or "{}")
     except json.JSONDecodeError:
@@ -93,6 +96,8 @@ def api_login_scrape() -> tuple[dict, int] | dict:
         proc = subprocess.run(cmd, capture_output=True, text=True, timeout=SCRAPE_TIMEOUT_SEC)
     except subprocess.TimeoutExpired:
         return {"ok": False, "error": "フォーム取得がタイムアウトしました"}, 504
+    if proc.returncode != 0 and is_browser_unavailable(proc.stderr, proc.stdout):
+        return blocked_payload(), 503
     try:
         data = json.loads(proc.stdout.strip() or "{}")
     except json.JSONDecodeError:
@@ -141,6 +146,8 @@ def api_login_submit() -> tuple[dict, int] | dict:
         )
     except subprocess.TimeoutExpired:
         return {"success": False, "error": "ログイン処理がタイムアウトしました"}, 504
+    if proc.returncode != 0 and is_browser_unavailable(proc.stderr, proc.stdout):
+        return blocked_payload(), 503
     try:
         data = json.loads(proc.stdout.strip() or "{}")
     except json.JSONDecodeError:

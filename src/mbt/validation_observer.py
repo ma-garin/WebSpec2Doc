@@ -107,10 +107,11 @@ def guard_validation_websocket(websocket_route: Any, page: ValidationPage) -> No
 @contextmanager
 def playwright_validation_session(auth_path: Path | None) -> Iterator[ValidationPage]:
     """破壊的HTTPメソッドを遮断したheadless Chromiumセッション。"""
+    from browser_detect import launch_browser
     from playwright.sync_api import sync_playwright
 
     with sync_playwright() as playwright:
-        browser = playwright.chromium.launch(headless=True)
+        browser = launch_browser(playwright, headless=True)
         # Service Worker 経由の通信は context.route で捕捉できないため無効化し、
         # 入力・blurで発火した破壊的通信を必ず下のルートガードへ通す。
         context = None

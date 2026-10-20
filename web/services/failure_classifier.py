@@ -48,9 +48,8 @@ _ENV_SETUP_KEYWORDS = (
 
 _ACTION_ENV = "環境・認証状態を確認してください"
 _ACTION_ENV_SETUP = (
-    "Playwrightのブラウザ実行環境が未セットアップまたはバージョン不一致です。"
-    "次回のAutoRun実行時に自動修復を試みます。改善しない場合は "
-    "`npx playwright install chromium` を手動実行してください。"
+    "ブラウザ（Chrome / Edge）を起動できません。"
+    "Google Chrome か Microsoft Edge を導入してから再実行してください。"
 )
 _ACTION_ROT = "ロケータを更新してください（self-healing ロケータ候補を確認）"
 _ACTION_ASYNC = (

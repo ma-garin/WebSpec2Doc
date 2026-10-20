@@ -131,32 +131,28 @@ def check_virtualenv() -> CheckResult:
 
 
 def check_chromium_runtime() -> CheckResult:
-    """playwright が要求する Chromium が実起動できるか検査する。"""
+    """Chrome / Edge を検出できるか検査する（Playwright のブラウザ同梱は使わない）。"""
     try:
-        from crawler.playwright_runtime import (
-            PlaywrightRuntimeError,
-            verify_playwright_runtime,
-        )
-    except Exception as exc:  # noqa: BLE001  # playwright 未導入等もここで表面化する
+        from browser_detect import status
+    except Exception as exc:  # noqa: BLE001  # 読み込み失敗もここで表面化する
         return CheckResult(
-            name="Chromium ランタイム",
+            name="ブラウザ（Chrome / Edge）",
             ok=False,
             detail=f"検査モジュールを読み込めません: {exc}",
             fix="`venv/bin/pip install -r requirements-dev.txt` を実行してください",
         )
-    try:
-        info = verify_playwright_runtime()
-    except PlaywrightRuntimeError as exc:
+    info = status()
+    if not info.get("available"):
         return CheckResult(
-            name="Chromium ランタイム",
+            name="ブラウザ（Chrome / Edge）",
             ok=False,
-            detail=str(exc),
-            fix="`make setup-runtime`（対応 Chromium をリポジトリ配下へ導入）",
+            detail=f"BLOCKED: browser unavailable（{info.get('detail', '')}）",
+            fix="Google Chrome か Microsoft Edge を導入してください",
         )
     return CheckResult(
-        name="Chromium ランタイム",
+        name="ブラウザ（Chrome / Edge）",
         ok=True,
-        detail=f"Chromium {info.chromium_version}（{info.browsers_path}）",
+        detail=f"{info.get('channel')}（{info.get('path')}）",
     )
 
 

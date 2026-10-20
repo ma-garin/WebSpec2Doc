@@ -5,7 +5,7 @@ from web.services.impact import db, roles
 from web.services.impact.repo import audit
 from web.services.impact.repo.errors import ImpactError
 
-_FIELDS = ("name", "description", "policy", "p1_min", "p2_min", "depth_default")
+_FIELDS = ("name", "description", "policy", "p1_min", "p2_min", "depth_default", "code_site")
 _NOT_FOUND = "対象システムが見つかりません。一覧から選び直してください。"
 
 
@@ -73,7 +73,12 @@ def _validate(merged: dict) -> dict:
         raise ImpactError("P1 の下限は P2 の下限より大きく、1〜12 の範囲で入力してください。", 400)
     if not 1 <= depth <= 3:
         raise ImpactError("波及の段数は 1〜3 から選んでください。", 400)
-    return {**out, "p1_min": p1, "p2_min": p2, "depth_default": depth}
+    site = str(out.get("code_site") or "").strip()
+    if site:
+        from web.validation import _valid_domain
+        if len(site) > 253 or not _valid_domain(site):
+            raise ImpactError("関連付けるサイトの指定が正しくありません。一覧から選び直してください。", 400)
+    return {**out, "p1_min": p1, "p2_min": p2, "depth_default": depth, "code_site": site}
 
 
 def update(conn, sid, fields, actor) -> dict:

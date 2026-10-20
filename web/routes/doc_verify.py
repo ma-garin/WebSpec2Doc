@@ -54,6 +54,12 @@ def _renumber(existing: list[dict], new: list[dict]) -> list[dict]:
     return [upgrade_finding({**f, "id": f"F{start + i + 1}"}) for i, f in enumerate(new)]
 
 
+def _denied(op: str, insp: dict | None = None):
+    """役割×操作の表（perm.MATRIX）で拒否なら 403 応答、許可なら None。R4 と同じ判定を R1 の更新系にも掛ける。"""
+    msg = _perm.check(op, insp)
+    return (jsonify(error=msg, code="forbidden"), 403) if msg else None
+
+
 def _norm(text: str) -> str:
     return re.sub(r"\s+", "", text or "")
 
@@ -62,7 +68,7 @@ def _norm(text: str) -> str:
 def page() -> str:
     # 静的ファイルの更新が古い版の読み込みで隠れないよう、JS/CSS の更新時刻を URL に付ける
     static = Path(__file__).resolve().parents[2] / "static"
-    files = ["js/docverify-core.js", "js/docverify-global.js", "js/docverify-review.js", "css/docverify.css", "js/docverify-r5.js", "js/docverify-r3.js", "css/docverify-r3.css", "js/docverify-r2.js", "js/docverify-r4.js", "css/docverify-r4.css", "js/docverify-tier.js", "js/docverify-tier-1.js", "js/docverify-tier-2.js", "js/docverify-tier-3.js", "css/docverify-tier.css", "css/docverify-tier-1.css", "css/docverify-tier-2.css", "css/docverify-tier-3.css"]
+    files = ["js/docverify-core.js", "js/docverify-global.js", "js/docverify-review.js", "js/docverify-viewpoints.js", "css/docverify.css", "js/docverify-accuracy.js", "js/docverify-ai.js", "js/docverify-process.js", "css/docverify-process.css", "js/docverify-trace.js", "js/docverify-trace-docs.js", "js/docverify-trace-check.js", "js/docverify-trace-report.js", "css/docverify-trace.css", "css/docverify-trace-docs.css", "css/docverify-trace-check.css", "css/docverify-trace-report.css"]
     dv_ver = max(int((static / f).stat().st_mtime) for f in files if (static / f).exists())
     return render_template("doc_verify.html", dv_ver=dv_ver)
 
@@ -141,6 +147,7 @@ def upload_document(iid: str):
         return _err("指摘の候補を作れませんでした。もう一度取り込んでください。", 500)
 
     from datetime import datetime, timezone
+
     from web.services.docverify import metrics
     versions = metrics.freeze_current(insp)  # 旧の断片・指摘で前の版のスコアを確定する
     # document は ingest の unread（読めなかった要素の数）をそのまま持つ
@@ -167,6 +174,10 @@ def update_finding(iid: str, fid: str):
     if err:
         return err
     body = request.get_json(silent=True) or {}
+    op = {"fixed": "mark_fixed", "verified": "mark_verified"}.get(str(body.get("status") or ""), "finding_edit")
+    denied = _denied(op, insp)
+    if denied:
+        return denied
     changes = {}
     if "status" in body:
         if body["status"] not in _STATUSES:
@@ -295,6 +306,9 @@ def match_screens(iid: str):
     insp, err = _load(iid)
     if err:
         return err
+    denied = _denied("finding_edit", insp)
+    if denied:
+        return denied
     domain = str((request.get_json(silent=True) or {}).get("domain") or "").strip()
     if not domain:
         return _err("照合するサイトを選んでください。", 400)
@@ -404,6 +418,12 @@ def patch_inspection(iid: str):
     if err:
         return err
     body = request.get_json(silent=True)
+    if isinstance(body, dict):
+        ops = (["approve"] if "approval" in body else []) + (["plan_edit"] if set(body) - {"approval"} else [])
+        for op in ops:
+            denied = _denied(op, insp)
+            if denied:
+                return denied
     if not isinstance(body, dict):
         return _err("入力の形が正しくありません。画面を再読み込みしてやり直してください。", 400)
     changes = {}
@@ -481,6 +501,10 @@ def participant_done(iid: str):
 
 @bp.route("/api/docverify/viewpoints", methods=["GET", "PUT"])
 def viewpoints():
+    if request.method != "GET":
+        denied = _denied("tenant_settings")
+        if denied:
+            return denied
     from web.services.docverify import viewpoints as vp
     try:
         if request.method == "PUT":
@@ -510,6 +534,10 @@ def viewpoints_export():
 
 @bp.route("/api/docverify/viewpoints/import", methods=["POST"])
 def viewpoints_import():
+    if request.method != "GET":
+        denied = _denied("tenant_settings")
+        if denied:
+            return denied
     from web.services.docverify import viewpoints as vp
     f = request.files.get("file")
     if not f or not f.filename:
@@ -531,6 +559,10 @@ def viewpoints_import():
 
 @bp.route("/api/docverify/checklists", methods=["GET", "PUT"])
 def checklists():
+    if request.method != "GET":
+        denied = _denied("tenant_settings")
+        if denied:
+            return denied
     from web.services.docverify import settings
     try:
         if request.method == "GET":
@@ -545,6 +577,10 @@ def checklists():
 
 @bp.route("/api/docverify/settings", methods=["GET", "PUT"])
 def settings_api():
+    if request.method != "GET":
+        denied = _denied("tenant_settings")
+        if denied:
+            return denied
     from web.services.docverify import settings
     try:
         if request.method == "GET":

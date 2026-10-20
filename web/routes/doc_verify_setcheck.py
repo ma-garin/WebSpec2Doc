@@ -13,7 +13,7 @@ from pathlib import Path
 
 from flask import Blueprint, Response, jsonify, request
 
-bp = Blueprint("doc_verify_r3", __name__)
+bp = Blueprint("doc_verify_setcheck", __name__)
 log = logging.getLogger(__name__)
 
 _IID = re.compile(r"^[0-9a-f]{12}$")

@@ -18,8 +18,8 @@
   /* 取り込めるファイル（サーバは拡張子を見ないので、ここで非対応形式を先に止める） */
   var OK_EXT = ['.bat', '.cmd', '.sh', '.ps1', '.xlsx', '.docx', '.md', '.txt', '.pdf', '.csv'];
   var MAX_BYTES = 20 * 1048576;
-  /* exported: 案件ごとの書き出し記録。サーバには残らないので、この画面の操作中だけ（リロードで消える） */
-  var state = { jobs: [], job: null, step: 'intake', obs: '', src: 0, editing: '', exported: {}, notice: {} };
+  /* 書き出しの記録はサーバ（job.exports）が持つ。送り出した事実だけで、受け取り・実行・確認は含まない */
+  var state = { jobs: [], job: null, step: 'intake', obs: '', src: 0, editing: '', notice: {} };
 
   function api(method, path, body) {
     var opt = { method: method, headers: {} };
@@ -144,18 +144,25 @@
   }
 
   /* ---- 4 段の状態: 生成済み / 書き出し済み / 実行済み / 確認済み（別々に持つ。前の段が次の段を意味しない） ---- */
-  function exportedKinds(j) { return j ? Object.keys(state.exported[j.id] || {}) : []; }
   var EXPORT_NAME = { 'cases.xlsx': 'ケース表', 'code.zip': 'テストコード一式', 'questions.csv': '質問票' };
+  function exportRecs(j) { return (j && j.exports) || {}; }
+  /* 書き出した後で中身（ケース・コード）が変わっていない記録だけを「書き出し済み」に数える */
+  function exportedKinds(j) { var r = exportRecs(j); return Object.keys(EXPORT_NAME).filter(function (k) { return r[k] && !r[k].stale; }); }
+  function staleKinds(j) { var r = exportRecs(j); return Object.keys(EXPORT_NAME).filter(function (k) { return r[k] && r[k].stale; }); }
+  function exportNames(ks) { return ks.map(function (k) { return EXPORT_NAME[k]; }).join('・'); }
+  function lastExportAt(j, ks) { var r = exportRecs(j); return ks.map(function (k) { return r[k].at || ''; }).sort().pop() || ''; }
   function stages(j) {
     var gen = j && (j.cases.length > 0 || j.sources.length > 0);
-    var ex = exportedKinds(j);
+    var ex = exportedKinds(j), old = j ? staleKinds(j) : [];
     var ran = !!(j && j.results && j.results.length);
     var ver = !!(j && j.verified_at);
     return [
       { key: 'generated', code: gen ? 'preparing' : 'not_started', label: gen ? '生成済み' : '未生成',
         note: gen ? 'ケース ' + j.cases.length + ' 件・コード ' + j.sources.length + ' ファイル（未実行）' : 'ケース表とテストコードを作ると変わります' },
-      { key: 'exported', code: ex.length ? 'preparing' : 'unverified', label: ex.length ? '書き出し済み（未実行）' : '未確認',
-        note: ex.length ? ex.map(function (k) { return EXPORT_NAME[k]; }).join('・') + '。この画面の操作中だけの記録（リロード後は未確認）' : '書き出しの記録はサーバにありません' },
+      { key: 'exported', code: ex.length ? 'preparing' : 'unverified', label: ex.length ? '書き出し済み（未実行）' : old.length ? '書き出し後に変更あり' : '未書き出し',
+        note: ex.length ? exportNames(ex) + '（' + fmtTime(lastExportAt(j, ex)) + '・サーバの送出記録）。受け取り後の実行・確認は記録していません' + (old.length ? '。' + exportNames(old) + ' は書き出し後に変わりました' : '')
+          : old.length ? exportNames(old) + ' は書き出した後でケースまたはコードが変わりました。もう一度書き出してください'
+          : '書き出しの記録はまだありません' },
       { key: 'executed', code: ran ? 'done' : 'not_started', label: ran ? '実行済み' : '未実行',
         note: ran ? j.results.length + ' 件の実行結果を取り込み済み' : 'この画面ではテストを実行しません。書き出したコードを手元の pytest で実行してください（結果の取り込みは未対応）' },
       { key: 'verified', code: ver ? 'done' : 'unverified', label: ver ? '確認済み' : '未確認',
@@ -202,6 +209,7 @@
     else if (!j.facts) { msg = 'スクリプトを取り込みました。「読み取る」で引数・終了コード・入出力を取り出します。'; }
     else if (!j.cases.length) { msg = '読み取り済みです。「観点とケース表を作る」でケースを生成します。'; }
     else if (!j.sources.length) { msg = 'ケースを ' + j.cases.length + ' 件生成しました（未実行）。テストコードはまだありません。'; }
+    else if (staleKinds(j).length) { msg = '書き出した後でケースまたはコードが変わりました。手元のファイルは古いままです。もう一度書き出してください。'; kind = 'warning'; }
     else if (exportedKinds(j).length) { msg = '書き出し済み（未実行）です。この画面では実行していないので、実行済み・確認済みとは扱いません。'; kind = 'warning'; }
     else { msg = '生成済み（未実行）です。実行結果が無いため、合否は出していません。書き出して手元の環境で実行してください。'; }
     if (state.notice[failHostId()]) { msg = '直前の操作が失敗しました。既存の結果は保持しています。画面内の案内に従ってください。'; kind = 'error'; }
@@ -314,13 +322,19 @@
     checks.push(j.sources.length ? 'テストコードは生成済み（未実行）です。この画面では実行していません。お使いの環境で 1 回実行して確かめてください。' : 'テストコードがまだありません。「テストコード」で生成してください。');
     checks.push('入力サンプルに個人情報が含まれていないか確かめてから渡してください。');
     var ex = exportedKinds(j);
-    if (ex.length) checks.push('書き出し済み（未実行）: ' + ex.map(function (k) { return EXPORT_NAME[k]; }).join('・') + '。書き出しただけで、実行・確認はしていません。この記録はこの画面の操作中だけで、リロード後は未確認に戻ります。');
+    var old = staleKinds(j);
+    if (ex.length) checks.push('書き出し済み（未実行）: ' + exportNames(ex) + '（最終 ' + fmtTime(lastExportAt(j, ex)) + '）。サーバが送り出した記録です。実行・確認はしていません。');
+    if (old.length) checks.push('書き出し後に変更あり: ' + exportNames(old) + '。書き出した後でケースまたはコードが変わりました。渡す前にもう一度書き出してください。');
     paintNotice('bt-export-state', !j.cases.length && !j.sources.length ? {
       kind: 'unavailable', title: '書き出せるものがありません', message: 'ケース表もテストコードもまだ生成していません。',
       next: '「取り込み」で読み取り、観点とケース表を作ってください。', actionLabel: '取り込みへ', onAction: function () { go('intake'); }
+    } : old.length ? {
+      kind: 'stale', title: '書き出し後に変更あり',
+      message: exportNames(old) + ' は書き出した後でケースまたはコードが変わりました。手元のファイルは古いままです。',
+      next: 'もう一度書き出してから渡してください。'
     } : ex.length ? {
       kind: 'unverified', title: '書き出し済み（未実行）',
-      message: ex.map(function (k) { return EXPORT_NAME[k]; }).join('・') + ' を書き出しました。実行も確認もしていません。この記録はこの画面の操作中だけで、リロード後は未確認に戻ります。',
+      message: exportNames(ex) + ' を書き出しました（最終 ' + fmtTime(lastExportAt(j, ex)) + '・サーバの送出記録）。実行も確認もしていません。',
       next: 'お使いの環境でテストコードを 1 回実行し、結果を確かめてください。'
     } : null);
     $('#bt-checks').innerHTML = checks.map(function (c) { return '<li>' + esc(c) + '</li>'; }).join('');
@@ -392,9 +406,10 @@
       l.href = u; l.download = x.name; document.body.appendChild(l); l.click(); l.remove();
       setTimeout(function () { URL.revokeObjectURL(u); }, 1000);
       delete state.notice['bt-export-state'];
-      (state.exported[j.id] = state.exported[j.id] || {})[kind] = Date.now();
-      renderExport(); renderHead();
       toast(EXPORT_NAME[kind] + 'を書き出しました（未実行）', 'success');
+      // 書き出しの記録はサーバが持つ。成功した時だけ読み直して「書き出し済み」に反映する
+      return api('GET', API + '/' + j.id).then(function (d) { if (d && d.job && state.job && state.job.id === d.job.id) setJob(d.job); })
+        .catch(function () { renderExport(); renderHead(); });
     }).catch(function (e) { fail(e instanceof TypeError ? 'サーバにつながりません。通信を確かめてください。' : e.message); })
       .then(function () { a.classList.remove('bt-busy'); });
   }
@@ -421,7 +436,6 @@
         if (!ok) return;
         return api('DELETE', API + '/' + delId).then(function () {
           state.jobs = state.jobs.filter(function (x) { return x.id !== delId; });
-          delete state.exported[delId];
           if (j && j.id === delId) { state.job = null; history.replaceState(null, '', location.pathname); }
           renderAll(); toast('案件を削除しました');
         }).catch(function (er) { banner(er.message); });

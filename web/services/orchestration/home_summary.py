@@ -62,8 +62,8 @@ def _links(domain: str, has_report: bool) -> dict[str, str | None]:
         "s01": f"/sites/{q}/spec" if has_report else None,
         "s02": f"/sites/{q}/tests" if has_report else None,
         "s03": f"/auto-run?site={q}",  # 入口でサイトを選び直させない（static/js/autorun-deeplink.js）
-        "s09": "/impact",
-        "s05": "/healing",
+        "s09": f"/impact?site={q}",  # 対象システムは自動で決めず、/impact が候補を示して人が選ぶ
+        "s05": f"/healing?site={q}",  # 登録済みの対象なら直接開く。未登録は推測せずその旨を表示
     }
 
 

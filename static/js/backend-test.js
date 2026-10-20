@@ -517,7 +517,7 @@
     fillList('#bs-unread', un, function (u) {
       return typeof u === 'string' ? li('', u) : li('', text(u.reason || u.text || u.file), where(u.source || u));
     }, '読めなかった資料はありません。');
-    kpis($('#bs-facts-kpis'), [[files.length, '資料', '', '取り込んだファイル', 'file'], [facts.length, '読み取った事実', facts.length ? 'ok' : '', '根拠の行が付いた事実', 'check'],
+    kpis($('#bs-facts-kpis'), [[files.length, '資料', '', '取り込んだファイル', 'file'], [facts.length, '資料から読み取った内容', '', '資料の行が付いた項目（実測ではない）', 'check'],
       [qs.length, '確認したいこと', qs.length ? 'wa' : '', '業務の担当者に確かめること', 'help'], [un.length, '読めなかった文', un.length ? 'wa' : '', '取り込めなかった資料・文', 'warn']]);
   };
   function upload(files) {

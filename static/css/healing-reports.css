@@ -161,8 +161,9 @@
   font-weight: 600;
   white-space: nowrap;
 }
-.hl-badge.is-ok { background: var(--ok-bg, #ECFDF3); color: var(--ok, #067647); }
-.hl-badge.is-err { background: var(--er-bg, #FEF3F2); color: var(--er, #D92D20); }
+/* 文字色は意味色の「濃い文字」側（--color-*-tx）。--ok / --er は塗り用の明るさで、白地では 2.4〜4.0:1 しか出ない。 */
+.hl-badge.is-ok { background: var(--ok-bg, #ECFDF3); color: var(--color-success-tx, #067647); }
+.hl-badge.is-err { background: var(--er-bg, #FEF3F2); color: var(--color-error-tx, #B42318); }
 .hl-badge.is-warn { background: var(--wn-bg, #FFFAEB); color: var(--wn, #B54708); }
 .hl-badge.is-mute {
   background: var(--bg, #F9FAFB);
@@ -330,9 +331,9 @@
 }
 .hl-verify-box small { display: block; font-size: 10.5px; color: var(--tx3, #667085); }
 .hl-verify-box b { font-size: 13px; font-weight: 600; }
-.hl-verify-box.is-ok b { color: var(--ok, #067647); }
-.hl-verify-box.is-err b { color: var(--er, #D92D20); }
-.hl-verify-box.is-mute b { color: var(--tx3, #667085); }
+.hl-verify-box.is-ok b { color: var(--color-success-tx, #067647); }
+.hl-verify-box.is-err b { color: var(--color-error-tx, #B42318); }
+.hl-verify-box.is-mute b { color: var(--color-text-secondary, #616161); }
 
 /* ── 折りたたみ ─────────────────────────────── */
 .hl-doc details {

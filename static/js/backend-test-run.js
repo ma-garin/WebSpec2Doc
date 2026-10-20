@@ -17,7 +17,7 @@
     cancelled: 'キャンセルしました。終わったケースの結果は残っています。',
     timeout: '時間内に終わりませんでした。ケースを絞ってもう一度実行してください。',
     error: '実行が途中で止まりました。接続先とテストコードを確かめてから、まだ実行していないケースを実行してください。' };
-  var S = { job: null, file: '', run: null, timer: 0, preview: null, pending: null };
+  var S = { job: null, file: '', run: null, timer: 0, preview: null, pending: null, rows: {} };
   /* ---- 共通 ---- */
   function jid() { return (S.job && S.job.id) || new URLSearchParams(location.search).get('job') || ''; }
   function api(method, path, body) { var opt = { method: method, headers: {} };
@@ -199,8 +199,20 @@
       $('#bs-run-cancel').hidden = !on;
       $('#bs-rollback').hidden = on || !r.can_rollback; }
     renderRunRows(r); }
+  /* 終わった実行の結果は、段階 7 の承認前は job.results にまだ入らない（判定は承認後）。
+     そのままだと「完了 66 / 66 件」なのに結果表が「まだ実行していません」になるため、
+     終わった実行は証跡（GET /runs/<id>/results）から 1 回だけ読み、機械の判定として出す。 */
+  function rowsFromEvidence(list) { return (list || []).map(function (x) { var f = x.facts || {}, d = f.diff_counts || {}, jd = x.judgement || {};
+      return { case: x.case, state: jd.state, fact: { rc: f.rc, added: d.added, removed: d.removed, updated: d.updated, reason: /^[a-z_]+$/.test(jd.reason || '') ? '判定規則 ' + jd.reason : jd.reason } }; }); }
+  function loadRunRows(r) { if (!r || ACTIVE[r.status] || S.rows[r.id]) return;
+    S.rows[r.id] = 'loading';
+    api('GET', '/runs/' + encodeURIComponent(r.id) + '/results').then(function (d) {
+      S.rows[r.id] = rowsFromEvidence(d.results); if (S.run && S.run.id === r.id) renderRunRows(S.run);
+    }).catch(function () { S.rows[r.id] = []; if (S.run && S.run.id === r.id) renderRunRows(S.run); }); }
   function renderRunRows(r) { var rows = (r && (r.results || r.partial)) ||
       (S.job.results || []).filter(function (x) { return r && x.run === r.id; });
+    var ev = r && S.rows[r.id];
+    if (!rows.length && r && !ACTIVE[r.status]) { if (Array.isArray(ev)) rows = ev; else loadRunRows(r); }
     var tb = $('#bs-run-rows'); tb.innerHTML = '';
     var count = {};
     rows.forEach(function (x) { count[x.state] = (count[x.state] || 0) + 1;
@@ -208,8 +220,10 @@
         time: x.duration != null ? fmtSec(x.duration) : '—', actual: x.actual != null ? x.actual : factText(x.fact) });
       pill(tr.querySelector('[data-f="state"]'), x.state); tb.appendChild(tr); });
     $('#bs-run-none').hidden = rows.length > 0;
+    $('#bs-run-none').textContent = !r ? 'まだ実行していません。' : ACTIVE[r.status] ? '結果を待っています。'
+      : ev === 'loading' ? 'この実行の結果を読み込んでいます…' : 'この実行で記録された結果はありません。証跡のログを確かめてください。';
     $('#bs-run-summary').textContent = rows.length ? Object.keys(count).map(function (k) { return (STATE_JA[k] || k) + ' ' + count[k];
-    }).join('・') : ''; }
+    }).join('・') + (rows === ev ? '（機械の判定・段階 7 の承認前）' : '') : ''; }
   // 接続先の登録（POST /envs）。パスワードは接続確認にだけ使われ、サーバは保存しない
   function bindEnvAdd() { var f = $('#bs-envadd-form'); if (!f) return;
     f.addEventListener('submit', function (e) { e.preventDefault();

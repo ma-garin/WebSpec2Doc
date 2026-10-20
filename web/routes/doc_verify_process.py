@@ -12,7 +12,7 @@ from flask import Blueprint, Response, jsonify, request
 
 from web.services.docverify import perm, presets, process
 
-bp = Blueprint("doc_verify_r4", __name__)
+bp = Blueprint("doc_verify_process", __name__)
 log = logging.getLogger(__name__)
 
 _IID = re.compile(r"^[0-9a-f]{12}$")

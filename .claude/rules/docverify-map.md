@@ -26,9 +26,10 @@ paths:
 ## 画面（1 ページ SPA）
 - 殻 `templates/doc_verify.html`（ルート `web/routes/doc_verify.py:66`、`dv_ver` を `?v=` に付与）
 - `DV.show(view)` が `.dv-view[data-view]` の hidden を切替え、`DV.on(view, fn)` の関数を実行（配列登録＝同じ画面に複数ファイルのハンドラが重なる）。hash と sessionStorage `dv-review` で復元（保存済みレビューがあると起動時に自動で開く）
-- JS 読込順（順序依存）: core → global → review → r2 → r3 → r4 → r5。core が `window.DV`（api/banner/toast/modal/busy/scoreBar）を作る
+- JS 読込順（順序依存）: core → global → viewpoints → review → ai（旧 r2）→ trace・trace-docs・trace-check・trace-report（旧 tier・tier-1〜3）→ process（旧 r4）→ accuracy（旧 r5）。core が `window.DV`（api/banner/toast/modal/busy/scoreBar）を作る
 - global.js: home / mine / reviews / findings / checklists / metrics / settings。review.js: レビュー内 7 画面（plan/read/triage/questions/followup/screen/gate、殻は `_review.html`）
-- r2.js は review/triage/settings に MutationObserver で注入。r3.js は setcheck（`_r3.html`）。r4.js は `#dvR4Parts` の部品を plan/triage/questions/gate に差し込む。r5.js は DV 非依存の #accuracy
+- ai.js は review/triage/settings に MutationObserver で注入。trace*.js は #trace（`_trace.html` と `_trace_docs/_check/_report.html`、API `/inspections/<iid>/tier`）。process.js は `#dvR4Parts`（`_process.html`）の部品を plan/triage/questions/gate に差し込む。accuracy.js は DV 非依存の #accuracy（`_accuracy.html`）
+- 2026-10-20 改名（G5）: 旧世代名ファイル r2〜r5・tier・tier-1〜3 を役割名に改名。旧 r3 画面（`_r3.html`・docverify-r3.js/css・#setcheck）は読み込まれていなかったため削除。API の URL（`/api/docverify/r2/...`・`/tier`）と DOM の id・class（`dvR4*`・`dvt*`）は互換のため不変
 - 新画面の追加は 3 点セット: サイドバー `data-nav`、core の `TITLES`（要レビューなら `REVIEW_VIEWS`）、partial と `DV.on`
 
 ## ホーム（data-view="home"）
@@ -42,7 +43,7 @@ paths:
 
 ## API（Blueprint 5 つ、`web/__init__.py` 145〜149 行で登録）
 - R1 `doc_verify.py`: 検査の CRUD・取り込み・指摘・質問票・照合・終了・報告・ホーム・設定。応答 `{inspection, summary}`
-- R2 `_r2`: AI 説明（同意トークン＝プロセス内メモリ）と監査。R3 `_r3`: 複数文書・矛盾・追跡表（`_state`）。R4 `_r4`: 工程・権限・楽観ロック・プリセット（`view`、rev 必須で無いと 409）。R5 `_r5`: GET /accuracy
+- R2 `doc_verify_ai.py`: AI 説明（同意トークン＝プロセス内メモリ）と監査。R3 `doc_verify_setcheck.py`: 複数文書・矛盾・追跡表（`_state`。画面からは呼ばれていない）。R4 `doc_verify_process.py`: 工程・権限・楽観ロック・プリセット（`view`、rev 必須で無いと 409）。R5 `doc_verify_accuracy.py`: GET /accuracy。トレーサビリティ `doc_verify_trace.py`
 - エラーは全て `{error}`（R4 は `code`/`errors` 付きあり）
 - 認可が 3 系統: R1・R4 は `perm.require`（役割×操作の表、認証オフは全許可）、R2 は `is_admin`/`is_approver`、R3・R5 は無し
 - **R1 の更新系は権限も rev も無く、R4 の権限と楽観ロックを迂回できる**。PATCH phase=closed は終了条件を検査しない

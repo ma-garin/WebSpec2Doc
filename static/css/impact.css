@@ -5,6 +5,13 @@
   --ok-bg:#DCFAE6;--ok-tx:#067647;--ng:#F04438;--ng-bg:#FEE4E2;--ng-tx:#B42318;--wa-bg:#FEF0C7;--wa-tx:#B54708;
   --im:#C2410C;--im-bg:#FFF7ED;--im-tx:#9A3412;--mono:'JetBrains Mono',ui-monospace,monospace}
 .im-page [hidden],.app-nav-item[hidden],.app-nav-group[hidden]{display:none!important}
+/* 共通シェルの群見出しは淡色で 2.68:1（WCAG AA 未満）。共通 CSS は編集しないため本画面だけ濃くする */
+.im-page .app-sidebar .app-nav-group{color:var(--color-text-secondary)}
+/* 装飾の矢印（aria-hidden）も 3:1 以上にする（共通の淡色は 2.59:1） */
+.im-page .dash-hero-arrow,.im-page .onboard-arrow{color:var(--color-text-secondary)}
+.im-site-cand{margin:0 0 16px;padding:12px 16px}
+.im-site-cand-list{display:flex;flex-wrap:wrap;gap:8px;list-style:none;margin:8px 0 0;padding:0}
+.im-site-cand code{overflow-wrap:anywhere}
 .im-page .sp{flex:1}
 .im-page :focus-visible{outline:2px solid var(--im);outline-offset:2px}
 .im-root,.im-view{display:flex;flex-direction:column;gap:16px;min-width:0}

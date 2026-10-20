@@ -121,6 +121,7 @@
     metrics: ['履歴', '過去の判定と記録、指摘の件数と修正の進み具合を見ます。', '数値は、画面に表示された時点の記録です。'],
     checklists: ['観点', '文書の検査で何を見るか、見つけた指摘をどれだけ重く扱うかを決めます。', '観点は区分ごとに、見る内容と重さを決められます。'],
     settings: ['設定', 'レビューで使う言葉と基準、AI の送信先を確認します。', 'AI に文書を送る前には、必ず送る内容の確認が出ます。'],
+    accuracy: ['精度', '自動検出の規則ごとの適合率・再現率を、評価セットでの測定値で示します。', '測定値は評価セットでの結果です。あなたの文書での正しさを保証するものではありません。'],
   };
   const PHASE_STATUS = { plan: ['preparing', '計画'], individual: ['running', '個別レビュー'], triage: ['waiting_review', '指摘の検討'], rework: ['running', '修正'], followup: ['waiting_review', '修正版の確認'], closed: ['done', '判定と記録'] };
   function renderPageHead(view) {

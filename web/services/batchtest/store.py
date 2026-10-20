@@ -1,12 +1,13 @@
 """案件（job）の保存と読み出し。1 案件 = 1 フォルダ（job.json と取り込んだファイル）。"""
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import re
 import tempfile
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 from web import config
@@ -27,7 +28,7 @@ class StoreError(ValueError):
 
 
 def now() -> str:
-    return datetime.now(timezone.utc).isoformat(timespec="seconds")
+    return datetime.now(UTC).isoformat(timespec="seconds")
 
 
 def _root() -> Path:
@@ -58,11 +59,39 @@ def new(name: str) -> dict:
     }
 
 
+EXPORT_KINDS = ("cases.xlsx", "code.zip", "questions.csv")
+
+
+def export_basis(job: dict, kind: str) -> str:
+    """書き出した中身の指紋。ケース表・質問票はケースから、テストコード一式はケースとコードから作る。"""
+    part: dict = {"cases": job.get("cases") or []}
+    if kind == "code.zip":
+        part["sources"] = job.get("sources") or []
+    raw = json.dumps(part, ensure_ascii=False, sort_keys=True).encode("utf-8")
+    return hashlib.sha256(raw).hexdigest()[:16]
+
+
+def with_export_state(job: dict) -> dict:
+    """書き出しの記録に「その後で中身が変わったか（stale）」を付ける。
+
+    記録はサーバがファイルを送り出した事実だけ。受け取り・実行・確認は記録しない（画面では未実行・未確認のまま）。
+    """
+    exports = job.get("exports")
+    if not isinstance(exports, dict) or not exports:
+        return job
+    marked = {
+        kind: {**rec, "stale": rec.get("basis") != export_basis(job, kind)}
+        for kind, rec in exports.items()
+        if kind in EXPORT_KINDS and isinstance(rec, dict)
+    }
+    return {**job, "exports": marked}
+
+
 def load(jid: str) -> dict:
     path = job_dir(jid) / "job.json"
     if not path.is_file():
         raise KeyError(jid)
-    return json.loads(path.read_text(encoding="utf-8"))
+    return with_export_state(json.loads(path.read_text(encoding="utf-8")))
 
 
 def save(job: dict) -> dict:
@@ -77,7 +106,7 @@ def save(job: dict) -> dict:
     except BaseException:
         Path(tmp).unlink(missing_ok=True)
         raise
-    return job
+    return with_export_state(job)
 
 
 def summary(job: dict) -> dict:

@@ -31,11 +31,11 @@ def create_app() -> Flask:
         batch_test,
         impact,
         doc_verify,
-        doc_verify_r5,
-        doc_verify_r3,
-        doc_verify_r2,
-        doc_verify_r4,
-        doc_verify_tier,
+        doc_verify_accuracy,
+        doc_verify_setcheck,
+        doc_verify_ai,
+        doc_verify_process,
+        doc_verify_trace,
         history,
         integrations,
         llm_chat,
@@ -154,11 +154,11 @@ def create_app() -> Flask:
     app.register_blueprint(healing.bp)
     # ドキュメント検証（System 06）。独立した入口 /docverify を持つ。
     app.register_blueprint(doc_verify.bp)
-    app.register_blueprint(doc_verify_r5.bp)
-    app.register_blueprint(doc_verify_r3.bp)
-    app.register_blueprint(doc_verify_r2.bp)
-    app.register_blueprint(doc_verify_r4.bp)
-    app.register_blueprint(doc_verify_tier.bp)
+    app.register_blueprint(doc_verify_accuracy.bp)
+    app.register_blueprint(doc_verify_setcheck.bp)
+    app.register_blueprint(doc_verify_ai.bp)
+    app.register_blueprint(doc_verify_process.bp)
+    app.register_blueprint(doc_verify_trace.bp)
     # バッチ・スクリプトのテスト（System 07）。独立した入口 /batch-test を持つ。
     app.register_blueprint(batch_test.bp)
     # バッチ・バックエンドのテスト（System 08）。独立した入口 /backend-test を持つ。

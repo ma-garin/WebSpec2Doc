@@ -9,7 +9,7 @@ import logging
 
 from flask import Blueprint, jsonify
 
-bp = Blueprint("doc_verify_r5", __name__)
+bp = Blueprint("doc_verify_accuracy", __name__)
 log = logging.getLogger(__name__)
 
 

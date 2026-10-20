@@ -453,7 +453,7 @@
   function renderQuestions(view) {
     var qs = (rv().findings || []).filter(function (f) { return f.certainty === '要確認' && f.status !== 'rejected'; });
     part(view, 'headright').innerHTML = '<a class="b" href="' + esc(base() + '/questions.csv') + '">CSV で出力</a><a class="b" href="' + esc(base() + '/questions.xlsx') + '">Excel で出力</a>';
-    part(view, 'body').innerHTML = '<div class="dv-panel" style="margin:0 0 12px">回答を書き込んだ CSV を取り込む: <input type="file" accept=".csv" data-file> <button type="button" class="b p" data-act="ans">取り込む</button></div>' +
+    part(view, 'body').innerHTML = '<div class="dv-panel" style="margin:0 0 12px"><label>回答を書き込んだ CSV を取り込む: <input type="file" accept=".csv" data-file></label> <button type="button" class="b p" data-act="ans">取り込む</button></div>' +
       (qs.length ? '<table class="dv-t"><thead><tr><th>No.</th><th>場所</th><th>質問</th><th>回答</th></tr></thead><tbody>' + qs.map(function (f, i) {
         return '<tr><td>' + (i + 1) + '</td><td class="loc">' + esc(f.location) + '</td><td>' + esc(f.message) + '</td><td>' + (f.answer ? esc(f.answer) : '<span class="role">未回答</span>') + '</td></tr>';
       }).join('') + '</tbody></table>' : empty('作成者への質問はありません。文書を読む画面で「作成者に質問」を押すとここに並びます。'));

@@ -11,7 +11,7 @@ from pathlib import Path
 from flask import Blueprint, jsonify, request
 
 log = logging.getLogger(__name__)
-bp = Blueprint("doc_verify_tier", __name__)
+bp = Blueprint("doc_verify_trace", __name__)
 
 _IID = re.compile(r"^[0-9a-f]{12}$")
 _P = "/api/docverify/inspections/<iid>/tier"

@@ -330,6 +330,15 @@ def record_comparison_from_report(
     )
 
 
+def _a11y_violations_of(screen: dict) -> list:
+    """新キー a11y_violations を優先し、旧キー axe_violations にフォールバックする（二重計上しない）。"""
+    new = screen.get("a11y_violations")
+    if isinstance(new, list):
+        return new
+    old = screen.get("axe_violations")
+    return old if isinstance(old, list) else []
+
+
 def record_ux_review_from_report(
     output_root: Path,
     domain: str,
@@ -338,7 +347,7 @@ def record_ux_review_from_report(
     """UX レビュー完了後、生成された ux_review.json から実績を集計して記録する（AC-2）。
 
     ux_review.json（generator.ux_reporter.save_ux_outputs の出力）が無い/壊れている
-    場合は記録自体をスキップする。指摘数は axe 違反とニールセン所見の合計。
+    場合は記録自体をスキップする。指摘数はアクセシビリティ違反とニールセン所見の合計。
     """
     if not ux_review_json_path.is_file():
         logger.warning(
@@ -357,7 +366,7 @@ def record_ux_review_from_report(
     screens = data.get("screens") or []
     screen_count = len(screens)
     finding_count = sum(
-        len(screen.get("axe_violations") or []) + len(screen.get("ux_findings") or [])
+        len(_a11y_violations_of(screen)) + len(screen.get("ux_findings") or [])
         for screen in screens
     )
     return record_usage(

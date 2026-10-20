@@ -4,6 +4,7 @@ import logging
 from pathlib import Path
 
 from playwright.sync_api import Browser, sync_playwright
+from browser_detect import launch_browser
 
 DEFAULT_AUTH_FILE = "auth.json"
 LOGIN_PROMPT = "ブラウザでログインを完了したら、このターミナルで Enter を押してください... "
@@ -14,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 def capture_auth_state(login_url: str, output_path: Path) -> Path:
     with sync_playwright() as playwright:
-        browser = playwright.chromium.launch(headless=False)
+        browser = launch_browser(playwright, headless=False)
         try:
             context = browser.new_context()
             page = context.new_page()

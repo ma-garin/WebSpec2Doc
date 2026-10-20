@@ -102,11 +102,13 @@ def test_route_の純粋ルール_同一path複数は_ambiguous_path不明は_un
 def test_HTTP_method_は_Evidence_に無いので全て欠測のまま(controlled: Any) -> None:
     doc = controlled.document
     apis = [c for c in doc["static_candidates"] if c["kind"] == "api"]
-    assert apis and all(c["method"] is None for c in apis)
+    # method は静的な構文（fetch の options・XHR#open の引数）から読めたものだけ。実測の値とは扱わない
+    assert apis and all(c["method"] is None or "method_from_static_syntax" in c["limitations"] for c in apis)
     api_ids = {c["id"] for c in apis}
     for relation in doc["relations"]:
         if set(relation["static_ids"]) & api_ids:
-            assert relation["classification"] in ("unknown", "ambiguous")
+            # method/path が揃っても推定（inferred）止まり。matched にはしない
+            assert relation["classification"] in ("unknown", "ambiguous", "inferred")
             assert relation["classification"] != "matched"
 
 

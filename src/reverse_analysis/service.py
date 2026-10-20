@@ -15,6 +15,7 @@ from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any
 
+from reverse_analysis import api_resolve
 from reverse_analysis.models import Coverage, Diagnostic
 from reverse_analysis.normalize import StaticNormalization, UnsupportedNode, normalize_static
 from reverse_analysis.rea_adapter import AdapterResult, run_static_analysis
@@ -113,6 +114,10 @@ def run_reverse_analysis(
     if runtime is None:
         runtime = _cancelled_runtime()
     static = _with_provider_limits(normalize_static(adapter))
+    if static.status in ("complete", "partial"):  # REA が解析できた入力だけを補う（失敗・中止は候補を足さない）
+        refined, extra = api_resolve.refine(static.candidates, Path(request.js_input), "",
+                                            {a.path: a.sha256 for a in static.artifacts})
+        static = replace(static, candidates=refined, diagnostics=(*static.diagnostics, *extra))
     document = _document(request, runtime, static)
 
     try:

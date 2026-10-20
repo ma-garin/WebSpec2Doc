@@ -81,14 +81,14 @@
     "static_evidence": 0
   },
   "after": {
-    "output_sha256": "a8ae0c4dc04cda5ad3a94f4c5fae13811b323fb85b671642ddb29e3c234845dc",
-    "output_bytes": 11225,
+    "output_sha256": "6492b49c65ba45d7ed7b7bd735be3da2dc883d18b87e52f6b4fbc8f72ebcedbb",
+    "output_bytes": 11294,
     "summary": {
       "static_candidates": 4,
       "observed_api_records": 3,
-      "inferred_relations": 0,
+      "inferred_relations": 1,
       "ambiguous_relations": 0,
-      "unknown_relations": 6,
+      "unknown_relations": 4,
       "matched_relations": 0
     },
     "candidates_by_kind": {
@@ -103,6 +103,7 @@
     "not_counted_as_new": [
       "gt-api-items"
     ],
+    "output_change_2026_10_20b": "API 候補の method を静的な構文から読み、根拠を limitations（method_from_static_syntax）に残し、候補に path_pattern（未確定の候補の表示用パターン）を加えたため更新。method が読めた候補が自動対応の対象になり、実測と同じ method・path の 1 組が unknown 2 件から inferred 1 件になった（matched にはしない）。候補数は不変（旧 a8ae0c4dc04cda5ad3a94f4c5fae13811b323fb85b671642ddb29e3c234845dc・11225 bytes）",
     "output_change_2026_10_20": "route 不在の診断文を「0 件ではなく利用不可」と明記したため hash/bytes だけ更新（旧 76e4d8acde4c47f402910f3ee669451def555d1ab00ff32b85c24a62573bb29f・11050 bytes）。summary と候補数は不変",
     "output_change_2026_10_19": "FINAL_REAL_REA で出力が変わったため hash/bytes だけ更新（旧 6ab4ce2ff8019416177de44b15e4f60564351f1ba57910ecbec390d54ab9aef6・10942 bytes）。理由: 実 REA は route を返すと判明し route 不在の診断文を訂正、source 候補に鮮度・行対応未確認の制限を追加。summary と候補数は不変。cost_fake_provider の after_output_bytes・wall・RSS は旧 schema での測定値のまま（新出力で測り直していない）"
   },

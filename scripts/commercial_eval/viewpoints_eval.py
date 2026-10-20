@@ -36,7 +36,21 @@ CATEGORY_RULES = (
 )
 
 
+# 製品の正規カテゴリ → 評価データのカテゴリ名。navigation（画面間の遷移）はどの評価カテゴリにも数えない
+CANONICAL = {"normal": "normal", "invalid": "abnormal", "boundary": "boundary", "required": "required",
+             "format": "format", "state_transition": "state_transition", "permission": "permission",
+             "error": "error", "api": "api", "persistence": "persistence", "retry": "retry", "timeout": "timeout",
+             "empty": "empty", "duplicate": "duplicate", "navigation": None}
+# 評価データが categories を宣言していなければ、従来の 10 カテゴリだけを数える（付けていないカテゴリを FP にしない）
+LEGACY_CATEGORIES = ("normal", "abnormal", "boundary", "required", "format", "state_transition", "permission",
+                     "error", "api", "persistence")
+
+
 def categories(test: dict) -> set[str]:
+    """製品が付けた正規カテゴリがあればそれだけを使う（文言で数えない）。古い出力だけ名前の規則で寄せる。"""
+    if test.get("category"):
+        c = CANONICAL.get(test["category"])
+        return {c} if c else set()
     tech, name = test.get("technique") or "", test.get("name") or ""
     return {c for c, t, n in CATEGORY_RULES if (t != "^$" and re.search(t, tech)) or re.search(n, name)}
 
@@ -49,6 +63,8 @@ def evaluate(out_dir: Path, expected: dict) -> dict:
     got: dict[str, set[str]] = {}
     for t in tests:
         got.setdefault(name_of.get(t.get("screen"), ""), set()).update(categories(t))
+    scope = set(expected.get("categories") or LEGACY_CATEGORIES)
+    got = {k: v & scope for k, v in got.items()}
     tp = fp = fn = 0
     per_cat: dict[str, list[int]] = {}
     missing_screens = []

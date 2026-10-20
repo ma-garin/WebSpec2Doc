@@ -577,7 +577,7 @@ def expression_path_pattern(expression: str | None) -> str | None:
     """REA が path を解決できなかった呼び出し先の式から、表示用の path パターンを作る。
 
     テンプレート文字列（`/a/${x}`）と文字列連結（'/a/' + x + '/b'）を扱い、変数部分を :param にする。
-    先頭が変数（ベース URL の定数など）のときは、その後ろの path だけを使う。path が作れなければ None。
+    先頭が変数（解決できないベース URL など）のときは、後ろだけを path と見なさず None を返す（推測しない）。
     推論した値なので、呼び出し側は「候補」としてだけ扱うこと。
     """
     text = (expression or "").strip()
@@ -594,9 +594,7 @@ def expression_path_pattern(expression: str | None) -> str | None:
             out.append(re.sub(r"\$\{[^}]*\}", ":param", lit.group(2)))
         elif out:
             out.append(":param")
-        elif i == 0:
-            continue  # 先頭のベース URL 定数
         else:
-            return None
+            return None  # 先頭が解決できない値: 後ろの path だけでは呼び出し先にならない
     path = "".join(out)
     return path if path.startswith("/") else None

@@ -1,0 +1,279 @@
+{"id": "V3-001", "text": "夜間メンテナンス中は、画面上部にお知らせバナーを表示する。", "labels": [], "note": "問題なし"}
+{"id": "V3-002", "text": "商品画像は、1 商品あたり 8 枚まで掲載できる。", "labels": [], "note": "問題なし"}
+{"id": "V3-003", "text": "本機能は、Chrome の最新版と Firefox の最新版で動作する。", "labels": [], "note": "問題なし"}
+{"id": "V3-004", "text": "全角英数字で入力された値は、半角に変換して保存する。", "labels": [], "note": "[紛REQ.UNIVERSAL] 全角"}
+{"id": "V3-005", "text": "その後、システムは画面を最新の状態に更新する。", "labels": [], "note": "[紛REQ.OPEN_ENDED] その後"}
+{"id": "V3-006", "text": "画面は、短時間で切り替わること。", "labels": ["REQ.MEASURABILITY"], "note": "陽性: 短時間"}
+{"id": "V3-007", "text": "添付ファイルは、一定サイズを超えた場合に圧縮する。", "labels": ["REQ.MEASURABILITY"], "note": "陽性: 一定サイズ"}
+{"id": "V3-008", "text": "閲覧権限は、部署及び／又は役職に基づいて付与する。", "labels": ["REQ.AND_OR"], "note": "陽性: 及び／又は"}
+{"id": "V3-009", "text": "申請手続きは、窓口と連携して円滑に進める。", "labels": ["AMBIGUOUS"], "note": "陽性: 円滑に"}
+{"id": "V3-010", "text": "通知は、メールとアプリ内メッセージの 2 経路で送る。", "labels": [], "note": "[紛REQ.OPEN_ENDED] 閉じた列挙"}
+{"id": "V3-011", "text": "見積書は、顧客の事情を考慮した形で作成する。", "labels": ["AMBIGUOUS"], "note": "陽性: 考慮した形"}
+{"id": "V3-012", "text": "同時に多数の利用者が接続できること。", "labels": ["REQ.MEASURABILITY"], "note": "陽性: 多数"}
+{"id": "V3-013", "text": "動画教材は、再生を中断した位置から再開できる。", "labels": [], "note": "問題なし"}
+{"id": "V3-014", "text": "誰でもデータを閲覧できる。", "labels": ["REQ.UNIVERSAL"], "note": "陽性: 誰でも"}
+{"id": "V3-015", "text": "後日配送を選択した注文には、配送希望日を設定できない。", "labels": [], "note": "[紛REQ.INCOMPLETE] 配送オプション名"}
+{"id": "V3-016", "text": "送料は、購入金額が 5,000 円以上の場合に無料とする。", "labels": [], "note": "問題なし"}
+{"id": "V3-017", "text": "配送料の上限額は未定である。", "labels": ["REQ.INCOMPLETE"], "note": "陽性: 未定(状態値でない)"}
+{"id": "V3-018", "text": "倉庫の入庫予定は、前日の 18 時までに登録する。", "labels": [], "note": "問題なし"}
+{"id": "V3-019", "text": "全体の消費税額は、小数点以下を切り捨てて表示する。", "labels": [], "note": "[紛REQ.UNIVERSAL] 全体"}
+{"id": "V3-020", "text": "アラートは、閾値超過や通信断ほか、異常と判断される事象を検知した際に発報する。", "labels": ["REQ.OPEN_ENDED"], "note": "陽性: ほか"}
+{"id": "V3-021", "text": "バックアップは、頻繁に取得する。", "labels": ["REQ.MEASURABILITY"], "note": "陽性: 頻繁に"}
+{"id": "V3-022", "text": "住所は、都道府県、市区町村、番地、建物名の 4 項目に分けて保存する。", "labels": [], "note": "[紛REQ.OPEN_ENDED] 件数を明示した列挙"}
+{"id": "V3-023", "text": "返品は、店頭／郵送で受け付ける。", "labels": ["REQ.AND_OR"], "note": "陽性: A／B"}
+{"id": "V3-024", "text": "契約内容が確定した時点で、契約書の版数を文書管理表に記録する。", "labels": [], "note": "[紛REQ.INCOMPLETE] 確定を条件にしているだけ"}
+{"id": "V3-025", "text": "システムは、請求書を PDF で出力するとともに、CSV でもダウンロードできるようにする。", "labels": ["REQ.MULTIPLE_REQUIREMENTS"], "note": "陽性: 出力とダウンロード"}
+{"id": "V3-026", "text": "課金のタイミングは仮置きであり、運用開始までに確定する。", "labels": ["REQ.INCOMPLETE"], "note": "陽性: 仮置き"}
+{"id": "V3-027", "text": "登録には、氏名および電話番号の両方が必要である。", "labels": [], "note": "[紛REQ.AND_OR] 単純な および"}
+{"id": "V3-028", "text": "処方箋の有効期間は、交付日を含めて 4 日間とする。", "labels": [], "note": "問題なし"}
+{"id": "V3-029", "text": "現地通貨での支払額は、予約日の為替レートで円換算して表示する。", "labels": [], "note": "問題なし"}
+{"id": "V3-030", "text": "毎週月曜日の午前 3 時に、週次集計を実行する。", "labels": [], "note": "[紛REQ.UNIVERSAL] 毎週は周期の指定"}
+{"id": "V3-031", "text": "項目：パスワード長、値：8 文字以上 64 文字以下。", "labels": [], "note": "問題なし"}
+{"id": "V3-032", "text": "保護者は、自身の子の出欠状況のみ参照できる。", "labels": [], "note": "問題なし"}
+{"id": "V3-033", "text": "通知は、メール、SMS、その他の手段で送信する。", "labels": ["REQ.OPEN_ENDED"], "note": "陽性: その他"}
+{"id": "V3-034", "text": "外貨預金の為替レートは、15 分ごとに更新する。", "labels": [], "note": "問題なし"}
+{"id": "V3-035", "text": "予約画面は、高齢の利用者にも使いやすい構成とする。", "labels": ["AMBIGUOUS"], "note": "陽性: 使いやすい"}
+{"id": "V3-036", "text": "診察券番号が未入力の場合は、受付を完了できない。", "labels": [], "note": "問題なし"}
+{"id": "V3-037", "text": "物件写真は、1 件につき 20 枚まで登録できる。", "labels": [], "note": "問題なし"}
+{"id": "V3-038", "text": "利用者は、メールおよび/またはSMSで通知を受信できる。", "labels": ["REQ.AND_OR"], "note": "陽性: および/または"}
+{"id": "V3-039", "text": "パスワードは必ず暗号化して保存する。", "labels": ["REQ.UNIVERSAL"], "note": "陽性: 必ず"}
+{"id": "V3-040", "text": "他の利用者の予約情報は、参照できない。", "labels": [], "note": "[紛REQ.OPEN_ENDED] 単なる他の"}
+{"id": "V3-041", "text": "一部の項目は、閲覧者の権限により非表示とする。", "labels": [], "note": "[紛REQ.UNIVERSAL] 一部"}
+{"id": "V3-042", "text": "ログイン後の初回表示画面は、ダッシュボードとする。", "labels": [], "note": "問題なし"}
+{"id": "V3-043", "text": "外部決済サービスとの連携方式は、要検討とする。", "labels": ["REQ.INCOMPLETE"], "note": "陽性: 要検討"}
+{"id": "V3-044", "text": "申請書の様式は、PDF 形式でダウンロードできる。", "labels": [], "note": "問題なし"}
+{"id": "V3-045", "text": "認証方式は未決定のため、本書では記載しない。", "labels": ["REQ.INCOMPLETE"], "note": "陽性: 未決定"}
+{"id": "V3-046", "text": "担当者は、検索条件を入力し、該当する注文の一覧を取得できる。", "labels": [], "note": "[紛REQ.MULTIPLE_REQUIREMENTS] 操作+1要求"}
+{"id": "V3-047", "text": "給与明細は、毎月 25 日の 9 時に公開する。", "labels": [], "note": "問題なし"}
+{"id": "V3-048", "text": "検索結果の適合率を、再現率とあわせて月次で集計する。", "labels": [], "note": "[紛AMBIGUOUS] 指標名の適合率"}
+{"id": "V3-049", "text": "エラー表示は、利用者に配慮した文言とする。", "labels": ["AMBIGUOUS"], "note": "陽性: 配慮した"}
+{"id": "V3-050", "text": "会員は、氏名、住所、電話番号等の登録情報を変更できる。", "labels": ["REQ.OPEN_ENDED"], "note": "陽性: 等"}
+{"id": "V3-051", "text": "通信に失敗した場合は、数回再試行する。", "labels": ["REQ.MEASURABILITY"], "note": "陽性: 数回"}
+{"id": "V3-052", "text": "配送先住所は、1 アカウントにつき 10 件まで登録できる。", "labels": [], "note": "問題なし"}
+{"id": "V3-053", "text": "傷病名と全治見込み期間を、診療記録に入力する。", "labels": [], "note": "[紛REQ.UNIVERSAL] 全治"}
+{"id": "V3-054", "text": "支払状況が「未定」の場合は、請求書を発行しない。", "labels": [], "note": "[紛REQ.INCOMPLETE] 状態値としての未定"}
+{"id": "V3-055", "text": "帳票は、請求書、納品書を含む各種書類を出力できる。", "labels": ["REQ.OPEN_ENDED"], "note": "陽性: を含む各種"}
+{"id": "V3-056", "text": "年齢制限のある作品は、保護者設定が有効な場合に表示しない。", "labels": [], "note": "問題なし"}
+{"id": "V3-057", "text": "氏名と生年月日を入力すると、年齢が自動計算される。", "labels": [], "note": "[紛REQ.MULTIPLE_REQUIREMENTS] 入力が条件の1要求"}
+{"id": "V3-058", "text": "本人確認書類は、運転免許証 and/or マイナンバーカードとする。", "labels": ["REQ.AND_OR"], "note": "陽性: and/or"}
+{"id": "V3-059", "text": "患者情報を暗号化して保存し、5 年経過後に自動で削除する。", "labels": ["REQ.MULTIPLE_REQUIREMENTS"], "note": "陽性: 暗号化保存と削除"}
+{"id": "V3-060", "text": "返金額は、妥当な範囲で算出する。", "labels": ["AMBIGUOUS"], "note": "陽性: 妥当な"}
+{"id": "V3-061", "text": "管理者は、状況に応じて承認経路を切り替える。", "labels": ["AMBIGUOUS"], "note": "陽性: 状況に応じて"}
+{"id": "V3-062", "text": "通信に失敗した場合は、最大 3 回まで再試行する。", "labels": [], "note": "[紛REQ.MEASURABILITY] 回数が明記"}
+{"id": "V3-063", "text": "ログは、サーバー側／クライアント側に保存する。", "labels": ["REQ.AND_OR"], "note": "陽性: A／B"}
+{"id": "V3-064", "text": "注文確定後 30 分以内であれば、利用者は注文をキャンセルできる。", "labels": [], "note": "問題なし"}
+{"id": "V3-065", "text": "レビューの投稿は、購入済みの商品に限り受け付ける。", "labels": [], "note": "問題なし"}
+{"id": "V3-066", "text": "管理者は、ユーザーを登録でき、削除もできる。", "labels": ["REQ.MULTIPLE_REQUIREMENTS"], "note": "陽性: 登録と削除"}
+{"id": "V3-067", "text": "決してユーザーの許可なく、位置情報を取得しない。", "labels": ["REQ.UNIVERSAL"], "note": "陽性: 決して"}
+{"id": "V3-068", "text": "在庫数がマイナスとなる出庫は、受け付けない。", "labels": [], "note": "問題なし"}
+{"id": "V3-069", "text": "システムは、入力された郵便番号から住所を検索して自動入力する。", "labels": [], "note": "[紛REQ.MULTIPLE_REQUIREMENTS] 一連の1機能"}
+{"id": "V3-070", "text": "小テストは、制限時間 20 分で自動的に終了する。", "labels": [], "note": "問題なし"}
+{"id": "V3-071", "text": "検索結果は、要求から 2 秒以内に表示する。", "labels": [], "note": "[紛REQ.MEASURABILITY] 数値と単位"}
+{"id": "V3-072", "text": "稼働状況テーブルには、機器ごとの最新の状態を保持する。", "labels": [], "note": "[紛AMBIGUOUS] 名詞としての状況"}
+{"id": "V3-073", "text": "利用者の表示名は、2 文字以上 20 文字以下で入力する。", "labels": [], "note": "問題なし"}
+{"id": "V3-074", "text": "一般ユーザーは、他の利用者の予約履歴を参照できない。", "labels": [], "note": "[紛AMBIGUOUS] ロール名の一般"}
+{"id": "V3-075", "text": "潤滑油の残量が 10% 未満になった場合、保守担当者へメールで通知する。", "labels": [], "note": "[紛AMBIGUOUS] 円滑に似た潤滑油"}
+{"id": "V3-076", "text": "項目：通知手段、値：メール／SMS。", "labels": ["REQ.AND_OR"], "note": "陽性: 表形式 A／B"}
+{"id": "V3-077", "text": "一覧画面は、1 ページあたり 50 件表示する。", "labels": [], "note": "[紛REQ.MEASURABILITY] 件数が明記"}
+{"id": "V3-078", "text": "物件を検索でき、気に入った物件をお気に入りに登録できる。", "labels": ["REQ.MULTIPLE_REQUIREMENTS"], "note": "陽性: 検索と登録"}
+{"id": "V3-079", "text": "パスワードは、90 日ごとに変更を促す。", "labels": [], "note": "[紛REQ.MEASURABILITY] 頻度が明記"}
+{"id": "V3-080", "text": "システムは、利用者の入力内容を検証し、検証結果をログに記録する。", "labels": ["REQ.MULTIPLE_REQUIREMENTS"], "note": "陽性: 検証とログ記録"}
+{"id": "V3-081", "text": "どの支店の窓口からでも、同じ口座情報を参照できる。", "labels": ["REQ.UNIVERSAL"], "note": "陽性: どの〜でも"}
+{"id": "V3-082", "text": "電子申請の受付番号は、申請完了時に画面へ表示される。", "labels": [], "note": "問題なし"}
+{"id": "V3-083", "text": "項目：付与権限、値：全ユーザーに付与。", "labels": ["REQ.UNIVERSAL"], "note": "陽性: 表形式 全ユーザー"}
+{"id": "V3-084", "text": "退職者のアカウントは、退職日の翌日に無効化される。", "labels": [], "note": "問題なし"}
+{"id": "V3-085", "text": "決済機能は、高い信頼性を備える。", "labels": ["REQ.MEASURABILITY"], "note": "陽性: 高い信頼性"}
+{"id": "V3-086", "text": "医師は、診察室の端末から電子カルテを参照できる。", "labels": [], "note": "問題なし"}
+{"id": "V3-087", "text": "管理者アカウントでの操作は、操作ログに記録される。", "labels": [], "note": "問題なし"}
+{"id": "V3-088", "text": "会員割引とクーポンを併用した場合に限り、5% を追加で割引する。", "labels": [], "note": "[紛REQ.AND_OR] 併用の明示"}
+{"id": "V3-089", "text": "検査結果は、血圧・脈拍・体温等を時系列で表示する。", "labels": ["REQ.OPEN_ENDED"], "note": "陽性: 等"}
+{"id": "V3-090", "text": "動画を再生する際に画質を自動調整し、再生履歴を保存する。", "labels": ["REQ.MULTIPLE_REQUIREMENTS"], "note": "陽性: 画質調整と履歴保存"}
+{"id": "V3-091", "text": "○○部門の承認者は、課長以上とする。", "labels": ["REQ.INCOMPLETE"], "note": "陽性: ○○"}
+{"id": "V3-092", "text": "勤怠入力は、ストレスなく行えること。", "labels": ["AMBIGUOUS"], "note": "陽性: ストレスなく"}
+{"id": "V3-093", "text": "添付ファイルは、10 MB を超えた場合に圧縮する。", "labels": [], "note": "[紛REQ.MEASURABILITY] 閾値が明記"}
+{"id": "V3-094", "text": "画像の最大幅は 1200 px とする。", "labels": [], "note": "[紛REQ.MEASURABILITY] 単位が明記"}
+{"id": "V3-095", "text": "管理者は、ログインしてユーザー一覧を閲覧できる。", "labels": [], "note": "[紛REQ.MULTIPLE_REQUIREMENTS] 操作+1要求"}
+{"id": "V3-096", "text": "生産ラインの稼働実績は、シフトごとに集計する。", "labels": [], "note": "問題なし"}
+{"id": "V3-097", "text": "写真は、高画質で保存する。", "labels": ["REQ.MEASURABILITY"], "note": "陽性: 高画質"}
+{"id": "V3-098", "text": "配達員のアプリは、受取人の不在時に不在票の発行画面を開く。", "labels": [], "note": "問題なし"}
+{"id": "V3-099", "text": "未決済の注文は、24 時間後に自動でキャンセルする。", "labels": [], "note": "[紛REQ.INCOMPLETE] 未決済という状態"}
+{"id": "V3-100", "text": "受診予約のキャンセル料は、追って決定する。", "labels": ["REQ.INCOMPLETE"], "note": "陽性: 追って決定"}
+{"id": "V3-101", "text": "担当医／看護師は、投薬記録を入力できる。", "labels": ["REQ.AND_OR"], "note": "陽性: A／B(主語)"}
+{"id": "V3-102", "text": "承認は、課長および部長の両者が行う。", "labels": [], "note": "[紛REQ.AND_OR] 両者と明示"}
+{"id": "V3-103", "text": "管理者は、権限、所属、役職等々の属性でユーザーを絞り込める。", "labels": ["REQ.OPEN_ENDED"], "note": "陽性: 等々"}
+{"id": "V3-104", "text": "学生は、履修登録期間中に科目を追加または削除できる。", "labels": [], "note": "[紛REQ.MULTIPLE_REQUIREMENTS] 同一機能の選択"}
+{"id": "V3-105", "text": "処理名：夜間集計バッチ、実行時刻：毎日 02:00、再実行回数：最大 2 回。", "labels": [], "note": "問題なし"}
+{"id": "V3-106", "text": "利用者は、商品を選び、カートに追加できる。", "labels": [], "note": "[紛REQ.MULTIPLE_REQUIREMENTS] 操作+1要求"}
+{"id": "V3-107", "text": "データ移行の範囲は、現在調整中である。", "labels": ["REQ.INCOMPLETE"], "note": "陽性: 調整中"}
+{"id": "V3-108", "text": "検査工程で不良と判定された部品は、廃棄ボックスへ搬送する。", "labels": [], "note": "問題なし"}
+{"id": "V3-109", "text": "受講者向けの案内は、分かりやすい言葉で表示する。", "labels": ["AMBIGUOUS"], "note": "陽性: 分かりやすい"}
+{"id": "V3-110", "text": "取引記録は、長期間保管する。", "labels": ["REQ.MEASURABILITY"], "note": "陽性: 長期間"}
+{"id": "V3-111", "text": "アレルギー情報が登録されている患者の処方には、確認ダイアログを表示する。", "labels": [], "note": "問題なし"}
+{"id": "V3-112", "text": "在庫一覧は、見やすい形式で出力する。", "labels": ["AMBIGUOUS"], "note": "陽性: 見やすい"}
+{"id": "V3-113", "text": "振動値が 5 mm/s を超えた場合、設備保全担当者へ通知する。", "labels": [], "note": "[紛REQ.AND_OR] 単位の毎"}
+{"id": "V3-114", "text": "郵便番号の妥当性は、7 桁の数字であるかどうかで判定する。", "labels": [], "note": "[紛AMBIGUOUS] 妥当性の判定基準を明記"}
+{"id": "V3-115", "text": "適正在庫数には、商品マスタに登録された値を用いる。", "labels": [], "note": "[紛AMBIGUOUS] 参照先が定まった用語"}
+{"id": "V3-116", "text": "在庫が 5 個未満の商品を抽出し、一覧に表示する。", "labels": [], "note": "[紛REQ.MULTIPLE_REQUIREMENTS] 抽出と表示は1機能"}
+{"id": "V3-117", "text": "例外なく、全職員が年 1 回の研修を受講する。", "labels": ["REQ.UNIVERSAL"], "note": "陽性: 例外なく・全職員"}
+{"id": "V3-118", "text": "復旧時間の目標は、別途定める迅速な水準とする。", "labels": ["REQ.INCOMPLETE", "REQ.MEASURABILITY"], "note": "陽性: 別途定める+迅速"}
+{"id": "V3-119", "text": "項目：郵便番号、型：文字列、桁数：7 桁、必須：はい。", "labels": [], "note": "問題なし"}
+{"id": "V3-120", "text": "承認者は、課長と/または部長とする。", "labels": ["REQ.AND_OR"], "note": "陽性: と/または"}
+{"id": "V3-121", "text": "受信メールは、件名と本文を保存する。", "labels": [], "note": "[紛REQ.MULTIPLE_REQUIREMENTS] 対象が2つでも1要求"}
+{"id": "V3-122", "text": "管理者は、ユーザー追加といった各種操作を実行できる。", "labels": ["REQ.OPEN_ENDED"], "note": "陽性: といった"}
+{"id": "V3-123", "text": "注文のキャンセルは、顧客及び/又は店舗が実施できる。", "labels": ["REQ.AND_OR"], "note": "陽性: 及び/又は"}
+{"id": "V3-124", "text": "進捗率が 3/4 を超えた時点で、案件を「終盤」と表示する。", "labels": [], "note": "[紛REQ.AND_OR] 分数"}
+{"id": "V3-125", "text": "契約書は、署名が完了した時点で PDF として保存される。", "labels": [], "note": "問題なし"}
+{"id": "V3-126", "text": "住所検索は、都道府県名、市区町村名、町域名ほかで絞り込める。", "labels": ["REQ.OPEN_ENDED"], "note": "陽性: ほか"}
+{"id": "V3-127", "text": "従業員は、月末までに翌月の休暇申請を提出する。", "labels": [], "note": "問題なし"}
+{"id": "V3-128", "text": "画面の文字サイズは、標準、大、特大の 3 段階から選べる。", "labels": [], "note": "問題なし"}
+{"id": "V3-129", "text": "「その他」を選択した場合は、自由記述欄に理由を 100 文字以内で入力する。", "labels": [], "note": "[紛REQ.OPEN_ENDED] 選択肢名のその他"}
+{"id": "V3-130", "text": "利用者は、画面右上の「適用」ボタンで設定を反映できる。", "labels": [], "note": "[紛AMBIGUOUS] 適宜に似た「適用」"}
+{"id": "V3-131", "text": "洗剤や柔軟剤の在庫数は、商品マスタから取得する。", "labels": [], "note": "[紛AMBIGUOUS] 商品名の柔軟剤"}
+{"id": "V3-132", "text": "配送先は、自宅もしくは/および職場とする。", "labels": ["REQ.AND_OR"], "note": "陽性: もしくは/および"}
+{"id": "V3-133", "text": "メールやSMSなどで、顧客へ適宜お知らせを送る。", "labels": ["REQ.OPEN_ENDED", "AMBIGUOUS"], "note": "陽性: など+適宜"}
+{"id": "V3-134", "text": "管理者は、不正な操作を検知した場合に、アカウントを適切に制限する。", "labels": ["AMBIGUOUS"], "note": "陽性: 適切に"}
+{"id": "V3-135", "text": "成績は、100 点満点の素点と 5 段階の評価で保存する。", "labels": [], "note": "問題なし"}
+{"id": "V3-136", "text": "大量発注時の保守費用は、後日協議する。", "labels": ["REQ.INCOMPLETE", "REQ.MEASURABILITY"], "note": "陽性: 後日協議+大量"}
+{"id": "V3-137", "text": "取り込めるファイル形式は、PDF、DOCX、XLSX の 3 種類のみとする。", "labels": [], "note": "[紛REQ.OPEN_ENDED] のみで閉じる"}
+{"id": "V3-138", "text": "通知文面は、一般的な敬語表現で作成する。", "labels": ["AMBIGUOUS"], "note": "陽性: 一般的な"}
+{"id": "V3-139", "text": "受注データを取り込んで在庫を引き当て、不足分は自動発注する。", "labels": ["REQ.MULTIPLE_REQUIREMENTS"], "note": "陽性: 引当と自動発注"}
+{"id": "V3-140", "text": "同等の権限を持つ 2 名以上が承認すること。", "labels": [], "note": "[紛REQ.OPEN_ENDED] 同等の等"}
+{"id": "V3-141", "text": "配送完了時に顧客へ通知するとともに、売上を確定する。", "labels": ["REQ.MULTIPLE_REQUIREMENTS"], "note": "陽性: 通知と売上確定"}
+{"id": "V3-142", "text": "取引先コードは、□□桁の英数字とする。", "labels": ["REQ.INCOMPLETE"], "note": "陽性: □□"}
+{"id": "V3-143", "text": "対応言語は検討中であり、確定次第追記する。", "labels": ["REQ.INCOMPLETE"], "note": "陽性: 検討中・確定次第"}
+{"id": "V3-144", "text": "項目：入力形式、値：望ましい形式。", "labels": ["AMBIGUOUS"], "note": "陽性: 表形式 適切な"}
+{"id": "V3-145", "text": "項目：対応ブラウザ、値：Chrome、Edge に類するもの。", "labels": ["REQ.OPEN_ENDED"], "note": "陽性: 表形式 に類する"}
+{"id": "V3-146", "text": "通知先は、担当者／責任者とする。", "labels": ["REQ.AND_OR"], "note": "陽性: A／B"}
+{"id": "V3-147", "text": "在庫が 0 の商品には、「入荷待ち」と表示する。", "labels": [], "note": "問題なし"}
+{"id": "V3-148", "text": "すべての注文データを登録し、検索結果を素早く返す。", "labels": ["REQ.UNIVERSAL", "REQ.MEASURABILITY", "REQ.MULTIPLE_REQUIREMENTS"], "note": "陽性: すべて+迅速+2要求"}
+{"id": "V3-149", "text": "利用者は、いつでも退会手続きを行える。", "labels": ["REQ.UNIVERSAL"], "note": "陽性: いつでも"}
+{"id": "V3-150", "text": "セッションのタイムアウトは 30 とする。", "labels": ["REQ.MEASURABILITY"], "note": "陽性: 単位の無い数値"}
+{"id": "V3-151", "text": "迅速対応チームの連絡先を、障害画面に表示する。", "labels": [], "note": "[紛REQ.MEASURABILITY] 名称中の迅速"}
+{"id": "V3-152", "text": "予約を受け付け、前日にリマインドメールを送信する。", "labels": ["REQ.MULTIPLE_REQUIREMENTS"], "note": "陽性: 受付とリマインド"}
+{"id": "V3-153", "text": "本システムは、あらゆる端末で動作する。", "labels": ["REQ.UNIVERSAL"], "note": "陽性: あらゆる"}
+{"id": "V3-154", "text": "口座開設の申込みには、顔写真付きの本人確認書類 1 点が必要である。", "labels": [], "note": "問題なし"}
+{"id": "V3-155", "text": "通知は、利用者に分かりやすく、メールその他の手段で送る。", "labels": ["AMBIGUOUS", "REQ.OPEN_ENDED"], "note": "陽性: 分かりやすく+その他"}
+{"id": "V3-156", "text": "バックアップは、毎日午前 2 時に取得する。", "labels": [], "note": "[紛REQ.MEASURABILITY] 時刻が明記"}
+{"id": "V3-157", "text": "見積書は、PDF／Excel 形式で出力する。", "labels": ["REQ.AND_OR"], "note": "陽性: A／B"}
+{"id": "V3-158", "text": "作品の詳細ページには、あらすじと公開年を掲載する。", "labels": [], "note": "問題なし"}
+{"id": "V3-159", "text": "診療予約は、希望日の前日 17 時まで変更を受け付ける。", "labels": [], "note": "問題なし"}
+{"id": "V3-160", "text": "看護師は、必要に応じて投薬記録を修正できる。", "labels": ["AMBIGUOUS"], "note": "陽性: 必要に応じて"}
+{"id": "V3-161", "text": "割引は、会員割引と／またはクーポンで適用する。", "labels": ["REQ.AND_OR"], "note": "陽性: と／または"}
+{"id": "V3-162", "text": "項目：最大登録件数、値：1,000 件。", "labels": [], "note": "問題なし"}
+{"id": "V3-163", "text": "未確定の注文数を、ダッシュボードの右上に件数で表示する。", "labels": [], "note": "[紛REQ.INCOMPLETE] 未確定という状態"}
+{"id": "V3-164", "text": "登録画面では、パスワードを 2 回入力させる。", "labels": [], "note": "問題なし"}
+{"id": "V3-165", "text": "取引記録は、7 年間保管する。", "labels": [], "note": "[紛REQ.MEASURABILITY] 期間が明記"}
+{"id": "V3-166", "text": "システムは、いかなる場合も使いやすい画面を提供する。", "labels": ["REQ.UNIVERSAL", "AMBIGUOUS"], "note": "陽性: いかなる+使いやすい"}
+{"id": "V3-167", "text": "点検結果は、合格／不合格のいずれかで登録する。", "labels": [], "note": "[紛REQ.AND_OR] 排他的な値の対"}
+{"id": "V3-168", "text": "利用者は、メールまたは SMS のいずれか一方で通知を受信する。", "labels": [], "note": "[紛REQ.AND_OR] 単純な または"}
+{"id": "V3-169", "text": "加工機の主軸温度を、1 秒間隔で取得する。", "labels": [], "note": "問題なし"}
+{"id": "V3-170", "text": "ログの出力先は、決まり次第記載する。", "labels": ["REQ.INCOMPLETE"], "note": "陽性: 決まり次第"}
+{"id": "V3-171", "text": "勤怠の打刻漏れが発生した場合、上長に修正依頼のメールを送る。", "labels": [], "note": "問題なし"}
+{"id": "V3-172", "text": "取り込み可能なファイルは、Excel、CSV、テキストといった表形式のものとする。", "labels": ["REQ.OPEN_ENDED"], "note": "陽性: など"}
+{"id": "V3-173", "text": "異常検知後は、すぐにオペレーターへ連絡する。", "labels": ["REQ.MEASURABILITY"], "note": "陽性: すぐに"}
+{"id": "V3-174", "text": "本サービスは、注文管理をはじめとする基幹業務を支援する。", "labels": ["REQ.OPEN_ENDED"], "note": "陽性: をはじめ"}
+{"id": "V3-175", "text": "「検討中」ステータスの案件は、一覧に黄色で表示する。", "labels": [], "note": "[紛REQ.INCOMPLETE] 状態値としての検討中"}
+{"id": "V3-176", "text": "開催日が「未定」のイベントは、一覧の末尾に表示する。", "labels": [], "note": "[紛REQ.INCOMPLETE] 状態値としての未定"}
+{"id": "V3-177", "text": "ポイントの有効期限は、最後に利用した日から 1 年間とする。", "labels": [], "note": "問題なし"}
+{"id": "V3-178", "text": "絶対値が 100 を超える差異は、警告として表示する。", "labels": [], "note": "[紛REQ.UNIVERSAL] 絶対値"}
+{"id": "V3-179", "text": "検索キーワードは、半角スペースで区切って 5 語まで指定できる。", "labels": [], "note": "問題なし"}
+{"id": "V3-180", "text": "管理画面には、常に最新の在庫数が表示される。", "labels": ["REQ.UNIVERSAL"], "note": "陽性: 常に"}
+{"id": "V3-181", "text": "スムーズスクロールを無効にする項目を、表示設定に設ける。", "labels": [], "note": "[紛AMBIGUOUS] 機能名のスムーズ"}
+{"id": "V3-182", "text": "住民票の写しは、申請から 10 分以内に交付する。", "labels": [], "note": "問題なし"}
+{"id": "V3-183", "text": "料金体系は、契約内容の変更に柔軟に対応する。", "labels": ["AMBIGUOUS"], "note": "陽性: 柔軟に"}
+{"id": "V3-184", "text": "温度管理が必要な荷物は、庫内温度が 5 度を超えた時点でアラートを出す。", "labels": [], "note": "問題なし"}
+{"id": "V3-185", "text": "無条件で、返品を受け付ける。", "labels": ["REQ.UNIVERSAL"], "note": "陽性: 無条件で"}
+{"id": "V3-186", "text": "同伴者は、1 回の予約につき 6 名まで登録できる。", "labels": [], "note": "問題なし"}
+{"id": "V3-187", "text": "出荷指示は、ピッキング担当者の端末へ 1 分以内に配信される。", "labels": [], "note": "問題なし"}
+{"id": "V3-188", "text": "入金を確認した場合に領収書を発行し、顧客のポイントを加算する。", "labels": ["REQ.MULTIPLE_REQUIREMENTS"], "note": "陽性: 領収書とポイント"}
+{"id": "V3-189", "text": "予約の変更を受け付け、相応のキャンセル料を計算する。", "labels": ["REQ.MULTIPLE_REQUIREMENTS", "AMBIGUOUS"], "note": "陽性: 2要求+相応の"}
+{"id": "V3-190", "text": "一覧画面の表示は、高速であること。", "labels": ["REQ.MEASURABILITY"], "note": "陽性: 高速"}
+{"id": "V3-191", "text": "項目：応答時間、値：速やか。", "labels": ["REQ.MEASURABILITY"], "note": "陽性: 表形式 速やか"}
+{"id": "V3-192", "text": "保護者および／または後見人の同意を必要とする。", "labels": ["REQ.AND_OR"], "note": "陽性: および／または"}
+{"id": "V3-193", "text": "会員は、登録したメールアドレスを自分で変更できる。", "labels": [], "note": "問題なし"}
+{"id": "V3-194", "text": "一括登録の結果は、成功件数と失敗件数で表示する。", "labels": [], "note": "[紛REQ.UNIVERSAL] 一括"}
+{"id": "V3-195", "text": "利用者は、ボタンを押下し、確認画面を表示する。", "labels": [], "note": "[紛REQ.MULTIPLE_REQUIREMENTS] 操作+1要求"}
+{"id": "V3-196", "text": "障害が発生しても、データは一切失われない。", "labels": ["REQ.UNIVERSAL"], "note": "陽性: 一切"}
+{"id": "V3-197", "text": "教師は成績を入力でき、保護者は成績を閲覧できる。", "labels": ["REQ.MULTIPLE_REQUIREMENTS"], "note": "陽性: 別主体の別挙動"}
+{"id": "V3-198", "text": "利用者が 3 回続けてパスワードを誤入力した場合、アカウントを 30 分間ロックする。", "labels": [], "note": "問題なし"}
+{"id": "V3-199", "text": "機器は、温度や湿度、気圧といったセンサー値を送信する。", "labels": ["REQ.OPEN_ENDED"], "note": "陽性: といった"}
+{"id": "V3-200", "text": "日付の表示形式は、YYYY/MM/DD とする。", "labels": [], "note": "[紛REQ.AND_OR] 日付の区切り"}
+{"id": "V3-201", "text": "システムは、同じメールアドレスでの重複登録を拒否する。", "labels": [], "note": "問題なし"}
+{"id": "V3-202", "text": "夜間バッチが失敗した場合でも、必ずしも再実行を要しない。", "labels": [], "note": "[紛REQ.UNIVERSAL] 必ずしも"}
+{"id": "V3-203", "text": "取引明細は、直近 13 か月分を画面で参照できる。", "labels": [], "note": "問題なし"}
+{"id": "V3-204", "text": "有給休暇の残日数は、付与日から 2 年後に失効する。", "labels": [], "note": "問題なし"}
+{"id": "V3-205", "text": "常連客向けのクーポンは、前月に 3 回以上来店した会員へ発行する。", "labels": [], "note": "[紛REQ.UNIVERSAL] 常連"}
+{"id": "V3-206", "text": "納期が未入力の注文は、受付一覧に表示しない。", "labels": [], "note": "[紛REQ.INCOMPLETE] 未入力"}
+{"id": "V3-207", "text": "利用者は、パスワードを変更でき、二要素認証を設定することもできる。", "labels": ["REQ.MULTIPLE_REQUIREMENTS"], "note": "陽性: 変更と二要素設定"}
+{"id": "V3-208", "text": "月間稼働率は 99.9% 以上とする。", "labels": [], "note": "[紛REQ.MEASURABILITY] 率が明記"}
+{"id": "V3-209", "text": "担当者名が未設定の場合は、「担当者なし」と表示する。", "labels": [], "note": "[紛REQ.INCOMPLETE] 未設定という状態"}
+{"id": "V3-210", "text": "配送担当者は、配達ルートを適宜変更できる。", "labels": ["AMBIGUOUS"], "note": "陽性: 適宜"}
+{"id": "V3-211", "text": "システムは、すべての入力値を検証する。", "labels": ["REQ.UNIVERSAL"], "note": "陽性: すべて"}
+{"id": "V3-212", "text": "外部との通信には、TCP/IP を使用する。", "labels": [], "note": "[紛REQ.AND_OR] プロトコル名"}
+{"id": "V3-213", "text": "センサー値が閾値を超えた場合に警報を鳴らし、管理者へ電話をかける。", "labels": ["REQ.MULTIPLE_REQUIREMENTS"], "note": "陽性: 警報と電話"}
+{"id": "V3-214", "text": "受講者が提出期限までに課題を送信しない場合、未提出として記録する。", "labels": [], "note": "問題なし"}
+{"id": "V3-215", "text": "商品ページの URL は、/products/{id} の形式とする。", "labels": [], "note": "[紛REQ.AND_OR] URL パス"}
+{"id": "V3-216", "text": "全ての取引履歴を削除せず保管する。", "labels": ["REQ.UNIVERSAL"], "note": "陽性: 全て"}
+{"id": "V3-217", "text": "障害時の連絡体制については、後日協議のうえ決定する。", "labels": ["REQ.INCOMPLETE"], "note": "陽性: 後日協議"}
+{"id": "V3-218", "text": "画像の最大幅は 1200 とする。", "labels": ["REQ.MEASURABILITY"], "note": "陽性: 単位の無い数値"}
+{"id": "V3-219", "text": "機器の設定画面は、直感的に操作できること。", "labels": ["AMBIGUOUS"], "note": "陽性: 直感的に"}
+{"id": "V3-220", "text": "航空券の検索結果は、料金の安い順に並べ替えて表示できる。", "labels": [], "note": "問題なし"}
+{"id": "V3-221", "text": "帳票は、CSV、PDF、ほか各種形式で出力できる。", "labels": ["REQ.OPEN_ENDED"], "note": "陽性: ほか"}
+{"id": "V3-222", "text": "選択できる色は、赤、青、緑の 3 色に限る。", "labels": [], "note": "[紛REQ.OPEN_ENDED] 限定"}
+{"id": "V3-223", "text": "仮予約の状態が 48 時間続いた場合は、自動的に取り消す。", "labels": [], "note": "[紛REQ.INCOMPLETE] 仮予約という状態名"}
+{"id": "V3-224", "text": "サーバーには、十分なディスク容量を確保する。", "labels": ["REQ.MEASURABILITY"], "note": "陽性: 十分な"}
+{"id": "V3-225", "text": "配送業者は、ヤマト運輸、佐川急便、日本郵便その他から選択できる。", "labels": ["REQ.OPEN_ENDED"], "note": "陽性: その他"}
+{"id": "V3-226", "text": "パスワードは、定期的に変更を促す。", "labels": ["REQ.MEASURABILITY"], "note": "陽性: 定期的に"}
+{"id": "V3-227", "text": "内見の予約は、希望日時の 2 日前までに受け付ける。", "labels": [], "note": "問題なし"}
+{"id": "V3-228", "text": "二重請求は絶対に発生させない。", "labels": ["REQ.UNIVERSAL"], "note": "陽性: 絶対"}
+{"id": "V3-229", "text": "ログは定期的に、CSV／PDF などの形式で出力する。", "labels": ["REQ.MEASURABILITY", "REQ.AND_OR", "REQ.OPEN_ENDED"], "note": "陽性: 定期的に+A／B+など"}
+{"id": "V3-230", "text": "窓口の待ち人数を、5 分ごとにウェブへ表示する。", "labels": [], "note": "問題なし"}
+{"id": "V3-231", "text": "操作性は、SUS スコア 68 点以上を満たすこと。", "labels": [], "note": "[紛AMBIGUOUS] 使いやすさを数値で定義"}
+{"id": "V3-232", "text": "添付資料は、しかるべき担当者に回付する。", "labels": ["AMBIGUOUS"], "note": "陽性: しかるべき"}
+{"id": "V3-233", "text": "均等割の会費は、1 人あたり 3,000 円とする。", "labels": [], "note": "[紛REQ.OPEN_ENDED] 均等の等"}
+{"id": "V3-234", "text": "利用者の等級は、1 級から 5 級までの 5 段階で表示する。", "labels": [], "note": "[紛REQ.OPEN_ENDED] 等級の等"}
+{"id": "V3-235", "text": "宿泊予約は、チェックインの 7 日前まで無料でキャンセルできる。", "labels": [], "note": "問題なし"}
+{"id": "V3-236", "text": "ゲートウェイは、通信が途絶えたデータを 24 時間まで保持する。", "labels": [], "note": "問題なし"}
+{"id": "V3-237", "text": "視聴履歴は、直近 90 日分を保持する。", "labels": [], "note": "問題なし"}
+{"id": "V3-238", "text": "振込の上限額は、1 日あたり 100 万円とする。", "labels": [], "note": "問題なし"}
+{"id": "V3-239", "text": "荷物の追跡番号は、12 桁の数字で採番する。", "labels": [], "note": "問題なし"}
+{"id": "V3-240", "text": "残高照会の結果は、取引の確定後 5 秒以内に反映される。", "labels": [], "note": "問題なし"}
+{"id": "V3-241", "text": "管理会社は、入居者からの修繕依頼を受け付けた日付を記録する。", "labels": [], "note": "問題なし"}
+{"id": "V3-242", "text": "休日出勤の手当率は、別途定める。", "labels": ["REQ.INCOMPLETE"], "note": "陽性: 別途定める"}
+{"id": "V3-243", "text": "セッションは、無操作が 30 分続いた場合に終了する。", "labels": [], "note": "[紛REQ.MEASURABILITY] 条件が明記"}
+{"id": "V3-244", "text": "同時接続数 500 までは、応答時間 3 秒以内を維持する。", "labels": [], "note": "[紛REQ.MEASURABILITY] 負荷と時間が明記"}
+{"id": "V3-245", "text": "共有リンクは、発行から 72 時間で無効になる。", "labels": [], "note": "問題なし"}
+{"id": "V3-246", "text": "月次レポートは、翌月 3 営業日以内に生成される。", "labels": [], "note": "問題なし"}
+{"id": "V3-247", "text": "一次審査または二次審査で不合格となった応募は、再応募を受け付けない。", "labels": [], "note": "[紛REQ.AND_OR] 単純な または"}
+{"id": "V3-248", "text": "字幕は、日本語と英語の 2 言語から選択できる。", "labels": [], "note": "問題なし"}
+{"id": "V3-249", "text": "いかなる場合も、個人情報を外部へ送信しない。", "labels": ["REQ.UNIVERSAL"], "note": "陽性: いかなる"}
+{"id": "V3-250", "text": "操作者は、CSV ファイルを選択してインポートを開始する。", "labels": [], "note": "[紛REQ.MULTIPLE_REQUIREMENTS] 操作+1要求"}
+{"id": "V3-251", "text": "再生中の動画の画質は、通信速度が 3 Mbps を下回ると 480p に下げる。", "labels": [], "note": "問題なし"}
+{"id": "V3-252", "text": "注文確定時に、在庫数を 1 減らす。", "labels": [], "note": "[紛REQ.MULTIPLE_REQUIREMENTS] 1要求"}
+{"id": "V3-253", "text": "支払いは、クレジットカードおよび／またはデビットカードで行える。", "labels": ["REQ.AND_OR"], "note": "陽性: および／または"}
+{"id": "V3-254", "text": "CSV の文字コードは、UTF-8 とする。", "labels": [], "note": "問題なし"}
+{"id": "V3-255", "text": "項目：保存期間、値：TBD。", "labels": ["REQ.INCOMPLETE"], "note": "陽性: 表形式 TBD"}
+{"id": "V3-256", "text": "未定義のパラメータが指定された場合は、エラーコード E400 を返す。", "labels": [], "note": "[紛REQ.INCOMPLETE] 未定義"}
+{"id": "V3-257", "text": "監視サーバーは、常時稼働する。", "labels": ["REQ.UNIVERSAL"], "note": "陽性: 常時"}
+{"id": "V3-258", "text": "大量のアクセスが発生しても、サービスを継続する。", "labels": ["REQ.MEASURABILITY"], "note": "陽性: 大量の"}
+{"id": "V3-259", "text": "返品期限は XXX 日以内とする。", "labels": ["REQ.INCOMPLETE"], "note": "陽性: XXX"}
+{"id": "V3-260", "text": "保存期間は、今後決める。", "labels": ["REQ.INCOMPLETE"], "note": "陽性: 今後決める"}
+{"id": "V3-261", "text": "検索結果は、迅速に表示する。", "labels": ["REQ.MEASURABILITY"], "note": "陽性: 迅速に"}
+{"id": "V3-262", "text": "管理者は、必要に応じてすべての利用者のログを確認できる。", "labels": ["AMBIGUOUS", "REQ.UNIVERSAL"], "note": "陽性: 必要に応じて+すべて"}
+{"id": "V3-263", "text": "担当者および/または管理者は、常に最新の申請状況を確認できる。", "labels": ["REQ.AND_OR", "REQ.UNIVERSAL"], "note": "陽性: および/または+常に"}
+{"id": "V3-264", "text": "申請書には、添付書類として住民票、課税証明書、またはこれらに類するものを添える。", "labels": ["REQ.OPEN_ENDED"], "note": "陽性: に類する"}
+{"id": "V3-265", "text": "検査結果が基準値の範囲外の場合、該当項目を赤字で表示する。", "labels": [], "note": "問題なし"}
+{"id": "V3-266", "text": "会員区分は、一般会員と法人会員の 2 種類とする。", "labels": [], "note": "[紛AMBIGUOUS] 区分名としての一般"}
+{"id": "V3-267", "text": "利用者は、クレジットカードや銀行振込などで決済できる。", "labels": ["REQ.OPEN_ENDED"], "note": "陽性: など"}
+{"id": "V3-268", "text": "出勤打刻を記録し、月末に残業時間を集計して上長へ送信する。", "labels": ["REQ.MULTIPLE_REQUIREMENTS"], "note": "陽性: 打刻記録と集計送信"}
+{"id": "V3-269", "text": "アップロードできるファイルの最大サイズは、1 ファイルあたり 25 MB とする。", "labels": [], "note": "問題なし"}
+{"id": "V3-270", "text": "氏名欄は必須項目である。", "labels": [], "note": "[紛REQ.UNIVERSAL] 必須は例外許容の語ではない"}
+{"id": "V3-271", "text": "年会費は TBD 円とする。", "labels": ["REQ.INCOMPLETE"], "note": "陽性: TBD"}
+{"id": "V3-272", "text": "管理者かつ／または運用担当者に、警告メールを送信する。", "labels": ["REQ.AND_OR"], "note": "陽性: かつ／または"}
+{"id": "V3-273", "text": "授業の出欠は、出席、欠席をはじめとする区分で記録する。", "labels": ["REQ.OPEN_ENDED"], "note": "陽性: など"}
+{"id": "V3-274", "text": "物件検索は、家賃の上限と下限を指定して絞り込める。", "labels": [], "note": "問題なし"}
+{"id": "V3-275", "text": "自動更新の周期は、関係部署と相談のうえ後から取り決める。", "labels": ["REQ.INCOMPLETE"], "note": "陽性: 後から取り決める"}
+{"id": "V3-276", "text": "予約確定時に、予約番号を記載した確認メールを送信する。", "labels": [], "note": "問題なし"}
+{"id": "V3-277", "text": "申請を受理し、担当課に回付するとともに、申請者へ受理通知を送る。", "labels": ["REQ.MULTIPLE_REQUIREMENTS"], "note": "陽性: 受理・回付・通知"}
+{"id": "V3-278", "text": "検索キーワードは、完全一致で判定する。", "labels": [], "note": "[紛REQ.UNIVERSAL] 完全一致"}
+{"id": "V3-279", "text": "転入届は、転入した日から 14 日以内に提出する。", "labels": [], "note": "問題なし"}

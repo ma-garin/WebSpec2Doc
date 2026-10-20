@@ -1,0 +1,505 @@
+{
+ "cases": [
+  {
+   "id": "api-001",
+   "kind": "api",
+   "method": "GET",
+   "path": "/api/v2/fees",
+   "should_detect": true,
+   "category": "helper",
+   "file": "assets/apply.js",
+   "note": "apiGet 経由。API_BASE + path"
+  },
+  {
+   "id": "api-002",
+   "kind": "api",
+   "method": "GET",
+   "path": "/api/v2/collections/slots",
+   "should_detect": true,
+   "category": "helper_2level",
+   "file": "assets/apply.js",
+   "note": "fetchCollection -> apiGet の 2 段"
+  },
+  {
+   "id": "api-003",
+   "kind": "api",
+   "method": "GET",
+   "path": "/api/v2/collections/:id/ticket",
+   "should_detect": true,
+   "category": "helper_2level",
+   "file": "assets/apply.js",
+   "note": "fetchCollection -> apiGet の 2 段。id は連結"
+  },
+  {
+   "id": "api-004",
+   "kind": "api",
+   "method": "GET",
+   "path": "/api/v2/addresses/search",
+   "should_detect": true,
+   "category": "string_concat",
+   "file": "assets/apply.js",
+   "note": "リテラル文字列 + 連結。method 省略"
+  },
+  {
+   "id": "api-005",
+   "kind": "api",
+   "method": "GET",
+   "path": "/api/v2/item-categories",
+   "should_detect": true,
+   "category": "local_var",
+   "file": "assets/apply.js",
+   "note": "関数内の局所変数 url を組み立ててから fetch。クエリは含めない"
+  },
+  {
+   "id": "api-006",
+   "kind": "api",
+   "method": "GET",
+   "path": "/api/v2/areas/lookup",
+   "should_detect": true,
+   "category": "multi_stage_const",
+   "file": "assets/apply.js",
+   "note": "API_PREFIX/API_VERSION -> API_BASE -> AREA_BASE -> AREA_LOOKUP の多段定数。method 省略"
+  },
+  {
+   "id": "api-007",
+   "kind": "api",
+   "method": "GET",
+   "path": "/api/v2/areas/:areaCode/schedule",
+   "should_detect": true,
+   "category": "template_literal",
+   "file": "assets/apply.js",
+   "note": "テンプレートリテラル。AREA_BASE は config.js"
+  },
+  {
+   "id": "api-008",
+   "kind": "api",
+   "method": "POST",
+   "path": "/api/v2/collections",
+   "should_detect": true,
+   "category": "helper_method_arg",
+   "file": "assets/apply.js",
+   "note": "アロー関数 submitRequest。apiSend に method を渡す"
+  },
+  {
+   "id": "api-009",
+   "kind": "api",
+   "method": "GET",
+   "path": "/api/v2/collections/:id",
+   "should_detect": true,
+   "category": "template_literal",
+   "file": "assets/apply.js",
+   "note": "テンプレートリテラル。method 省略"
+  },
+  {
+   "id": "api-010",
+   "kind": "api",
+   "method": "PATCH",
+   "path": "/api/v2/collections/:id",
+   "should_detect": true,
+   "category": "options_method",
+   "file": "assets/apply.js",
+   "note": "options の method で指定"
+  },
+  {
+   "id": "api-011",
+   "kind": "api",
+   "method": "POST",
+   "path": "/api/v2/collections/:id/cancel",
+   "should_detect": true,
+   "category": "multi_stage_const",
+   "file": "assets/apply.js",
+   "note": "COLLECTION_BASE(3 段定数) + 文字列連結 + options method"
+  },
+  {
+   "id": "api-012",
+   "kind": "api",
+   "method": "DELETE",
+   "path": "/api/v2/collections/:id/items/:itemId",
+   "should_detect": true,
+   "category": "options_method",
+   "file": "assets/apply.js",
+   "note": "options の method。path パラメータ 2 つ"
+  },
+  {
+   "id": "api-013",
+   "kind": "api",
+   "method": "POST",
+   "path": "/api/v2/uploads/photos",
+   "should_detect": true,
+   "category": "options_method",
+   "file": "assets/apply.js",
+   "note": "method が小文字 'post'。正解は大文字"
+  },
+  {
+   "id": "api-014",
+   "kind": "api",
+   "method": "POST",
+   "path": "/api/v2/collections/:id/reminders",
+   "should_detect": true,
+   "category": "helper_2level",
+   "file": "assets/apply.js",
+   "note": "registerReminder -> postJson -> apiSend の 3 関数連鎖"
+  },
+  {
+   "id": "api-015",
+   "kind": "api",
+   "method": "GET",
+   "path": "/api/v2/calendar/holidays/:year",
+   "should_detect": true,
+   "category": "string_concat",
+   "file": "assets/apply.js",
+   "note": "ベース定数 + 連結。method 省略"
+  },
+  {
+   "id": "api-016",
+   "kind": "api",
+   "method": "POST",
+   "path": "/api/v2/payments/checkout-sessions",
+   "should_detect": true,
+   "category": "cross_file_base_const",
+   "file": "assets/apply.js",
+   "note": "PAYMENT_API は apply.js 冒頭で API_BASE(config.js) から組み立て"
+  },
+  {
+   "id": "api-017",
+   "kind": "api",
+   "method": "GET",
+   "path": "/api/v2/payments/:paymentId/receipt",
+   "should_detect": true,
+   "category": "cross_file_base_const",
+   "file": "assets/apply.js",
+   "note": "テンプレートリテラル + PAYMENT_API"
+  },
+  {
+   "id": "api-018",
+   "kind": "api",
+   "method": "POST",
+   "path": "/api/v2/payments/:id/cvs-slip",
+   "should_detect": true,
+   "category": "local_var",
+   "file": "assets/apply.js",
+   "note": "options を局所変数 init に置いてから fetch に渡す"
+  },
+  {
+   "id": "api-019",
+   "kind": "api",
+   "method": "GET",
+   "path": "/admin-api/v1/requests",
+   "should_detect": true,
+   "category": "object_method",
+   "file": "assets/operator.js",
+   "note": "オブジェクトの短縮メソッド。method 省略。ADMIN_BASE は config.js"
+  },
+  {
+   "id": "api-020",
+   "kind": "api",
+   "method": "PUT",
+   "path": "/admin-api/v1/requests/:id/assign",
+   "should_detect": true,
+   "category": "object_method",
+   "file": "assets/operator.js",
+   "note": "function 式のプロパティ + テンプレートリテラル + options method"
+  },
+  {
+   "id": "api-021",
+   "kind": "api",
+   "method": "POST",
+   "path": "/admin-api/v1/requests/:id/complete",
+   "should_detect": true,
+   "category": "helper",
+   "file": "assets/operator.js",
+   "note": "adminPost 経由。別系統ベース ADMIN_BASE"
+  },
+  {
+   "id": "api-022",
+   "kind": "api",
+   "method": "GET",
+   "path": "/admin-api/v1/crews",
+   "should_detect": true,
+   "category": "arrow_function",
+   "file": "assets/operator.js",
+   "note": "アロー関数のプロパティ。method 省略"
+  },
+  {
+   "id": "api-023",
+   "kind": "api",
+   "method": "GET",
+   "path": "/admin-api/v1/reports/daily",
+   "should_detect": true,
+   "category": "iife_local_var",
+   "file": "assets/operator.js",
+   "note": "IIFE 内の局所変数 reportUrl に連結してから fetch"
+  },
+  {
+   "id": "api-024",
+   "kind": "api",
+   "method": null,
+   "path": "/admin-api/v1/exports/requests",
+   "should_detect": true,
+   "category": "method_unknown",
+   "file": "assets/operator.js",
+   "note": "init を引数で受けるため method は静的に不明"
+  },
+  {
+   "id": "api-025",
+   "kind": "api",
+   "method": "GET",
+   "path": "/api/v2/notices/latest",
+   "should_detect": true,
+   "category": "xhr",
+   "file": "assets/legacy.js",
+   "note": "XMLHttpRequest.open"
+  },
+  {
+   "id": "api-026",
+   "kind": "api",
+   "method": "POST",
+   "path": "/api/v2/inquiries",
+   "should_detect": true,
+   "category": "xhr",
+   "file": "assets/legacy.js",
+   "note": "XMLHttpRequest.open。リテラル path"
+  },
+  {
+   "id": "api-027",
+   "kind": "api",
+   "method": "GET",
+   "path": "/api/v2/collections/:id/history",
+   "should_detect": true,
+   "category": "xhr",
+   "file": "assets/legacy.js",
+   "note": "XMLHttpRequest.open + テンプレートリテラル"
+  },
+  {
+   "id": "api-028",
+   "kind": "api",
+   "method": "DELETE",
+   "path": "/api/v2/collections/:id/reminders",
+   "should_detect": true,
+   "category": "xhr",
+   "file": "assets/legacy.js",
+   "note": "XMLHttpRequest.open + 文字列連結"
+  },
+  {
+   "id": "api-029",
+   "kind": "api",
+   "method": "POST",
+   "path": "/auth/session",
+   "should_detect": true,
+   "category": "literal_string",
+   "file": "assets/legacy.js",
+   "note": "ログイン。/api 配下ではない同一オリジン path"
+  },
+  {
+   "id": "api-030",
+   "kind": "api",
+   "method": "DELETE",
+   "path": "/auth/session",
+   "should_detect": true,
+   "category": "literal_string",
+   "file": "assets/legacy.js",
+   "note": "ログアウト"
+  },
+  {
+   "id": "api-031",
+   "kind": "api",
+   "method": "GET",
+   "path": "/:userUrl",
+   "should_detect": true,
+   "category": "dynamic_url",
+   "file": "assets/legacy.js",
+   "note": "利用者が入力した URL をそのまま fetch。宛先は実行時まで不明",
+   "exclude_from_metrics": true
+  },
+  {
+   "id": "api-032",
+   "kind": "api",
+   "method": null,
+   "path": "/api/v1/fees",
+   "should_detect": false,
+   "category": "unused_string",
+   "file": "assets/config.js",
+   "note": "LEGACY_FEE_URL。定義だけで参照されない"
+  },
+  {
+   "id": "api-033",
+   "kind": "api",
+   "method": null,
+   "path": "/api/v1/notices",
+   "should_detect": false,
+   "category": "unused_string",
+   "file": "assets/legacy.js",
+   "note": "OLD_NOTICE_URL。連結で組み立てるが参照されない"
+  },
+  {
+   "id": "api-034",
+   "kind": "api",
+   "method": "POST",
+   "path": "/admin-api/v1/sync/legacy-ledger",
+   "should_detect": false,
+   "category": "dead_code_if_false",
+   "file": "assets/operator.js",
+   "note": "if (false) の中"
+  },
+  {
+   "id": "api-035",
+   "kind": "api",
+   "method": "POST",
+   "path": "/admin-api/v1/requests/purge",
+   "should_detect": false,
+   "category": "dead_code_after_return",
+   "file": "assets/operator.js",
+   "note": "return の後ろ。到達しない"
+  },
+  {
+   "id": "api-036",
+   "kind": "api",
+   "method": "GET",
+   "path": "/api/v1/collections/export",
+   "should_detect": false,
+   "category": "comment",
+   "file": "assets/apply.js",
+   "note": "行コメント内の fetch 例"
+  },
+  {
+   "id": "api-037",
+   "kind": "api",
+   "method": "POST",
+   "path": "/api/v2/legacy/sync",
+   "should_detect": false,
+   "category": "comment",
+   "file": "assets/legacy.js",
+   "note": "ブロックコメント内"
+  },
+  {
+   "id": "api-038",
+   "kind": "api",
+   "method": "GET",
+   "path": "/api/v2/collections/mock-1",
+   "should_detect": false,
+   "category": "mock_data",
+   "file": "assets/mocks.js",
+   "note": "MOCK_REQUEST.detailUrl。ダミーデータ"
+  },
+  {
+   "id": "api-039",
+   "kind": "api",
+   "method": "GET",
+   "path": "/api/v2/collections/mock-1/ticket",
+   "should_detect": false,
+   "category": "mock_data",
+   "file": "assets/mocks.js",
+   "note": "MOCK_REQUEST.ticketUrl。ダミーデータ"
+  },
+  {
+   "id": "api-040",
+   "kind": "api",
+   "method": null,
+   "path": "/api/v2/slots/mock",
+   "should_detect": false,
+   "category": "mock_data",
+   "file": "assets/mocks.js",
+   "note": "MOCK_ROUTES のキー"
+  },
+  {
+   "id": "api-041",
+   "kind": "api",
+   "method": null,
+   "path": "/api/v2/collections/__selftest__",
+   "should_detect": false,
+   "category": "mock_data",
+   "file": "assets/mocks.js",
+   "note": "runSelfCheck の偽 URL。fetch せず値として返すだけ"
+  },
+  {
+   "id": "api-042",
+   "kind": "api",
+   "method": "GET",
+   "path": "/v1/search",
+   "should_detect": false,
+   "category": "external_origin",
+   "file": "assets/apply.js",
+   "note": "https://geocode.example-maps.jp への fetch。外部オリジンのため本サイトの API ではない"
+  },
+  {
+   "id": "api-043",
+   "kind": "api",
+   "method": "POST",
+   "path": "/services/T000/B000/xxxx",
+   "should_detect": false,
+   "category": "external_origin",
+   "file": "assets/operator.js",
+   "note": "https://hooks.example-chat.com への fetch。外部オリジン"
+  },
+  {
+   "id": "api-044",
+   "kind": "api",
+   "method": "GET",
+   "path": "/admin-api/v1/debug/state",
+   "should_detect": false,
+   "category": "console_log_only",
+   "file": "assets/operator.js",
+   "note": "console.log に出すだけ"
+  },
+  {
+   "id": "api-045",
+   "kind": "api",
+   "method": "GET",
+   "path": "/api/v2/debug/ping",
+   "should_detect": false,
+   "category": "console_log_only",
+   "file": "assets/apply.js",
+   "note": "局所変数に組み立てて console.log するだけ。fetch しない"
+  },
+  {
+   "id": "api-046",
+   "kind": "api",
+   "method": "GET",
+   "path": "/api/v2/session/refresh",
+   "should_detect": false,
+   "category": "error_message_text",
+   "file": "assets/http.js",
+   "note": "Error メッセージ内の文字列"
+  },
+  {
+   "id": "api-047",
+   "kind": "api",
+   "method": null,
+   "path": "/apply/:name",
+   "should_detect": false,
+   "category": "page_route",
+   "file": "assets/apply.js",
+   "note": "history.pushState のページ遷移。API ではない"
+  },
+  {
+   "id": "api-048",
+   "kind": "api",
+   "method": null,
+   "path": "/files/guide-2026.pdf",
+   "should_detect": false,
+   "category": "static_file",
+   "file": "assets/apply.js",
+   "note": "リンク先の静的 PDF。API ではない"
+  },
+  {
+   "id": "api-049",
+   "kind": "api",
+   "method": null,
+   "path": "/category/size/weight",
+   "should_detect": false,
+   "category": "non_url_string",
+   "file": "assets/apply.js",
+   "note": "SORT_ORDER。スラッシュ区切りの並び順キーで URL ではない（先頭 / は便宜上）"
+  },
+  {
+   "id": "api-050",
+   "kind": "api",
+   "method": null,
+   "path": "/image/jpeg",
+   "should_detect": false,
+   "category": "non_url_string",
+   "file": "assets/apply.js",
+   "note": "ALLOWED_PHOTO_TYPE。MIME タイプで URL ではない（先頭 / は便宜上）"
+  }
+ ]
+}

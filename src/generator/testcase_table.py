@@ -72,6 +72,9 @@ class TestCaseRow:
     # 実行用の構造化操作。表示列には出さず、Playwright コード生成が使う。
     actions: tuple[dict[str, Any], ...] = ()
     assertions: tuple[dict[str, Any], ...] = ()
+    # 観点の正規カテゴリ（normal / invalid / boundary / required / format / state_transition / permission /
+    # api / persistence / error / navigation）。文言ではなく、どの根拠から作った行かで決める
+    category: str = ""
 
 
 # =========================================================================
@@ -87,6 +90,7 @@ def build_testcase_table(report: Mapping[str, Any], design: TestDesign) -> tuple
     rows: list[TestCaseRow] = []
     for page_id, screen in screens.items():
         ctx = _ScreenContext(screen)
+        first = len(rows)
         rows.extend(_display_rows(ctx))
         sd = designs.get(page_id)
         if sd is not None:
@@ -94,7 +98,9 @@ def build_testcase_table(report: Mapping[str, Any], design: TestDesign) -> tuple
             rows.extend(_dt_rows(ctx, sd))
             rows.extend(_pairwise_rows(ctx, sd))
             rows.extend(_state_rows(ctx, sd, screens))
-        rows.extend(_evidence_viewpoint_rows(ctx, has_required_rows=any(r.case_id.startswith(f"TC-{page_id}-DT") for r in rows)))
+        rows.extend(_evidence_viewpoint_rows(
+            ctx, has_required_rows=any(r.category == "required" for r in rows[first:]),
+            has_boundary_rows=any(r.category == "boundary" for r in rows[first:])))
         rows.extend(_transition_rows(ctx, screens))
     return tuple(rows)
 
@@ -394,6 +400,7 @@ def _display_rows(ctx: _ScreenContext) -> list[TestCaseRow]:
             screen=ctx.label,
             function="画面表示",
             viewpoint="画面表示確認",
+            category="normal",
             preconditions=ctx.preconditions(),
             steps=texts,
             expected=tuple(expected),
@@ -437,6 +444,8 @@ def _bva_rows(ctx: _ScreenContext, sd: ScreenTestDesign) -> list[TestCaseRow]:
                     screen=ctx.label,
                     function=ctx.function,
                     viewpoint=f"境界値分析／{case.label}",
+                    # 値カタログ由来の無効値（形式の不正など）は境界ではなく無効値のケース
+                    category=_bva_category(fld, case),
                     preconditions=ctx.preconditions(),
                     steps=texts,
                     expected=_bva_expected(ctx, fld, table.field_name, case.expected),
@@ -506,6 +515,15 @@ def _bva_assertions(
     return ({"type": "expect_stay", "url": ctx.url, "locator": locator},)
 
 
+def _bva_category(fld: Mapping[str, Any] | None, case: Any) -> str:
+    """境界値の 1 ケースの正規カテゴリ。必須項目を空にするケースは必須の確認、値カタログの無効値は無効値。"""
+    if str(case.value) == "" and fld is not None and fld.get("required"):
+        return "required"
+    if str(case.evidence).startswith("値カタログ") and case.expected == "無効":
+        return "invalid"
+    return "boundary"
+
+
 def _dt_rows(ctx: _ScreenContext, sd: ScreenTestDesign) -> list[TestCaseRow]:
     dt: DecisionTable | None = sd.decision_table
     if dt is None:
@@ -532,6 +550,7 @@ def _dt_rows(ctx: _ScreenContext, sd: ScreenTestDesign) -> list[TestCaseRow]:
                 screen=ctx.label,
                 function=ctx.function,
                 viewpoint="デシジョンテーブル／必須チェック",
+                category="required" if missing else "normal",
                 preconditions=ctx.preconditions(),
                 steps=texts,
                 expected=_dt_expected(ctx, missing),
@@ -693,6 +712,7 @@ def _pairwise_rows(ctx: _ScreenContext, sd: ScreenTestDesign) -> list[TestCaseRo
                 screen=ctx.label,
                 function=ctx.function,
                 viewpoint=f"ペアワイズ（{pw.strength}-way）／組み合わせ",
+                category="normal",
                 preconditions=ctx.preconditions(),
                 steps=texts,
                 expected=_pairwise_expected(values),
@@ -763,6 +783,8 @@ def _state_rows(
                 screen=ctx.label,
                 function="画面遷移",
                 viewpoint=f"状態遷移テスト（{st.n_switch}-スイッチ）",
+                # 画面間の遷移の並び。画面内の状態（下書き→申請中など）の根拠ではないので navigation
+                category="navigation",
                 preconditions=ctx.preconditions(),
                 steps=texts,
                 expected=tuple(
@@ -826,6 +848,7 @@ def _transition_rows(
                 screen=ctx.label,
                 function="画面遷移",
                 viewpoint="画面遷移／リンク導線",
+                category="navigation",
                 preconditions=ctx.preconditions(),
                 steps=texts,
                 expected=(
@@ -853,13 +876,33 @@ _SUBMIT_WORDS = _SAVE_WORDS + ("送信", "申請", "確定", "注文", "購入",
 _PERMISSION_WORDS = ("管理者", "管理画面", "権限", "ロール", "承認者")
 
 
-def _evidence_viewpoint_rows(ctx: _ScreenContext, *, has_required_rows: bool) -> list[TestCaseRow]:
+_CATEGORY_OF = {"REQ": "required", "FMT": "format", "ERR": "error", "API": "api", "PST": "persistence",
+                "PRM": "permission", "STT": "state_transition", "BND": "boundary", "RTY": "retry",
+                "TMO": "timeout", "EMP": "empty", "DUP": "duplicate"}
+# 説明文の根拠（画面に書かれた仕様）。語の有無ではなく、仕様の書き方の型で見る
+_API_TEXT = re.compile(r"(?:GET|POST|PUT|PATCH|DELETE)\s+/|/api/")
+_SAVE_TEXT = re.compile(r"保存され|保存します|保持され|再表示|再読み込み|一覧に表示")
+_STATE_TEXT = re.compile(r"(?:状態|ステータス)[^。]*(?:→|「[^」]+」(?:に|へ)(?:なり|なる|変わ|変更|遷移|戻))|現在の状態")
+_RANGE_TEXT = re.compile(r"[0-9０-９]+\s*[〜~～]\s*[0-9０-９]+")
+_FORMAT_TEXT = re.compile(r"[0-9０-９]+\s*桁|形式|書式|半角")
+# 「〜の場合は「…」を表示」のように、条件付きで出すメッセージが書かれていればエラー表示の根拠にする
+_ERROR_TEXT = re.compile(r"エラー|正しくありません|誤り|間違|失敗|できませんでした"
+                         r"|(?:場合|とき|ときは|なら|ないと)[^。]*「[^」]+」[^。]*表示")
+_RETRY_TEXT = re.compile(r"再試行|もう一度お試し|再送|やり直せ")
+_TIMEOUT_TEXT = re.compile(r"タイムアウト|[0-9０-９]+\s*(?:秒|分)[^。]{0,12}(?:超え|経過|過ぎ|応答が無)")
+_EMPTY_TEXT = re.compile(r"[0０]\s*件の(?:とき|場合)|該当する[^。]{0,20}(?:ありません|ない)|1\s*件も(?:ない|無い)|空の(?:とき|場合)")
+_DUP_TEXT = re.compile(r"重複|既に(?:登録|使われ|存在|使用)|すでに(?:登録|使われ|存在|使用)|同じ[^。]{0,12}(?:登録|使用)でき")
+_ROLE_TEXT = re.compile(r"(?:管理者|承認者|権限|ロール|ログインした)[^。]*(?:のみ|だけ|できます|できません)|のみ[^。]*(?:管理者|承認者)")
+
+
+def _evidence_viewpoint_rows(ctx: _ScreenContext, *, has_required_rows: bool, has_boundary_rows: bool = False
+                             ) -> list[TestCaseRow]:
     fields = ctx.fields
     labels = lambda fs: "・".join(_field_label(f, _field_key(f)) for f in fs[:3])  # noqa: E731
-    required = [f for f in fields if f.get("required")]
+    # 画面の「※」「必須」の印も必須の根拠にする（required 属性が無い画面がある）
+    required = [f for f in fields if f.get("required") or re.search(r"※|必須", _field_label(f, ""))]
     typed = [f for f in fields if str(f.get("field_type") or "") in _TYPED_INPUTS or f.get("pattern")]
-    constrained = required or typed or [
-        f for f in fields if any(f.get(k) not in (None, "") for k in ("maxlength", "minlength", "min_value", "max_value"))]
+    texts = " ".join(str(t) for t in (ctx.raw.get("texts") or []))
     words = " ".join([*ctx.buttons, ctx.title, *[str(h) for h in (ctx.raw.get("headings") or [])]])
     submits = [b for b in ctx.buttons if any(w in b for w in _SUBMIT_WORDS)]
     posts = [f for f in ctx.forms if str(f.get("method") or "").lower() == "post" or str(f.get("action") or "").startswith("/api")]
@@ -867,28 +910,46 @@ def _evidence_viewpoint_rows(ctx: _ScreenContext, *, has_required_rows: bool) ->
     if required and not has_required_rows:
         rows.append(("REQ", f"必須項目（{labels(required)}）が空のまま確定すると受け付けられない", "必須チェック",
                      ("空の必須項目があると先へ進めず、どの項目が必要かが画面に示される",)))
-    if typed:
-        rows.append(("FMT", f"{labels(typed)}: 形式に合わない値は受け付けられない", "形式チェック",
+    if typed or (fields and _FORMAT_TEXT.search(texts)):
+        rows.append(("FMT", f"{labels(typed or fields)}: 形式に合わない値は受け付けられない", "形式チェック",
                      ("形式に合わない値を入れると、正しい形式の例が示されて先へ進めない",)))
-    if constrained and (submits or ctx.forms):
+    if fields and not has_boundary_rows and _RANGE_TEXT.search(texts):
+        rows.append(("BND", f"画面に書かれた範囲（{_RANGE_TEXT.search(texts).group(0)}）の内側と外側の値を確かめる", "境界値（画面の記述から）",
+                     ("範囲の端の値は受け付けられ、範囲の外の値は受け付けられない",)))
+    # エラー表示は、画面にエラーの表示が書かれているときだけ（入力欄があるだけでは作らない）
+    if fields and _ERROR_TEXT.search(texts) and (submits or ctx.forms):
         rows.append(("ERR", "入力に誤りがあるとエラーメッセージが表示され、直すと先へ進める", "エラー表示と回復",
                      ("誤りのある項目の近くにエラーメッセージが表示される", "直したあとは同じ操作で先へ進める")))
-    if submits or posts:
+    # API は送信先の根拠（POST のフォーム・/api への送信先・画面に書かれた API）があるときだけ
+    if posts or _API_TEXT.search(texts):
         rows.append(("API", f"「{(submits or [ctx.submit_label])[0]}」の内容がサーバ（API）に届き、応答が画面に反映される",
                      "API 連携", ("サーバの応答（成功・失敗）が画面に反映される", "通信に失敗したときは失敗が分かる表示になる")))
-    if any(w in " ".join(ctx.buttons) for w in _SAVE_WORDS):
+    if any(w in " ".join(ctx.buttons) for w in _SAVE_WORDS) or _SAVE_TEXT.search(texts):
         rows.append(("PST", "保存した内容が、再読み込みしても保持されて再表示される", "保存と再表示",
                      ("再読み込みや再訪問のあとも、保存した値が表示される",)))
-    if any(w in words for w in _PERMISSION_WORDS):
+    if any(w in words for w in _PERMISSION_WORDS) or _ROLE_TEXT.search(texts):
         rows.append(("PRM", "権限のない利用者では、この画面や操作が使えない", "権限",
                      ("権限のない利用者には表示されないか、操作できない理由が示される",)))
+    for code, rx, name, viewpoint, exp in (
+            ("RTY", _RETRY_TEXT, "失敗したあと、画面に書かれた方法で再試行できる", "再試行", ("再試行すると同じ要求をもう一度送り、成功すれば結果が表示される",)),
+            ("TMO", _TIMEOUT_TEXT, "応答が遅いとき（画面に書かれた時間を超えたとき）の表示と扱いを確かめる", "タイムアウト",
+             ("決められた時間を超えると、待たされ続けず、分かる表示になる",)),
+            ("EMP", _EMPTY_TEXT, "対象が 0 件のときの表示を確かめる", "0 件のとき", ("0 件のときの案内が表示され、空白や誤った件数にならない",)),
+            ("DUP", _DUP_TEXT, "同じ内容を重ねて登録・使用できないことを確かめる", "重複", ("重複するときは受け付けられず、理由が示される",))):
+        if rx.search(texts):
+            rows.append((code, name, viewpoint, exp))
+    state = _STATE_TEXT.search(texts)
+    if state:
+        rows.append(("STT", f"画面に書かれた状態の変化（{state.group(0)[:40]}）どおりに状態が変わり、許されない変化は起きない",
+                     "状態遷移（画面の記述から）",
+                     ("操作のたびに表示中の状態が記述どおりに変わる", "その状態で許されない操作はできない")))
     out: list[TestCaseRow] = []
     for code, name, viewpoint, expected in rows:
-        texts, actions = _split_steps([ctx.open_step()])
+        steps, actions = _split_steps([ctx.open_step()])
         out.append(TestCaseRow(
             case_id=f"TC-{ctx.page_id}-{code}-001", name=name, screen=ctx.label, function=ctx.function,
             viewpoint=f"{viewpoint}（Evidence から作った観点）", preconditions=ctx.preconditions(),
-            steps=texts, expected=expected, automation=AUTOMATION_MANUAL,
+            steps=steps, expected=expected, automation=AUTOMATION_MANUAL,
             automation_reason="画面の根拠から作った観点。手順と期待値は人が具体化する",
-            trace_id=ctx.page_id, actions=actions))
+            trace_id=ctx.page_id, actions=actions, category=_CATEGORY_OF[code]))
     return out

@@ -1,0 +1,126 @@
+{
+ "n_screens": 28,
+ "all": {
+  "precision": 0.906,
+  "recall": 0.88,
+  "f1": 0.893,
+  "tp": 125,
+  "fp": 13,
+  "fn": 17
+ },
+ "by_category": {
+  "abnormal": {
+   "precision": 0.667,
+   "recall": 0.667,
+   "f1": 0.667,
+   "tp": 6,
+   "fp": 3,
+   "fn": 3
+  },
+  "api": {
+   "precision": 1.0,
+   "recall": 1.0,
+   "f1": 1.0,
+   "tp": 17,
+   "fp": 0,
+   "fn": 0
+  },
+  "boundary": {
+   "precision": 0.875,
+   "recall": 1.0,
+   "f1": 0.933,
+   "tp": 14,
+   "fp": 2,
+   "fn": 0
+  },
+  "duplicate": {
+   "precision": 1.0,
+   "recall": 0.4,
+   "f1": 0.571,
+   "tp": 2,
+   "fp": 0,
+   "fn": 3
+  },
+  "empty": {
+   "precision": 1.0,
+   "recall": 1.0,
+   "f1": 1.0,
+   "tp": 4,
+   "fp": 0,
+   "fn": 0
+  },
+  "error": {
+   "precision": 0.9,
+   "recall": 0.643,
+   "f1": 0.75,
+   "tp": 9,
+   "fp": 1,
+   "fn": 5
+  },
+  "format": {
+   "precision": 0.846,
+   "recall": 0.917,
+   "f1": 0.88,
+   "tp": 11,
+   "fp": 2,
+   "fn": 1
+  },
+  "normal": {
+   "precision": 1.0,
+   "recall": 1.0,
+   "f1": 1.0,
+   "tp": 28,
+   "fp": 0,
+   "fn": 0
+  },
+  "permission": {
+   "precision": 1.0,
+   "recall": 0.833,
+   "f1": 0.909,
+   "tp": 5,
+   "fp": 0,
+   "fn": 1
+  },
+  "persistence": {
+   "precision": 0.556,
+   "recall": 1.0,
+   "f1": 0.714,
+   "tp": 5,
+   "fp": 4,
+   "fn": 0
+  },
+  "required": {
+   "precision": 1.0,
+   "recall": 1.0,
+   "f1": 1.0,
+   "tp": 13,
+   "fp": 0,
+   "fn": 0
+  },
+  "retry": {
+   "precision": 1.0,
+   "recall": 1.0,
+   "f1": 1.0,
+   "tp": 5,
+   "fp": 0,
+   "fn": 0
+  },
+  "state_transition": {
+   "precision": 0.75,
+   "recall": 0.5,
+   "f1": 0.6,
+   "tp": 3,
+   "fp": 1,
+   "fn": 3
+  },
+  "timeout": {
+   "precision": 1.0,
+   "recall": 0.75,
+   "f1": 0.857,
+   "tp": 3,
+   "fp": 0,
+   "fn": 1
+  }
+ },
+ "missing_screens": []
+}

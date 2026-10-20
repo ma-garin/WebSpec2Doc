@@ -3374,6 +3374,7 @@
         "src/reverse_analysis/runtime.py",
         "src/reverse_analysis/rea_adapter.py",
         "src/reverse_analysis/normalize.py",
+        "src/reverse_analysis/api_resolve.py",
         "src/reverse_analysis/reconcile.py",
         "src/reverse_analysis/reporter.py",
         "src/reverse_analysis/service.py",

@@ -1,0 +1,158 @@
+{
+ "n": 279,
+ "excluded": 0,
+ "rules": {
+  "AMBIGUOUS": {
+   "precision": 0.571,
+   "recall": 0.364,
+   "f1": 0.444,
+   "tp": 8,
+   "fp": 6,
+   "fn": 14,
+   "n": 279,
+   "n_gold": 22,
+   "n_predicted": 14
+  },
+  "REQ.INCOMPLETE": {
+   "precision": 0.882,
+   "recall": 0.789,
+   "f1": 0.833,
+   "tp": 15,
+   "fp": 2,
+   "fn": 4,
+   "n": 279,
+   "n_gold": 19,
+   "n_predicted": 17
+  },
+  "REQ.OPEN_ENDED": {
+   "precision": 1.0,
+   "recall": 0.75,
+   "f1": 0.857,
+   "tp": 15,
+   "fp": 0,
+   "fn": 5,
+   "n": 279,
+   "n_gold": 20,
+   "n_predicted": 15
+  },
+  "REQ.UNIVERSAL": {
+   "precision": 0.938,
+   "recall": 0.75,
+   "f1": 0.833,
+   "tp": 15,
+   "fp": 1,
+   "fn": 5,
+   "n": 279,
+   "n_gold": 20,
+   "n_predicted": 16
+  },
+  "REQ.AND_OR": {
+   "precision": 0.938,
+   "recall": 0.833,
+   "f1": 0.882,
+   "tp": 15,
+   "fp": 1,
+   "fn": 3,
+   "n": 279,
+   "n_gold": 18,
+   "n_predicted": 16
+  },
+  "REQ.MEASURABILITY": {
+   "precision": 0.625,
+   "recall": 0.714,
+   "f1": 0.667,
+   "tp": 15,
+   "fp": 9,
+   "fn": 6,
+   "n": 279,
+   "n_gold": 21,
+   "n_predicted": 24
+  },
+  "REQ.MULTIPLE_REQUIREMENTS": {
+   "precision": 0.889,
+   "recall": 0.941,
+   "f1": 0.914,
+   "tp": 16,
+   "fp": 2,
+   "fn": 1,
+   "n": 279,
+   "n_gold": 17,
+   "n_predicted": 18
+  }
+ },
+ "misses": {
+  "AMBIGUOUS": [
+   "FN V3-009",
+   "FN V3-011",
+   "FN V3-049",
+   "FN V3-060",
+   "FN V3-061",
+   "FN V3-092",
+   "FN V3-112",
+   "FP V3-118",
+   "FP V3-129",
+   "FN V3-138",
+   "FN V3-144",
+   "FN V3-155",
+   "FP V3-173",
+   "FN V3-189",
+   "FP V3-190",
+   "FN V3-210",
+   "FN V3-219",
+   "FP V3-224",
+   "FN V3-232",
+   "FP V3-261"
+  ],
+  "REQ.INCOMPLETE": [
+   "FP V3-015",
+   "FN V3-026",
+   "FN V3-100",
+   "FP V3-163",
+   "FN V3-170",
+   "FN V3-275"
+  ],
+  "REQ.OPEN_ENDED": [
+   "FN V3-103",
+   "FN V3-145",
+   "FN V3-221",
+   "FN V3-225",
+   "FN V3-264"
+  ],
+  "REQ.UNIVERSAL": [
+   "FN V3-014",
+   "FP V3-053",
+   "FN V3-083",
+   "FN V3-185",
+   "FN V3-196",
+   "FN V3-228"
+  ],
+  "REQ.AND_OR": [
+   "FN V3-076",
+   "FN V3-157",
+   "FP V3-167",
+   "FN V3-229"
+  ],
+  "REQ.MEASURABILITY": [
+   "FP V3-001",
+   "FP V3-019",
+   "FP V3-026",
+   "FN V3-118",
+   "FP V3-127",
+   "FN V3-136",
+   "FN V3-150",
+   "FP V3-151",
+   "FN V3-190",
+   "FN V3-191",
+   "FP V3-202",
+   "FP V3-213",
+   "FP V3-214",
+   "FN V3-218",
+   "FP V3-275"
+  ],
+  "REQ.MULTIPLE_REQUIREMENTS": [
+   "FP V3-088",
+   "FP V3-116",
+   "FN V3-139"
+  ]
+ }
+}

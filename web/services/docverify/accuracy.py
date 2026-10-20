@@ -13,9 +13,10 @@ log = logging.getLogger(__name__)
 
 RESULT_PATH = Path(__file__).resolve().parents[3] / "quality" / "docverify_eval" / "result.json"
 # 規則の調整に使っていない、別の作成者による検証用セットの結果（scripts/commercial_eval/docverify_holdout_eval.py）。
-# あれば規則ごとに最も低い値を採る（調整に使ったセットの値だけで有効・無効を決めない）。最後が改善に一度も使っていない最終評価用
+# あれば規則ごとに最も低い値を採る（調整に使ったセットの値だけで有効・無効を決めない）。最後（holdout_v3）が改善に一度も使っていない最終評価用。holdout_final は #312 で結果を見たため開発用に戻した
 _EVAL = Path(__file__).resolve().parents[3] / "quality" / "commercial_eval"
-HOLDOUT_PATHS = (_EVAL / "docverify_holdout" / "result.json", _EVAL / "holdout_final" / "docverify" / "result.json")
+HOLDOUT_PATHS = (_EVAL / "docverify_holdout" / "result.json", _EVAL / "holdout_final" / "docverify" / "result.json",
+                 _EVAL / "holdout_v3" / "docverify" / "result.json")
 MIN_PRECISION = 0.75  # 商用品質の基準。これ未満の規則は既定で無効
 MIN_RECALL = 0.7  # これ未満の規則は有効のままにするが、見落としが多い限定的な検出と明示する
 UNMEASURED = "未測定"

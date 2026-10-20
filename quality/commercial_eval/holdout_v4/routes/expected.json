@@ -1,0 +1,466 @@
+{
+ "cases": [
+  {
+   "id": "T01",
+   "kind": "api",
+   "method": "GET",
+   "path": "/api/v2/patients",
+   "should_detect": true,
+   "category": "concat_const_query",
+   "file": "site/assets/patients.js",
+   "note": "PATIENT_API + クエリ文字列。クエリは path に含めない"
+  },
+  {
+   "id": "T02",
+   "kind": "api",
+   "method": "GET",
+   "path": "/api/v2/patients/:param",
+   "should_detect": true,
+   "category": "concat_trailing_param",
+   "file": "site/assets/patients.js",
+   "note": "fetch(PATIENT_API + \"/\" + patientId)。method 省略"
+  },
+  {
+   "id": "T03",
+   "kind": "api",
+   "method": "GET",
+   "path": "/api/v2/patients/:param/visits",
+   "should_detect": true,
+   "category": "local_var_mid_param",
+   "file": "site/assets/patients.js",
+   "note": "url をローカル変数に組み立ててから fetch(url)。method 省略"
+  },
+  {
+   "id": "T04",
+   "kind": "api",
+   "method": "POST",
+   "path": "/api/v2/patients",
+   "should_detect": true,
+   "category": "options_post",
+   "file": "site/assets/patients.js",
+   "note": "options で POST。URL は定数のみ"
+  },
+  {
+   "id": "T05",
+   "kind": "api",
+   "method": "PUT",
+   "path": "/api/v2/patients/:param/insurance",
+   "should_detect": true,
+   "category": "options_put_template_mid_param",
+   "file": "site/assets/patients.js",
+   "note": "テンプレートリテラル。途中に param"
+  },
+  {
+   "id": "T06",
+   "kind": "api",
+   "method": "PATCH",
+   "path": "/api/v2/patients/:param/contact",
+   "should_detect": true,
+   "category": "options_patch_concat_mid_param",
+   "file": "site/assets/patients.js",
+   "note": "連結。途中に param"
+  },
+  {
+   "id": "T07",
+   "kind": "api",
+   "method": "DELETE",
+   "path": "/api/v2/patients/:param",
+   "should_detect": true,
+   "category": "options_delete_template_trailing_param",
+   "file": "site/assets/patients.js",
+   "note": "テンプレートリテラル。末尾 param"
+  },
+  {
+   "id": "T08",
+   "kind": "api",
+   "method": "POST",
+   "path": "/api/v2/reception/check-in",
+   "should_detect": true,
+   "category": "helper_2plus_post",
+   "file": "site/assets/reception.js",
+   "note": "apiPost -> req -> fetch の 2 段ヘルパー。パスはヘルパー側で API_BASE を前置"
+  },
+  {
+   "id": "T09",
+   "kind": "api",
+   "method": "POST",
+   "path": "/api/v2/reception/queue/next",
+   "should_detect": true,
+   "category": "object_method_this_multilevel_const",
+   "file": "site/assets/reception.js",
+   "note": "this.queueUrl (= QUEUE_BASE <- RECEPTION_BASE <- API_BASE の 3 段定数)"
+  },
+  {
+   "id": "T10",
+   "kind": "api",
+   "method": "DELETE",
+   "path": "/api/v2/reception/queue/:param",
+   "should_detect": true,
+   "category": "helper_1_arrow_delete",
+   "file": "site/assets/reception.js",
+   "note": "アロー関数 req(\"DELETE\", ...) 経由。QUEUE_BASE は config.js の多段定数"
+  },
+  {
+   "id": "T11",
+   "kind": "api",
+   "method": "PUT",
+   "path": "/api/v2/reception/queue/:param/priority",
+   "should_detect": true,
+   "category": "helper_2plus_send_mid_param",
+   "file": "site/assets/reception.js",
+   "note": "apiSend(\"PUT\", path) 経由。途中に param"
+  },
+  {
+   "id": "T12",
+   "kind": "api",
+   "method": "GET",
+   "path": "/api/v2/reception/queue",
+   "should_detect": true,
+   "category": "helper_3level_getjson",
+   "file": "site/assets/reception.js",
+   "note": "getJson -> apiGet -> req -> fetch の 3 段ヘルパー"
+  },
+  {
+   "id": "T13",
+   "kind": "api",
+   "method": "GET",
+   "path": "/api/v2/departments",
+   "should_detect": true,
+   "category": "const_only_method_omitted",
+   "file": "site/assets/reception.js",
+   "note": "fetch(DEPT_URL)。別ファイルの定数のみ・method 省略"
+  },
+  {
+   "id": "T14",
+   "kind": "api",
+   "method": "GET",
+   "path": "/api/v2/doctors",
+   "should_detect": true,
+   "category": "helper_chain_runtime_concat",
+   "file": "site/assets/reception.js",
+   "note": "loadList(\"doctors\") -> getJson(\"/\" + resource) -> apiGet -> req。実引数とヘルパー内連結の合成"
+  },
+  {
+   "id": "T15",
+   "kind": "api",
+   "method": "GET",
+   "path": "/api/v2/doctors/:param/schedule",
+   "should_detect": true,
+   "category": "template_method_omitted_mid_param",
+   "file": "site/assets/reception.js",
+   "note": "テンプレートリテラル + クエリ。method 省略"
+  },
+  {
+   "id": "T16",
+   "kind": "api",
+   "method": "POST",
+   "path": "/api/v2/doctors/:param/rooms/:param/assign",
+   "should_detect": true,
+   "category": "template_two_params_post",
+   "file": "site/assets/reception.js",
+   "note": "param が 2 つ。末尾は固定語 assign"
+  },
+  {
+   "id": "T17",
+   "kind": "api",
+   "method": "GET",
+   "path": "/api/v2/billing/invoices/:param",
+   "should_detect": true,
+   "category": "xhr_direct_get",
+   "file": "site/assets/billing.js",
+   "note": "xhr.open(\"GET\", BILLING_BASE + ...)"
+  },
+  {
+   "id": "T18",
+   "kind": "api",
+   "method": "POST",
+   "path": "/api/v2/billing/payments",
+   "should_detect": true,
+   "category": "xhr_direct_post_template",
+   "file": "site/assets/billing.js",
+   "note": "xhr.open のテンプレートリテラル (BILLING_BASE 自体もテンプレート定数)"
+  },
+  {
+   "id": "T19",
+   "kind": "api",
+   "method": "GET",
+   "path": "/api/v2/billing/payments/:param/receipt",
+   "should_detect": true,
+   "category": "xhr_helper_get_mid_param",
+   "file": "site/assets/billing.js",
+   "note": "xhrRequest(method, url) 経由 (内部で x.open(method, url))"
+  },
+  {
+   "id": "T20",
+   "kind": "api",
+   "method": "DELETE",
+   "path": "/api/v2/billing/payments/:param",
+   "should_detect": true,
+   "category": "xhr_helper_delete_trailing_param",
+   "file": "site/assets/billing.js",
+   "note": "xhrRequest 経由の DELETE"
+  },
+  {
+   "id": "T21",
+   "kind": "api",
+   "method": "POST",
+   "path": "/api/v2/billing/copay/recalc",
+   "should_detect": true,
+   "category": "helper_2plus_send_post",
+   "file": "site/assets/billing.js",
+   "note": "apiSend(\"POST\", path, body) 経由"
+  },
+  {
+   "id": "T22",
+   "kind": "api",
+   "method": "POST",
+   "path": "/api/v2/lab/orders",
+   "should_detect": true,
+   "category": "object_method_multilevel_const_post",
+   "file": "site/assets/app.js",
+   "note": "LabDesk.submit。LAB_ORDERS <- LAB_ROOT <- API_BASE"
+  },
+  {
+   "id": "T23",
+   "kind": "api",
+   "method": "GET",
+   "path": "/api/v2/lab/orders/:param/status",
+   "should_detect": true,
+   "category": "object_method_multilevel_mid_param",
+   "file": "site/assets/app.js",
+   "note": "LabDesk.status。method 省略"
+  },
+  {
+   "id": "T24",
+   "kind": "api",
+   "method": "PATCH",
+   "path": "/api/v2/lab/orders/:param",
+   "should_detect": true,
+   "category": "object_method_template_patch",
+   "file": "site/assets/app.js",
+   "note": "LabDesk.reprioritize"
+  },
+  {
+   "id": "T25",
+   "kind": "api",
+   "method": "DELETE",
+   "path": "/api/v2/lab/orders/:param",
+   "should_detect": true,
+   "category": "object_method_concat_delete",
+   "file": "site/assets/app.js",
+   "note": "LabDesk.cancel"
+  },
+  {
+   "id": "T26",
+   "kind": "api",
+   "method": "GET",
+   "path": "/api/v2/lab/results/latest",
+   "should_detect": true,
+   "category": "object_method_const_concat",
+   "file": "site/assets/app.js",
+   "note": "LabDesk.latestResults。method 省略"
+  },
+  {
+   "id": "T27",
+   "kind": "api",
+   "method": "GET",
+   "path": "/api/v2/notices/active",
+   "should_detect": true,
+   "category": "literal_concat_async_await",
+   "file": "site/assets/app.js",
+   "note": "NOTICE_API = \"/api/v2\" + \"/notices\" (リテラル同士の連結) + await fetch"
+  },
+  {
+   "id": "T28",
+   "kind": "api",
+   "method": "PUT",
+   "path": "/api/v2/notices/:param/read",
+   "should_detect": true,
+   "category": "template_async_put",
+   "file": "site/assets/app.js",
+   "note": "await fetch(`${NOTICE_API}/${id}/read`, {method:\"PUT\"})"
+  },
+  {
+   "id": "T29",
+   "kind": "api",
+   "method": null,
+   "path": "/api/v2/memos",
+   "should_detect": true,
+   "category": "method_conditional",
+   "file": "site/assets/app.js",
+   "note": "method が readOnly ? \"GET\" : \"POST\" の条件式。method は静的に 1 つに決まらないので null (path のみ判定対象)"
+  },
+  {
+   "id": "T30",
+   "kind": "api",
+   "method": "GET",
+   "path": "/api/v2/session/ping",
+   "should_detect": true,
+   "category": "concat_const_method_omitted",
+   "file": "site/assets/app.js",
+   "note": "fetch(API_BASE + \"/session/ping\")。boot から呼ばれる"
+  },
+  {
+   "id": "F01",
+   "kind": "api",
+   "method": "GET",
+   "path": "/api/v1/print/queue-slip",
+   "should_detect": false,
+   "category": "unused_string",
+   "file": "site/assets/app.js",
+   "note": "文字列変数に代入されるだけで、どこからも使われない"
+  },
+  {
+   "id": "F02",
+   "kind": "api",
+   "method": "GET",
+   "path": "/api/v2/debug/dump-patients",
+   "should_detect": false,
+   "category": "if_false",
+   "file": "site/assets/app.js",
+   "note": "if (false) の中"
+  },
+  {
+   "id": "F03",
+   "kind": "api",
+   "method": "POST",
+   "path": "/api/v2/reception/queue/purge",
+   "should_detect": false,
+   "category": "after_return",
+   "file": "site/assets/app.js",
+   "note": "return null の後ろ (到達不能)"
+  },
+  {
+   "id": "F04",
+   "kind": "api",
+   "method": "GET",
+   "path": "/api/v2/analytics/summary",
+   "should_detect": false,
+   "category": "line_comment",
+   "file": "site/assets/app.js",
+   "note": "// コメント内の文章中の URL"
+  },
+  {
+   "id": "F05",
+   "kind": "api",
+   "method": "POST",
+   "path": "/api/v2/patients/export",
+   "should_detect": false,
+   "category": "block_comment_call",
+   "file": "site/assets/app.js",
+   "note": "/* ... */ でコメントアウトされた fetch"
+  },
+  {
+   "id": "F06",
+   "kind": "api",
+   "method": "GET",
+   "path": "/api/v2/patients/legacy-search",
+   "should_detect": false,
+   "category": "line_comment_call",
+   "file": "site/assets/patients.js",
+   "note": "// コメント内の旧 fetch 呼び出し"
+  },
+  {
+   "id": "F07",
+   "kind": "api",
+   "method": "GET",
+   "path": "/api/v2/mock/tickets/A001",
+   "should_detect": false,
+   "category": "mock_array",
+   "file": "site/assets/app.js",
+   "note": "MOCK_QUEUE のダミー行。textContent に表示するだけ"
+  },
+  {
+   "id": "F08",
+   "kind": "api",
+   "method": "GET",
+   "path": "/api/v2/mock/tickets/A002",
+   "should_detect": false,
+   "category": "mock_array",
+   "file": "site/assets/app.js",
+   "note": "MOCK_QUEUE のダミー行。表示するだけ"
+  },
+  {
+   "id": "F09",
+   "kind": "api",
+   "method": "GET",
+   "path": "/patient/insurance/number",
+   "should_detect": false,
+   "category": "json_pointer_not_url",
+   "file": "site/assets/patients.js",
+   "note": "画面モデルから値を取り出す JSON ポインタ。URL ではない"
+  },
+  {
+   "id": "F10",
+   "kind": "api",
+   "method": null,
+   "path": "/api/v2/status-board",
+   "should_detect": false,
+   "category": "url_in_message_text",
+   "file": "site/assets/app.js",
+   "note": "alert の文言中の API 名。呼び出しではない"
+  },
+  {
+   "id": "F11",
+   "kind": "api",
+   "method": "POST",
+   "path": "/v1/export",
+   "should_detect": false,
+   "category": "external_origin",
+   "file": "site/assets/app.js",
+   "note": "外部オリジン https://reports.partner-lab.example (REPORT_HOST) への POST"
+  },
+  {
+   "id": "F12",
+   "kind": "api",
+   "method": "GET",
+   "path": "/v1/forecast",
+   "should_detect": false,
+   "category": "external_origin_literal",
+   "file": "site/assets/app.js",
+   "note": "外部オリジン https://api.weather-board.example へ GET (クエリ ?city=tokyo)"
+  },
+  {
+   "id": "F13",
+   "kind": "api",
+   "method": "GET",
+   "path": "/api/v2/debug/state",
+   "should_detect": false,
+   "category": "console_log_only",
+   "file": "site/assets/app.js",
+   "note": "console.log に出すだけ (さらに DEBUG=false の中)"
+  },
+  {
+   "id": "F14",
+   "kind": "api",
+   "method": "GET",
+   "path": "/api/v2/reception/queue/snapshot",
+   "should_detect": false,
+   "category": "console_warn_only",
+   "file": "site/assets/app.js",
+   "note": "console.warn の文言に連結で埋め込むだけ"
+  },
+  {
+   "id": "X01",
+   "kind": "api",
+   "method": null,
+   "path": "/__user_supplied__",
+   "should_detect": false,
+   "category": "user_input_url",
+   "file": "site/assets/app.js",
+   "note": "fetch(入力欄の value)。URL は利用者入力で静的に決まらない",
+   "exclude_from_metrics": true
+  },
+  {
+   "id": "X02",
+   "kind": "api",
+   "method": null,
+   "path": "/__user_supplied__",
+   "should_detect": false,
+   "category": "query_param_url",
+   "file": "site/assets/app.js",
+   "note": "fetch(location.search の next)。静的に決まらない",
+   "exclude_from_metrics": true
+  }
+ ]
+}

@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Maple Library Portal</title>
+  <style>
+    body { font-family: sans-serif; margin: 0; }
+    nav { background: #234; padding: 8px 16px; }
+    nav a { color: #fff; margin-right: 16px; text-decoration: none; }
+    main { padding: 16px; }
+    section { display: none; }
+    section.active { display: block; }
+    .tip { color: #666; font-size: 12px; }
+  </style>
+</head>
+<body>
+  <nav>
+    <a href="#/books">蔵書</a>
+    <a href="#/members">会員</a>
+    <a href="#/loans">貸出</a>
+    <a href="#/fines">延滞料</a>
+    <button id="btn-login" type="button">ログイン</button>
+    <button id="btn-logout" type="button">ログアウト</button>
+  </nav>
+  <main>
+    <p id="help-tip" class="tip"></p>
+
+    <section id="view-books">
+      <h1>蔵書検索</h1>
+      <form id="book-search-form">
+        <input id="book-q" type="search" placeholder="書名・著者">
+        <button type="submit">検索</button>
+      </form>
+      <button id="btn-add-book" type="button">蔵書を追加</button>
+      <button id="btn-export-csv" type="button">CSV 出力</button>
+      <ul id="book-list"></ul>
+      <select id="genre-select"></select>
+    </section>
+
+    <section id="view-members">
+      <h1>会員</h1>
+      <input id="member-id" type="text" placeholder="会員ID">
+      <button id="btn-register-member" type="button">新規登録</button>
+      <button id="btn-reissue-card" type="button">カード再発行</button>
+      <button id="btn-suspend" type="button">利用停止</button>
+      <button id="btn-delete-member" type="button">退会</button>
+      <ul id="member-list"></ul>
+    </section>
+
+    <section id="view-loans">
+      <h1>貸出・返却</h1>
+      <input id="loan-member" type="text" placeholder="会員ID">
+      <input id="loan-isbn" type="text" placeholder="ISBN">
+      <button id="btn-checkout" type="button">貸出</button>
+      <button id="btn-return" type="button">返却</button>
+      <button id="btn-renew" type="button">延長</button>
+      <button id="btn-hold" type="button">予約</button>
+      <button id="btn-cancel-hold" type="button">予約取消</button>
+      <select id="branch-select"></select>
+      <ul id="loan-list"></ul>
+
+      <h2>管理者ツール</h2>
+      <input id="count-resource" type="text" placeholder="books / members / loans">
+      <button id="btn-count" type="button">件数</button>
+      <input id="probe-url" type="text" placeholder="接続確認する URL">
+      <button id="btn-probe" type="button">接続確認</button>
+      <input id="report-month" type="month">
+      <button id="btn-report" type="button">月次レポート</button>
+    </section>
+
+    <section id="view-fines">
+      <h1>延滞料</h1>
+      <ul id="fine-list"></ul>
+      <button id="btn-pay-fine" type="button">支払い</button>
+    </section>
+  </main>
+
+  <script src="/assets/config.js"></script>
+  <script src="/assets/http.js"></script>
+  <script src="/assets/catalog.js"></script>
+  <script src="/assets/members.js"></script>
+  <script src="/assets/circulation.js"></script>
+</body>
+</html>

@@ -123,10 +123,65 @@
     if (missing || skippedN) return { code: 'partial', label: '一部のみ実行', reason: detail + '。結果の無いテストは成功に数えていません。', kind: 'warning' };
     return { code: 'done', label: allN > total ? '成功（' + total + ' 件）' : '成功', reason: detail + '。', kind: 'success' };
   }
+  /* 実行がブラウザ不在などで始められなかった／結果が 1 件も返らなかった状態。成功・失敗と混ぜない */
+  var runBlocked = null;
+  var runStartedAt = 0;      // 実行を始めた時刻（経過時間の表示用）
+  function fmtElapsed(ms) {
+    var sec = Math.max(0, Math.round(ms / 1000));
+    return Math.floor(sec / 60) + ':' + ('0' + (sec % 60)).slice(-2);
+  }
+  /* 支援技術へは、進捗の細かい変化でなく節目（開始・完了・BLOCKED）だけ読み上げる */
+  function announce(msg) {
+    var el = $('#run-announce');
+    if (!el) {
+      el = document.createElement('div');
+      el.id = 'run-announce'; el.className = 'sr-only';
+      el.setAttribute('role', 'status'); el.setAttribute('aria-live', 'polite');
+      document.body.appendChild(el);
+    }
+    el.textContent = '';
+    setTimeout(function () { el.textContent = msg; }, 50);
+  }
+  var baseTitle = document.title;
+  function focusRunHeading() {
+    var h = document.querySelector('#p-run .ph h2');
+    if (!h) return;
+    h.setAttribute('tabindex', '-1');
+    h.focus({ preventScroll: false });
+  }
+  var BROWSER_RE = /ブラウザ|chrome|edge|browser|executable|playwright|503|424/i;
+  function blockReason(detail) {
+    return 'この PC の Chrome / Edge が見つからない、または起動できないため、テストを実行できませんでした。成功・失敗のどちらでもありません。'
+      + 'Google Chrome か Microsoft Edge をインストールしてから、もう一度「▶ 全件実行」を押してください。'
+      + (detail ? '（サーバの応答: ' + detail + '）' : '');
+  }
+  /* 製品内の実行方式と、書き出しの区別を常に見せる（generated≠executed / exported≠verified） */
+  function renderEngineNote() {
+    var el = $('#run-engine');
+    if (!el) {
+      var host = $('#run-reason');
+      if (!host || !host.parentNode) return;
+      el = document.createElement('p');
+      el.id = 'run-engine';
+      el.className = 'run-engine';
+      host.parentNode.insertBefore(el, host);
+    }
+    el.innerHTML = '<b>実行方式</b> Python Playwright（この PC の Chrome / Edge）。' +
+      '<b>TypeScript</b> は書き出し専用で、<span class="pill p-new">生成済み</span> <span class="pill p-new">未実行</span> ' +
+      '<span class="pill p-new">未検証</span> です。' +
+      '<span class="run-engine__note">「成功」は実行したテストの確認項目が通ったことだけを示します。機能全体の正しさではなく、未実行の範囲は <b>未検証</b> です。</span>' +
+      '<button type="button" class="sublink" id="back-tests">← テスト一覧へ戻る</button>';
+  }
   function renderRunState(list) {
     var W = window.WS2D;
     var st = $('#run-state'), rh = $('#run-reason');
     if (!W || !st) return;
+    renderEngineNote();
+    if (runBlocked && !state().run.running) {
+      st.innerHTML = W.status.html('unavailable', 'BLOCKED');
+      if (rh) { W.reason(rh, runBlocked.reason, 'error'); rh.hidden = false; }
+      return;
+    }
     var v = runVerdict(state().run, lastRun(), skippedList().length, list.length);
     if (!state().run.running && !runsLoaded) { st.innerHTML = ''; if (rh) rh.hidden = true; return; }
     st.innerHTML = W.status.html(v.code, v.label);
@@ -138,8 +193,10 @@
     var skTxt = sk.length ? ' · 実行できなかった ' + sk.length + ' 件' : '';
     if (r.running) {
       return '実行中 ' + (r.done || 0) + ' / ' + (r.total || 0) +
-        ' · 成功 ' + (r.passed || 0) + ' · 失敗 ' + (r.failed || 0) + skTxt;
+        ' · 成功 ' + (r.passed || 0) + ' · 失敗 ' + (r.failed || 0) +
+        (runStartedAt ? ' · 経過 ' + fmtElapsed(Date.now() - runStartedAt) : '') + skTxt;
     }
+    if (runBlocked) return '実行できませんでした（結果なし）';
     var l = lastRun();
     if (!l) return (runsLoaded ? 'まだ実行していません' : '') + skTxt;
     return '直近の実行 ' + (l.at || '') + ' · 成功 ' + (l.passed || 0) +
@@ -162,6 +219,7 @@
     // 知らない状態を既定で「成功」にしない（成功を確かめていないものを成功と表示しない）
     return '<span class="pill p-new">状態不明</span>';
   }
+  function r0Running() { var r = state().run || {}; return !!r.running; }
   function renderRun() {
     var el = $('#p-run');
     if (!el) return;
@@ -172,6 +230,9 @@
     var c = counts(list);
     var meta = $('#run-meta'); if (meta) meta.textContent = runMetaText();
     renderRunState(list);
+    var tbl = document.querySelector('#p-run .tbl table');
+    if (tbl) tbl.setAttribute('aria-label', 'テストごとの実行結果。行を選ぶと詳細を開きます');
+    document.title = (r0Running() ? '(' + (state().run.done || 0) + '/' + (state().run.total || 0) + ') 実行中 · ' : '') + baseTitle;
 
     var kpis = $('#kpis');
     var rs = state().run || {};
@@ -195,6 +256,12 @@
     var skipped = skippedList();
     var prog = $('#prog');
     if (prog) {
+      var pct = (r.running && Number(r.total)) ? Math.min(100, Math.round((r.done || 0) / Number(r.total) * 100)) : 0;
+      prog.setAttribute('role', 'progressbar');
+      prog.setAttribute('aria-label', '実行の進捗');
+      prog.setAttribute('aria-valuemin', '0'); prog.setAttribute('aria-valuemax', '100');
+      prog.setAttribute('aria-valuenow', String(pct));
+      prog.setAttribute('aria-valuetext', r.running ? (r.done || 0) + ' / ' + (r.total || 0) + ' 件完了' : '実行していません');
       var bar = prog.querySelector('i');
       // total は除外分を含まない（サーバが除外後の件数を返す）。
       // done/total で 100% に到達させ、除外分は別行で明示する（B-3）
@@ -462,11 +529,19 @@
       if (st.running) { pollTimer = setTimeout(poll, 1000); return; }
       stopPolling();
       live = {};
+      var noResult = Number(st.total) > 0 && !Number(st.done);
+      var tookTxt = runStartedAt ? ' · 所要 ' + fmtElapsed(Date.now() - runStartedAt) : '';
+      runStartedAt = 0;
+      document.title = baseTitle;
+      announce(noResult ? 'BLOCKED: 結果が 1 件も返りませんでした'
+        : '実行完了。成功 ' + (st.passed || 0) + '、失敗 ' + (st.failed || 0) + tookTxt);
+      if (noResult) runBlocked = { reason: blockReason('') };
       refreshTests().then(function () {
         return loadRuns(true);
       }).then(function () {
         if (TA().render) TA().render(); else render();
-        toast('実行完了 · 成功 ' + (st.passed || 0) + ' / 失敗 ' + (st.failed || 0)
+        if (noResult) { renderRun(); toast('BLOCKED: 結果が 1 件も返りませんでした', 'ng'); return; }
+        toast('実行完了 · 成功 ' + (st.passed || 0) + ' / 失敗 ' + (st.failed || 0) + tookTxt
           + (st.failed ? '。最初の失敗を下に出しています' : ''),
           (st.failed ? 'ng' : 'ok'));
         // 失敗があるなら最初の失敗行まで送る（結果表の先頭は失敗順に並ぶ）
@@ -504,7 +579,11 @@
   }
   function doRun(ids, label) {
     api().run(domain(), ids).then(function (r) {
+      runBlocked = null;
+      runStartedAt = Date.now();
+      announce('実行を開始しました。' + (r.total || 0) + ' 件');
       if (TA().setView) TA().setView('run');
+      focusRunHeading();
       var sk = Array.isArray(r.skipped) ? r.skipped : [];
       if (TA().state) {
         TA().state.run = {
@@ -524,6 +603,12 @@
         if (TA().setView) TA().setView('run');
         toast(m, 'ng');
         startPolling();
+      } else if (BROWSER_RE.test(m)) {
+        runBlocked = { reason: blockReason(m) };
+        if (TA().setView) TA().setView('run');
+        renderRun();
+        announce('BLOCKED: 実行できません。Chrome または Edge を確認してください');
+        toast('BLOCKED: 実行できません。Chrome / Edge を確認してください', 'ng');
       } else {
         toast('実行を開始できません: ' + m, 'ng');
       }
@@ -565,7 +650,22 @@
   }
 
   /* ==================== 配線 ==================== */
+  /* 左の一覧が DOM 上で後ろにあり、Tab で結果へ着くまでに 40 回以上かかる。先頭に飛び先を 1 つ置く */
+  function addSkipLink() {
+    if (document.getElementById('skip-results') || !document.getElementById('p-run')) return;
+    var a = document.createElement('a');
+    a.id = 'skip-results'; a.href = '#/run'; a.className = 'skip-link';
+    a.textContent = '実行と結果へ移動';
+    a.addEventListener('click', function (e) {
+      e.preventDefault();
+      if (!domain()) { toast('先にサイトを選んでください', 'ng'); return; }
+      if (TA().setView) TA().setView('run');
+      renderRun(); focusRunHeading();
+    });
+    document.body.insertBefore(a, document.body.firstChild);
+  }
   function bind() {
+    addSkipLink();
     // 結果の行はキーボードでも開ける（Enter / Space）。クリックと同じくテストの詳細へ
     document.addEventListener('keydown', function (e) {
       if (e.key !== 'Enter' && e.key !== ' ') return;
@@ -591,6 +691,12 @@
 
       if (btn.id === 'run-all-btn' && btn.getAttribute('data-scope') === 'visible') { runVisible(); return; }
       if (btn.id === 'run-all-btn' || btn.id === 'run-all-btn2' || btn.id === 'go-run') { runAll(); return; }
+      if (btn.id === 'go-results') { if (TA().setView) TA().setView('run'); renderRun(); focusRunHeading(); return; }
+      if (btn.id === 'back-tests') {
+        if (TA().setView) TA().setView('test');
+        var gr = document.getElementById('go-results'); if (gr) gr.focus();
+        return;
+      }
       if (btn.id === 'rerun-fail-btn') { rerunFailed(); return; }
       if (btn.id === 'export-btn') { exportEvidence(); return; }
       if (btn.id === 'recrawl-btn') { recrawl(btn); return; }

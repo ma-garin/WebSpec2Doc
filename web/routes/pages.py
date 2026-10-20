@@ -87,6 +87,11 @@ def _may_use_testlab() -> bool:
     return user.get("role") == "admin"
 
 
+def _forbidden_page() -> tuple[str, int]:
+    """素の 403 を出さず、理由と次の行動を書いた画面を返す（ステータスは 403 のまま）。"""
+    return render_template("forbidden.html"), 403
+
+
 @bp.route("/")
 def index() -> Response:
     """ドキュメント作成（System 01）の入口。実体は /dashboard に一本化する。
@@ -128,7 +133,7 @@ def site_workspace(domain: str, ws: str) -> str | Response:
         abort(404)
     if not _may_use_testlab():
         # 存在は隠さず 403 にする。404 にすると権限の問題か綴り違いか切り分けられない。
-        abort(403)
+        return _forbidden_page()
     if not (scoped_output_dir(OUTPUT_DIR) / domain / "report.json").is_file():
         return redirect("/")
     return render_template("workspace.html", ws=ws, domain=domain, mode="full")
@@ -139,7 +144,7 @@ def test_automation() -> str:
     """テスト自動化単体モード。統合ワークスペースをテスト系パネルだけに絞って開く。"""
     if not _may_use_testlab():
         # /sites/<domain>/* と同じ。画面骨格に入れてから中の API で初めて拒否される不揃いを避ける。
-        abort(403)
+        return _forbidden_page()
     return render_template("workspace.html", ws="home", domain="", mode="test-only")
 
 

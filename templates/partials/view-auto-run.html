@@ -18,6 +18,8 @@
               <div class="autorun-intake-lead">
                 <div class="section-kicker">受付</div>
                 <h3 class="autorun-intake-title">URLか仕様書を渡すだけ。あとはベテランQAとして回します。</h3>
+                <p class="asr-jump-row"><button type="button" class="btn-outline-sm" id="asr-jump">静的候補の探索へ移動 ↓</button>
+                  <span>System01 の静的候補を GET だけで開いて到達を確かめます（未確認・曖昧は System02 の実行対象に数えません）。</span></p>
                 <!-- 「全自動」とだけ書くと、途中で確認を求められた時点で期待を裏切る。
                      人が関わる点（要確認の提示・実行条件の確認）を先に言う。 -->
                 <p class="autorun-intake-sub">受領から実行完了レポートの納品まで、フルスペクトラムのQAを一貫して実施します。範囲は絞りません。技法・観点はシステム側が判断します。<strong>途中2回だけ止まります</strong>（ログインが必要なとき／実行条件の確認）。根拠が弱い項目は「要確認」として提示します。</p>
@@ -225,7 +227,7 @@
                 </div>
                 <span id="autorun-progress-count" class="autorun-elapsed" aria-live="polite">準備中</span>
                 <span id="autorun-phase-label" class="autorun-phase-label" aria-live="polite"></span>
-                <span id="autorun-elapsed" class="autorun-elapsed">0:00</span>
+                <span id="autorun-elapsed" class="autorun-elapsed" role="timer" aria-label="経過時間">0:00</span>
               </div>
               <div id="autorun-step-note" class="autorun-step-note" style="display:none"></div>
             </div>
@@ -243,9 +245,9 @@
             <div id="autorun-live-tests-area"></div>
 
             <!-- 完了カード（レポート「テスト実行」タブへの導線） -->
-            <div id="autorun-complete-card" class="card autorun-complete-card" style="display:none"></div>
+            <div id="autorun-complete-card" class="card autorun-complete-card" style="display:none" role="status" aria-live="polite" tabindex="-1" aria-label="実行結果"></div>
 
-            <div id="autorun-failure-panel" class="card autorun-failure-panel" style="display:none">
+            <div id="autorun-failure-panel" class="card autorun-failure-panel" style="display:none" role="alert" tabindex="-1" aria-label="失敗の見立て">
               <div class="autorun-panel-head">
                 <div>
                   <div class="section-kicker">失敗の見立て</div>
@@ -344,6 +346,10 @@
               </div>
             </div>
 
+
+          </div><!-- /.autorun-workspace -->
+
+          <!-- fixed 配置のため .autorun-workspace の外に置く（overflow に切られない） -->
             <!-- QAアシスタント。常駐せず、呼び出したときだけ右から出るドロワー -->
             <button type="button" id="autorun-chat-fab" class="autorun-chat-fab"
                     aria-controls="autorun-chat" aria-expanded="false">QAアシスタント</button>
@@ -376,6 +382,4 @@
                 </div>
               </form>
             </aside>
-
-          </div><!-- /.autorun-workspace -->
         </section>

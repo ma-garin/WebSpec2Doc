@@ -116,7 +116,7 @@
       return;
     }
     var last = st.last_run_at ? '（前回 ' + fmt(st.last_run_at) + '）' : '（まだ実行していません）';
-    box.textContent = '◔ 次回 ' + fmt(st.next_run_at) + ' ' + last;
+    box.innerHTML = (window.WS2D ? WS2D.status.html('not_started', '次回予定') : '次回予定') + ' ' + esc(fmt(st.next_run_at)) + ' ' + esc(last);
   }
 
   var RESULT = { success: '成功', ok: '成功', completed: '成功', failed: '失敗', error: '失敗' };

@@ -63,6 +63,38 @@ _JOBS: dict[str, AutoRunJob] = {}
 _JOBS_LOCK = threading.Lock()
 
 
+def _viewer() -> tuple[str, str, bool]:
+    """(テナント ID, 利用者 ID, 管理者か)。認証オフなら空と True（従来どおり制限しない）。"""
+    from flask import g
+
+    from web.auth import auth_enabled
+
+    if not auth_enabled():
+        return "", "", True
+    user = getattr(g, "auth_user", None) or {}
+    tenant = getattr(g, "tenant", None) or {}
+    return (str(tenant.get("id") or ""), str(user.get("id") or ""), user.get("role") == "admin")
+
+
+def _job_visible(job: AutoRunJob | None) -> AutoRunJob | None:
+    """別テナントのジョブは存在しないものとして扱う（読み取り）。"""
+    if job is None:
+        return None
+    tenant, _uid, _admin = _viewer()
+    if tenant and getattr(job, "_tenant_id", "") != tenant:
+        return None
+    return job
+
+
+def _may_mutate(job: AutoRunJob) -> bool:
+    """中止・承認・入力の送信は、起動した本人か管理者だけ。"""
+    _tenant, uid, admin = _viewer()
+    return admin or not uid or getattr(job, "_owner_id", "") == uid
+
+
+_DENY_MUTATE = ({"error": "このジョブを操作できるのは、実行を始めた本人か管理者だけです。"}, 403)
+
+
 def _out() -> Path:
     """テナントスコープ済みの出力ディレクトリ（リクエスト毎に解決）。"""
     return scoped_output_dir(OUTPUT_DIR)
@@ -126,6 +158,7 @@ def api_autorun_start() -> dict | tuple[dict, int]:
     )
     if auth:
         job.auth_path = auth
+    job._tenant_id, job._owner_id = _viewer()[0], _viewer()[1]
     with _JOBS_LOCK:
         _JOBS[job_id] = job
 
@@ -137,7 +170,7 @@ def api_autorun_start() -> dict | tuple[dict, int]:
 @bp.get("/api/autorun/status")
 def api_autorun_status() -> dict | tuple[dict, int]:
     with _JOBS_LOCK:
-        job = _JOBS.get(request.args.get("job_id", ""))
+        job = _job_visible(_JOBS.get(request.args.get("job_id", "")))
     if job is None:
         return {"error": "not found"}, 404
     data = job.to_dict()
@@ -183,9 +216,11 @@ def api_autorun_cancel() -> dict | tuple[dict, int]:
     body = request.get_json(silent=True) or {}
     job_id = (request.form.get("job_id") or body.get("job_id", "")).strip()
     with _JOBS_LOCK:
-        job = _JOBS.get(job_id)
+        job = _job_visible(_JOBS.get(job_id))
     if job is None:
         return {"error": "not found"}, 404
+    if not _may_mutate(job):
+        return _DENY_MUTATE
     job.cancel()
     job.status = "cancelled"
     job.step_label = "キャンセルしました"
@@ -319,9 +354,11 @@ def api_autorun_submit_input() -> dict | tuple[dict, int]:
     body = request.get_json(silent=True) or {}
     job_id = (request.form.get("job_id") or body.get("job_id", "")).strip()
     with _JOBS_LOCK:
-        job = _JOBS.get(job_id)
+        job = _job_visible(_JOBS.get(job_id))
     if job is None:
         return {"error": "not found"}, 404
+    if not _may_mutate(job):
+        return _DENY_MUTATE
     if job.status != "awaiting_input":
         return {"error": f"awaiting_input ではありません (status={job.status})"}, 400
 
@@ -348,7 +385,7 @@ def api_autorun_submit_input() -> dict | tuple[dict, int]:
 def api_autorun_preview() -> dict | tuple[dict, int]:
     """テストケース一覧・スクリプト内容・フィルター件数を返す。"""
     with _JOBS_LOCK:
-        job = _JOBS.get(request.args.get("job_id", ""))
+        job = _job_visible(_JOBS.get(request.args.get("job_id", "")))
     if job is None:
         return {"error": "not found"}, 404
     return build_autorun_preview(job, _job_out(job))
@@ -359,9 +396,11 @@ def api_autorun_approve() -> dict | tuple[dict, int]:
     body = request.get_json(silent=True) or {}
     job_id = (request.form.get("job_id") or body.get("job_id", "")).strip()
     with _JOBS_LOCK:
-        job = _JOBS.get(job_id)
+        job = _job_visible(_JOBS.get(job_id))
     if job is None:
         return {"error": "not found"}, 404
+    if not _may_mutate(job):
+        return _DENY_MUTATE
     if job.status != "awaiting_approval":
         return {"error": f"status '{job.status}' では承認できません"}, 400
 
@@ -397,7 +436,7 @@ def api_autorun_approve() -> dict | tuple[dict, int]:
 @bp.get("/api/autorun/report")
 def api_autorun_report() -> dict | tuple[dict, int]:
     with _JOBS_LOCK:
-        job = _JOBS.get(request.args.get("job_id", ""))
+        job = _job_visible(_JOBS.get(request.args.get("job_id", "")))
     if job is None:
         return {"error": "not found"}, 404
     return {**job.to_dict(), "report_html": _report_html_path(job)}
@@ -425,7 +464,7 @@ def api_autorun_live_screenshot() -> Response:
 @bp.get("/api/autorun/jobs")
 def api_autorun_jobs() -> dict:
     with _JOBS_LOCK:
-        jobs_snapshot = list(_JOBS.values())
+        jobs_snapshot = [j for j in _JOBS.values() if _job_visible(j) is not None]
     return {
         "jobs": [
             {
@@ -452,7 +491,7 @@ def current_awaiting_stage(job_id: str, domain: str) -> str:
     先へ進むのか」を API 側が知る必要がある。
     """
     with _JOBS_LOCK:
-        job = _JOBS.get(job_id) if job_id else None
+        job = _job_visible(_JOBS.get(job_id)) if job_id else None
         if job is None:
             job = next(
                 (
@@ -474,7 +513,7 @@ def release_stage_gate(job_id: str, domain: str) -> bool:
     ジョブを対象にする（画面をリロードして job_id を失った場合の救済）。
     """
     with _JOBS_LOCK:
-        job = _JOBS.get(job_id) if job_id else None
+        job = _job_visible(_JOBS.get(job_id)) if job_id else None
         if job is None:
             job = next(
                 (
@@ -507,7 +546,7 @@ def release_all_stage_gates(
     いま待機中の関門も同時に解除し、後続の段階では止まらないようにする。
     """
     with _JOBS_LOCK:
-        job = _JOBS.get(job_id) if job_id else None
+        job = _job_visible(_JOBS.get(job_id)) if job_id else None
         if job is None:
             job = next(
                 (

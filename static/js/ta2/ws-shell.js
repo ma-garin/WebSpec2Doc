@@ -170,6 +170,20 @@
     }, true);
   }
 
+  /* System 02「実行と結果」への入口。ワークスペースの左レールは SPA 切替、こちらは別画面へ移る */
+  function addRunLink() {
+    var test = document.querySelector('.rail [data-view="test"]');
+    if (!test || document.getElementById('rail-run')) return;
+    var a = document.createElement('a');
+    a.className = 'app-nav-item rail-link';
+    a.id = 'rail-run';
+    a.href = '/test-automation#/run';
+    a.title = 'System 02 の「実行と結果」を開く';
+    a.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M8 5l11 7-11 7z"/></svg><span class="nav-label">実行と結果</span>';
+    test.insertAdjacentElement('afterend', a);
+  }
+  addRunLink();
+
   T.state.history = null;
   T.loadHistory = loadHistory;
   T.historyItem = historyItem;

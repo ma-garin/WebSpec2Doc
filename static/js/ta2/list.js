@@ -62,7 +62,10 @@
       var next = c.fail ? '<button class="sublink" id="go-fail">失敗 ' + c.fail + ' 件から直す</button>'
         : c.flaky ? '<button class="sublink" id="go-flaky">不安定 ' + c.flaky + ' 件を確認</button>'
           : (c.fixed + c['new']) ? '<button class="sublink" id="go-run">▶ 全件実行</button>' : '';
-      sub.innerHTML = esc(txt) + (next ? '<br>' + next : '');
+      // 「実行と結果」は #/run でしか開けなかった。実行せずに結果だけ見る入口をここに常設する
+      var results = '<button class="sublink" id="go-results">実行と結果を開く ›</button>';
+      var hasSite = !!(window.TA2 && window.TA2.state && window.TA2.state.domain);
+      sub.innerHTML = esc(txt) + (hasSite ? '<br>' + (next ? next + ' · ' : '') + results : (next ? '<br>' + next : ''));
     }
     renderBadge('#bd-fail', c.fail);
     renderBadge('#bd-drift', openDriftCount());

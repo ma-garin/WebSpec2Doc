@@ -12,6 +12,7 @@ POST /api/sites/<domain>/reverse-analysis/run   CLI と同じ service で解析�
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 from typing import Any
 
@@ -35,6 +36,7 @@ _BASIS = {
     "method_missing": "HTTP method が不明なため、実測 API と照合していない",
     "runtime_only": "実行時に観測。対応する静的候補は無い",
     "matched": "静的候補と実測が一致",
+    "path_unresolved": "パスが決まらないため、実測との対応は付けられない",
 }
 
 _LIMITATION = {
@@ -53,14 +55,57 @@ _IMPORT_KIND = {"static-import": "静的 import", "dynamic-import": "動的 impo
 # source map の検証ケース。成功＝正常ではないので、意味を必ず併記する。
 
 
+ANALYZER_NAME = "WebSpec2Doc Native Analyzer"
+_JP = re.compile(r"[\u3040-\u30ff\u4e00-\u9fff]")
+# 解析エンジンが返す英語の注記を利用者の言葉にする（部分一致・先に書いたものが優先）。
+_NOTE_JA = (
+    ("static imports, entrypoints", "静的 import・起点・worker・endpoint・保存先の関係は、実行の証明ではない"),
+    ("static paths and relationships", "動的な式や難読化されたコードでは、パスと関係が未解決のまま残る"),
+    ("webpack/rspack", "Webpack/Rspack の factory は構文から復元した。push の処理とバンドルの起動コードは実行していない"),
+    ("commonjs and esm", "CommonJS/ESM の結び付きは構文から復元し、解析対象内だけで解決した"),
+    ("parsed as inert text", "JavaScript と HTML は文字列として解析した。バンドルの起動コードは実行していない"),
+    ("cross-function mutation", "関数をまたぐ変更と、動的なプロパティの解決は不明のまま"),
+    ("local call, argument", "関数の呼び出し・引数・戻り値・クロージャの関係は静的な候補。実行の証明ではない"),
+    ("no extension, directory package", "拡張子・ディレクトリ・index のいずれの候補も解析対象内に無い"),
+    ("promise ownership", "Promise は明示的な構文（生成・集約・連鎖・await）だけを対象にしている"),
+    ("return sites include only", "戻り値は直接返す関数だけを対象にしている。入れ子の戻り値は別扱い"),
+    ("values and aliases", "値と別名は構文だけから復元した。JavaScript は実行していない"),
+    ("could not be resolved", "静的な参照を解析対象内で解決できなかった"),
+    ("does not prove", "静的な構文から見つけた関係。実行時に動作する証明ではない"),
+)
+_GENERIC_NOTE = "英語の注記（原文は解析結果ファイルを参照）"
+
+
+def _user_text(text: str) -> str:
+    """利用者に見せる文言から内部名（REA・rea-agents）と英語の解析注記を除く。"""
+    text = re.sub(r"\brea-agents\b|\bREA\b", ANALYZER_NAME, text or "")
+    if re.fullmatch(r"[a-z0-9]+(_[a-z0-9]+)+", text):  # 内部の注記コードはそのまま見せない
+        return "内部の注記（利用者向けの説明は未整備。コードは解析結果ファイルを参照）"
+    prefix, sep, body = text.partition(": ")
+    target = body if sep else text
+    if _JP.search(target) or not re.search(r"[A-Za-z]{3,} [A-Za-z]{2,}", target):
+        return text.replace("は unknown に留め", "は不明に留め")
+    ja = next((v for k, v in _NOTE_JA if k in target.lower()), _GENERIC_NOTE)
+    return f"{prefix}{sep}{ja}" if sep and _JP.search(prefix) else ja
+
+
+_LIMIT_VALUE = {"observed": "構文あり", "ast-static-analysis": "構文木（AST）の静的解析", "property:path": "path プロパティ"}
+
+
+def _limit_value(rest: str) -> str:
+    if rest.startswith("map_parse_failed:"):
+        return "source map を解析できなかった（" + rest.split(":", 1)[1] + "）"
+    return _LIMIT_VALUE.get(rest, rest)
+
+
 def _limitations(codes: list[str]) -> list[str]:
     out = []
     for code in codes or []:
         text = _LIMITATION.get(code)
         if text is None:
             prefix, _, rest = code.partition(":")
-            text = _LIMITATION_PREFIX[prefix] + rest if rest and prefix in _LIMITATION_PREFIX else code
-        out.append(text)
+            text = _LIMITATION_PREFIX[prefix] + _limit_value(rest) if rest and prefix in _LIMITATION_PREFIX else code
+        out.append(_user_text(text))
     return out
 
 
@@ -73,13 +118,35 @@ _LIMITATION.update(
     }
 )
 
+_LIMITATION.update(
+    {
+        "provider_partial_resolution": "式の一部が解決できず、値は部分的にしか分からない",
+        "path_not_syntactically_determined": "パスが構文だけでは決まらない（動的な式）",
+        "static_value_has_query": "値に query が含まれる（実測の query とは照合していない）",
+        "expression_truncated": "長い式を途中で切って記録している",
+        "artifact_digest_mismatch": "解析した成果物の指紋が記録と一致しない",
+        "artifact_file_not_verified": "成果物のファイルを検証できていない",
+        "source_map_digest_mismatch": "source map の指紋が記録と一致しない（古い可能性）",
+        "source_map_original_unresolved": "source map から元ソースを特定できなかった",
+        "source_map_suffix_resolution": "source map の元ソースを末尾一致で推定した（確定ではない）",
+        "original_source_content_unavailable": "元ソースの内容が source map に無い",
+        "original_source_not_verified_in_input": "元ソースが入力の中にあるか確かめていない",
+        "module_identity_only": "モジュールの存在だけを示す（中身の関係までは示さない）",
+        "source_map_freshness_not_verified": "source map が最新か確かめていない",
+        "generated_to_original_range_not_provided": "生成コードから元ソースの範囲への対応は無い",
+    }
+)
+
 # 「接頭辞:値」形式の制限。値はそのまま見せ、接頭辞だけ利用者の言葉に置き換える。
 _LIMITATION_PREFIX = {
     "provider": "解析ツールの注記: ",
-    "provider_syntax_state": "解析ツール上の状態（構文の有無。実行ではない）: ",
+    "provider_syntax_state": "構文の有無（実行ではない）: ",
+    "provider_source_map": "source map の状態: ",
     "provider_authority": "根拠の種類: ",
     "provider_mechanism": "検出方法: ",
     "unsupported_nodes": "解析対象外の要素: ",
+    "candidates_share_location": "同じ位置を共有する候補の数: ",
+    "endpoint_shared_by_candidates": "同じ endpoint を指す候補の数: ",
 }
 
 
@@ -131,7 +198,7 @@ def _static_evidence(doc: dict, version: str | None) -> list[dict]:
                 "location": _loc(
                     loc.get("artifact_path"), loc.get("start_line"), loc.get("start_column")
                 ),
-                "provider": "静的解析",
+                "provider": f"静的解析（{ANALYZER_NAME}" + (f" {version}）" if version else "）"),
                 "claim": claim,
                 "relation": _BASIS.get(basis or "", basis or "対応付けなし"),
                 "limitations": _limitations(c.get("limitations", [])),
@@ -212,7 +279,7 @@ def _source_map(run: dict, doc: dict) -> list[dict]:
 def _diagnostics(items: list[dict]) -> list[dict]:
     """未対応 node の診断は内部 ID を含み件数も多いので、種類ごとの件数 1 行にまとめる。"""
     out = [
-        {k: d.get(k, "") for k in ("severity", "message", "next_action")}
+        {k: d.get(k, "") if k == "severity" else _user_text(d.get(k, "")) for k in ("severity", "message", "next_action")}
         for d in items
         if d.get("code") != "static_node_unsupported"
     ]
@@ -300,6 +367,7 @@ def _payload(domain: str) -> dict:
     producer = doc.get("producer") or {}
     version = (producer.get("engine_version") or producer.get("provider_version")
                or run.get("engine_version") or run.get("provider_version"))
+    version = re.sub(r"^webspec2doc-native/", "", str(version)) if version else version
     diagnostics = _diagnostics(doc.get("diagnostics", []))
     latest = runner.latest_snapshot(_base(), domain)
     if latest is not None and latest.name != run.get("snapshot"):
@@ -314,6 +382,7 @@ def _payload(domain: str) -> dict:
         "state": "ok",
         "status": doc.get("status"),
         "engine_version": version,
+        "analyzer": {"name": ANALYZER_NAME, "version": version},
         "input_label": domain,
         "summary": _summary(run),
         "added_seconds": run.get("seconds"),

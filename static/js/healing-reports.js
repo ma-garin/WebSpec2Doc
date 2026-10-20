@@ -159,7 +159,7 @@
 
   var STATUS_LABELS = {
     awaiting: '承認待ち', approved: '承認済み', returned: '差し戻し',
-    rejected: '却下', submitted: '提出済み', draft: '下書き'
+    rejected: '却下', submitted: '提出済み', draft: '下書き', mixed: '一部承認・一部却下'
   };
   /* 一覧の絞り込みは状態そのものではなく「要確認か」で分ける（T4）。
    * 決着済み（提出済み・却下）は従来どおり状態で分ける。0 件のものは並べない。 */
@@ -1101,7 +1101,8 @@
       box.appendChild(note);
 
       var fixTargets = bundle.fix_targets || [];
-      var scriptOnly = fixTargets.length > 0 && fixTargets.every(function (t) { return t === 'script'; });
+      // 送る修正（差分）が無い束は、テストだけの修正と同じく「承認」だけにする（PR は作られない）
+      var scriptOnly = (fixTargets.length > 0 && fixTargets.every(function (t) { return t === 'script'; })) || bundle.has_diff === false;
       var approveLabel = scriptOnly ? '承認' : '承認して修正を送る';
       var bUnverified = Math.max(0, (bundle.count || 0) - (bundle.verify_after_ok_count || 0));
       var bTotal = (bundle.attention_high || 0) + bUnverified;
@@ -1115,7 +1116,7 @@
         askConfirm({
           title: 'この束の承認待ち ' + (bundle.awaiting_count || 0) + ' 件をまとめて承認しますか？',
           message: scriptOnly
-            ? '承認は個票ごとに記録され、以後は書き直せません。サイトのコードは変更しません。'
+            ? '承認は個票ごとに記録され、以後は書き直せません。' + (bundle.has_diff === false ? '送る修正（差分）が無いため、PR は作られません。' : 'サイトのコードは変更しません。')
             : '承認すると、修正が接続先の GitHub リポジトリへ PR として送られます。外部のリポジトリに記録が残り、承認は取り消せません（PR は後から閉じられます）。',
           detail: '案件: ' + (bundle.project_name || '—'),
           confirmLabel: scriptOnly ? 'まとめて承認する' : 'まとめて承認して PR を送る'

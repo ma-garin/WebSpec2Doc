@@ -161,6 +161,8 @@ class Bundle:
     needs_review: bool = False
     #: needs_review の理由を 1 文で。False のときも「なぜ止めなくてよいか」を書く。
     review_reason: str = ""
+    #: 送る修正（差分）があるか。無い束で「PR を送る」と見せないために使う
+    has_diff: bool = True
 
 
 # ─────────────────────────── 人の言葉にする ───────────────────────────
@@ -752,7 +754,13 @@ def _effective_statuses(members: Sequence["MaintenanceReport"]) -> list[str]:
 
 def _heaviest_status(statuses: Sequence[str]) -> str:
     ranked = sorted(statuses, key=lambda s: _BUNDLE_STATUS_RANK.get(s, 99))
-    return ranked[0] if ranked else "awaiting"
+    if not ranked:
+        return "awaiting"
+    # 承認待ちが無く、承認と却下などの確定状態が混ざっているときは片方に寄せない
+    decided = {s for s in statuses if s in ("approved", "rejected", "submitted")}
+    if "awaiting" not in statuses and len(decided) > 1:
+        return "mixed"
+    return ranked[0]
 
 
 def _bundle_review(
@@ -833,6 +841,7 @@ def list_bundles(
                 updated_at=ordered[0].updated_at or ordered[0].created_at if ordered else "",
                 needs_review=needs_review,
                 review_reason=review_reason,
+                has_diff=any(bool(m.action_diff_stats) for m in members),
             )
         )
 
@@ -872,6 +881,7 @@ def bundle_to_dict(bundle: Bundle) -> dict[str, Any]:
         "updated_at": bundle.updated_at,
         "needs_review": bundle.needs_review,
         "review_reason": bundle.review_reason,
+        "has_diff": bundle.has_diff,
     }
 
 

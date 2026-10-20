@@ -26,9 +26,9 @@
   };
   var EVIDENCE = {
     observed: ['実測', '●', 'fact'], observed_auth: ['認証済み実測', '●🔑', 'fact'],
-    record: ['記録', '▣', 'fact'], document: ['文書', '▭', 'fact'],
+    record: ['記録', '▣', 'fact'], document: ['文書', '▭', 'inference'],  // 文書の記述は動作の観測ではない
     static: ['静的', '○', 'inference'], inferred: ['推論', '◐', 'inference'],
-    ambiguous: ['曖昧', '◇', 'inference'], unverified: ['未確認', '◌', 'unverified'],
+    ambiguous: ['曖昧', '◇', 'unverified'], unverified: ['未確認', '◌', 'unverified'],
     unavailable: ['利用不可', '⊘', 'unverified']
   };
 

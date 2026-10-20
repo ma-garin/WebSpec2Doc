@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>登録住所の変更 | みらい商店</title><link rel="stylesheet" href="css/style.css"></head>
+<body>
+<header class="hdr"><a href="index.html">メニュー</a></header>
+<main>
+<h1>登録住所の変更</h1>
+<form id="addr" action="#" method="post" novalidate>
+<h2>ご自宅</h2>
+<div class="row"><label for="home_zip">郵便番号</label><input type="text" id="home_zip" name="home_zip" maxlength="8" pattern="^\d{3}-?\d{4}$"></div>
+<input type="button" value="住所を検索">
+<div class="row"><select id="home_pref" name="home_pref" aria-label="都道府県（自宅）"><option value="">選択してください</option><option value="13">東京都</option><option value="27">大阪府</option><option value="01">北海道</option></select></div>
+<div class="row"><label for="home_addr">住所</label><input type="text" id="home_addr" name="home_addr" maxlength="100"></div>
+<div class="row"><label for="home_tel">電話番号</label><input type="tel" id="home_tel" name="home_tel" maxlength="13"></div>
+<h2>勤務先</h2>
+<div class="row"><label><input type="checkbox" id="same_as_home" name="same_as_home"> 勤務先は自宅と同じ</label></div>
+<div class="row"><label for="work_zip">郵便番号</label><input type="text" id="work_zip" name="work_zip" maxlength="8" pattern="^\d{3}-?\d{4}$"></div>
+<input type="button" value="住所を検索">
+<div class="row"><label for="work_addr">住所</label><input type="text" id="work_addr" name="work_addr" maxlength="100"></div>
+<div class="row"><label for="work_tel">電話番号</label><input type="tel" id="work_tel" name="work_tel" maxlength="13"></div>
+<div class="row"><label for="memo1">備考</label><input type="text" id="memo1" maxlength="50"></div>
+<input type="hidden" name="member_id" value="M-0042">
+<input type="hidden" name="mode" value="update">
+<div id="addr-errors" aria-live="polite"></div>
+<input type="submit" value="変更を保存">
+</form>
+<a href="p14.html">設定へ</a>
+</main>
+<footer><p><small>&copy; 2026 みらい商店 (評価用サンプル)</small></p></footer>
+<script>
+(function(){var f=document.getElementById("addr");var box=document.getElementById("addr-errors");f.addEventListener("submit",function(ev){ev.preventDefault();var errs=[];if(/^\d{3}-?\d{4}$/.test(f.elements["home_zip"].value)===false){errs.push("自宅の郵便番号は7桁の数字で入力してください");}if(f.elements["home_addr"].value===''){errs.push("自宅の住所を入力してください");}box.innerHTML="";errs.forEach(function(m){var q=document.createElement("p");q.className="error";q.textContent=m;box.appendChild(q);});if(!errs.length){fetch("/api/members/address",{method:"PATCH",body:new FormData(f)}).then(function(r){if(!r.ok){throw new Error("http "+r.status);}return r.json();}).catch(function(){var q=document.createElement("p");q.className="error";q.textContent="住所を変更できませんでした";box.appendChild(q);});}});})();
+</script>
+</body></html>

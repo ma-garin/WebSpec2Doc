@@ -1,0 +1,7 @@
+body{font-family:sans-serif;margin:0;padding:0 16px;line-height:1.6}
+.hdr{padding:8px 0;border-bottom:1px solid #ccc}
+.row{margin:8px 0}.row label{display:inline-block;min-width:11em}
+.error{color:#b00020}.field-error{color:#b00020;margin-left:8px}
+.is-hidden{display:none}.btn{display:inline-block;padding:4px 12px;border:1px solid #333}
+table{border-collapse:collapse;margin:8px 0}th,td{border:1px solid #999;padding:4px 8px}
+footer{margin-top:32px;border-top:1px solid #ccc}

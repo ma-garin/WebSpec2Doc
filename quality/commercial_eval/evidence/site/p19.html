@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>クーポンの利用 | みらい商店</title><link rel="stylesheet" href="css/style.css"></head>
+<body>
+<header class="hdr"><a href="index.html">メニュー</a></header>
+<main>
+<h1>クーポンの利用</h1>
+<p class="error" role="alert">クーポンの有効期限が切れています</p>
+<div style="display:none"><p>SECRET2026 は社内用コードです</p></div>
+<h2>クーポンコード入力</h2>
+<form id="coupon" action="#" method="post" novalidate>
+<div class="row"><label for="code">クーポンコード</label><input type="text" id="code" name="code" required maxlength="8" minlength="8" pattern="^[A-Z0-9]{8}$"></div>
+<div id="coupon-errors" aria-live="polite"></div>
+<input type="submit" value="適用">
+<button type="button">適用</button>
+</form>
+<h2>利用可能なクーポン</h2>
+<table><thead><tr><th>コード</th><th>割引</th><th>期限</th></tr></thead><tbody><tr><td>WELCOME1</td><td>500円引き</td><td>2026-12-31</td></tr><tr><td>AUTUMN10</td><td>10%引き</td><td>2026-11-30</td></tr></tbody></table>
+<a href="p05.html">カートへ</a>
+</main>
+<footer><p><small>&copy; 2026 みらい商店 (評価用サンプル)</small></p></footer>
+<script>
+(function(){var f=document.getElementById("coupon");var box=document.getElementById("coupon-errors");f.addEventListener("submit",function(ev){ev.preventDefault();var errs=[];if(!/^[A-Z0-9]{8}$/.test(f.elements["code"].value)){errs.push("クーポンコードは英大文字と数字8桁です");}box.innerHTML="";errs.forEach(function(m){var q=document.createElement("p");q.className="error";q.textContent=m;box.appendChild(q);});if(!errs.length){fetch("/api/coupons/apply",{method:"POST",body:new FormData(f)}).then(function(r){if(!r.ok){throw new Error("http "+r.status);}return r.json();}).catch(function(){var q=document.createElement("p");q.className="error";q.textContent="クーポンを適用できませんでした";box.appendChild(q);});}});})();
+</script>
+</body></html>

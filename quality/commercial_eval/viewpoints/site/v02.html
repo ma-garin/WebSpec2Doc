@@ -1,0 +1,10 @@
+<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ログイン</title><style>body{font-family:sans-serif;max-width:640px;margin:2em auto;padding:0 1em}label{display:block;margin:.6em 0}.n{color:#555;font-size:.9em}button{margin:.4em .3em .4em 0}</style></head><body>
+<p><a href="index.html">一覧へ戻る</a></p><h1>ログイン</h1>
+<p>ログイン ID とパスワードを入力してください（POST /api/login）。</p>
+<form action="/api/login" method="post">
+<label>ログイン ID <input type="text" name="id" required></label>
+<label>パスワード <input type="password" name="pw" required></label>
+<button type="submit">ログイン</button></form>
+<p class="n">ID またはパスワードが違う場合は「ID またはパスワードが正しくありません」を表示し、再入力できます。</p>
+</body></html>

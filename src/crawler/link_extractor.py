@@ -160,7 +160,7 @@ def extract_headings(page: Page) -> list[str]:
             list[str],
             page.eval_on_selector_all(
                 "h1, h2, h3",
-                "(els) => els.map((el) => (el.innerText || '').trim()).filter(Boolean)",
+                _HEADING_SCRIPT,
             ),
         )
     except Exception as exc:
@@ -289,7 +289,7 @@ def extract_headings_all_scopes(page: Page, base_url: str) -> list[str]:
                 list[str],
                 frame.eval_on_selector_all(
                     "h1, h2, h3",
-                    "(els) => els.map((el) => (el.innerText || '').trim()).filter(Boolean)",
+                    _HEADING_SCRIPT,
                 ),
             )
         except Exception as exc:
@@ -534,8 +534,12 @@ _FORM_SCRIPT = """
 """
 
 _BUTTON_SELECTOR = "button, input[type=button], input[type=submit], input[type=reset]"
-_BUTTON_SCRIPT = """
-(els) => els.map((el) => (
+# 描画されていない要素（display:none・hidden 属性・visibility:hidden の中）は画面の Evidence にしない。
+# innerText は描画されていない要素でも textContent を返すため、そのままだと非表示の文言が混ざる
+_SHOWN_JS = "(el) => el.getClientRects().length > 0 && getComputedStyle(el).visibility !== 'hidden'"
+_HEADING_SCRIPT = f"(els) => els.filter({_SHOWN_JS}).map((el) => (el.innerText || '').trim()).filter(Boolean)"
+_BUTTON_SCRIPT = f"""
+(els) => els.filter({_SHOWN_JS}).map((el) => (
   el.innerText || el.getAttribute('value') || el.getAttribute('aria-label') || ''
 ).trim()).filter(Boolean)
 """

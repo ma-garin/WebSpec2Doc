@@ -1,0 +1,9 @@
+<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>出荷ステータス管理</title><style>body{font-family:sans-serif;max-width:640px;margin:2em auto;padding:0 1em}label{display:block;margin:.6em 0}.n{color:#555;font-size:.9em}button{margin:.4em .3em .4em 0}</style></head><body>
+<p><a href="index.html">一覧へ戻る</a></p><h1>出荷ステータス管理</h1>
+<p>状態の流れ：受付 → 出荷準備 → 出荷済み → 配達完了。キャンセルは「受付」「出荷準備」の間のみ可能です。</p>
+<p>現在の状態：<strong>受付</strong></p>
+<button>次の状態へ進める</button>
+<button>キャンセル</button> <span class="n">※ 管理者のみ</span>
+<p class="n">状態変更は PATCH /api/orders/{id}/status で送信されます。</p>
+</body></html>

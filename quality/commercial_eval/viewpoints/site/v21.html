@@ -1,0 +1,9 @@
+<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>CSV 出力</title><style>body{font-family:sans-serif;max-width:640px;margin:2em auto;padding:0 1em}label{display:block;margin:.6em 0}.n{color:#555;font-size:.9em}button{margin:.4em .3em .4em 0}</style></head><body>
+<p><a href="index.html">一覧へ戻る</a></p><h1>CSV 出力</h1>
+<p>指定期間のデータを CSV で出力します（GET /api/export）。</p>
+<form action="/api/export" method="get">
+<label>期間 ※ <select name="p" required><option value="">選択</option><option>今月</option><option>先月</option></select></label>
+<button>出力</button></form>
+<p class="n">処理が 30 秒を超えた場合は「時間がかかっています。もう一度お試しください」を表示し、再試行できます。</p>
+</body></html>

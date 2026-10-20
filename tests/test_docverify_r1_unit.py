@@ -198,11 +198,14 @@ def test_open_ended_on_requirement():
     assert "REQ.OPEN_ENDED" in _rules("システムは、氏名・住所ほかを保存すること。")
 
 
-def test_open_ended_suppressed_when_ambiguous_term_already_flagged():
-    """FR-06-022（契約: 曖昧語として指摘済みなら出さない） G「など」の要求文 W 検出 T AMBIGUOUS_TERM のみで OPEN_ENDED は出ない。"""
-    rules = _rules("システムは、氏名・住所などを保存すること。")
-    assert {"RD.AMBIGUOUS", "REQ.AMBIGUOUS_TERM"} & set(rules)  # 曖昧語の規則（辞書由来か追加語か）で指摘済み
-    assert "REQ.OPEN_ENDED" not in rules
+def test_open_ended_replaces_ambiguous_term_for_enumeration():
+    """FR-06-022（2026-10-20 改: 列挙の後ろの「など」は閉じていない列挙として 1 件だけ出す。ja_v1・検証用セットとも
+    この用法を OPEN_ENDED と注釈している） G「など」の要求文 W 検出 T OPEN_ENDED が出て、同じ語の曖昧語指摘は重ねない。"""
+    found = checks.candidates([{"id": "p1", "location": "t", "text": "システムは、氏名・住所などを保存すること。"}],
+                              apply_disabled=False)
+    rules = [f["rule"] for f in found]
+    assert "REQ.OPEN_ENDED" in rules
+    assert not [f for f in found if f["rule"] in ("RD.AMBIGUOUS", "REQ.AMBIGUOUS_TERM") and "「など」" in f["message"]]
 
 
 def test_universal_only_on_requirement():

@@ -1,0 +1,10 @@
+<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>クーポン利用</title><style>body{font-family:sans-serif;max-width:640px;margin:2em auto;padding:0 1em}label{display:block;margin:.6em 0}.n{color:#555;font-size:.9em}button{margin:.4em .3em .4em 0}</style></head><body>
+<p><a href="index.html">一覧へ戻る</a></p><h1>クーポン利用</h1>
+<p>クーポンコードを入力して「適用」を押すと、サーバで有効性を確認します（POST /api/coupons/apply）。</p>
+<form action="/api/coupons/apply" method="post">
+<label>クーポンコード ※ <input type="text" name="code" required pattern="[A-Z0-9]{8}"></label>
+<p class="n">半角大文字英数字 8 桁。</p>
+<button>適用</button></form>
+<p class="n">期限切れ・使用済みのコードは「このクーポンは利用できません」を表示し、別のコードを入力し直せます。</p>
+</body></html>

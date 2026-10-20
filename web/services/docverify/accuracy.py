@@ -12,7 +12,11 @@ from pathlib import Path
 log = logging.getLogger(__name__)
 
 RESULT_PATH = Path(__file__).resolve().parents[3] / "quality" / "docverify_eval" / "result.json"
+# 規則の調整に使っていない、別の作成者による検証用セットの結果（scripts/commercial_eval/docverify_holdout_eval.py）。
+# あれば規則ごとに低い方の値を採る（調整に使ったセットの値だけで有効・無効を決めない）
+HOLDOUT_PATH = Path(__file__).resolve().parents[3] / "quality" / "commercial_eval" / "docverify_holdout" / "result.json"
 MIN_PRECISION = 0.7  # FR-06-170（暫定）。これ未満の規則は既定で無効
+MIN_RECALL = 0.7  # これ未満の規則は有効のままにするが、見落としが多い限定的な検出と明示する
 UNMEASURED = "未測定"
 
 LABELS = {
@@ -48,7 +52,29 @@ def load(path: Path | None = None) -> dict | None:
         raise ValueError(MSG_BROKEN) from e
     if not isinstance(data, dict) or not isinstance(data.get("rules"), dict):
         raise ValueError(MSG_BROKEN)
+    if path is None:
+        _apply_holdout(data)
     return data
+
+
+def _apply_holdout(data: dict) -> None:
+    """検証用セットの値があれば、規則ごとに適合率・再現率の低い方を採る（元の値は tuning_set に残す）。"""
+    try:
+        hold = json.loads(HOLDOUT_PATH.read_text(encoding="utf-8")) if HOLDOUT_PATH.exists() else None
+    except (OSError, json.JSONDecodeError):
+        log.warning("docverify accuracy: 検証用セットの結果 %s を読めない", HOLDOUT_PATH)
+        return
+    if not isinstance(hold, dict):
+        return
+    for rid, r in data["rules"].items():
+        h = (hold.get("rules") or {}).get(rid)
+        if not isinstance(h, dict):
+            continue
+        r["tuning_set"] = {"precision": r.get("precision"), "recall": r.get("recall"), "n": r.get("n")}
+        r["holdout"] = {"precision": h.get("precision"), "recall": h.get("recall"), "n": hold.get("n")}
+        for key in ("precision", "recall"):
+            vals = [v for v in (r.get(key), h.get(key)) if v is not None]
+            r[key] = min(vals) if vals else None
 
 
 def fmt(v) -> str:
@@ -63,6 +89,10 @@ def _status(r: dict) -> tuple[bool, str]:
         return True, "適合率が未測定です。"
     if p < MIN_PRECISION:
         return False, f"適合率 {p:.3f} が基準 {MIN_PRECISION} 未満のため、既定で無効にしています。"
+    rc = r.get("recall")
+    if rc is not None and rc < MIN_RECALL:
+        return True, (f"適合率は基準 {MIN_PRECISION} 以上ですが、再現率 {rc:.3f} が基準 {MIN_RECALL} 未満です。"
+                      "見落としが多い限定的な検出のため、指摘が無くても問題が無いとは言えません。")
     return True, f"適合率が基準 {MIN_PRECISION} 以上です。"
 
 
@@ -83,6 +113,8 @@ def _row(rid: str, r: dict, data: dict) -> dict:
         "precision": fmt(r.get("precision")), "recall": fmt(r.get("recall")),
         "n": r.get("n"), "n_gold": r.get("n_gold"), "n_predicted": r.get("n_predicted"),
         "enabled_by_default": enabled, "reason": reason,
+        "limited": enabled and r.get("recall") is not None and r.get("recall") < MIN_RECALL,
+        "tuning_set": r.get("tuning_set"), "holdout": r.get("holdout"),
         "by_method": {m: _cell((data.get("by_method") or {}).get(m), rid) for m, _ in METHOD_LABELS},
         "previous": {"precision": fmt(prev.get("precision")), "recall": fmt(prev.get("recall"))},
         "delta": {"precision": fmt(delta.get("precision")), "recall": fmt(delta.get("recall"))},

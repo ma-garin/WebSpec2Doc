@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>商品検索 | みらい商店</title><link rel="stylesheet" href="css/style.css"></head>
+<body>
+<header class="hdr"><a href="index.html">メニュー</a></header>
+<main>
+<h1>商品検索</h1>
+<button type="button">検索</button>
+<h2>検索条件</h2>
+<form id="search" action="p03.html" method="get">
+<div class="row"><label for="keyword">キーワード</label><input type="text" id="keyword" name="keyword" maxlength="50"></div>
+<div class="row"><label for="category">カテゴリ</label><select id="category" name="category"><option value="">すべて</option><option value="pc">PC周辺機器</option><option value="home">家電</option></select></div>
+<div class="row"><label for="price_min">最低価格</label><input type="number" id="price_min" name="price_min" min="0" max="1000000"></div>
+<div class="row"><label for="price_max">最高価格</label><input type="number" id="price_max" name="price_max" min="0" max="1000000"></div>
+<div class="row"><input type="checkbox" id="in_stock" name="in_stock"><label for="in_stock">在庫ありのみ</label></div>
+<input type="submit" value="検索">
+<input type="button" value="条件をクリア">
+</form>
+<h2>検索結果</h2>
+<div hidden><p>検索結果は0件です</p></div>
+<table><thead><tr><th>商品名</th><th>価格</th><th>在庫</th></tr></thead><tbody><tr><td><a href="p04.html?id=1">ワイヤレスマウス M-200</a></td><td>2,480円</td><td>あり</td></tr><tr><td><a href="p04.html?id=2">USBハブ 4ポート</a></td><td>1,980円</td><td>あり</td></tr><tr><td><a href="p04.html?id=3">ノートPCスタンド</a></td><td>3,200円</td><td>残りわずか</td></tr></tbody></table>
+<div id="dyn6" class="dyn"></div>
+<div id="st7" role="alert"></div>
+</main>
+<footer><p><small>&copy; 2026 みらい商店 (評価用サンプル)</small></p></footer>
+<script src="js/p03.js"></script>
+</body></html>

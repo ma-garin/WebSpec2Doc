@@ -400,3 +400,6 @@ a.btn{text-decoration:none}
   #p-run .rt-tablehost .c-table-wrap{max-height:none;overflow:visible}
   #p-run .rt-tablehost .c-table td:first-child{min-width:0}
 }
+/* 816〜1024px でプレビュー列の見出し（表示切替と実行情報）が列幅を押し広げ、ページ全体が横スクロールしていた */
+.ed-b>.view{min-width:0}
+.view-h{flex-wrap:wrap;row-gap:6px;min-width:0}

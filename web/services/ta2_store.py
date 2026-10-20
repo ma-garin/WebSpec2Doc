@@ -759,14 +759,15 @@ def resync(domain: str, report: Mapping[str, Any]) -> dict[str, Any]:
 # 実行結果の反映（契約 §3.1）
 # =========================================================================
 def _run_status(raw: str) -> str:
-    value = str(raw or "").lower()
-    if value in {"passed", "pass", "ok"}:
+    value = str(raw or "").strip().lower()
+    # 成功と読むのはランナーが成功と返した値だけ。「ok」など由来の分からない値は成功にしない
+    if value in {"passed", "pass"}:
         return "pass"
     if value in {"flaky", "unstable"}:
         return "flaky"
     if value in {"failed", "fail", "timedout", "timeout", "interrupted"}:
         return "fail"
-    if value in {"skipped", "skip"}:
+    if value in {"skipped", "skip", "pending"}:
         return "new"
     return "fail"
 

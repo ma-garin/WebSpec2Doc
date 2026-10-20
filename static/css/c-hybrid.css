@@ -57,7 +57,7 @@
 .c-kpi__label { color: var(--color-text-secondary); font-size: var(--text-xs); font-weight: 600; overflow-wrap: anywhere; }
 .c-kpi__value { font-size: var(--text-2xl); font-weight: 700; line-height: var(--leading-tight); font-variant-numeric: tabular-nums; }
 .c-kpi[href] .c-kpi__value, button.c-kpi .c-kpi__value { color: var(--color-primary-dark); text-decoration: underline; text-underline-offset: 3px; }
-.c-kpi__value.is-unmeasured { color: var(--color-text-disabled); font-size: var(--text-md); text-decoration: none; }
+.c-kpi__value.is-unmeasured { color: var(--color-text-secondary); font-size: var(--text-md); text-decoration: none; }
 .c-kpi__sub { color: var(--color-text-secondary); font-size: var(--text-xs); }
 
 /* ---- フィルタ・タブ ---- */

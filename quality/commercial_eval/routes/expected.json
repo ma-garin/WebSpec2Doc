@@ -1,0 +1,424 @@
+{
+  "cases": [
+    {
+      "id": "R01",
+      "kind": "route",
+      "method": null,
+      "path": "/",
+      "should_detect": true,
+      "category": "static_route",
+      "file": "assets/app.js",
+      "note": "Router.add('/', homeView)"
+    },
+    {
+      "id": "R02",
+      "kind": "route",
+      "method": null,
+      "path": "/products",
+      "should_detect": true,
+      "category": "static_route",
+      "file": "assets/app.js",
+      "note": "Router.add('/products', productsView)"
+    },
+    {
+      "id": "R03",
+      "kind": "route",
+      "method": null,
+      "path": "/products/:id",
+      "should_detect": true,
+      "category": "dynamic_route",
+      "file": "assets/app.js",
+      "note": "Router.add('/products/:id', productView)"
+    },
+    {
+      "id": "R04",
+      "kind": "route",
+      "method": null,
+      "path": "/categories/:slug/items/:itemId",
+      "should_detect": true,
+      "category": "dynamic_route",
+      "file": "assets/app.js",
+      "note": "two dynamic segments in Router.add"
+    },
+    {
+      "id": "R05",
+      "kind": "route",
+      "method": null,
+      "path": "/search",
+      "should_detect": true,
+      "category": "static_route",
+      "file": "assets/app.js",
+      "note": "Router.add('/search', searchView); query string is not part of the route"
+    },
+    {
+      "id": "R06",
+      "kind": "route",
+      "method": null,
+      "path": "/checkout",
+      "should_detect": true,
+      "category": "static_route",
+      "file": "assets/app.js",
+      "note": "Router.add('/checkout', checkoutView); also navigate('/checkout') after order"
+    },
+    {
+      "id": "R07",
+      "kind": "route",
+      "method": null,
+      "path": "/new",
+      "should_detect": true,
+      "category": "static_route",
+      "file": "assets/app.js",
+      "note": "Router.add('/new', newView); target of the /old redirect"
+    },
+    {
+      "id": "R08",
+      "kind": "route",
+      "method": null,
+      "path": "/articles/:slug",
+      "should_detect": true,
+      "category": "dynamic_route",
+      "file": "assets/app.js",
+      "note": "Router.add('/articles/:slug', articleView); target of the /blog/:slug redirect"
+    },
+    {
+      "id": "R09",
+      "kind": "route",
+      "method": null,
+      "path": "/old",
+      "should_detect": true,
+      "category": "redirect",
+      "file": "assets/app.js",
+      "note": "Router.redirect('/old', '/new')"
+    },
+    {
+      "id": "R10",
+      "kind": "route",
+      "method": null,
+      "path": "/legacy-home",
+      "should_detect": true,
+      "category": "redirect",
+      "file": "assets/app.js",
+      "note": "Router.redirect('/legacy-home', '/')"
+    },
+    {
+      "id": "R11",
+      "kind": "route",
+      "method": null,
+      "path": "/blog/:slug",
+      "should_detect": true,
+      "category": "redirect",
+      "file": "assets/app.js",
+      "note": "Router.redirect('/blog/:slug', '/articles/:slug') dynamic redirect source"
+    },
+    {
+      "id": "R12",
+      "kind": "route",
+      "method": null,
+      "path": "*",
+      "should_detect": true,
+      "category": "not_found",
+      "file": "assets/app.js",
+      "note": "Router.add('*', notFoundView) catch-all"
+    },
+    {
+      "id": "R13",
+      "kind": "route",
+      "method": null,
+      "path": "/cart",
+      "should_detect": true,
+      "category": "js_navigation",
+      "file": "assets/app.js",
+      "note": "navigate('/cart') in a click handler; no Router.add for it"
+    },
+    {
+      "id": "R14",
+      "kind": "route",
+      "method": null,
+      "path": "/help",
+      "should_detect": true,
+      "category": "js_navigation",
+      "file": "assets/app.js",
+      "note": "history.pushState({}, '', '/help'); no Router.add for it"
+    },
+    {
+      "id": "R15",
+      "kind": "route",
+      "method": null,
+      "path": "/account/settings",
+      "should_detect": true,
+      "category": "js_navigation",
+      "file": "assets/app.js",
+      "note": "navigate('/account/settings') after fetch('/api/profile'); no Router.add for it"
+    },
+    {
+      "id": "R16",
+      "kind": "route",
+      "method": null,
+      "path": "/admin/audit-log",
+      "should_detect": true,
+      "category": "unreachable",
+      "file": "assets/app.js",
+      "note": "Router.add exists but no link/navigate/redirect leads to it; the definition still exists"
+    },
+    {
+      "id": "R17",
+      "kind": "route",
+      "method": null,
+      "path": "/about",
+      "should_detect": true,
+      "category": "duplicate",
+      "file": "assets/app.js",
+      "note": "Router.add('/about') in app.js and again in extra.js; counted once"
+    },
+    {
+      "id": "R18",
+      "kind": "route",
+      "method": null,
+      "path": "/orders/:id/receipt",
+      "should_detect": true,
+      "category": "dynamic_route",
+      "file": "assets/extra.js",
+      "note": "Router.add('/orders/:id/receipt', receiptView) in the late module"
+    },
+    {
+      "id": "R19",
+      "kind": "route",
+      "method": null,
+      "path": "/beta/dashboard",
+      "should_detect": false,
+      "category": "dead_code",
+      "file": "assets/app.js",
+      "note": "inside if (false) { ... }; never executes"
+    },
+    {
+      "id": "R20",
+      "kind": "route",
+      "method": null,
+      "path": "/internal/debug",
+      "should_detect": false,
+      "category": "comment",
+      "file": "assets/app.js",
+      "note": "appears only in a block comment"
+    },
+    {
+      "id": "R21",
+      "kind": "api",
+      "method": "GET",
+      "path": "/api/items",
+      "should_detect": true,
+      "category": "get_api",
+      "file": "assets/api.js",
+      "note": "fetch('/api/items') in listItems"
+    },
+    {
+      "id": "R22",
+      "kind": "api",
+      "method": "POST",
+      "path": "/api/orders",
+      "should_detect": true,
+      "category": "post_api",
+      "file": "assets/api.js",
+      "note": "fetch('/api/orders', {method:'POST'}) in createOrder"
+    },
+    {
+      "id": "R23",
+      "kind": "api",
+      "method": "GET",
+      "path": "/api/items/:id",
+      "should_detect": true,
+      "category": "template_api",
+      "file": "assets/api.js",
+      "note": "fetch(`/api/items/${id}`) in getItem"
+    },
+    {
+      "id": "R24",
+      "kind": "api",
+      "method": "PUT",
+      "path": "/api/items/:id",
+      "should_detect": true,
+      "category": "put_api",
+      "file": "assets/api.js",
+      "note": "fetch(`/api/items/${id}`, {method:'PUT'}) in updateItem"
+    },
+    {
+      "id": "R25",
+      "kind": "api",
+      "method": "DELETE",
+      "path": "/api/items/:id",
+      "should_detect": true,
+      "category": "delete_api",
+      "file": "assets/api.js",
+      "note": "fetch(`/api/items/${id}`, {method:'DELETE'}) in deleteItem"
+    },
+    {
+      "id": "R26",
+      "kind": "api",
+      "method": "PATCH",
+      "path": "/api/cart/items/:itemId",
+      "should_detect": true,
+      "category": "patch_api",
+      "file": "assets/api.js",
+      "note": "template string with {method:'PATCH'} in updateCartItem"
+    },
+    {
+      "id": "R27",
+      "kind": "api",
+      "method": "POST",
+      "path": "/api/auth/login",
+      "should_detect": true,
+      "category": "post_api",
+      "file": "assets/api.js",
+      "note": "fetch('/api/auth/login', {method:'POST'}) in login"
+    },
+    {
+      "id": "R28",
+      "kind": "api",
+      "method": "GET",
+      "path": "/api/users/me",
+      "should_detect": true,
+      "category": "get_api",
+      "file": "assets/api.js",
+      "note": "double-quoted literal fetch in me()"
+    },
+    {
+      "id": "R29",
+      "kind": "api",
+      "method": "GET",
+      "path": "/api/health",
+      "should_detect": true,
+      "category": "get_api",
+      "file": "assets/api.js",
+      "note": "xhr.open('GET', '/api/health') in checkHealth"
+    },
+    {
+      "id": "R30",
+      "kind": "api",
+      "method": "POST",
+      "path": "/api/orders/:id/cancel",
+      "should_detect": true,
+      "category": "concat_api",
+      "file": "assets/api.js",
+      "note": "fetch('/api/orders/' + orderId + '/cancel', {method:'POST'}); dynamic by string concatenation"
+    },
+    {
+      "id": "R31",
+      "kind": "api",
+      "method": "GET",
+      "path": "/api/notifications",
+      "should_detect": true,
+      "category": "duplicate",
+      "file": "assets/api.js",
+      "note": "fetch('/api/notifications') in api.js and again in app.js; counted once"
+    },
+    {
+      "id": "R32",
+      "kind": "api",
+      "method": "GET",
+      "path": "/api/export/all",
+      "should_detect": true,
+      "category": "unreachable",
+      "file": "assets/api.js",
+      "note": "exportAll() defined with fetch but never called; the call site exists"
+    },
+    {
+      "id": "R33",
+      "kind": "api",
+      "method": "GET",
+      "path": "/api/categories/:slug/items",
+      "should_detect": true,
+      "category": "template_api",
+      "file": "assets/app.js",
+      "note": "fetch(`/api/categories/${params.slug}/items`) in categoryItemView"
+    },
+    {
+      "id": "R34",
+      "kind": "api",
+      "method": "GET",
+      "path": "/api/search",
+      "should_detect": true,
+      "category": "get_api",
+      "file": "assets/app.js",
+      "note": "fetch('/api/search?q=' + encodeURIComponent(q)); query string stripped"
+    },
+    {
+      "id": "R35",
+      "kind": "api",
+      "method": "POST",
+      "path": "/api/feedback",
+      "should_detect": true,
+      "category": "post_api",
+      "file": "assets/app.js",
+      "note": "apiPost('/api/feedback', ...) wrapper call; method comes from the helper in api.js"
+    },
+    {
+      "id": "R36",
+      "kind": "api",
+      "method": "GET",
+      "path": "/api/profile",
+      "should_detect": true,
+      "category": "get_api",
+      "file": "assets/app.js",
+      "note": "await fetch('/api/profile') in an async click handler"
+    },
+    {
+      "id": "R37",
+      "kind": "api",
+      "method": null,
+      "path": "/api/legacy",
+      "should_detect": false,
+      "category": "unused_string",
+      "file": "assets/api.js",
+      "note": "string constant LEGACY_ENDPOINT only used in a console.warn message"
+    },
+    {
+      "id": "R38",
+      "kind": "api",
+      "method": null,
+      "path": "/api/v2/items",
+      "should_detect": false,
+      "category": "unused_string",
+      "file": "assets/api.js",
+      "note": "appears only inside a console.warn message text"
+    },
+    {
+      "id": "R39",
+      "kind": "api",
+      "method": "GET",
+      "path": "/api/beta/metrics",
+      "should_detect": false,
+      "category": "dead_code",
+      "file": "assets/api.js",
+      "note": "inside if (false) { ... }; never executes"
+    },
+    {
+      "id": "R40",
+      "kind": "api",
+      "method": "GET",
+      "path": "/api/reports/export",
+      "should_detect": false,
+      "category": "comment",
+      "file": "assets/api.js",
+      "note": "appears only in a // TODO comment"
+    },
+    {
+      "id": "R41",
+      "kind": "api",
+      "method": "POST",
+      "path": "https://example.com/api/analytics",
+      "should_detect": false,
+      "category": "external",
+      "file": "assets/app.js",
+      "note": "external origin; not this app's API"
+    },
+    {
+      "id": "R42",
+      "kind": "api",
+      "method": "GET",
+      "path": "https://cdn.example.org/config.json",
+      "should_detect": false,
+      "category": "external",
+      "file": "assets/extra.js",
+      "note": "external origin; not this app's API"
+    }
+  ]
+}

@@ -1,0 +1,10 @@
+<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>二段階認証</title><style>body{font-family:sans-serif;max-width:640px;margin:2em auto;padding:0 1em}label{display:block;margin:.6em 0}.n{color:#555;font-size:.9em}button{margin:.4em .3em .4em 0}</style></head><body>
+<p><a href="index.html">一覧へ戻る</a></p><h1>二段階認証</h1>
+<p>登録メールに届いた 6 桁のコードを入力してください。コードの有効期限は 5 分です（POST /api/2fa/verify）。</p>
+<p>現在の状態：<strong>認証待ち</strong>（3 回連続で失敗すると「ロック中」になり、30 分間入力できません）</p>
+<form action="/api/2fa/verify" method="post">
+<label>確認コード ※ <input type="text" name="code" required pattern="[0-9]{6}" maxlength="6"></label>
+<button>確認</button> <button type="button">コードを再送</button></form>
+<p class="n">コードが違う場合は「コードが正しくありません（残り n 回）」を表示します。</p>
+</body></html>

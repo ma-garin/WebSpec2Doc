@@ -141,7 +141,7 @@
       <span class="fchip" data-f="pass" role="button" tabindex="0" aria-pressed="false"><i style="background:var(--ok)"></i>成功</span>
     </div>
     <div class="items" id="items" tabindex="-1" role="listbox" aria-label="テスト一覧"></div>
-    <div class="list-f" id="list-f-tests"><button class="btn pri" style="flex:1" id="new-btn">＋ 新しいテスト</button><button class="btn" id="run-all-btn" title="このサイトのテストを全件実行" aria-label="全件実行">▶</button></div>
+    <div class="list-f" id="list-f-tests"><button class="btn pri" style="flex:1" id="new-btn">＋ 新しいテスト</button><button class="btn" id="run-all-btn" data-scope="all" title="このサイトのテストを全件実行" aria-label="このサイトのテストを全件実行">▶ 全件</button></div>
     <div class="list-f" id="list-f-home" hidden><button class="btn pri" style="flex:1;justify-content:center" id="home-add">＋ サイトを追加</button></div>
   </aside>
 
@@ -253,15 +253,16 @@
 
     <!-- 実行と結果 -->
     <section class="panel" id="p-run">
-      <div class="ph"><h2>実行と結果</h2><span id="run-meta" style="color:var(--tx3);font-size:12px"></span><div class="sp"></div>
+      <div class="ph"><h2>実行と結果</h2><span id="run-state" class="run-state"></span><span id="run-meta" style="color:var(--tx3);font-size:12px"></span><div class="sp"></div>
         {# 証跡 ZIP / JUnit XML を作る API はまだ無い。作れない機能のボタンは出さない（契約 §0）。
            対応する API ができたら panels.js が hidden を外す #}
         <button class="btn" id="export-btn" hidden>証跡をまとめて書き出す</button><button class="btn" id="junit-btn" hidden>JUnit XML</button>
         <button class="btn" id="rerun-fail-btn">失敗のみ再実行</button><button class="btn pri" id="run-all-btn2">▶ 全件実行</button></div>
       <div class="pb">
-        <div id="run-reaview" class="rt-run" role="region" aria-label="リバース解析で増えたテスト観点"></div>
+        <p id="run-reason" hidden></p>
         <div class="kpis" id="kpis"></div>
         <div class="prog" id="prog"><i></i></div>
+        <div id="run-reaview" class="rt-run" role="region" aria-label="テスト候補の由来と実行"></div>
         <div class="tbl"><table><thead><tr><th style="width:34px"></th><th style="width:86px">ID</th><th>テスト</th><th style="width:130px">画面</th><th style="width:150px">直近 10 回</th><th style="width:70px;text-align:right">所要</th><th style="width:220px">結果</th></tr></thead><tbody id="run-rows"></tbody></table></div>
       </div>
     </section>

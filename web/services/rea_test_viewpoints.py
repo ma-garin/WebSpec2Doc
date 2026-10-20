@@ -98,6 +98,10 @@ def _route_rows(evidence: list[dict], probe: dict | None = None) -> list[dict]:
             row["text"] = f"画面ルート {value} の表示と操作を確認する（System 03 が GET の遷移で到達を確認済み）"
             if row["reach_authenticated"]:
                 row["text"] += "（認証状態を使用）"
+            # 静的根拠の主張「（到達は未確認）」が、実測の事実（到達済み）と食い違わないようにする
+            reach = "System 03 が GET の遷移で到達を実測。機能の正しさは未確認"
+            row["claim"] = (row["claim"].replace("到達は未確認", reach) if "到達は未確認" in row["claim"]
+                            else f"{row['claim']}（{reach}）")  # fmt: skip
             row["runnable_label"] = RUNNABLE_LABEL
             row["reach_observed_at"] = ((probe or {}).get(e.get("id")) or {}).get("observed_at")
     return rows
@@ -174,8 +178,8 @@ def _origin(row: dict) -> tuple[str, str]:
         return "existing_candidate", "observed"
     if row.get("runnable"):
         return ("observed_auth", "observed_auth") if row.get("reach_authenticated") else ("observed", "observed")
-    if row.get("reach_status") in {"auth_required", "ambiguous", "failed"}:
-        return "unverified", "unverified"  # System 03 で到達を確かめようとして確かめられなかった
+    if row.get("reach_status") in {"auth_required", "ambiguous", "failed", "unreached"}:
+        return "unverified", "unverified"  # System 03 で到達を確かめようとして確かめられなかった（System 03 の「未確認・曖昧」と同じ区分）
     state = row["evidence_state"]
     if state == "static":
         return "static", "static"

@@ -61,7 +61,7 @@ def _links(domain: str, has_report: bool) -> dict[str, str | None]:
     return {
         "s01": f"/sites/{q}/spec" if has_report else None,
         "s02": f"/sites/{q}/tests" if has_report else None,
-        "s03": "/auto-run",
+        "s03": f"/auto-run?site={q}",  # 入口でサイトを選び直させない（static/js/autorun-deeplink.js）
         "s09": "/impact",
         "s05": "/healing",
     }

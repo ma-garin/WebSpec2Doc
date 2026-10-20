@@ -1,87 +1,62 @@
+/* AutoRun「静的候補の探索」（System03）。C. Hybrid の部品（c-*）に、この画面固有の流れ図と表の補正だけを足す */
 .asr { margin: 16px 0; padding: 16px; max-width: 100%; box-sizing: border-box; overflow-wrap: anywhere; }
 .asr-title { margin: 0 0 4px; font-size: var(--text-md); color: var(--color-text); }
-.asr-lead { margin: 0 0 12px; font-size: var(--text-sm); color: var(--color-text-secondary); }
 .asr-label { display: block; font-size: var(--text-xs); color: var(--color-text-secondary); }
-.asr-bar { display: flex; flex-wrap: wrap; gap: 12px 24px; align-items: center; padding: 10px 12px;
-  background: var(--color-bg); border: 1px solid var(--color-border); border-radius: var(--radius-md); }
-.asr-bar-item { font-size: var(--text-sm); min-width: 0; }
-.asr-run { margin-left: auto; }
 .asr-run[disabled] { cursor: not-allowed; opacity: .6; }
 .asr-domain-input { height: 32px; padding: 0 8px; border: 1px solid var(--color-border-strong); border-radius: var(--radius-sm); font-size: var(--text-sm); }
 .asr-reason { margin: 6px 0 0; font-size: var(--text-sm); color: var(--color-high); }
 .asr-live { margin: 6px 0 0; min-height: 1em; font-size: var(--text-sm); color: var(--color-primary-dark); }
+.asr-live:empty { display: none; }
 .asr-notice { margin: 10px 0; padding: 10px 12px; font-size: var(--text-sm); border-radius: var(--radius-md); border: 1px solid; }
 .asr-notice.is-ok { background: var(--color-low-bg); border-color: var(--color-low-border); }
 .asr-notice.is-ng { background: var(--color-high-bg); border-color: var(--color-high-border); }
-.asr-empty { margin: 12px 0 0; font-size: var(--text-sm); color: var(--color-text-secondary); }
-.asr-band { display: flex; flex-wrap: wrap; gap: 12px; align-items: stretch; margin: 12px 0 6px; }
-.asr-band-before, .asr-band-after { padding: 10px 14px; border: 1px solid var(--color-border); border-radius: var(--radius-md);
-  background: var(--color-surface); font-size: var(--text-sm); }
-.asr-band-after { flex: 1 1 280px; border-color: var(--color-info-border); background: var(--color-info-bg); }
-.asr-band strong, .asr-sub strong { font-size: var(--text-md); }
-.asr-band ul { display: flex; flex-wrap: wrap; gap: 4px 16px; margin: 0; padding: 0; list-style: none; }
-.asr-arrow { align-self: center; font-size: var(--text-lg); color: var(--color-text-secondary); }
-.asr-sub { margin: 4px 0 12px; font-size: var(--text-sm); color: var(--color-text); }
-.asr-table-wrap { max-width: 100%; overflow-x: hidden; }
-.asr-table { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: var(--text-sm); }
-.asr-table th, .asr-table td { padding: 6px 8px; text-align: left; vertical-align: top; border-bottom: 1px solid var(--color-border); overflow-wrap: anywhere; }
-.asr-table th { font-size: var(--text-xs); color: var(--color-text-secondary); }
-.asr-row td { border-bottom: 0; }
-.asr-detail-row td { padding-top: 0; }
 .asr-sub-url { color: var(--color-text-secondary); font-size: var(--text-xs); }
-.asr-badge { display: inline-block; padding: 2px 8px; border-radius: var(--radius-full); border: 1px solid var(--color-border-strong);
-  font-size: var(--text-xs); font-weight: 600; white-space: nowrap; }
-.asr-badge.is-ok { background: var(--color-low-bg); border-color: var(--color-low-border); }
-.asr-badge.is-miss, .asr-badge.is-fail { background: var(--color-critical-bg); border-color: var(--color-critical-border); }
-.asr-badge.is-auth, .asr-badge.is-amb { background: var(--color-medium-bg); border-color: var(--color-medium-border); }
-.asr-dl { display: grid; grid-template-columns: max-content 1fr; gap: 4px 12px; margin: 6px 0 0; }
-.asr-dl dt { color: var(--color-text-secondary); }
-.asr-dl dd { margin: 0; min-width: 0; }
-.asr details summary { cursor: pointer; font-size: var(--text-xs); color: var(--color-primary-dark); }
 .asr-notes { margin: 10px 0 0; padding-left: 18px; font-size: var(--text-xs); color: var(--color-text-secondary); }
-.asr button:focus-visible, .asr input:focus-visible, .asr summary:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
-@media (max-width: 900px) {
-  .asr-table, .asr-table tbody, .asr-table tr, .asr-table td { display: block; width: 100%; box-sizing: border-box; }
-  .asr-table thead { position: absolute; left: -9999px; }
-  .asr-row { margin-top: 10px; padding: 8px; border: 1px solid var(--color-border); border-bottom: 0; border-radius: var(--radius-md) var(--radius-md) 0 0; }
-  .asr-detail-row { padding: 0 8px 8px; border: 1px solid var(--color-border); border-top: 0; border-radius: 0 0 var(--radius-md) var(--radius-md); }
-  .asr-table td { border: 0; padding: 3px 0; }
-  .asr-row td::before { content: attr(data-label); display: block; font-size: var(--text-xs); color: var(--color-text-secondary); }
-  .asr-run { margin-left: 0; }
-}
-.asr-sub-auth { font-size: var(--text-xs); color: var(--color-text-secondary); }
-/* ---- Wave4: C Hybrid 化（フロー図・絞り込み・注記） ---- */
+.asr button:focus-visible, .asr input:focus-visible, .asr a:focus-visible, .asr .c-table tr:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
+
 .asr-head { padding: 0 0 8px; }
 .asr-head .asr-title { font-size: var(--text-lg); }
 .asr-context { display: flex; flex-wrap: wrap; gap: 8px 24px; align-items: center; padding: 8px 12px; font-size: var(--text-sm);
   background: var(--color-bg); border: 1px solid var(--color-border); border-radius: var(--radius-md); }
 .asr-caveat { margin: 8px 0; padding: 8px 12px; font-size: var(--text-sm); border-left: 3px solid var(--color-warning);
   background: var(--color-warning-bg); color: var(--color-warning-tx); }
-.asr-flow { align-items: stretch; gap: 28px; margin: 12px 0; }
-.asr-flow li { position: relative; flex: 1 1 160px; min-width: 0; flex-direction: column; align-items: flex-start; gap: var(--space-2);
-  border-radius: var(--radius-md); padding: var(--space-3); }
-.asr-flow li:not(:last-child)::after { content: "\2192"; position: absolute; right: -22px; top: 50%; transform: translateY(-50%);
-  width: 16px; text-align: center; color: var(--color-text-secondary); font-size: var(--text-md); }
-.asr-flow-t { font-weight: 700; font-size: var(--text-sm); }
+
+/* ---- 流れ図: 1 静的候補 → 2 探索 → 3 未認証実測 → 4 認証済み実測 → 5 未確認・曖昧 → 6 System02/09 ---- */
+.asr-flow { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin: 12px 0; padding: 0; list-style: none; }
+.asr-node { position: relative; display: flex; flex-direction: column; gap: 6px; min-width: 0; padding: 10px;
+  border: 1px solid var(--color-border); border-top: 3px solid var(--color-border-strong); border-radius: var(--radius-md); background: var(--color-surface); }
+.asr-node:nth-child(1) { border-top-color: var(--color-warning); }
+.asr-node:nth-child(3), .asr-node:nth-child(4) { border-top-color: var(--color-success); }
+.asr-node:nth-child(5) { border-top-color: var(--color-text-disabled); border-top-style: dashed; }
+.asr-node:nth-child(6) { border-top-color: var(--color-primary); }
+.asr-node.is-warn { background: var(--color-warning-bg); }
+.asr-flow-t { display: flex; align-items: center; gap: 6px; font-weight: 700; font-size: var(--text-sm); color: var(--color-text); }
+.asr-no { display: inline-flex; align-items: center; justify-content: center; flex: none; width: 20px; height: 20px; border-radius: 50%;
+  background: var(--color-surface-2); border: 1px solid var(--color-border-strong); font-size: var(--text-xs); font-variant-numeric: tabular-nums; }
 .asr-flow-note { font-size: var(--text-xs); color: var(--color-text-secondary); }
-.asr-flow-group { display: flex; flex-direction: column; gap: var(--space-2); width: 100%; }
-.asr-stage { display: flex; align-items: baseline; gap: 8px; width: 100%; min-height: 36px; padding: 4px 10px; text-align: left; cursor: pointer;
+.asr-flow-note strong { font-size: var(--text-lg); color: var(--color-text); }
+.asr-flow-warn { font-size: var(--text-xs); color: var(--color-warning-tx); font-weight: 600; }
+.asr-flow-group { display: flex; flex-direction: column; gap: 6px; width: 100%; }
+.asr-stage { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; width: 100%; min-height: 36px; padding: 6px 8px; text-align: left; cursor: pointer;
   font: inherit; font-size: var(--text-xs); color: var(--color-text); background: var(--color-surface);
   border: 1px solid var(--color-border-strong); border-radius: var(--radius-md); }
 .asr-stage:hover { background: var(--color-surface-2); }
-.asr-stage.is-on { border-color: var(--color-primary); background: var(--color-primary-light); font-weight: 700; }
+.asr-stage.is-on { border-color: var(--color-primary); background: var(--color-primary-light); box-shadow: inset 0 0 0 1px var(--color-primary); }
 .asr-stage-n { font-size: var(--text-lg); font-weight: 700; font-variant-numeric: tabular-nums; }
+.asr-stage-ev { display: inline-flex; flex-wrap: wrap; gap: 4px; }
+.asr-stage-sub { flex-basis: 100%; color: var(--color-text-secondary); }
 .asr-next { display: block; padding: 6px 10px; font-size: var(--text-xs); color: var(--color-primary-dark);
   background: var(--color-surface); border: 1px solid var(--color-border-strong); border-radius: var(--radius-md); text-decoration: none; }
 .asr-next:hover { background: var(--color-surface-2); text-decoration: underline; }
-.asr-filter { justify-content: space-between; font-size: var(--text-sm); }
-.asr-stage:focus-visible, .asr-next:focus-visible, .asr .c-table tr:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
-@media (max-width: 816px) {
-  .asr-flow { flex-direction: column; gap: 28px; }
-  .asr-flow li { flex: none; width: 100%; box-sizing: border-box; }
-  .asr-flow li:not(:last-child)::after { content: "\2193"; right: auto; left: 50%; top: auto; bottom: -24px; transform: translateX(-50%); }
+.asr-next-sub { display: block; color: var(--color-text-secondary); }
+/* 6 段が 1 行に並ぶ幅だけ矢印を出す（折り返し時は番号で順序を示す） */
+@media (min-width: 1440px) {
+  .asr-flow { grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 18px; }
+  .asr-node:not(:last-child)::after { content: "\2192"; position: absolute; right: -15px; top: 50%; transform: translateY(-50%);
+    color: var(--color-text-secondary); font-size: var(--text-md); }
 }
+@media (max-width: 900px) { .asr-flow { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 
-/* 共通ステッパーの丸い形は小さな段用。この流れ図は大きな枠なので角丸の箱にし、番号の丸は出さない */
-.c-stepper.asr-flow li { border-radius: var(--radius-md, 8px); }
-.c-stepper.asr-flow li::before { display: none; }
+.asr-filter { justify-content: space-between; font-size: var(--text-sm); }
+.asr .c-table td[data-label="認証"], .asr .c-table td[data-label="状態"], .asr .c-table td[data-label="静的根拠の位置"] { white-space: nowrap; overflow-wrap: normal; }
+.asr-url { overflow-wrap: anywhere; }

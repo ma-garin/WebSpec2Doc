@@ -53,6 +53,7 @@ def test_site_without_run_is_not_unregistered(tmp_path):
     assert site["latest_change"] is None
     assert "未登録" not in json.dumps(res, ensure_ascii=False)
     assert site["links"]["s01"] == "/sites/example.com/spec"
+    assert site["links"]["s03"] == "/auto-run?site=example.com"  # 入口でサイトを選び直させない
     assert set(site["links"]) == {"s01", "s02", "s03", "s09", "s05"}
     assert res["counts"]["sites"] == 1 and res["counts"]["failed"] == 0
 

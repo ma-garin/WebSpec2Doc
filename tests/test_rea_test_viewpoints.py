@@ -184,3 +184,23 @@ def test_origin_vocabulary_matches_contract():
     probe_noauth = build_viewpoints(_routes(), 0, _obs("r1"), tests=[])["viewpoints"][0]
     assert probe_noauth["origin_label"] == "未認証実測" and probe_noauth["ev_code"] == "observed"
     assert {v["origin_label"] for v in out["viewpoints"]} <= {"元候補", "REA 追加", "静的", "未認証実測", "認証済み実測", "未確認"}
+
+
+
+def test_tried_but_unconfirmed_routes_share_system03_category():
+    """System 03 の「未確認・曖昧」（曖昧・未到達・ログイン必要・確認失敗）は System 02 でも未確認に揃える。"""
+    probe = _probe(r1="observed", r2="unreached", r3="auth_required", r4="ambiguous", r5="failed")
+    out = build_viewpoints(_ok(_ROUTES), before=0, probe=probe)
+    by = {v["evidence_id"]: v for v in out["viewpoints"]}
+    assert {by[k]["origin"] for k in ("r2", "r3", "r4", "r5")} == {"unverified"}
+    assert by["r1"]["origin"] == "observed" and by["r6"]["origin"] == "static"  # 未探索は静的のまま
+
+
+def test_observed_route_claim_does_not_say_unreached():
+    ev = [{**_ROUTES[0], "claim": "ソースに画面ルート「p1」の宣言がある（到達は未確認）"},
+          {**_ROUTES[1], "claim": "ソースに画面ルート「p2」の宣言がある（到達は未確認）"}]  # fmt: skip
+    out = build_viewpoints(_ok(ev), before=0, probe=_probe(r1="observed"))
+    by = {v["evidence_id"]: v for v in out["viewpoints"]}
+    assert "到達は未確認" not in by["r1"]["claim"] and "到達を実測" in by["r1"]["claim"]
+    assert "機能の正しさは未確認" in by["r1"]["claim"]
+    assert by["r2"]["claim"].endswith("（到達は未確認）")  # 未探索の主張は変えない

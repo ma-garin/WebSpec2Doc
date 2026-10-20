@@ -380,25 +380,70 @@ a.btn{text-decoration:none}
   .stage-wrap,.spec-grid,.rep-wrap{overflow:auto}
 }
 
-/* System02 実行と結果 #p-run — リバース解析の観点（C. Hybrid）。816〜1920px で崩さない */
+/* System02 実行と結果 #p-run — 実行の判定と、テスト候補の由来（C. Hybrid）。816〜1920px で崩さない */
+#p-run{grid-template-columns:minmax(0,1fr)}
+#p-run .run-state:empty{display:none}
+#p-run .run-state{flex:none}
+#p-run .ph h2{flex:none;white-space:nowrap}
+#p-run #run-meta{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#p-run .ph .sp{flex:0 0 0}
+#p-run .ph .btn{flex:none;white-space:nowrap}
+/* 結果の表: .scr（サイトの地図のグリッド）が td.scr に効いてセルが崩れていた。列幅は固定 px を減らしてテスト名に幅を残す */
+#p-run .tbl td.scr{display:table-cell}
+#p-run .tbl th:nth-child(1){width:28px!important}
+#p-run .tbl th:nth-child(2){width:78px!important}
+#p-run .tbl th:nth-child(4){width:15%!important}
+#p-run .tbl th:nth-child(5){width:96px!important}
+#p-run .tbl th:nth-child(6){width:56px!important}
+#p-run .tbl th:nth-child(7){width:28%!important}
+#p-run #run-reason{margin:0 0 12px}
 #p-run #run-reaview,#p-run .rt-wrap{min-width:0;max-width:100%}
-#p-run .rt-wrap{display:flex;flex-direction:column;gap:12px}
-#p-run .rt-kpis{grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}
-#p-run .rt-kpis .c-kpi{min-width:0}
-#p-run .rt-split{min-width:0}
+#p-run #run-reaview{margin:0 0 16px}
+#p-run .rt-wrap{display:flex;flex-direction:column;gap:12px;padding:14px 16px;border:1px solid var(--line);border-radius:10px;background:var(--sf)}
+#p-run .rv-title{font-size:15px}
+#p-run .rt-flow{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;margin:0;padding:0;list-style:none}
+#p-run .rt-step{min-width:0}
+#p-run .rt-step__btn{display:grid;grid-template-columns:auto 1fr;align-items:center;gap:2px 6px;width:100%;height:100%;padding:8px 10px;text-align:left;font:inherit;color:var(--color-text);background:var(--color-surface);border:1px solid var(--color-border);border-top:3px solid var(--color-border-strong);border-radius:8px;cursor:pointer}
+#p-run .rt-step.is-fact .rt-step__btn{border-top-color:var(--color-success)}
+#p-run .rt-step.is-inference .rt-step__btn{border-top-color:var(--color-warning)}
+#p-run .rt-step__btn:hover{border-color:var(--color-primary-border)}
+#p-run .rt-step__btn[aria-pressed="true"],#p-run .rt-chip[aria-pressed="true"]{box-shadow:inset 0 0 0 2px var(--color-primary);background:var(--color-primary-light)}
+#p-run .rt-step__no{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:50%;border:1px solid var(--color-border-strong);font-size:11px;color:var(--color-text-secondary)}
+#p-run .rt-step__label{font-size:12px;font-weight:700}
+#p-run .rt-step__value{grid-column:1/-1;font-size:22px;font-weight:700;color:var(--color-primary-dark);text-decoration:underline;text-underline-offset:3px;font-variant-numeric:tabular-nums}
+#p-run .rt-step__sub{grid-column:1/-1;font-size:11px;color:var(--color-text-secondary);line-height:1.4}
+#p-run .rt-ev{margin:0;min-width:0}
+#p-run .rt-ev .c-split__label b{font-variant-numeric:tabular-nums}
+#p-run .rt-ev__chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+#p-run .rt-chip{display:inline-flex;align-items:center;gap:6px;padding:2px 8px 2px 2px;font:inherit;font-size:12px;color:var(--color-text);background:var(--color-surface);border:1px solid var(--color-border);border-radius:999px;cursor:pointer}
+#p-run .rt-chip:hover{border-color:var(--color-primary-border)}
+#p-run .rt-chip__n{font-weight:700;font-variant-numeric:tabular-nums}
+#p-run .rt-step__btn:focus-visible,#p-run .rt-chip:focus-visible,#p-run .rt-details>summary:focus-visible{outline:2px solid var(--color-primary);outline-offset:2px}
+#p-run .rt-details>summary{cursor:pointer;font-size:13px;font-weight:600;color:var(--color-primary-dark);padding:4px 0}
+#p-run .rt-details[open]>summary{margin-bottom:8px}
 #p-run .rt-tablehost{min-width:0;max-width:100%}
 #p-run .rt-tablehost .c-table-wrap{max-height:420px;max-width:100%;overflow:auto}
 #p-run .rt-tablehost .c-table td:first-child{min-width:220px}
 #p-run .rt-tablehost .c-table td{height:auto;padding-top:6px;padding-bottom:6px}
+#p-run .rt-tablehost .c-table td:not(:first-child){white-space:nowrap}
 #p-run .rt-run-target{font-weight:700}
 #p-run .rt-run-na,#p-run .rt-run-none{color:var(--tx3)}
 #p-run .rt-filterbar:empty{display:none}
-@media (max-width:1024px){
-  #p-run .rt-split{grid-template-columns:minmax(0,1fr)}
+#p-run .tbl tr.rw:focus-visible{outline:2px solid var(--color-primary);outline-offset:-2px}
+#list-f-tests{flex-wrap:wrap}
+#list-f-tests #new-btn{flex:1 1 100%!important}
+#list-f-tests #run-all-btn,#list-f-tests .btn:not(#new-btn){flex:1 1 0;justify-content:center;white-space:nowrap}
+@media (max-width:1100px){
+  #p-run .rt-flow{grid-template-columns:repeat(3,minmax(0,1fr))}
+  /* 狭い幅は「画面」「直近 10 回」を畳む（画面名は行の title、履歴は右の詳細で見られる） */
+  #p-run .tbl th:nth-child(4),#p-run .tbl td:nth-child(4),#p-run .tbl th:nth-child(5),#p-run .tbl td:nth-child(5){display:none}
+  #p-run .tbl tr.skiph td{display:table-cell}
 }
 @media (max-width:816px){
+  #p-run .rt-ev{grid-template-columns:minmax(0,1fr)}
   #p-run .rt-tablehost .c-table-wrap{max-height:none;overflow:visible}
   #p-run .rt-tablehost .c-table td:first-child{min-width:0}
+  #p-run .rt-tablehost .c-table td:not(:first-child){white-space:normal}
 }
 /* 816〜1024px でプレビュー列の見出し（表示切替と実行情報）が列幅を押し広げ、ページ全体が横スクロールしていた */
 .ed-b>.view{min-width:0}

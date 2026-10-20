@@ -86,7 +86,7 @@
     });
 
     var q = S.q.trim().toLowerCase();
-    var html = '';
+    var html = '', shown = 0;
     screenOrder().forEach(function (scr) {
       var meta = T.screenOf(scr);
       var ts = S.tests.filter(function (t) {
@@ -103,6 +103,7 @@
         return;
       }
       ts.forEach(function (t) {
+        shown++;
         var on = t.id === S.sel;
         html += '<div class="it ' + (on ? 'on' : '') + '" data-id="' + esc(t.id) + '"'
           + ' role="option" aria-selected="' + (on ? 'true' : 'false') + '" tabindex="' + (on ? '0' : '-1') + '"'
@@ -112,11 +113,23 @@
       });
     });
     var items = $('#items');
+    syncRunButton(S.filter !== 'all' || !!q, shown);
     if (items) {
       items.innerHTML = html || emptyHTML();
       var on = $('#items .it.on');
       if (on) on.scrollIntoView({ block: 'nearest' });
     }
+  }
+
+  /** 一覧の ▶: 絞り込み中は「表示中の n 件を実行」、それ以外は全件実行（押す前に範囲が読める） */
+  function syncRunButton(filtered, n) {
+    var b = $('#run-all-btn');
+    if (!b) return;
+    b.setAttribute('data-scope', filtered ? 'visible' : 'all');
+    b.textContent = filtered ? '▶ 表示中 ' + n + ' 件' : '▶ 全件';
+    var tip = filtered ? '絞り込みで表示中の ' + n + ' 件だけを実行' : 'このサイトのテストを全件実行';
+    b.title = tip; b.setAttribute('aria-label', tip);
+    b.disabled = filtered && !n;
   }
 
   /** 0 件のときは「なぜ 0 件か」と「戻し方」を出す。「該当なし」だけだと手詰まりに見える */

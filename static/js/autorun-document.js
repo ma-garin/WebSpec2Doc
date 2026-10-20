@@ -204,9 +204,11 @@ async function autorunStart() {
     if (!response.ok || !data.ok) throw new Error(data.error || '開始に失敗しました');
     _autorunAttachJob(data.job_id);
   } catch (error) {
-    autorunSetStartStatus(String(error), true);
+    autorunSetStartStatus((error && error.message) ? error.message + ' 条件を確認して、もう一度「開始」を押してください。' : String(error), true);
     if (btn) { delete btn.dataset.busy; btn.textContent = '開始'; }
     autorunSyncStartButton();
+    // キーボード操作の位置を失わない: 失敗後は「開始」へ戻し、やり直しをそのまま行えるようにする。
+    if (btn && !btn.disabled) { try { btn.focus(); } catch (e) { /* 無視 */ } }
   }
 }
 

@@ -50,6 +50,19 @@ logger = logging.getLogger(__name__)
 
 bp = Blueprint("ta2", __name__)
 
+
+@bp.before_request
+def _require_testlab_role() -> Any:
+    """画面（pages._may_use_testlab）と同じ判定を API にも掛ける。
+
+    画面だけ塞ぐと、一般ユーザーが API を直接叩いて実行・再クロールできてしまう。
+    """
+    from web.routes.pages import _may_use_testlab
+
+    if _may_use_testlab():
+        return None
+    return {"error": "この操作は管理者だけが行えます。管理者に権限の付与を依頼してください。"}, 403
+
 # domain → {run_id, thread, started, total, cancelled, ids, out_dir}
 _RUNS: dict[str, dict[str, Any]] = {}
 

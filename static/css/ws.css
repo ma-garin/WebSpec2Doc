@@ -24,7 +24,7 @@ a.btn{text-decoration:none}
 #ctx-card h4{font-size:13px;font-weight:700;margin-bottom:6px}
 #ctx-card dl{display:grid;grid-template-columns:auto 1fr;gap:4px 10px;font-size:11.5px}
 #ctx-card dt{color:var(--tx3)}
-#ctx-card dd{color:var(--tx2);word-break:break-all}
+#ctx-card dd{color:var(--tx2);overflow-wrap:anywhere}
 .it .grow{flex:1;min-width:0}
 .it .grow b{display:block;font-weight:500;font-size:12.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .it .grow small{display:block;color:var(--tx3);font-size:10.5px;font-family:var(--mono);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}

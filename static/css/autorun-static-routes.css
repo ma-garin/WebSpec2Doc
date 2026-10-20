@@ -60,3 +60,11 @@
 .asr-filter { justify-content: space-between; font-size: var(--text-sm); }
 .asr .c-table td[data-label="認証"], .asr .c-table td[data-label="状態"], .asr .c-table td[data-label="静的根拠の位置"] { white-space: nowrap; overflow-wrap: normal; }
 .asr-url { overflow-wrap: anywhere; }
+
+/* 受付先頭の入口。探索がページ最下部にあることを見失わせない */
+.asr-jump-row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; margin: 6px 0 0; font-size: var(--text-sm); color: var(--color-text-secondary); }
+#autorun-static-routes:focus { outline: 2px solid var(--color-primary); outline-offset: 2px; }
+
+/* キーボード操作: ⓘ ヒントと結果パネルのフォーカス位置を見えるようにする */
+.info-tip:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; border-radius: 50%; }
+#autorun-complete-card:focus-visible, #autorun-failure-panel:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }

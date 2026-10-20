@@ -194,6 +194,7 @@ function autorunSetStartStatus(msg, isError) {
   const el = document.getElementById('autorun-start-status');
   if (!el) return;
   el.textContent = msg;
+  if (isError && msg) el.setAttribute('role', 'alert'); else el.removeAttribute('role');
   el.classList.toggle('input-field-message-error', !!isError);
   // 明示的なエラー・通知は、入力のたびに走る活性判定に上書きさせない。
   if (isError && msg) el.dataset.sticky = '1';
@@ -363,6 +364,15 @@ function _autorunOutputSummary(data) {
   return labels.length ? labels.slice(0, 4).join(' / ') : 'まだありません';
 }
 
+// 完了・失敗の結果を支援技術へ伝え、キーボード利用者の位置を結果へ移す（ジョブごとに1回）。
+function _autorunAnnounceOutcome(el, data) {
+  if (!el || !data || !data.job_id && !_autoRunJobId) return;
+  const key = String(data.job_id || _autoRunJobId) + ':' + (data.status || '');
+  if (el.dataset.announced === key) return;
+  el.dataset.announced = key;
+  try { el.focus({ preventScroll: false }); } catch (e) { /* 非対応環境は無視 */ }
+}
+
 function _autorunRenderFailurePanel(data) {
   const panel = document.getElementById('autorun-failure-panel');
   const body = document.getElementById('autorun-failure-body');
@@ -378,6 +388,7 @@ function _autorunRenderFailurePanel(data) {
   }
 
   panel.style.display = '';
+  _autorunAnnounceOutcome(panel, data);
   const outputs = _autorunOutputSummary(data);
   const classifications = data.failure_classifications || [];
   const summary = data.failure_summary || {};
@@ -685,7 +696,10 @@ function _autorunUpdateStepper(data) {
     fill.classList.toggle('is-error', isError);
     fill.classList.toggle('is-done', status === 'complete');
   }
-  if (bar) bar.setAttribute('aria-valuenow', String(pct));
+  if (bar) {
+    bar.setAttribute('aria-valuenow', String(pct));
+    bar.setAttribute('aria-valuetext', pct + '%（' + (_autorunPhaseLabelWithProgress(status, data) || status) + '）');
+  }
 
   // 入力待ちの案内と再開操作は主導線バーが持つ。ここに同じものを出すと、
   // 同一画面で「入力待ちです」が3箇所、再開操作が2箇所に増える（利用者の指摘）。
@@ -757,6 +771,7 @@ function _autorunRenderComplete(data) {
   if (data.status !== 'complete') { card.style.display = 'none'; return; }
   card.style.display = '';
   card.replaceChildren();
+  _autorunAnnounceOutcome(card, data);
 
   const r = data.test_results || {};
   const unavailable = !!r.unavailable;
@@ -776,7 +791,7 @@ function _autorunRenderComplete(data) {
   title.textContent = unavailable
     ? 'AutoRun 完了（テストは実行できませんでした）'
     : noTests ? 'AutoRun 完了 — 実行対象のテストがありませんでした'
-    : ok ? 'AutoRun 完了 — 全テスト成功' : 'AutoRun 完了 — 失敗したテストがあります';
+    : ok ? 'AutoRun 完了 — 実行した ' + (r.total || 0) + ' 件はすべて成功（実行していない範囲は未検証）' : 'AutoRun 完了 — 失敗したテストがあります';
   const sub = document.createElement('p');
   sub.className = 'muted-copy';
   sub.textContent = unavailable

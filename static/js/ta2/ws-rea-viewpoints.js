@@ -12,7 +12,7 @@
   var CAT_LABEL = { fact: '事実', inference: '推論', unverified: '未確認' };
   // 根拠の区分（表示順 = 事実 → 推論 → 未確認）。ev は WS2D.evidence の code
   var EV = [
-    { key: 'base', label: '元候補（実測）', ev: 'observed', cat: 'fact' },
+    { key: 'base', label: '元候補（既存の候補・実測とは限らない）', ev: 'unverified', cat: 'unverified' },
     { key: 'observed', label: '未認証実測', ev: 'observed', cat: 'fact' },
     { key: 'observed_auth', label: '認証済み実測', ev: 'observed_auth', cat: 'fact' },
     { key: 'static', label: '静的', ev: 'static', cat: 'inference' },

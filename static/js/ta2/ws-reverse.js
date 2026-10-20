@@ -129,7 +129,7 @@
     function reasonOf() {
       var d = data;
       if (isRunning()) return { t: 'リバース解析を実行しています（数十秒かかることがあります）。完了すると結果を更新します。', k: 'info' };
-      if (netErr) return { t: netErr.message + '前回の結果を表示しています。', k: 'error' };
+      if (netErr) return { t: netErr.message + (d.state === 'ok' ? '前回の結果を表示しています。' : ''), k: 'error' };
       if (d.state === 'empty') return { t: d.message || 'このサイトのリバース解析結果はまだありません。', k: 'info' };
       if (d.state === 'error') return { t: d.message || '結果を表示できません。', k: 'error' };
       if (d.state === 'mismatch') return { t: '保存済みの結果が現在のサイトの記録と対応しないため、未確認として扱い表示しません。', k: 'warning' };
@@ -166,6 +166,7 @@
         '<span class="c-context__item">対象 <b>' + esc(d.site.domain) + '</b></span>' +
         '<span class="c-context__item">最終解析 <b>' + last + '</b></span>' +
         '<span class="c-context__item">所要 <b>' + secs + '</b></span>' +
+        (d.analyzer ? '<span class="c-context__item">解析ツール <b>' + esc(d.analyzer.name + (d.analyzer.version ? ' ' + d.analyzer.version : '')) + '</b></span>' : '') +
         '<span class="c-context__item">状態 ' + W.status.html(statusCode()) +
         (lr && STATUS_LABEL[lr.status] ? ' <span class="rv-chip">前回: ' + esc(STATUS_LABEL[lr.status]) + '</span>' : '') + '</span>' +
         '</div>';
@@ -205,11 +206,15 @@
       runMsg = null;
       refreshBar();
       fetch('/api/sites/' + encodeURIComponent(domain || '') + '/reverse-analysis/run', { method: 'POST', credentials: 'same-origin', headers: { 'Accept': 'application/json' } })
-        .then(function (r) { return r.json().catch(function () { return null; }); })
-        .then(function (j) {
+        .then(function (r) { return r.json().catch(function () { return null; }).then(function (j) { return { status: r.status, j: j }; }); })
+        .then(function (x) {
+          var j = x.j;
           var ok = j && typeof j === 'object' && typeof j.result === 'string';
-          runMsg = ok ? { result: j.result, message: j.message, next_action: j.next_action }
-            : { result: 'error', message: 'リバース解析の応答を読み取れませんでした。', next_action: '時間をおいて再実行してください。' };
+          if (ok) { runMsg = { result: j.result, message: j.message, next_action: j.next_action }; return; }
+          // 認証・権限の拒否は専用の文言で返す（実行していない・既存の結果は変わらない）
+          if (x.status === 401) runMsg = { result: 'error', message: 'ログインの有効期限が切れています。実行していません。', next_action: '再ログインしてから、もう一度実行してください。' };
+          else if (x.status === 403) runMsg = { result: 'error', message: 'この操作の権限がありません。実行していません。', next_action: '管理者に実行を依頼してください。' };
+          else runMsg = { result: 'error', message: 'リバース解析の応答を読み取れませんでした。', next_action: '時間をおいて再実行してください。' };
         })
         .catch(function () {
           runMsg = { result: 'error', message: 'リバース解析を実行できませんでした。', next_action: '通信状態を確認して、再実行してください。' };
@@ -390,7 +395,7 @@
           '<td data-label="状態">' + evBadge(e.state) + '</td>' +
           '<td data-label="探索結果">' + probeBadge(e) + '</td>' +
           '<td data-label="根拠の位置">' + (e.location ? '<code class="rv-loc">' + esc(e.location) + '</code>' : '<span class="rv-unk">位置なし</span>') + '</td>' +
-          '<td data-label="出所">' + esc(e.provider) + '</td></tr>';
+          '<td data-label="出所">' + esc(String(e.provider || '').replace(/（.*）/, '')) + '</td></tr>';
       });
       return h + '</tbody></table></div>';
     }

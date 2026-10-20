@@ -377,6 +377,16 @@
   }
   hook();
 
+  // 受付ページの最下部に埋もれるため、先頭から移動できる入口を置く
+  var jump = document.getElementById('asr-jump');
+  if (jump) jump.addEventListener('click', function () {
+    var sec = document.getElementById('autorun-static-routes');
+    if (!sec) return;
+    sec.scrollIntoView({ block: 'start', behavior: 'auto' });
+    sec.setAttribute('tabindex', '-1');
+    sec.focus({ preventScroll: true });
+  });
+
   window.autorunStaticRoutes = { load: setDomain };
   render();
 })();

@@ -166,6 +166,12 @@ window.addEventListener('popstate', () => {
 
 // ---- ヘッダー（パンくず＋タイトル）----
 function setHeader(trail, title) {
+  if (window.WS2D && WS2D.crumb && WS2D.crumb.set) {
+    WS2D.crumb.set(trail[0] === 'WebSpec2Doc' ? trail.slice(1) : trail);
+    document.getElementById('topbar-title').textContent = title;
+    document.getElementById('topbar-actions').innerHTML = '';
+    return;
+  }
   const bc = document.getElementById('topbar-breadcrumb');
   bc.innerHTML = trail.map((t, i) => i === 0
     ? `<a data-bc-root="1">${escHtml(t)}</a>`

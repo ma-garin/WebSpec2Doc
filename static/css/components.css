@@ -908,7 +908,8 @@
 }
 @media (max-width: 1280px) {
   .autorun-body { flex-direction: column; overflow-y: auto; }
-  .autorun-work, .autorun-rail { overflow: visible; width: auto; }
+  /* 縦積みでは各列を中身の高さで確保する。縮ませると、はみ出した作業列が下のレール（成果物）に重なる */
+  .autorun-work, .autorun-rail { overflow: visible; width: auto; flex: 0 0 auto; min-height: auto; }
 }
 .autorun-work #autorun-cancel-area { justify-content: flex-end; display: flex; }
 

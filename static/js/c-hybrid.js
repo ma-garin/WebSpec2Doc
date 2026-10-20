@@ -19,28 +19,31 @@
 
   /* ---- 語彙 ---- */
   var STATUS = {
-    not_started: ['未開始', '○'], preparing: ['準備中', '⋯'], running: ['実行中', '▶'],
+    not_started: ['未開始', '○'], preparing: ['準備中', '◎'], running: ['実行中', '▶'],
     waiting_review: ['確認待ち', '?'], waiting_approval: ['承認待ち', '!'], partial: ['一部完了', '◐'],
     done: ['完了', '✓'], failed: ['失敗', '×'], cancelled: ['中止', '■'],
-    unverified: ['未確認', '◌'], unavailable: ['利用不可', '⊘']
+    unverified: ['未確認', '△'], unavailable: ['利用不可', '－']
   };
   var EVIDENCE = {
     observed: ['実測', '●', 'fact'], observed_auth: ['認証済み実測', '●🔑', 'fact'],
     record: ['記録', '▣', 'fact'], document: ['文書', '▭', 'inference'],  // 文書の記述は動作の観測ではない
     static: ['静的', '○', 'inference'], inferred: ['推論', '◐', 'inference'],
-    ambiguous: ['曖昧', '◇', 'unverified'], unverified: ['未確認', '◌', 'unverified'],
-    unavailable: ['利用不可', '⊘', 'unverified']
+    ambiguous: ['曖昧', '◇', 'unverified'], unverified: ['未確認', '△', 'unverified'],
+    unavailable: ['利用不可', '－', 'unverified']
   };
 
   function badge(table, base, code, label) {
     var d = has(table, code) ? table[code] : null;
     var text = label || (d ? d[0] : String(code));
-    var icon = d ? d[1] : '◌';
+    var icon = d ? d[1] : '△';
     var cls = base + ' ' + base + '--' + (d ? esc(code) : 'unknown');
     return '<span class="' + cls + '" data-code="' + esc(code) + '"><span class="' + base +
       '__icon" aria-hidden="true">' + esc(icon) + '</span><span class="' + base + '__text">' + esc(text) + '</span></span>';
   }
-  var status = { html: function (code, label) { return badge(STATUS, 'c-status', code, label); } };
+  var status = {
+    html: function (code, label) { return badge(STATUS, 'c-status', code, label); },
+    label: function (code) { return has(STATUS, code) ? STATUS[code][0] : '未確認'; }
+  };
   var evidence = {
     html: function (code, label) { return badge(EVIDENCE, 'c-ev', code, label); },
     category: function (code) { return has(EVIDENCE, code) ? EVIDENCE[code][2] : 'unverified'; }
@@ -189,7 +192,12 @@
       var holder = el('span'); holder.innerHTML = has(EVIDENCE, o.state) ? evidence.html(o.state) : status.html(o.state);
       st.appendChild(holder);
     }
-    if (o.stateReason) { st.appendChild(el('span', null, o.stateReason)); }
+    if (o.stateReason) {
+      var why = el('span', 'c-drawer__why');
+      why.appendChild(el('strong', null, 'なぜこの状態か: '));
+      why.appendChild(doc.createTextNode(o.stateReason));
+      st.appendChild(why);
+    }
     if (st.childNodes.length) { hm.appendChild(st); }
     var close = el('button', 'c-btn c-btn--ghost c-btn--sm', '閉じる');
     close.setAttribute('type', 'button'); close.setAttribute('aria-label', 'ドロワーを閉じる');
@@ -206,9 +214,21 @@
     if (o.inferences && o.inferences.length) { ul(s3, o.inferences); } else { none(s3); }
     var s4 = section(4, '制限');
     if (o.limitations && o.limitations.length) { ul(s4, o.limitations); } else { none(s4); }
-    var s5 = section(5, '出典・位置・provider・version');
-    if (o.sources && o.sources.length) { kv(s5, o.sources); } else { none(s5); }
-    [s1, s2, s3, s4, s5].forEach(function (s) { body.appendChild(s); });
+    /* 出典 / 位置 / Provider・version を別節にする。呼び出し側が sources だけを渡した旧形式は、ラベルで振り分ける */
+    var srcRows = (o.sources || []).slice(), locRows = (o.location || []).slice(), provRows = (o.provider || []).slice();
+    if (!o.location && !o.provider) {
+      srcRows = []; locRows = []; provRows = [];
+      (o.sources || []).forEach(function (r) {
+        var lb = String((r && r.label) || '');
+        if (/位置|場所|行|location/i.test(lb)) { locRows.push(r); }
+        else if (/provider|version|バージョン|解析器|出所|解析元/i.test(lb)) { provRows.push(r); }
+        else { srcRows.push(r); }
+      });
+    }
+    var s5 = section(5, '出典'); if (srcRows.length) { kv(s5, srcRows); } else { none(s5); }
+    var s6 = section(6, '位置'); if (locRows.length) { kv(s6, locRows); } else { none(s6); }
+    var s7 = section(7, 'Provider / version'); if (provRows.length) { kv(s7, provRows); } else { none(s7); }
+    [s1, s2, s3, s4, s5, s6, s7].forEach(function (s) { body.appendChild(s); });
     if (o.extra) {
       var ex = el('section', 'c-drawer__sec c-drawer__extra');
       if (typeof o.extra === 'string') { ex.textContent = o.extra; } else { ex.appendChild(o.extra); }
@@ -317,8 +337,54 @@
     root.setTimeout(function () { if (t.parentNode) { t.parentNode.removeChild(t); } }, k === 'error' ? 8000 : 4500);
   }
 
+  /* ---- パンくず: 「WebSpec2Doc / 画面 / 子」の 1 形式に統一する ----
+     組み立て元は画面ごとに違う（topbar.html の初期値・core.js setHeader・各 System の JS）。
+     新規・改修は crumb.set(['画面','子']) を使う。既存 JS が書いた内容は normalize が観察して整える。 */
+  var CRUMB_ROOT = 'WebSpec2Doc';
+  var crumbBusy = false;
+  function crumbNode() { return doc.getElementById('topbar-breadcrumb'); }
+  function crumbSet(trail, links) {
+    var bc = crumbNode();
+    if (!bc) { return; }
+    crumbBusy = true;
+    clear(bc);
+    [CRUMB_ROOT].concat(trail || []).forEach(function (t, i, all) {
+      if (i) { bc.appendChild(el('span', 'sep', '/')); }
+      var href = links && links[i - 1];
+      var last = i === all.length - 1;
+      var n;
+      if (href && !last) { n = el('a', null, t); n.setAttribute('href', href); } else { n = el('span', null, t); }
+      if (last && i) { n.setAttribute('aria-current', 'page'); }
+      bc.appendChild(n);
+    });
+    crumbBusy = false;
+  }
+  function crumbNormalize() {
+    var bc = crumbNode();
+    if (!bc || crumbBusy) { return; }
+    crumbBusy = true;
+    var seps = bc.querySelectorAll('.sep'), i;
+    for (i = 0; i < seps.length; i++) { if (seps[i].textContent !== '/') { seps[i].textContent = '/'; } }
+    var first = bc.firstElementChild;
+    if (first && first.textContent.replace(/\s/g, '') !== CRUMB_ROOT) {
+      var r = el('span', null, CRUMB_ROOT), sp = el('span', 'sep', '/');
+      bc.insertBefore(sp, first); bc.insertBefore(r, sp);
+    }
+    var kids = bc.children, last = kids[kids.length - 1];
+    if (last && kids.length > 1 && !last.hasAttribute('aria-current')) { last.setAttribute('aria-current', 'page'); }
+    crumbBusy = false;
+  }
+  function crumbWatch() {
+    var bc = crumbNode();
+    if (!bc) { return; }
+    crumbNormalize();
+    if (root.MutationObserver) { new root.MutationObserver(crumbNormalize).observe(bc, { childList: true, subtree: true, characterData: true }); }
+  }
+  if (doc.readyState === 'loading') { doc.addEventListener('DOMContentLoaded', crumbWatch); } else { crumbWatch(); }
+
   root.WS2D = {
     esc: esc, status: status, evidence: evidence, kpis: kpis, state: state, reason: reason,
-    drawer: drawer, confirm: confirmDlg, toast: toast, modal: modal
+    drawer: drawer, confirm: confirmDlg, toast: toast, modal: modal,
+    crumb: { set: crumbSet, normalize: crumbNormalize }
   };
 })(window);

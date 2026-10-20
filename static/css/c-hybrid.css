@@ -191,3 +191,7 @@ body.c-drawer-push { transition: padding-right var(--motion-normal); }
   .c-drawer, .c-toast, .c-btn, body.c-drawer-push { animation: none !important; transition: none !important; }
   .c-state__spinner { animation: none; border-top-color: var(--color-primary); border-right-color: var(--color-primary); }
 }
+
+/* ドロワー: 「なぜこの状態か」の理由行 */
+.c-drawer__why { flex-basis: 100%; color: var(--color-text); font-size: var(--text-sm, 13px); line-height: 1.5; }
+.c-drawer__why strong { font-weight: 700; }

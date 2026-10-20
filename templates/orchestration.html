@@ -48,9 +48,7 @@
         <div id="ch-body" role="tabpanel" aria-live="polite" tabindex="-1"></div>
       </section>
       {% else %}
-      <nav class="ch-crumb" aria-label="パンくず">
-        <a href="/orchestration">指揮ホーム</a><span aria-hidden="true"> › </span><span aria-current="page">個別実行詳細</span>
-      </nav>
+      <p class="ch-crumb"><a href="/orchestration">← 指揮ホームへ戻る</a></p>
       {% endif %}
       <div id="cw-detail"{% if mode == 'home' %} hidden{% endif %}>
       <header class="cw-head">
@@ -95,6 +93,7 @@
 </div>
 
 <script src="{{ url_for('static', filename='js/c-hybrid.js') }}?v={{ _ver }}"></script>
-<script src="{{ url_for('static', filename='js/orchestration.js') }}?v={{ _ver }}"></script>
+{% if mode == 'home' %}<script src="{{ url_for('static', filename='js/orchestration-home.js') }}?v={{ _ver }}"></script>
+{% else %}<script src="{{ url_for('static', filename='js/orchestration.js') }}?v={{ _ver }}"></script>{% endif %}
 </body>
 </html>

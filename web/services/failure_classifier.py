@@ -44,13 +44,13 @@ _AUTH_KEYWORDS = (
 _ENV_SETUP_KEYWORDS = (
     "browserType.launch",
     "Executable doesn't exist",
+    "browser unavailable",
 )
 
 _ACTION_ENV = "環境・認証状態を確認してください"
 _ACTION_ENV_SETUP = (
-    "Playwrightのブラウザ実行環境が未セットアップまたはバージョン不一致です。"
-    "次回のAutoRun実行時に自動修復を試みます。改善しない場合は "
-    "`npx playwright install chromium` を手動実行してください。"
+    "テストを実行するブラウザ（Google Chrome または Microsoft Edge）が見つかりません。"
+    "どちらかをインストールして、もう一度実行してください。"
 )
 _ACTION_ROT = "ロケータを更新してください（self-healing ロケータ候補を確認）"
 _ACTION_ASYNC = (

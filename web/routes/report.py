@@ -16,6 +16,7 @@ from flask import Blueprint, Response, make_response, redirect, request, send_fi
 from web.config import _PREVIEW_MIME, OUTPUT_DIR, SAMPLE_DOMAIN, SAMPLE_REPORT_DIR
 from web.services.admin_audit import append_admin_audit
 from web.services.spec_ts_generator import generate_spec_ts
+from web.services.ts_export import TS_EXPORT_HEADER, TS_EXPORT_STATE, TS_EXPORT_LABELS
 from web.summary import _summary_for_domain, summary_from_report
 from web.tenancy import current_auth_user, scoped_instance_path, scoped_output_dir
 from web.validation import _safe_output_path, _valid_domain
@@ -160,15 +161,23 @@ def download_spec_ts(domain: str) -> Response | tuple[dict, int]:
         output_path = Path(tmp) / f"{domain}.spec.ts"
         generate_spec_ts(domain, candidates_path, output_path, filter_mode=filter_mode)
         content = output_path.read_bytes()
+    # TypeScript はエクスポート専用。3 区分（生成済み／未実行／未検証）をファイルにも残す
+    if not content.startswith(TS_EXPORT_HEADER[:30].encode("utf-8")):
+        content = TS_EXPORT_HEADER.encode("utf-8") + content
     buffer = io.BytesIO(content)
     buffer.seek(0)
-    _record_export(f"{domain}/{domain}.spec.ts", {"format": "typescript"})
-    return send_file(
+    _record_export(
+        f"{domain}/{domain}.spec.ts",
+        {"format": "typescript", "ts_export": dict(TS_EXPORT_STATE)},
+    )
+    response = send_file(
         buffer,
         as_attachment=True,
         download_name=f"{domain}.spec.ts",
         mimetype="text/plain",
     )
+    response.headers["X-TS-Export"] = "generated; not-executed; not-verified"
+    return response
 
 
 def _generate_features_md_if_missing(domain_dir: Path) -> None:

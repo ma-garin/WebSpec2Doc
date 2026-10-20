@@ -40,7 +40,7 @@ def build_autorun_preview(job: AutoRunJob, output_dir: Path) -> dict[str, Any]:
         result["candidates"] = []
         result["summary"] = {}
 
-    spec_path = Path(job.outputs.get("spec_ts", ""))
+    spec_path = Path(job.outputs.get("spec_py") or job.outputs.get("spec_ts", ""))
     if spec_path.is_file():
         try:
             result["spec_content"] = spec_path.read_text(encoding="utf-8")

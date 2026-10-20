@@ -70,6 +70,8 @@ _QA_ARTIFACTS: tuple[str, ...] = (
     "test_design.md",
     "test_cases.md",
     "autorun.spec.ts",
+    "autorun_spec.py",
+    "autorun.meta.json",
     "playwright_report.json",
     "playwright_report.html",
     "qa_process_report.html",
@@ -93,6 +95,7 @@ ARTIFACT_PROBES: dict[str, tuple[str, ...]] = {
         "qa_process/playwright_report.json",
         "qa_process/stages.json",
         "qa_process/autorun.spec.ts",
+        "qa_process/autorun_spec.py",
     ),
 }
 
@@ -114,6 +117,7 @@ RESULT_FILE_MAP: dict[str, str] = {
     "playwright_report_json": "qa_process/playwright_report.json",
     "playwright_report_html": "qa_process/playwright_report.html",
     "spec_ts": "qa_process/autorun.spec.ts",
+    "spec_py": "qa_process/autorun_spec.py",
     "test_plan": "qa_process/test_plan.md",
     "test_analysis": "qa_process/test_analysis.md",
     "test_design": "qa_process/test_design.md",

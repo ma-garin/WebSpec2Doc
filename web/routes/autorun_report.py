@@ -21,6 +21,7 @@ from typing import Any
 from flask import Blueprint, abort, render_template, request
 
 from web.config import OUTPUT_DIR
+from web.services.ts_export import ts_export_status
 from web.tenancy import scoped_output_dir
 from web.validation import _valid_domain
 
@@ -200,10 +201,32 @@ def _section_payload(domain: str, key: str) -> dict[str, Any]:
             "source": "test_cases.md",
         }
     if key == "script":
+        # 実行されるのは Python のみ。TypeScript はエクスポート（状態は ts_export の 3 区分）。
+        meta = _read_json(qa / "autorun.meta.json")
+        ts_status = ts_export_status(meta if isinstance(meta, dict) else None, (qa / "autorun.spec.ts").is_file())
+        py_text = _read_text(qa / "autorun_spec.py")
+        if py_text is not None:
+            return {
+                "kind": "code",
+                "text": py_text,
+                "source": "autorun_spec.py",
+                "ts_export": ts_status,
+            }
+        # 旧 run（TypeScript のみ・Node で実行されていた）は壊さず表示し、旧形式と注記する
         return {
             "kind": "code",
             "text": _read_text(qa / "autorun.spec.ts"),
             "source": "autorun.spec.ts",
+            "ts_export": ts_status,
+            "note": ts_status["note"],
+        }
+    if key == "script_ts":
+        meta = _read_json(qa / "autorun.meta.json")
+        return {
+            "kind": "code",
+            "text": _read_text(qa / "autorun.spec.ts"),
+            "source": "autorun.spec.ts",
+            "ts_export": ts_export_status(meta if isinstance(meta, dict) else None, (qa / "autorun.spec.ts").is_file()),
         }
     if key == "results":
         return {

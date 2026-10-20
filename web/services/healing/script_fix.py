@@ -26,7 +26,7 @@ except ImportError:  # noqa: BLE001 - src がまだ sys.path に無い実行経�
 
 #: test( の呼び出し検出。playwright_executor._count_tests_in_spec と同じ条件
 #: （メソッド呼び出し `.test(` を誤検出しない）。
-_NEXT_TEST_RE = re.compile(r"(?<![.\w])test\s*\(")
+_NEXT_TEST_RE = re.compile(r"(?<![.\w])(?:test|@case)\s*\(")
 
 
 @dataclass(frozen=True)
@@ -45,7 +45,9 @@ def find_spec(out_dir: Path, domain: str) -> Path | None:
     """spec_path が分からないときのフォールバック探索。"""
     base = Path(out_dir) / domain
     for candidate in (
-        base / "testcases" / "testcases.spec.ts",
+        base / "testcases" / "testcases_spec.py",
+        base / "qa_process" / "autorun_spec.py",
+        base / "testcases" / "testcases.spec.ts",  # 旧データ（互換）
         Path("qa_process") / "autorun.spec.ts",
     ):
         if candidate.is_file():
@@ -64,10 +66,10 @@ def _title_pattern(test_title: str, test_id: str = "") -> str:
     if test_id:
         tid = re.escape(test_id)
         return (
-            r"""test\(\s*(['"])(?:""" + tid + r"""(?:\s[^'"]*)?\s)?"""
+            r"""(?:test|@case)\(\s*(['"])(?:""" + tid + r"""(?:\s[^'"]*)?\s)?"""
             + title + r"""(?:\s[^'"]*)?\1"""
         )
-    return r"""test\(\s*(['"])(?:[^'"]*\s)?""" + title + r"""(?:\s[^'"]*)?\1"""
+    return r"""(?:test|@case)\(\s*(['"])(?:[^'"]*\s)?""" + title + r"""(?:\s[^'"]*)?\1"""
 
 
 def _find_test_block(

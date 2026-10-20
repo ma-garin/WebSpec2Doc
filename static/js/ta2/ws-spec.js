@@ -409,7 +409,8 @@
         '全成果物<small>.zip</small></a>' +
         '<a role="menuitem" id="spec-ex-ts" href="/api/report/' + T.esc(enc(domain)) + '/spec-ts"' +
         ' title="Playwright 用の候補データがある解析でのみ書き出せます（無い解析では開いた先で理由を表示します）">' +
-        'Playwright 用スペック<small>.spec.ts</small></a>';
+        'Playwright 用スペック<small>.spec.ts</small>' +
+        '<small class="ts-export-state" title="TypeScript はエクスポート専用です。製品内では実行も検証もしません">生成済み／未実行／未検証</small></a>';
     }
     var cta = $('#spec-cta-tests');
     if (cta) cta.href = '/sites/' + enc(domain) + '/tests';

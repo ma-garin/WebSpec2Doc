@@ -43,8 +43,8 @@ logger = logging.getLogger(__name__)
 
 #: 回すテストファイル。02 が作ったものを優先し、無ければ 03 のものを使う。
 _SPEC_CANDIDATES: tuple[tuple[str, ...], ...] = (
-    ("testcases", "testcases.spec.ts"),
-    ("qa_process", "autorun.spec.ts"),
+    ("testcases", "testcases_spec.py"),
+    ("qa_process", "autorun_spec.py"),
 )
 
 _NO_SPEC = "02 テスト自動化でこのサイトのテストを作ってください"
@@ -87,6 +87,9 @@ def _report_relpath(domain: str) -> str:
 
 def _meta_path(out_dir: Path, domain: str) -> Path:
     """02 が生成したテストケース表のメタ（総件数）。spec と同じ場所に並ぶ。"""
+    new = out_dir / domain / "testcases" / "testcases.meta.json"
+    if new.is_file():
+        return new
     return out_dir / domain / "testcases" / "testcases.spec.meta.json"
 
 

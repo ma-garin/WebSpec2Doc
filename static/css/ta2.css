@@ -114,8 +114,8 @@ code{font-family:var(--mono);font-size:11px}
 
 .view{display:grid;grid-template-rows:40px 1fr;min-height:0;background:#EEF0F3;position:relative}
 .view-h{display:flex;align-items:center;gap:10px;padding:0 18px;font-size:12px;color:var(--tx2);border-bottom:1px solid var(--line);background:var(--sf)}
-.seg{display:flex;border:1px solid var(--line);border-radius:7px;overflow:hidden}
-.seg button{padding:4px 10px;font-weight:500;border:0;background:#fff;color:var(--tx2);font-size:12px}
+.seg{display:flex;flex-shrink:0;border:1px solid var(--line);border-radius:7px;overflow:hidden}
+.seg button{flex-shrink:0;white-space:nowrap;padding:4px 10px;font-weight:500;border:0;background:#fff;color:var(--tx2);font-size:12px}
 .seg button.on{background:var(--tx);color:#fff}
 .stage{padding:22px;display:grid;place-items:center;min-height:0;position:relative}
 .browser{width:100%;max-width:820px;height:520px;background:#fff;border-radius:10px;box-shadow:0 1px 2px rgba(16,24,40,.06),0 12px 32px rgba(16,24,40,.12);overflow:hidden;position:relative;border:1px solid var(--line);display:flex;flex-direction:column}

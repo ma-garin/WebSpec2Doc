@@ -34,8 +34,8 @@ curl -s http://127.0.0.1:8765/api/v1/healthz   # 死活確認（認証なしで�
 |---|---|---|
 | `WEBSPEC2DOC_PORT` | 待ち受けポート（`web/config.py`） | 8765 |
 | `WEBSPEC2DOC_TRUSTED_HOSTS` | 追加で許可するホスト（カンマ区切り）。設定時のみ全 IF で待ち受け | 未設定（ループバックのみ） |
-| `WEBSPEC2DOC_AUTH_MODE` | `auto`／`required`／`off`。`auto` はユーザー未作成の間だけ認証なし | `auto` |
-| `WEBSPEC2DOC_AUTH_MOCK` | `1` でパスワードなしログイン（一覧から選択）。社内モック用 | `1`（有効） |
+| `WEBSPEC2DOC_AUTH_MODE` | `auto`／`required`／`off`。`auto` はユーザー未作成の間だけ認証なし | `auto`（`TRUSTED_HOSTS` 設定時は `required`） |
+| `WEBSPEC2DOC_AUTH_MOCK` | `1` でパスワードなしログイン（一覧から選択）。社内モック用 | `1`（有効。`TRUSTED_HOSTS` 設定時は `0`） |
 | `WEBSPEC2DOC_BOOTSTRAP_ADMIN` | `0`／`off`／`false` で初期管理者の自動作成を止める | 有効 |
 | `WEBSPEC2DOC_SECRET_KEY` | セッション署名鍵。未設定なら `instance/secret_key` を生成・利用 | 自動生成 |
 | `WEBSPEC2DOC_SECURE_COOKIES` | `1` でセッション Cookie に Secure 属性。HTTPS 配下では必須 | 未設定 |

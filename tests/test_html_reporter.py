@@ -398,11 +398,8 @@ def test_html_reporter_multiple_pages(tmp_path: Path) -> None:
 # =========================================================================
 # B-1: Mermaid をアプリ内で描画（R3-18a）
 # =========================================================================
-def test_mermaid_script_uses_local_vendor() -> None:
-    """`_mermaid_script()` はアプリ内では同梱版 static/vendor/mermaid/mermaid.min.js を
-    'self' から読み込み、securityLevel:'strict' で初期化する。
-    static/vendor/mermaid.min.js 本体の有無に依存しないよう、生成HTML文字列自体を
-    検証する（ネットワーク遮断環境でも実行可能なテスト）。"""
+def test_report_has_static_svg_and_no_external_script() -> None:
+    """図は静的 SVG。cdn.jsdelivr.net・mermaid の参照は 0 件（ネットワーク遮断下でも表示される）。"""
     analyzed = [_make_analyzed_page()]
     graph = _empty_graph()
     graph.add_node("P001", url="https://example.com/", title="T", page_id="P001")
@@ -415,11 +412,10 @@ def test_mermaid_script_uses_local_vendor() -> None:
         mermaid_content="graph LR\n  P001\n",
     )
 
-    assert '<script src="/static/vendor/mermaid/mermaid.min.js"></script>' in result
-    assert "securityLevel:'strict'" in result
-    # CSP 変更禁止（規約0-6）: cdn.jsdelivr.net への直接 <script src> 埋め込みは行わない
-    # （フォールバックは window.mermaid 未定義時のみ動的に document.head へ追加する）。
-    assert '<script src="https://cdn.jsdelivr.net' not in result
+    assert "cdn.jsdelivr.net" not in result
+    assert "mermaid.min.js" not in result
+    assert "<script src=" not in result
+    assert result.count('class="wsd-diagram"') >= 2
 
 
 # =========================================================================

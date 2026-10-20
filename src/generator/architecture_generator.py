@@ -71,6 +71,44 @@ def generate_architecture_mermaid(
     return "\n".join(lines)
 
 
+def build_architecture_model(
+    domain: str,
+    stack: StackInfo | None,
+    api_endpoints: tuple[ApiEndpoint, ...],
+) -> dict:
+    """アーキテクチャ図の描画モデル（svg_diagram 用。ラベルは生文字列で、描画側がエスケープする）。"""
+    nodes: list[dict] = [
+        {"id": "User", "label": "👤 ユーザー", "shape": "round", "cls": "user"},
+        {"id": "FE", "label": _frontend_label(stack, escape=False), "shape": "box", "cls": "frontend"},
+    ]
+    edges: list[dict] = []
+    groups: list[dict] = []
+    api_paths = _representative_paths(api_endpoints)
+    members: list[str] = []
+    for path in api_paths:
+        node_id = "ep_" + _safe_node_id(path)
+        members.append(node_id)
+        nodes.append({"id": node_id, "label": path, "shape": "box"})
+    if members:
+        groups.append({"id": "APIGROUP", "label": "🔌 API エンドポイント（観測）", "members": members})
+    nodes.append({"id": "BE", "label": _backend_label(stack, escape=False), "shape": "box", "cls": "backend"})
+    nodes.append({"id": "DB", "label": "💾 データストア\n（推定）", "shape": "cyl", "cls": "db"})
+    edges.append({"from": "User", "to": "FE", "label": "操作"})
+    if members:
+        edges.append(
+            {"from": "FE", "to": "APIGROUP", "label": f"XHR/fetch\n{_edge_label(api_endpoints)}"}
+        )
+        edges.append({"from": "APIGROUP", "to": "BE", "label": ""})
+    else:
+        edges.append({"from": "FE", "to": "BE", "label": "HTTP"})
+    edges.append({"from": "BE", "to": "DB", "label": ""})
+    if stack and stack.css_framework != UNKNOWN:
+        css_id = "UI_" + _safe_node_id(stack.css_framework)
+        nodes.append({"id": css_id, "label": f"🎨 {stack.css_framework}", "shape": "para"})
+        edges.append({"from": "FE", "to": css_id, "label": ""})
+    return {"nodes": nodes, "edges": edges, "groups": groups}
+
+
 def merge_stack_infos(stacks: list[StackInfo]) -> StackInfo | None:
     """複数ページの StackInfo を統合して最も情報量の多い 1 つを返す。"""
     if not stacks:
@@ -99,22 +137,24 @@ def merge_api_endpoints(
     return tuple(seen.values())
 
 
-def _frontend_label(stack: StackInfo | None) -> str:
+def _frontend_label(stack: StackInfo | None, escape: bool = True) -> str:
+    esc = html.escape if escape else str
     if stack is None or stack.frontend_framework == UNKNOWN:
         return "🖥 フロントエンド\\n（フレームワーク不明）"
-    parts = [f"🖥 {html.escape(stack.frontend_framework)}"]
+    parts = [f"🖥 {esc(stack.frontend_framework)}"]
     if stack.rendering_mode != UNKNOWN:
-        parts.append(f"({html.escape(stack.rendering_mode)})")
+        parts.append(f"({esc(stack.rendering_mode)})")
     return "\\n".join(parts)
 
 
-def _backend_label(stack: StackInfo | None) -> str:
+def _backend_label(stack: StackInfo | None, escape: bool = True) -> str:
+    esc = html.escape if escape else str
     base = "⚙ バックエンド"
     if not stack or not stack.backend_hints:
         return f"{base}\\n（推定）"
     hint = stack.backend_hints[0]
     short = hint.replace("Server: ", "").replace("X-Powered-By: ", "")[:30]
-    return f"{base}\\n({html.escape(short)})"
+    return f"{base}\\n({esc(short)})"
 
 
 def _representative_paths(endpoints: tuple[ApiEndpoint, ...]) -> list[str]:

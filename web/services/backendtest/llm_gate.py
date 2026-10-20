@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import re
 import urllib.error
 import urllib.request
@@ -158,10 +159,20 @@ def _kinds(payload: dict) -> list[str]:
     return [k for k in PAYLOAD_KINDS if str(payload.get(k) or "").strip()]
 
 
+def _configured_base_is_local() -> bool:
+    """WEBSPEC2DOC_LLM_BASE_URL（.env または環境変数）がローカル宛てか。"""
+    base = _read_env().get(openai_qa.ENV_LLM_BASE_URL, "").strip() or os.environ.get(
+        openai_qa.ENV_LLM_BASE_URL, ""
+    ).strip()
+    return bool(base) and openai_qa._is_local_base_url(base)
+
+
 def route(job: dict, payload: dict, purpose: str = "") -> str:
     """送信先を決める。データ値を含む・扱う用途は Ollama 固定。"""
     if "data" in _kinds(payload) or purpose in DATA_PURPOSES:
         return PROVIDER_OLLAMA
+    if _configured_base_is_local():
+        return PROVIDER_OLLAMA  # 接続先がローカルなら api.openai.com へは送らない
     configured = str(((job or {}).get("llm") or {}).get("provider") or PROVIDER_OPENAI)
     return PROVIDER_OLLAMA if configured == PROVIDER_OLLAMA else PROVIDER_OPENAI
 

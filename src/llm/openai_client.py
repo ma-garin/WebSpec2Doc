@@ -27,6 +27,7 @@ import time
 import urllib.error
 import urllib.request
 from dataclasses import dataclass
+from collections.abc import Mapping
 from typing import Any
 
 from llm.activity_log import record_llm_activity
@@ -77,27 +78,37 @@ class LLMEndpoint:
         return "127.0.0.1" in self.base_url or "localhost" in self.base_url
 
 
-def resolve_endpoint(model: str | None = None) -> LLMEndpoint:
+def resolve_endpoint(
+    model: str | None = None, env: Mapping[str, str] | None = None
+) -> LLMEndpoint:
     """環境変数から接続先を解決する。
 
     ベース URL がローカル（Ollama 等）の場合、API キーは不要なので置き値を使う。
     """
-    base_url = os.environ.get(ENV_BASE_URL, "").strip() or DEFAULT_BASE_URL
-    resolved_model = model or os.environ.get(ENV_MODEL, "").strip() or "gpt-4o-mini"
-    api_key = (
-        os.environ.get(ENV_API_KEY, "").strip() or os.environ.get("OPENAI_API_KEY", "").strip()
-    )
+    source = os.environ if env is None else env
+    base_url = (source.get(ENV_BASE_URL) or "").strip() or DEFAULT_BASE_URL
+    resolved_model = model or (source.get(ENV_MODEL) or "").strip() or "gpt-4o-mini"
+    api_key = (source.get(ENV_API_KEY) or "").strip() or (source.get("OPENAI_API_KEY") or "").strip()
     is_local = "127.0.0.1" in base_url or "localhost" in base_url
     if not api_key and is_local:
         api_key = PLACEHOLDER_API_KEY
     return LLMEndpoint(base_url=base_url, api_key=api_key, model=resolved_model)
 
 
-def _post_json(url: str, api_key: str, payload: dict[str, Any], timeout_sec: int) -> dict[str, Any]:
+def _post_json(
+    url: str,
+    api_key: str,
+    payload: dict[str, Any],
+    timeout_sec: int,
+    extra_headers: Mapping[str, str] | None = None,
+) -> dict[str, Any]:
+    headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
+    if extra_headers:
+        headers.update(extra_headers)
     request = urllib.request.Request(
         url,
         data=json.dumps(payload).encode("utf-8"),
-        headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
+        headers=headers,
         method="POST",
     )
     with urllib.request.urlopen(request, timeout=timeout_sec) as resp:  # nosec B310
@@ -127,6 +138,9 @@ def request_structured_json(
     timeout_sec: int = DEFAULT_TIMEOUT_SEC,
     base_url: str | None = None,
     purpose: str = "",
+    system: str | None = None,
+    max_tokens: int | None = None,
+    extra_headers: Mapping[str, str] | None = None,
 ) -> dict[str, Any]:
     """Structured Outputs で LLM を呼び出し、応答 JSON を返す。
 
@@ -143,7 +157,16 @@ def request_structured_json(
     resolved_base = base_url or os.environ.get(ENV_BASE_URL, "").strip() or DEFAULT_BASE_URL
     try:
         result, mode = _request_structured_json_impl(
-            api_key, model, prompt, schema_name, json_schema, timeout_sec, resolved_base
+            api_key,
+            model,
+            prompt,
+            schema_name,
+            json_schema,
+            timeout_sec,
+            resolved_base,
+            system,
+            max_tokens,
+            extra_headers,
         )
         detail = mode
         return result
@@ -176,12 +199,21 @@ def _request_structured_json_impl(
     json_schema: dict[str, Any],
     timeout_sec: int,
     base_url: str,
+    system: str | None = None,
+    max_tokens: int | None = None,
+    extra_headers: Mapping[str, str] | None = None,
 ) -> tuple[dict[str, Any], str]:
     endpoint = LLMEndpoint(base_url=base_url, api_key=api_key, model=model)
 
+    limit = max_tokens or MAX_OUTPUT_TOKENS
+
+    def _messages(content: str) -> list[dict[str, str]]:
+        head = [{"role": "system", "content": system}] if system else []
+        return [*head, {"role": "user", "content": content}]
+
     strict_payload: dict[str, Any] = {
         "model": endpoint.model,
-        "messages": [{"role": "user", "content": prompt}],
+        "messages": _messages(prompt),
         "response_format": {
             "type": "json_schema",
             "json_schema": {"name": schema_name, "strict": True, "schema": json_schema},
@@ -189,11 +221,12 @@ def _request_structured_json_impl(
         "temperature": 0,
         # 上限を渡さないとローカルモデル（Ollama 等）が生成を続け、
         # urllib の timeout（ソケット無通信時間）が働かないまま待ち続ける。
-        "max_tokens": MAX_OUTPUT_TOKENS,
+        "max_tokens": limit,
     }
 
     try:
-        parsed = _extract_json(_post_json(endpoint.chat_url, api_key, strict_payload, timeout_sec))
+        parsed = _extract_json(_post_json(endpoint.chat_url, api_key, strict_payload, timeout_sec, extra_headers)
+        )
         return parsed, "json_schema"
     except urllib.error.HTTPError as exc:
         if exc.code not in (400, 404, 422, 501):
@@ -213,17 +246,71 @@ def _request_structured_json_impl(
     )
     fallback_payload: dict[str, Any] = {
         "model": endpoint.model,
-        "messages": [{"role": "user", "content": fallback_prompt}],
+        "messages": _messages(fallback_prompt),
         "response_format": {"type": "json_object"},
         "temperature": 0,
-        "max_tokens": MAX_OUTPUT_TOKENS,
+        "max_tokens": limit,
     }
     try:
         parsed = _extract_json(
-            _post_json(endpoint.chat_url, api_key, fallback_payload, timeout_sec)
+            _post_json(endpoint.chat_url, api_key, fallback_payload, timeout_sec, extra_headers)
         )
         return parsed, "json_object_fallback"
     except urllib.error.URLError as exc:
         raise LLMUnavailableError(f"LLM エンドポイントへ到達できません: {exc.reason}") from exc
     except (TimeoutError, OSError) as exc:
         raise LLMUnavailableError(f"LLM エンドポイントへ到達できません: {exc}") from exc
+
+
+def request_embeddings(
+    texts: list[str],
+    model: str,
+    base_url: str | None = None,
+    api_key: str | None = None,
+    timeout_sec: int = 60,
+    purpose: str = "",
+) -> list[list[float]]:
+    """`{base}/embeddings` へ POST し、入力順のベクトル列を返す。
+
+    件数不一致・形式不正は ``LLMResponseError``、到達不能は ``LLMUnavailableError``。
+    """
+    started_at = time.monotonic()
+    outcome = "ok"
+    detail = ""
+    endpoint = resolve_endpoint(model)
+    resolved_base = base_url or endpoint.base_url
+    key = api_key if api_key is not None else endpoint.api_key
+    url = f"{resolved_base.rstrip('/')}/embeddings"
+    try:
+        try:
+            data = _post_json(url, key, {"model": model, "input": list(texts)}, timeout_sec)
+        except urllib.error.HTTPError as exc:
+            raise LLMUnavailableError(f"埋め込みの呼び出しに失敗しました: {exc}") from exc
+        except urllib.error.URLError as exc:
+            raise LLMUnavailableError(f"LLM エンドポイントへ到達できません: {exc.reason}") from exc
+        except (TimeoutError, OSError) as exc:
+            raise LLMUnavailableError(f"LLM エンドポイントへ到達できません: {exc}") from exc
+        try:
+            rows = sorted(data["data"], key=lambda row: row["index"])
+            vectors = [[float(x) for x in row["embedding"]] for row in rows]
+        except (KeyError, TypeError, ValueError) as exc:
+            raise LLMResponseError(f"埋め込み応答の形式が不正です: {exc}") from exc
+        if len(vectors) != len(texts):
+            raise LLMResponseError("埋め込み応答の件数が入力と一致しません。")
+        return vectors
+    except LLMUnavailableError as exc:
+        outcome, detail = "unavailable", str(exc)
+        raise
+    except LLMResponseError as exc:
+        outcome, detail = "invalid_response", str(exc)
+        raise
+    finally:
+        record_llm_activity(
+            purpose=purpose,
+            endpoint_url=url,
+            model=model,
+            outcome=outcome,
+            detail=detail,
+            prompt_chars=sum(len(x) for x in texts),
+            duration_ms=int((time.monotonic() - started_at) * 1000),
+        )

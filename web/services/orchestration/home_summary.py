@@ -7,6 +7,7 @@
 null になる指標:
 - changes_today / latest_change: 変更を日付つきで返す集計源が無い。
 - unverified / evidence: リバース解析（REA）の結果があるサイトだけ数える。1 件も無ければ null。
+  結果の無いサイトの数は unanalyzed に出す（保存ビュー「未確認」にも含める）。
 """
 
 from __future__ import annotations
@@ -30,9 +31,11 @@ _RUN_STATUS_CODE = {
     "succeeded": "done", "failed": "failed", "cancelled": "cancelled", "skipped": "partial",
 }
 
-_FACT_STATES = frozenset({"observed", "observed_auth", "record", "document"})
-_INFERENCE_STATES = frozenset({"static", "inferred", "ambiguous"})
-_UNVERIFIED_STATES = frozenset({"unverified", "unavailable"})
+# 区分は共通部品 WS2D.evidence.category（static/js/c-hybrid.js）と同じ。
+# 文書の記述は動作の観測ではないので推論、曖昧は確かめられていないので未確認。
+_FACT_STATES = frozenset({"observed", "observed_auth", "record"})
+_INFERENCE_STATES = frozenset({"document", "static", "inferred"})
+_UNVERIFIED_STATES = frozenset({"ambiguous", "unverified", "unavailable"})
 
 _RUN_STEP_TO_STAGE = workflow_view._AGENT_OF_STEP  # noqa: SLF001
 _STAGE_LABEL = dict(workflow_view._STEP_DEFS)  # noqa: SLF001
@@ -58,7 +61,7 @@ def _links(domain: str, has_report: bool) -> dict[str, str | None]:
     return {
         "s01": f"/sites/{q}/spec" if has_report else None,
         "s02": f"/sites/{q}/tests" if has_report else None,
-        "s03": "/auto-run",
+        "s03": f"/auto-run?site={q}",  # 入口でサイトを選び直させない（static/js/autorun-deeplink.js）
         "s09": "/impact",
         "s05": "/healing",
     }
@@ -77,7 +80,7 @@ def _stage_of(run: ConductorRun | None) -> dict[str, str] | None:
 
 
 def classify_evidence(items: list[dict[str, Any]]) -> dict[str, int]:
-    """REA の evidence 配列を 事実／推論／未確認 に数える（state が未知なら未確認）。"""
+    """REA の evidence 配列を 事実／推論／未確認 に数える（曖昧・未知の state は未確認）。"""
     out = {"fact": 0, "inference": 0, "unverified": 0}
     for item in items:
         state = str(item.get("state") or "")
@@ -264,7 +267,7 @@ def _counts(src: _Sources, sites: list[dict[str, Any]], sites_ok: bool) -> dict[
     if not sites_ok:
         return dict.fromkeys(
             ("sites", "ok", "running", "failed", "human_action", "awaiting_approval", "unverified",
-             "changes_today", "tests_today", "fixes_today", "reports_today"), None)
+             "unanalyzed", "changes_today", "tests_today", "fixes_today", "reports_today"), None)
     ev = [s["evidence"] for s in sites if s["evidence"] is not None]
     steps_today = _steps_today(src)
     return {
@@ -275,6 +278,8 @@ def _counts(src: _Sources, sites: list[dict[str, Any]], sites_ok: bool) -> dict[
         "human_action": sum(1 for s in sites if s["human_action"]),
         "awaiting_approval": _sum_or_null([s["awaiting_reports"] for s in sites]),
         "unverified": sum(e["unverified"] for e in ev) if ev else None,
+        # 根拠（REA）の結果が無く、根拠の健全性を確かめられていないサイトの数
+        "unanalyzed": sum(1 for s in sites if s["evidence"] is None),
         "changes_today": None,
         "tests_today": steps_today.get("run") if steps_today is not None else None,
         "fixes_today": steps_today.get("healing") if steps_today is not None else None,
@@ -308,8 +313,9 @@ def filter_sites(sites: list[dict[str, Any]], view: str) -> list[dict[str, Any]]
     if view == "failed":
         return [s for s in sites if s["status"] == "failed" or s["latest_failure"]]
     if view == "unverified":
+        # 根拠の結果が無いサイトも一覧では「未確認（解析結果なし）」と出すので、ここに含める
         return [s for s in sites
-                if s["status"] == "unverified" or (s["evidence"] and s["evidence"]["unverified"] > 0)]
+                if s["status"] == "unverified" or s["evidence"] is None or s["evidence"]["unverified"] > 0]
     return list(sites)
 
 

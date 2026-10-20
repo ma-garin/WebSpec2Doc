@@ -39,6 +39,9 @@
     var title = document.getElementById('ws-task');
     var lead = document.getElementById('ws-lead');
     if (title) title.textContent = task[0];
+    // 共通ヘッダーの見出しも作業名に合わせる（どの System のどの作業かを上端で読めるように）
+    var top = document.getElementById('topbar-title');
+    if (top && v !== 'home' && task[0]) top.textContent = v === 'run' ? task[0] + ' · 実行と結果' : task[0];
     if (lead) lead.textContent = task[1];
     if (!crumb) return;
 

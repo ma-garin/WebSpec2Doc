@@ -310,3 +310,73 @@ def test_gui_uses_ws2d_parts_and_keeps_product_truth():
     for label in ("未認証実測", "observed_auth", "未確認"):
         assert label in js, label
     assert "/static-routes/probe" in js
+
+
+# ------------------------------------------------------------------ route の取得不可・provider の一時失敗
+
+
+def test_route_not_provided_is_unavailable_not_zero(client):
+    """REA が route 宣言を出さなかったときは「取得不可」。0 件と区別できる印を画面へ渡す。"""
+    c, base = client
+    sha = _snapshot(base)
+    run = _run(sha)
+    run["after"] = {"static_candidates": 2, "route_candidates": None, "runtime_observations": 1}
+    doc = _doc(sha)
+    doc["coverage"] = {"static": {"limitations": ["provider_route_nodes_not_provided"]}}
+    _place(base, doc, run)
+    body = _get(c)
+    route = {r["key"]: r for r in body["summary"]}["route"]
+    assert route["unavailable"] is True and route["after"] is None
+    assert "0 件という意味ではない" in route["note"]
+    assert "provider_route_nodes_not_provided" not in body["coverage_limitations"]
+    assert any("route を取得できない" in x for x in body["coverage_limitations"])
+
+
+def test_route_measured_is_not_unavailable(client):
+    c, base = client
+    sha = _snapshot(base)
+    _place(base, _doc(sha), _run(sha))
+    route = {r["key"]: r for r in _get(c)["summary"]}["route"]
+    assert route["unavailable"] is False and route["after"] == 1
+
+
+def test_provider_failure_is_not_cached_forever(tmp_path, monkeypatch):
+    """版確認の一時的な失敗（冷えた起動の timeout 等）を、再起動するまで覚え続けない。"""
+    rea_adapter = pytest.importorskip("reverse_analysis.rea_adapter")
+    exe = tmp_path / "rea"
+    exe.write_text("#!/bin/sh\n")
+    exe.chmod(0o755)
+    monkeypatch.setattr(runner, "rea_command", lambda: str(exe))
+    runner._provider_cache.clear()
+    calls = []
+
+    class Diag:
+        message, next_action = "応答なし", "確認してください"
+
+    def probe(_cmd):
+        calls.append(1)
+        return (None, Diag()) if len(calls) == 1 else ("6.7.0", None)
+
+    monkeypatch.setattr(rea_adapter, "probe_version", probe)
+    clock = [1000.0]
+    monkeypatch.setattr(runner.time, "monotonic", lambda: clock[0])
+    try:
+        assert runner.provider_status().available is False
+        assert runner.provider_status().available is False and len(calls) == 1  # 短い間は覚える
+        clock[0] += runner._PROVIDER_FAILURE_TTL + 1
+        assert runner.provider_status().available is True and len(calls) == 2
+        clock[0] += 10_000
+        assert runner.provider_status().available is True and len(calls) == 2  # 成功は覚え続ける
+    finally:
+        runner._provider_cache.clear()
+
+
+def test_gui_route_unavailable_and_provider_down_wording():
+    """route 取得不可を 0 と出さない／解析ツール利用不可で前回結果を「現在の成功」に見せない。"""
+    js = (ROOT / "static/js/ta2/ws-reverse.js").read_text(encoding="utf-8")
+    assert "取得不可" in js and "0 件という意味ではありません" in js
+    assert "再実行不可・解析ツール利用不可" in js
+    assert "到達は System 03 で実測" in js  # 実測済み route に「到達は未確認」と書かない
+    assert "いまは実行できません" in js  # 実行できないのに「実行を押す」と案内しない
+    spec = (ROOT / "static/js/ta2/ws-spec.js").read_text(encoding="utf-8")
+    assert "aria-pressed" in spec and "get('view')" in spec  # ?view=reverse で直接開ける

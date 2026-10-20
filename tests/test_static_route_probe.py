@@ -160,7 +160,9 @@ def test_run_saves_and_status_reports(site, monkeypatch):
     assert nav.opened == [f"{SITE_ORIGIN}/ok", f"{SITE_ORIGIN}/moved"]  # 起点は DOMAIN 一致の最初のページ
     doc = json.loads(store.probe_path(site, DOMAIN).read_text())
     assert doc["rea_snapshot_sha256"] == SHA and len(doc["items"]) == 3
-    monkeypatch.setattr(probe, "build_viewpoints", lambda e: {"viewpoints": [
+    real = probe.build_status(site, DOMAIN, ev)  # 実際の観点文言: 到達を実測した route は「到達は未確認」と書かない
+    assert real["items"][0]["system02_viewpoints"] and all("到達は未確認" not in t for t in real["items"][0]["system02_viewpoints"])
+    monkeypatch.setattr(probe, "build_viewpoints", lambda e, probe=None: {"viewpoints": [
         {"evidence_id": "s1", "text": "ok に遷移できる", "is_new": True},
         {"evidence_id": "s2", "text": "moved", "is_new": True}]})
     st = probe.build_status(site, DOMAIN, ev)

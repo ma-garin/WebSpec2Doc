@@ -56,6 +56,24 @@ def test_doc_app_inputs_are_disabled() -> None:
     assert "試作のため使用しません" in html
 
 
+def test_doc_app_hides_url_only_inputs_and_names_sample_completion() -> None:
+    """URL 版だけの入力は試作で出さない。完了・見出しは「サンプルの再生」と書く（実アプリの解析完了に見せない）。"""
+    root = Path(__file__).resolve().parent.parent
+    css = (root / "static/css/doc-app.css").read_text(encoding="utf-8")
+    for sel in ("#record-mode", "#discover-scope", ".wizard-p1-hints"):
+        assert f"body[data-app-mode] {sel}" in css, sel
+    html = _html()
+    assert "サンプルの再生が完了" in html and "実アプリは解析していません" in html
+    assert 'class="doc-app-unsupported" disabled' in html and "未対応" in html
+    assert "サンプル画面（再生）" in html
+    js = (root / "static/js/execution.js").read_text(encoding="utf-8")
+    assert "サンプルの再生が完了" in js
+    mode = (root / "static/js/doc-app-mode.js").read_text(encoding="utf-8")
+    assert "サンプルで出力を見る（試作）" in mode
+    overview = (root / "static/js/view-overview.js").read_text(encoding="utf-8")
+    assert "サンプルデータの再生（クロール・実アプリ解析なし）" in overview
+
+
 def test_mock_log_and_report(tmp_path: Path) -> None:
     lines = list(
         app_mock.run_stream(

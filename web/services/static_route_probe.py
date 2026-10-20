@@ -407,7 +407,9 @@ def build_status(base: Path, domain: str, evidence: dict[str, Any]) -> dict[str,
     views: dict[str, list[str]] = {}
     runnable = 0
     observed_ids = {i["evidence_id"] for i in doc["items"] if i.get("status") == "observed"}
-    for v in (build_viewpoints(evidence).get("viewpoints") or []):
+    # 探索結果を渡す（渡さないと観点の文言が「到達は未確認」のままになり、実測の事実と食い違う）
+    probe = {i.get("evidence_id"): i for i in doc["items"] if i.get("evidence_id")}
+    for v in (build_viewpoints(evidence, probe=probe).get("viewpoints") or []):
         eid = v.get("evidence_id")
         if eid in observed_ids:
             views.setdefault(eid, []).append(v.get("text"))

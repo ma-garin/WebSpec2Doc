@@ -6,7 +6,8 @@
   var root = document.getElementById('autorun-static-routes');
   if (!root) return;
 
-  var state = { domain: '', data: null, running: false, notice: null, loadError: '', filter: 'all' };
+  var state = { domain: '', data: null, running: false, notice: null, loadError: '', filter: 'all', posting: false };
+  var pollTimer = null;
   var els = {};
 
   function esc(v) {
@@ -42,11 +43,15 @@
       state.loadError = '探索の状態を取得できませんでした。再読み込みしてください。';
     }
     render();
+    // 別タブ・再読み込みで実行中の探索を開いたときは、完了まで 2 秒ごとに状態を取り直す（「実行中」のまま止めない）
+    if (pollTimer) { clearTimeout(pollTimer); pollTimer = null; }
+    if (state.running && !state.posting && !state.loadError) pollTimer = setTimeout(fetchState, 2000);
   }
 
   async function run() {
     if (state.running || !state.domain) return;
     state.running = true;
+    state.posting = true;
     state.notice = null;
     render();
     var notice;
@@ -62,6 +67,7 @@
       notice = { ok: false, message: '探索を開始できませんでした。', next: '通信状態を確認して再実行してください。' };
     }
     state.running = false;
+    state.posting = false;
     state.notice = notice;
     await fetchState();
   }
@@ -120,7 +126,7 @@
       '<p class="asr-caveat" role="note"><strong>探索完了は機能が正しいことの証明ではありません</strong>（URL への到達のみ）。</p>' +
       (d && d.can_run === false && d.cannot_run_reason ? '<p class="asr-reason">' + esc(d.cannot_run_reason) + '</p>' : '') +
       '<div id="asr-reason-host"></div>' +
-      '<p class="asr-live" role="status" aria-live="polite">' + (busy ? '探索しています（数十秒かかることがあります）' : '') + '</p>';
+      '<p class="asr-live" role="status" aria-live="polite">' + (busy ? '探索しています（数十秒かかることがあります）。' + (hasResult ? '完了するまで下は前回の結果です。' : '') : '') + '</p>';
   }
 
   function renderNotice() {
@@ -131,30 +137,60 @@
       (n.next ? '<div>' + esc(n.next) + '</div>' : '') + '</div>';
   }
 
-  function stageBtn(key, label, n, extra) {
-    var on = state.filter === key;
-    return '<button type="button" class="asr-stage' + (on ? ' is-on' : '') + '" data-filter="' + key + '" aria-pressed="' + (on ? 'true' : 'false') + '">' +
-      '<span class="asr-stage-n">' + esc(num(n)) + '</span><span class="asr-stage-l">' + esc(label) + '</span>' + (extra || '') + '</button>';
+  // 流れ図の数（純関数・tests/js で検証）。0 と「未実施」を分ける: 認証状態が無いときの認証済み実測は null
+  function flowModel(d) {
+    var items = (d && d.items) || [];
+    var a = (d && d.after) || {};
+    var before = d && d.before && d.before.static_routes != null ? d.before.static_routes : items.length;
+    var by = function (st) { return items.filter(function (it) { return it.status === st; }).length; };
+    var auth = items.filter(function (it) { return it.status === 'observed' && it.authenticated === true; }).length;
+    return {
+      before: before,
+      probed: items.length,
+      notProbed: Math.max(0, before - items.length),
+      unauth: items.filter(function (it) { return it.status === 'observed' && it.authenticated !== true; }).length,
+      auth: (a.auth_state_available === false && !auth) ? null : auth,
+      ambiguous: by('ambiguous'), unreached: by('unreached'), authRequired: by('auth_required'), failed: by('failed'),
+      unconfirmed: items.filter(function (it) { return UNCONFIRMED.indexOf(it.status) >= 0; }).length,
+      runnable: a.system02_runnable == null ? null : a.system02_runnable
+    };
   }
 
+  function stageBtn(key, label, n, ev, sub) {
+    var on = state.filter === key;
+    return '<button type="button" class="asr-stage' + (on ? ' is-on' : '') + '" data-filter="' + key + '" aria-pressed="' + (on ? 'true' : 'false') + '"' +
+      ' aria-label="' + esc(label + ' ' + (n == null ? '未実施' : n + ' 件') + (on ? '（絞り込み中）' : '')) + '">' +
+      '<span class="asr-stage-n">' + esc(n == null ? '—' : String(n)) + '</span>' +
+      (ev ? '<span class="asr-stage-ev">' + ev + '</span>' : '') +
+      (sub ? '<span class="asr-stage-sub">' + esc(sub) + '</span>' : '') + '</button>';
+  }
+
+  function node(no, title, body, cls) {
+    return '<li class="asr-node' + (cls ? ' ' + cls : '') + '"><span class="asr-flow-t"><span class="asr-no" aria-hidden="true">' + no + '</span>' +
+      esc(title) + '</span>' + body + '</li>';
+  }
+
+  // 静的候補 → 探索 → 未認証実測 → 認証済み実測 → 未確認・曖昧 → System02/09。番号で順序を示す（矢印は広い幅だけ）
   function renderFlow(d) {
-    var items = d.items || [];
-    var a = d.after || {};
-    var before = d.before && d.before.static_routes != null ? d.before.static_routes : items.length;
-    var unconf = count(items, 'unconfirmed');
+    var m = flowModel(d);
     var q = encodeURIComponent(state.domain);
-    var run02 = a.system02_runnable;
-    return '<ol class="c-stepper asr-flow" aria-label="静的候補から System02・System09 までの流れ">' +
-      '<li class="is-done"><span class="asr-flow-t">静的候補</span>' + stageBtn('all', 'リバース解析の候補', before) + '</li>' +
-      '<li class="is-done"><span class="asr-flow-t">探索（GET のみ）</span><span class="asr-flow-note">' +
-        esc(d.seconds != null ? d.seconds + ' 秒で実施' : '実施済み') + '</span></li>' +
-      '<li class="is-current" aria-current="step"><span class="asr-flow-t">結果</span><span class="asr-flow-group">' +
-        stageBtn('unauth', '未認証で実測', count(items, 'unauth')) +
-        stageBtn('auth', '認証済みで実測', count(items, 'auth')) +
-        stageBtn('unconfirmed', '未確認・曖昧', unconf) + '</span></li>' +
-      '<li><span class="asr-flow-t">次の工程</span><span class="asr-flow-group">' +
-        '<a class="asr-next" href="/sites/' + q + '/tests">System02 実行対象 <strong>' + esc(num(run02)) + '</strong> 件</a>' +
-        '<a class="asr-next" href="/impact?tab=rea">System09 影響を見る</a></span></li></ol>';
+    var E = WS2D.evidence;
+    var authOff = d.after && d.after.auth_state_available === false;
+    var unconfSub = '曖昧 ' + m.ambiguous + '・未到達 ' + m.unreached + '・ログイン必要 ' + m.authRequired + '・確認失敗 ' + m.failed;
+    return '<ol class="asr-flow" aria-label="静的候補から System02・System09 までの流れ（6 段）">' +
+      node(1, '静的候補', stageBtn('all', 'リバース解析の静的候補', m.before, E.html('static', '静的'), '到達は未確認')) +
+      node(2, '探索（GET のみ）', '<span class="asr-flow-note"><strong>' + m.probed + '</strong> 件を開いた' +
+        (d.seconds != null ? '（' + esc(d.seconds) + ' 秒）' : '') + '</span>' +
+        (m.notProbed ? '<span class="asr-flow-warn">未探索 ' + m.notProbed + ' 件（候補が増えています。再実行で確かめます）</span>' : '<span class="asr-flow-note">送信・入力・削除はしない</span>')) +
+      node(3, '未認証実測', stageBtn('unauth', '未認証で実測', m.unauth, E.html('observed', '未認証実測'), 'URL への到達のみ')) +
+      node(4, '認証済み実測', stageBtn('auth', '認証済みで実測', m.auth, E.html('observed_auth', '認証済み実測'),
+        authOff && m.auth == null ? '保存済みの認証状態なし（未実施）' : 'ログイン必要な Route を再探索')) +
+      node(5, '未確認・曖昧', stageBtn('unconfirmed', '未確認・曖昧', m.unconfirmed, E.html('unverified', '未確認') + ' ' + E.html('ambiguous', '曖昧'), unconfSub),
+        m.unconfirmed ? 'is-warn' : '') +
+      node(6, '次の工程', '<span class="asr-flow-group">' +
+        '<a class="asr-next" href="/sites/' + q + '/tests#/run">System02 実行対象 <strong>' + esc(num(m.runnable)) + '</strong> 件<span class="asr-next-sub">実行済みとは別</span></a>' +
+        '<a class="asr-next" href="/impact?tab=rea">System09 影響を見る</a></span>') +
+      '</ol>';
   }
 
   function renderRow(it, i) {
@@ -201,7 +237,7 @@
       WS2D.state(host, { kind: 'error', title: '探索の状態を取得できませんでした', message: state.loadError, retained: !!d,
         next: '再読み込みしてください。', actionLabel: '再読み込み', onAction: fetchState });
     } else if (!state.domain) {
-      WS2D.state(host, { kind: 'empty', title: '対象サイトが未選択です', message: '対象サイトを選ぶと探索できます。', next: '上の入力欄にドメインを入れて「設定」を押します。' });
+      WS2D.state(host, { kind: 'empty', title: '対象サイトが未選択です', message: '対象サイトを選ぶと探索できます。', next: '上の入力欄にドメインを入れて「対象サイトに指定」を押します。' });
     } else if (!d) {
       WS2D.state(host, { kind: 'loading', message: '探索の状態を読み込んでいます。' });
     } else if (busy) {
@@ -226,8 +262,10 @@
     var items = d.items || [];
     var obs = count(items, 'unauth') + count(items, 'auth');
     var un = count(items, 'unconfirmed');
-    WS2D.reason(host, '候補 ' + items.length + ' 件のうち ' + obs + ' 件は URL への到達を実測、' + un + ' 件は未確認・曖昧・未到達・確認失敗のままです。',
-      un ? 'warning' : 'info');
+    var m = flowModel(d);
+    WS2D.reason(host, '探索した ' + items.length + ' 件のうち ' + obs + ' 件は URL への到達を実測、' + un + ' 件は未確認・曖昧・未到達・確認失敗のままです。' +
+      (m.notProbed ? '静的候補 ' + m.before + ' 件のうち ' + m.notProbed + ' 件は未探索です（静的のまま）。' : ''),
+      (un || m.notProbed) ? 'warning' : 'info');
   }
 
   function openDrawer(it, d, row) {
@@ -245,10 +283,11 @@
       if (it.auth_attempted) facts.push({ label: '認証', value: '保存済みの認証状態で再試行しましたが確認できませんでした' });
       if (it.http_status != null) facts.push({ label: 'HTTP ステータス', value: String(it.http_status) });
     }
+    if (it.evidence) facts.push({ label: '観測（探索）', value: it.evidence });
+    if (it.reason) facts.push({ label: '判定の理由', value: it.reason });
     var inf = [];
-    if (it.reason) inf.push('理由: ' + it.reason);
-    if (it.evidence) inf.push('静的根拠: ' + it.evidence);
-    inf.push('System02 テスト観点: ' + (vps.length ? vps.join(' / ') : 'なし'));
+    if (it.status !== 'observed') inf.push('静的解析は Route「' + it.route + '」の宣言を示していますが、到達は実測できていません。');
+    inf.push('System02 テスト観点: ' + (vps.length ? vps.join(' / ') : 'なし') + '（実行対象であっても実行済みではありません）');
     var lim = ['URL への到達のみを示します。画面の内容・機能が正しいことは確認していません。'];
     if (it.limitation) lim.push(it.limitation);
     WS2D.drawer.open({

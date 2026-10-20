@@ -9,6 +9,9 @@
   // /doc-app を「新規解析」ビューの URL にする（core.js の対応表はここで差し替える）
   if (typeof VIEW_PATHS !== 'undefined') VIEW_PATHS.generate = '/doc-app';
   if (typeof PATH_VIEWS !== 'undefined') PATH_VIEWS['/doc-app'] = 'generate';
+  // 見出しも試作であることを示す（URL 版の「サイトを追加 / 再解析」を出さない）
+  var APP_HEADER = { trail: ['ダッシュボード', 'ドキュメント作成(app)［試作］'], title: 'サンプルで出力を見る（試作）' };
+  if (typeof VIEW_HEADER !== 'undefined') VIEW_HEADER.generate = APP_HEADER;
 
   var DEVICES = {
     android: ['エミュレータ Pixel 8 (API 34)', '実機 (adb 接続)'],
@@ -43,6 +46,9 @@
     if (name) name.textContent = 'ドキュメント作成(app)';
     var title = $('topbar-title');
     if (title && title.textContent === 'QAドキュメント生成') title.textContent = 'QAドキュメント生成（app）';
+    // core.js は読み込み時に見出しを当て終えているため、生成画面ならここで当て直す
+    var gen = $('view-generate');
+    if (gen && gen.classList.contains('is-active') && typeof setHeader === 'function') setHeader(APP_HEADER.trail, APP_HEADER.title);
     applyPlatform();
     sync();
     document.querySelectorAll('input[name="app-platform"]').forEach(function (r) { r.addEventListener('change', applyPlatform); });

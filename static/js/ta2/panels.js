@@ -103,6 +103,35 @@
     var r = state().run || {};
     return Array.isArray(r.skipped) ? r.skipped : [];
   }
+  /** 実行の判定（純関数・tests/js で検証）。一部失敗・一部のみ実行を「成功」にしない。
+   *  rs: 実行中の状態 / l: 直近の実行記録 / skippedN: 実行できなかった件数 / allN: このサイトのテスト総数 */
+  var T_LABEL = { pass: '成功', fail: '失敗', flaky: '不安定', fixed: '修正済・未実行', new: '未実行', running: '実行中' };
+  function runVerdict(rs, l, skippedN, allN) {
+    rs = rs || {};
+    if (rs.running) {
+      return { code: 'running', label: '実行中 ' + (rs.done || 0) + ' / ' + (rs.total || 0),
+        reason: '実行しています。成功 ' + (rs.passed || 0) + ' · 失敗 ' + (rs.failed || 0) + '。完了するまで前回の結果は書き換えません。', kind: 'info' };
+    }
+    if (!l) return { code: 'not_started', label: '未実行', reason: 'まだ実行していません。「▶ 全件実行」か、一覧を絞り込んでから「▶ 表示中」で数件だけ実行できます。', kind: 'info' };
+    var total = Number(l.total) || 0, p = Number(l.passed) || 0, f = Number(l.failed) || 0;
+    var missing = Math.max(0, total - p - f);
+    var scope = allN > total ? '。範囲外の ' + (allN - total) + ' 件は前回までの結果のままです' : '';
+    var detail = '直近の実行（' + (l.at || '日時不明') + '）: ' + total + ' 件を実行 · 成功 ' + p + ' · 失敗 ' + f +
+      (missing ? ' · 結果なし ' + missing : '') + (skippedN ? ' · 実行できず ' + skippedN : '') + scope;
+    if (f && !p && !missing) return { code: 'failed', label: '失敗', reason: detail + '。', kind: 'error' };
+    if (f) return { code: 'partial', label: '一部失敗', reason: detail + '。失敗の理由は下の表の「結果」列にあります。', kind: 'warning' };
+    if (missing || skippedN) return { code: 'partial', label: '一部のみ実行', reason: detail + '。結果の無いテストは成功に数えていません。', kind: 'warning' };
+    return { code: 'done', label: allN > total ? '成功（' + total + ' 件）' : '成功', reason: detail + '。', kind: 'success' };
+  }
+  function renderRunState(list) {
+    var W = window.WS2D;
+    var st = $('#run-state'), rh = $('#run-reason');
+    if (!W || !st) return;
+    var v = runVerdict(state().run, lastRun(), skippedList().length, list.length);
+    if (!state().run.running && !runsLoaded) { st.innerHTML = ''; if (rh) rh.hidden = true; return; }
+    st.innerHTML = W.status.html(v.code, v.label);
+    if (rh) { W.reason(rh, v.reason, v.kind); rh.hidden = false; }
+  }
   function runMetaText() {
     var r = state().run || {};
     var sk = skippedList();
@@ -142,6 +171,7 @@
     var list = mergedTests();
     var c = counts(list);
     var meta = $('#run-meta'); if (meta) meta.textContent = runMetaText();
+    renderRunState(list);
 
     var kpis = $('#kpis');
     var rs = state().run || {};
@@ -212,7 +242,8 @@
     }
     body.innerHTML = skipHTML + rows.map(function (t) {
       var last = t.last || {};
-      return '<tr class="rw ' + esc(t.status) + '" data-id="' + esc(t.id) + '">' +
+      return '<tr class="rw ' + esc(t.status) + '" data-id="' + esc(t.id) + '" tabindex="0" aria-label="' +
+        esc(t.id + ' ' + t.name + '・' + (T_LABEL[t.status] || t.status) + '。詳細を開く') + '">' +
         '<td><i class="i-' + esc(t.status) + '" style="display:inline-block;width:8px;height:8px;border-radius:50%"></i></td>' +
         '<td class="mono">' + esc(t.id) + '</td>' +
         '<td class="nm" title="' + esc(t.name) + '">' + esc(t.name) + '</td>' +
@@ -458,9 +489,20 @@
   }
   function startPolling() { stopPolling(); poll(); }
 
+  /** 複数件の実行は、対象サイトと件数・副作用を文字で確かめてから始める（1 件だけの再実行は確認しない） */
   function startRun(ids, label) {
     if (!domain()) { toast('対象サイトが選ばれていません', 'ng'); return; }
     if (!api().run) { toast('実行 API を利用できません', 'ng'); return; }
+    var n = ids.length || tests().length;
+    if (n <= 1 || !window.WS2D || !window.WS2D.confirm) { doRun(ids, label); return; }
+    window.WS2D.confirm({
+      title: label + '（' + n + ' 件）を始めますか',
+      message: '対象サイト ' + domain() + ' に対して ' + n + ' 件のテストをブラウザで実行します。',
+      detail: '手順に入力・送信を含むテストは、対象サイトへ実際にデータを送ります。本番サイトでは対象を確認してから実行してください。範囲外のテストの結果は変わりません。',
+      confirmLabel: n + ' 件を実行する'
+    }).then(function (ok) { if (ok) doRun(ids, label); });
+  }
+  function doRun(ids, label) {
     api().run(domain(), ids).then(function (r) {
       if (TA().setView) TA().setView('run');
       var sk = Array.isArray(r.skipped) ? r.skipped : [];
@@ -488,6 +530,12 @@
     });
   }
   function runAll() { startRun([], '全件実行'); }
+  /** 一覧の絞り込み（状態・検索）で見えているテストだけを実行する */
+  function runVisible() {
+    var ids = Array.prototype.map.call(document.querySelectorAll('#items .it[data-id]'), function (x) { return x.getAttribute('data-id'); });
+    if (!ids.length) { toast('表示中のテストがありません。絞り込みを変えてください', 'ng'); return; }
+    startRun(ids, '表示中の実行');
+  }
   function rerunFailed() {
     var ids = tests().filter(function (t) {
       return t.status === 'fail' || t.status === 'flaky' || t.status === 'fixed';
@@ -518,6 +566,14 @@
 
   /* ==================== 配線 ==================== */
   function bind() {
+    // 結果の行はキーボードでも開ける（Enter / Space）。クリックと同じくテストの詳細へ
+    document.addEventListener('keydown', function (e) {
+      if (e.key !== 'Enter' && e.key !== ' ') return;
+      var row = e.target && e.target.closest && e.target.closest('#run-rows tr[data-id]');
+      if (!row || e.target !== row) return;
+      e.preventDefault();
+      if (TA().select) TA().select(row.getAttribute('data-id'));
+    });
     document.addEventListener('click', function (e) {
       var t = e.target;
       var row = t.closest && t.closest('#run-rows tr[data-id]');
@@ -533,6 +589,7 @@
       var btn = t.closest && t.closest('button');
       if (!btn) return;
 
+      if (btn.id === 'run-all-btn' && btn.getAttribute('data-scope') === 'visible') { runVisible(); return; }
       if (btn.id === 'run-all-btn' || btn.id === 'run-all-btn2' || btn.id === 'go-run') { runAll(); return; }
       if (btn.id === 'rerun-fail-btn') { rerunFailed(); return; }
       if (btn.id === 'export-btn') { exportEvidence(); return; }

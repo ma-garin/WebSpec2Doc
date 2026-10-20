@@ -530,7 +530,7 @@
     .stat-card-icon.is-ok { background: var(--ok-bg); color: var(--ok); }
     .stat-card-label { font-size: 12.5px; font-weight: 700; color: var(--text-muted); }
     .stat-card-num { font-size: 27px; font-weight: 800; line-height: 1.05; letter-spacing: -.01em; color: var(--text); font-variant-numeric: tabular-nums; }
-    .stat-card-sub { font-size: 12px; color: var(--text-subtle); }
+    .stat-card-sub { font-size: 12px; color: var(--color-text-secondary); } /* 補足文もコントラスト 4.5 以上（--text-subtle は 2.7） */
     @media (max-width: 1020px) { .stat-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
     @media (max-width: 560px) { .stat-cards { grid-template-columns: 1fr; } }
 
@@ -619,6 +619,10 @@
     @media (max-width: 860px) {
       :root { --sidebar-w: 60px; }
       .app-brand-text, .nav-label, .add-site-label, .app-sidebar-foot, .app-nav-group { display: none; }
+      /* 60px のレールにシステム名を入れると 1 文字ずつ縦に折り返す。「切替」だけ残す */
+      .app-sidebar a.sys-switcher { padding: 6px 2px; justify-content: center; }
+      .sys-switcher-label, .sys-switcher-cur { display: none; }
+      .app-sidebar .sys-switcher .sys-switcher-swap { margin-left: 0; padding: 1px 6px; }
       .app-sidebar { padding: 14px 8px; align-items: center; }
       .app-brand { justify-content: center; padding: 0; }
       #add-site-btn { padding: 0; }

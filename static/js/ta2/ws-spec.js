@@ -26,7 +26,12 @@
 
   var $ = function (s) { return document.querySelector(s); };
   var enc = encodeURIComponent;
-  var mode = 'screen';      // screen | cases
+  // 表示の切替（画面仕様 / テストケース / 技法 / リバース解析）は ?view= で直接開ける（他 System からの deep link）
+  var MODES = ['screen', 'cases', 'tech', 'reverse'];
+  var mode = (function () {
+    try { var v = new URLSearchParams(location.search).get('view'); return MODES.indexOf(v) >= 0 ? v : 'screen'; }
+    catch (e) { return 'screen'; }
+  })();
   var loading = null;       // 読み込み中の Promise（多重取得を防ぐ）
   var casesDomain = '';     // テストケース表をマウント済みのドメイン
   var bound = false;
@@ -364,8 +369,15 @@
       Array.prototype.forEach.call(seg.querySelectorAll('button'), function (b, i) {
         var key = b.dataset.m || ['screen', 'cases', 'tech', 'map'][i];
         b.classList.toggle('on', key === m);
+        // 選択中を色だけで伝えない（読み上げにも「押されている」を渡す）
+        if (key !== 'map') b.setAttribute('aria-pressed', key === m ? 'true' : 'false');
       });
     }
+    try {
+      var u = new URL(location.href);
+      if (m === 'screen') u.searchParams.delete('view'); else u.searchParams.set('view', m);
+      if (u.href !== location.href) history.replaceState(history.state, '', u.pathname + u.search + u.hash);
+    } catch (e) { /* URL を更新できなくても表示は切り替える */ }
     if (m === 'cases') mountCases();
     if (m === 'tech' && T.techRender) T.techRender((T.state.spec || {}).sel || '');
     if (m === 'reverse' && T.reverseRender && reverse) T.reverseRender(reverse, T.state.domain);

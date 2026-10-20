@@ -68,6 +68,7 @@ _LIMITATION.update(
     {
         "route_candidate_from_static_syntax": "静的な構文から見つけた route 候補（画面遷移の実測ではない）",
         "unsupported_nodes": "解析対象外の要素がある",
+        "provider_route_nodes_not_provided": "provider（REA）から route を取得できない（route が 0 件という意味ではない）",
     }
 )
 
@@ -230,11 +231,15 @@ def _summary(run: dict) -> list[dict]:
     def row(key: str, label: str, mkey: str, note: str = "") -> dict:
         return {"key": key, "label": label, "before": b.get(mkey), "after": a.get(mkey), "note": note}
 
+    # REA が route 宣言を出さなかったときは「取得不可」。0 件（見つからなかった）とは区別して画面に渡す。
+    route_unavailable = bool(a) and a.get("route_candidates") is None
+    route = row("route", "Route", "route_candidates",
+                "provider（REA）から取得不可: route 宣言が出力されなかった（ルートが 0 件という意味ではない）"
+                if route_unavailable else "静的な宣言。到達は未確認")  # fmt: skip
+    route["unavailable"] = route_unavailable
     return [
         row("static", "静的候補", "static_candidates", "ソースに構文がある候補。実行の証明ではない"),
-        row("route", "Route", "route_candidates",
-            "provider（REA）から取得不可: route 宣言が出力されなかった（ルートが 0 件という意味ではない）" if a.get("route_candidates") is None and a
-            else "静的な宣言。到達は未確認"),
+        route,
         row("api_static", "API 候補（静的）", "api_candidates", "HTTP method は不明のまま"),
         row("api_runtime", "API（実測）", "runtime_observations", "実行時の観測。リバース解析では増えない"),
         row("module_dep", "Module 依存", "module_dependency_edges", "import の関係"),

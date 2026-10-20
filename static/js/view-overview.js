@@ -40,7 +40,10 @@ function renderOverview() {
   // 以前は meta に入った argparse 既定値をそのまま出し、「深さ3・最大50ページ」と誤表示していた。
   // crawl_mode を持たない旧レポートは従来の文言を維持する。
   const selectedCount = Number(meta.target_url_count) > 0 ? Number(meta.target_url_count) : 0;
-  const crawlCondText = meta.crawl_mode === 'selected'
+  // ドキュメント作成(app) の試作はサンプルの再生で、クロールしていない（深さ・最大ページは条件ではない）。
+  const crawlCondText = document.body.hasAttribute('data-app-mode')
+    ? 'サンプルデータの再生（クロール・実アプリ解析なし）'
+    : meta.crawl_mode === 'selected'
     ? (selectedCount > 0 ? `選択した ${selectedCount} 画面` : '選択した画面')
     : `クロール: 深さ${meta.crawl_depth ?? '-'} ・最大${meta.max_pages ?? '-'}ページ`;
   resultHero.innerHTML = '<div class="hero-pad">' +

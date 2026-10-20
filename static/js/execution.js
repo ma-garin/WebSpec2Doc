@@ -325,8 +325,14 @@ async function runWith(bodyStr, domain, label, urlCount) {
   } else if (ok || reportPath) {
     setStep(4); execProgressBar.style.width = '100%';
     estep.forEach(el => el.className = 'execution-step is-complete');
-    execTitle.textContent = '生成完了'; execPhase.textContent = '完了';
-    execMessage.textContent = 'ドキュメントの生成が完了しました。';
+    if (document.body.hasAttribute('data-app-mode')) {
+      // ドキュメント作成(app) はサンプルの再生。実アプリの解析が完了したようには書かない。
+      execTitle.textContent = 'サンプルの再生が完了'; execPhase.textContent = '完了（サンプル）';
+      execMessage.textContent = 'サンプルデータから出力の見本を作りました。実アプリは解析していません。';
+    } else {
+      execTitle.textContent = '生成完了'; execPhase.textContent = '完了';
+      execMessage.textContent = 'ドキュメントの生成が完了しました。';
+    }
     document.getElementById('btn-view-report').style.display = '';
     execActions.classList.remove('hidden');
     _showCompletionPopup(Math.floor((Date.now() - startTime) / 1000));

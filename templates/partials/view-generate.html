@@ -59,25 +59,30 @@
               {# ドキュメント作成(app): URL の代わりにアプリを指定する。値は #url-input に
                  https://app.<package> として同期し（doc-app-mode.js）、以降の画面解析・実行・
                  レポートは URL 版と同じ経路を通る。 #}
-              <label class="form-label">デモ用サンプルアプリ <span style="color:var(--color-critical)">*</span></label>
-              <div class="discover-scope-chips" role="radiogroup" aria-label="プラットフォーム（試作のため使用しません）" style="margin-bottom:8px">
-                <label class="checkbox-chip"><input type="radio" name="app-platform" value="android" checked disabled> Android（.apk / .aab）</label>
-                <label class="checkbox-chip"><input type="radio" name="app-platform" value="ios" disabled> iOS（.app・シミュレータ専用）</label>
-                <span class="form-hint" style="font-size:12px">試作のため使用しません</span>
-              </div>
-              <div class="input-row" style="gap:8px;margin-bottom:8px;flex-wrap:wrap">
-                <label for="app-package" class="visually-hidden">デモ用サンプルアプリ</label>
-                <select id="app-package" class="url-input" style="flex:1">
-                  <option value="com.example.sampleshop">サンプル（SampleShop・デモ）</option>
+              {# 使えるのはサンプルの選択だけ。実アプリの指定欄は「未対応」の枠にまとめ、操作できないことを文字で示す。 #}
+              <label for="app-package" class="form-label">デモ用サンプルアプリ（使うデータ）</label>
+              <div class="input-row doc-app-sample-row">
+                <select id="app-package" class="url-input" aria-describedby="doc-app-sample-note">
+                  <option value="com.example.sampleshop">サンプル（SampleShop・デモ・固定 6 画面）</option>
                 </select>
-                <label for="app-file" class="visually-hidden">アプリファイル（試作のため使用しません）</label>
-                <input type="file" id="app-file" accept=".apk,.aab" style="flex:1;font-size:12px" disabled />
-                <label for="app-device" class="visually-hidden">実行先（試作のため使用しません）</label>
-                <select id="app-device" class="url-input" style="flex:1" disabled>
-                  <option>エミュレータ Pixel 8 (API 34)</option><option>実機 (adb 接続)</option>
-                </select>
-                <span class="form-hint" style="font-size:12px;flex-basis:100%">アプリファイル・実行先は試作のため使用しません（常にサンプルを再生します）</span>
               </div>
+              <p class="form-hint doc-app-sample-note" id="doc-app-sample-note">押すとサンプルデータを再生し、画面仕様書・遷移図・フォーム定義の見本を作ります。実アプリは解析しません。</p>
+              <fieldset class="doc-app-unsupported" disabled aria-describedby="doc-app-unsupported-note">
+                <legend>実アプリの指定 <span class="c-status c-status--unavailable"><span class="c-status__icon" aria-hidden="true">⊘</span>未対応</span></legend>
+                <p class="form-hint" id="doc-app-unsupported-note">試作のため使用しません（常にサンプルを再生します）。下の欄は操作できません。</p>
+                <div class="doc-app-unsupported__row" role="radiogroup" aria-label="プラットフォーム（試作のため使用しません）">
+                  <label class="checkbox-chip"><input type="radio" name="app-platform" value="android" checked disabled> Android（.apk / .aab）</label>
+                  <label class="checkbox-chip"><input type="radio" name="app-platform" value="ios" disabled> iOS（.app・シミュレータ専用）</label>
+                </div>
+                <div class="doc-app-unsupported__row">
+                  <label for="app-file" class="doc-app-unsupported__label">アプリファイル</label>
+                  <input type="file" id="app-file" accept=".apk,.aab" disabled />
+                  <label for="app-device" class="doc-app-unsupported__label">実行先</label>
+                  <select id="app-device" class="url-input" disabled>
+                    <option>エミュレータ Pixel 8 (API 34)</option><option>実機 (adb 接続)</option>
+                  </select>
+                </div>
+              </fieldset>
               {% else %}
               <label for="url-input" class="form-label">解析対象URL <span style="color:var(--color-critical)">*</span></label>
               {% endif %}
@@ -185,7 +190,7 @@
                 <div class="p1-result-cards">
                   <div class="p1-result-card p1-result-card--screens">
                     <span class="p1-result-num" id="p1-screens-num">0</span>
-                    <span class="p1-result-label">画面を検出</span>
+                    <span class="p1-result-label">{% if app_mode %}サンプル画面（再生）{% else %}画面を検出{% endif %}</span>
                   </div>
                   <div class="p1-result-card p1-result-card--login" id="p1-login-card" style="display:none">
                     <span class="p1-result-num" id="p1-login-num">0</span>
@@ -193,7 +198,7 @@
                   </div>
                   <div class="p1-result-card p1-result-card--time" id="p1-time-card" style="display:none">
                     <span class="p1-result-num" id="p1-elapsed-num">-</span>
-                    <span class="p1-result-label">解析時間</span>
+                    <span class="p1-result-label">{% if app_mode %}再生時間{% else %}解析時間{% endif %}</span>
                   </div>
                 </div>
                 <span class="wizard-p1-summary-hint" id="p1-login-hint" style="display:none"></span>

@@ -104,10 +104,13 @@
           <label class="cli-check"><input type="checkbox" id="cli-json"> 結果を JSON で受け取る（自動化向け）</label>
         </div>
         {% if not domains %}<p class="cli-hint" id="cli-nodomain">解析済みのサイトがまだありません。「ドキュメント作成」または「AutoRun」のコマンドで先に解析してください。</p>{% endif %}
+        <p class="cli-out-label" id="cli-out-label">端末に貼り付けるコマンド（この画面では実行しません・結果も表示しません）</p>
         <div class="cli-out">
-          <code id="cli-command" aria-label="組み立てたコマンド"></code>
-          <button type="button" class="c-btn c-btn--primary cli-copy" id="cli-copy">コピー</button>
+          <code id="cli-command" aria-labelledby="cli-out-label"></code>
+          <button type="button" class="c-btn c-btn--primary cli-copy" id="cli-copy" aria-describedby="cli-check">コピー</button>
         </div>
+        {# 入力の不足・注意はここに出す（色だけにせず、記号と文で示す）。 #}
+        <p class="cli-check" id="cli-check" role="status" aria-live="polite" hidden></p>
         <p class="cli-hint">コピーしても実行はされません。端末に貼り付けて実行してください。</p>
       </section>
 

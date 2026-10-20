@@ -98,10 +98,11 @@
   </div>
 </div>
   <!-- 実行完了ポップアップ -->
-  <div id="completion-overlay" class="completion-overlay hidden" role="dialog" aria-modal="true" aria-label="生成完了">
+  <div id="completion-overlay" class="completion-overlay hidden" role="dialog" aria-modal="true" aria-label="{{ 'サンプルの再生が完了' if app_mode else '生成完了' }}">
     <div class="completion-card">
       <div class="completion-icon">✅</div>
-      <div class="completion-title">生成完了</div>
+      <div class="completion-title">{% if app_mode %}サンプルの再生が完了{% else %}生成完了{% endif %}</div>
+      {% if app_mode %}<p class="completion-note">サンプルデータから作った見本です。実アプリは解析していません。</p>{% endif %}
       <div class="completion-time">
         <strong id="popup-elapsed">0:00</strong>
         実行時間

@@ -89,11 +89,14 @@ def sha256_file(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
-_provider_cache: dict[tuple[str, float], ProviderStatus] = {}
+_provider_cache: dict[tuple[str, float], tuple[ProviderStatus, float]] = {}
+# 版確認の失敗（起動直後の node の冷えた起動で 5 秒を超える等）は一時的なことがある。
+# 失敗を実行ファイルの更新まで覚えると、再起動するまで「利用不可」が続くため、失敗だけ短く覚える。
+_PROVIDER_FAILURE_TTL = 30.0
 
 
 def provider_status() -> ProviderStatus:
-    """REA が使えるか。版確認（--version）は実行ファイルの更新時刻ごとに 1 回だけ行う。"""
+    """REA が使えるか。版確認（--version）は実行ファイルの更新時刻ごとに 1 回だけ行う（失敗は 30 秒だけ覚える）。"""
     command = rea_command()
     path = Path(command)
     if not path.is_file() or not os.access(path, os.X_OK):
@@ -110,8 +113,8 @@ def provider_status() -> ProviderStatus:
         )  # fmt: skip
     key = (command, path.stat().st_mtime)
     cached = _provider_cache.get(key)
-    if cached is not None:
-        return cached
+    if cached is not None and (cached[0].available or time.monotonic() - cached[1] < _PROVIDER_FAILURE_TTL):
+        return cached[0]
     version, diag = probe_version(command)
     status = (
         ProviderStatus(True, version, None, None)
@@ -119,7 +122,7 @@ def provider_status() -> ProviderStatus:
         else ProviderStatus(False, version, diag.message, diag.next_action)
     )
     _provider_cache.clear()
-    _provider_cache[key] = status
+    _provider_cache[key] = (status, time.monotonic())
     return status
 
 

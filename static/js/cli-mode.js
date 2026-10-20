@@ -44,6 +44,39 @@
     if (use.includes('failon') && $('cli-failon').value) parts.push('--fail-on', $('cli-failon').value);
     if ($('cli-json').checked) parts.push('--json');
     out.textContent = parts.join(' ');
+    check(use);
+  }
+
+  // 入力の不足は「動かないコマンド」をコピーさせない。注意（ローカル URL・未解析のサイト）はコピーを止めない。
+  const KNOWN = Array.prototype.map.call(document.querySelectorAll('#cli-domains option'), (o) => o.value);
+  const LOCAL = /^(localhost|127\.|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|0\.0\.0\.0|\[?::1\]?)/i;
+  function check(use) {
+    const box = $('cli-check');
+    const copy = $('cli-copy');
+    let error = '';
+    let note = '';
+    if (use.includes('url')) {
+      const v = $('cli-url').value.trim();
+      let u = null;
+      try { u = new URL(v); } catch (e) { u = null; }
+      if (!v) error = '対象 URL を入れてください。URL が無いコマンドは端末で失敗します。';
+      else if (!u || (u.protocol !== 'http:' && u.protocol !== 'https:')) error = '対象 URL は http:// か https:// で始めてください。';
+      else if (LOCAL.test(u.hostname)) note = 'ローカル・社内の URL は既定で解析しません。対象にするときは端末で先頭に WEBSPEC2DOC_ALLOW_LOCAL=1 を付けて実行してください（この画面では付けません）。';
+    }
+    if (!error && use.includes('domain')) {
+      const d = $('cli-domain').value.trim();
+      if (!d) error = '対象サイトを入れてください（例: example.com）。';
+      else if (KNOWN.length && KNOWN.indexOf(d) < 0) note = 'このサーバの解析済みサイトにはありません。端末側の出力先にあるかは未確認です。';
+    }
+    if (copy) {
+      copy.disabled = !!error;
+      copy.title = error ? 'コマンドが未完成のためコピーできません' : '';
+    }
+    out.classList.toggle('is-incomplete', !!error);
+    if (!box) return;
+    box.hidden = !(error || note);
+    box.className = 'cli-check' + (error ? ' cli-check--error' : (note ? ' cli-check--note' : ''));
+    box.textContent = error ? '× 未完成: ' + error : (note ? '! 注意: ' + note : '');
   }
 
   ['cli-cmd', 'cli-url', 'cli-domain', 'cli-depth', 'cli-max', 'cli-failon', 'cli-json'].forEach((id) => {
@@ -67,6 +100,7 @@
   }
 
   $('cli-copy')?.addEventListener('click', () => {
+    if ($('cli-copy').disabled) return;
     const text = out.textContent;
     const fail = () => { selectCommand(); notify('コピーできませんでした。手動でコピーしてください', 'warning'); };
     if (!navigator.clipboard || !navigator.clipboard.writeText) { fail(); return; }

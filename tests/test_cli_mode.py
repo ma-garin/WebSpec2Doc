@@ -241,6 +241,17 @@ class TestCliModePage:
         assert "手動でコピーしてください" in js
         assert "'gate'" in js  # ci モードは gate を付ける
 
+    def test_cli_builder_blocks_incomplete_command_and_marks_terminal(self, client) -> None:
+        """URL・対象サイトが無い動かないコマンドはコピーさせない。実行場所は端末と明示する。"""
+        js = (ROOT / "static" / "js" / "cli-mode.js").read_text(encoding="utf-8")
+        assert "copy.disabled = !!error" in js
+        assert "対象 URL を入れてください" in js and "対象サイトを入れてください" in js
+        assert "WEBSPEC2DOC_ALLOW_LOCAL=1" in js  # ローカル URL は案内だけ（自動では付けない）
+        assert "端末側の出力先にあるかは未確認" in js
+        html = client.get("/cli", headers=H).get_data(as_text=True)
+        assert "端末に貼り付けるコマンド（この画面では実行しません・結果も表示しません）" in html
+        assert 'id="cli-check" role="status"' in html
+
 
 class TestViewpointAndReviewSubcommands:
     """GUI でしか行えなかった観点セットの版操作とレビュー更新を端末から使えること。

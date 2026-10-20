@@ -173,3 +173,7 @@
 .rv .c-table-wrap{max-width:100%}
 .rv .c-table tr.rv-row:focus-visible{outline:2px solid var(--color-primary);outline-offset:-2px}
 .rv .c-context{min-width:0}
+/* 色付きの小札は文字色を本文色にしてコントラスト 4.5 以上を保つ（区別は背景・枠・文字で行う） */
+.rv-or-runtime,.rv-or-static,.rv-oc-success,.rv-sev-info,.rv-oc-partial,.rv-sev-warning,.rv-oc-failed,.rv-sev-error{color:var(--color-text)}
+/* 種別列（Route / API …）を 1 文字ずつ折り返さない */
+.rv .c-table td[data-label="種別"],.rv .c-table td[data-label="ケース"]{white-space:nowrap}

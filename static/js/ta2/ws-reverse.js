@@ -127,6 +127,8 @@
       }
       return 'unverified';
     }
+    /* 結果はあるが解析ツールが使えない（再実行できない）。前回の結果を成功の現在値に見せない */
+    function providerDown() { return !isRunning() && data.state === 'ok' && !!data.provider_status && data.provider_status.available === false; }
     function reasonOf() {
       var d = data;
       if (isRunning()) return { t: 'リバース解析を実行しています（数十秒かかることがあります）。完了すると結果を更新します。', k: 'info' };
@@ -135,6 +137,10 @@
       if (d.state === 'provider_unavailable') return { t: d.message || '静的解析ツールを利用できません。', k: 'warning' };
       if (d.state === 'error') return { t: d.message || '結果を表示できません。', k: 'error' };
       if (d.state === 'mismatch') return { t: '保存済みの結果が現在のサイトの記録と対応しないため、未確認として扱い表示しません。', k: 'warning' };
+      if (providerDown()) {
+        var when = d.last_run && fmtTime(d.last_run.finished_at);
+        return { t: '静的解析ツールを利用できないため再実行できません。表示中の結果は前回' + (when ? '（' + when + '）' : '') + 'のもので、保持しています。', k: 'warning' };
+      }
       if (d.status !== 'complete') return { t: '一部のみ取得しました。取得できた範囲だけを表示しており、成功とは扱いません。', k: 'warning' };
       var warn = (d.diagnostics || []).filter(function (x) { return x.severity === 'warning'; })[0];
       if (warn) return { t: warn.message, k: 'warning' };
@@ -151,7 +157,8 @@
       var dis = isRunning() || !d.can_run || !d.site;
       var h = '<div class="c-page-head"><div class="c-page-head__main"><h2 class="c-page-head__title">リバース解析</h2>' +
         '<p class="c-page-head__desc">実行時観測だけでは見えなかった構造を、静的解析で補完します。静的な根拠は「推論」で、動作の確認ではありません。</p>' +
-        '<div class="c-page-head__state">' + W.status.html(statusCode()) + '</div></div>';
+        '<div class="c-page-head__state">' + W.status.html(statusCode()) +
+        (providerDown() ? ' ' + W.status.html('unavailable', '再実行不可・解析ツール利用不可') : '') + '</div></div>';
       if (d.site) {
         h += '<div class="c-page-head__actions"><button type="button" class="c-btn c-btn--primary" data-rv="run"' + (dis ? ' disabled' : '') + '>' + esc(runLabel()) + '</button></div>';
       }
@@ -174,7 +181,7 @@
         '<span class="c-context__item">状態 ' + W.status.html(statusCode()) +
         (lr && STATUS_LABEL[lr.status] ? ' <span class="rv-chip">前回: ' + esc(STATUS_LABEL[lr.status]) + '</span>' : '') + '</span>' +
         '<span class="c-context__item">解析ツール ' + prov + '</span></div>';
-      if (!d.can_run && !isRunning()) {
+      if (!d.can_run && !isRunning() && d.state !== 'empty') {  // 結果が無い状態では下の状態カードが理由を出す
         if (d.cannot_run_reason) h += '<p class="rv-runhint rv-runhint-ng">実行できない理由: ' + esc(d.cannot_run_reason) + '</p>';
         if (d.cannot_run_next) h += '<p class="rv-runhint">次の行動: ' + esc(d.cannot_run_next) + '</p>';
       }
@@ -238,7 +245,10 @@
       if (netErr) {
         cfg = { kind: 'error', title: '最新の結果を取得できませんでした', message: netErr.message, next: netErr.next_action, retained: !!lastGood, actionLabel: '再読み込み', onAction: load };
       } else if (d.state === 'empty') {
-        cfg = { kind: 'empty', title: 'リバース解析結果はまだありません', message: d.message, next: d.next_action };
+        // 実行できないのに「実行を押す」と案内しない（理由と次の行動はサーバの判定どおりに出す）
+        cfg = (!d.can_run && !isRunning() && d.cannot_run_reason)
+          ? { kind: 'unavailable', title: 'リバース解析結果はまだありません（いまは実行できません）', message: d.cannot_run_reason, next: d.cannot_run_next }
+          : { kind: 'empty', title: 'リバース解析結果はまだありません', next: d.next_action };
       } else if (d.state === 'provider_unavailable') {
         cfg = { kind: 'unavailable', title: '静的解析ツールを利用できません', message: d.message, next: d.next_action, retained: true, actionLabel: '再読み込み', onAction: load };
       } else if (d.state === 'error') {
@@ -262,11 +272,28 @@
       });
     }
 
+    /* route を REA が出さなかった（取得不可）。0 件（見つからなかった）とは区別する */
+    var ROUTE_NA = '取得不可';
+    var ROUTE_NA_MSG = 'provider（REA）から route を取得できません。0 件という意味ではありません。';
+    var ROUTE_NA_NEXT = '画面ルートは既存クロールの画面一覧（画面仕様）で確認してください。';
+    function routeUnavailable() {
+      var r = (data.summary || []).filter(function (x) { return x.key === 'route'; })[0];
+      if (!r) return false;
+      if (typeof r.unavailable === 'boolean') return r.unavailable;
+      return r.after == null && isNum(r.before);
+    }
+
     /* ---------- Before → After（WS2D.kpis） ---------- */
     function kpiItems() {
       var items = (data.summary || []).map(function (it) {
         var meas = isNum(it.before) && isNum(it.after);
         var sub;
+        if (it.key === 'route' && routeUnavailable()) {
+          return {
+            label: it.label, value: ROUTE_NA, sub: 'provider（REA）から取得不可・0 件ではない', category: 'unverified', unavailable: true,
+            onClick: function () { selectTab('route', false); var b = host.querySelector('#rv-body'); if (b && b.scrollIntoView) b.scrollIntoView({ block: 'nearest' }); }
+          };
+        }
         if (it.key === 'api_runtime') {
           sub = (meas && it.after === it.before) ? '変化なし・増分に数えない' : '実行時の観測。増分に数えない';
         } else if (!meas) {
@@ -314,6 +341,7 @@
     function rowsFor(key) { return key === 'all' ? (data.evidence || []) : group(key); }
     function count(key) {
       if (key === 'diag') return group('diagnostic').length + (data.diagnostics || []).length;
+      if (key === 'route' && routeUnavailable()) return ROUTE_NA;
       return rowsFor(key).length;
     }
     function tabsHtml() {
@@ -339,6 +367,7 @@
       return W.evidence.html('unverified') + '<div class="rv-sub">' + esc(why) + '</div>';
     }
     function probeNoteHtml() {
+      if (routeUnavailable()) return '<p class="rv-probe-note">Route: ' + esc(ROUTE_NA_MSG) + '</p>';
       if (!probe || probe.state !== 'ok') {
         return '<p class="rv-probe-note">Route の到達は未確認です（System 03 の探索を実行すると、実測／未確認を併記します）。</p>';
       }
@@ -358,7 +387,10 @@
         var o = ORIGIN_LABEL[e.origin] || '起点不明';
         return '<div class="rv-sub"><span class="rv-method' + (e.method ? '' : ' rv-unk') + '">' + m + '</span> <span class="rv-origin rv-or-' + esc(e.origin || 'x') + '">' + esc(o) + '</span></div>';
       }
-      if (e.group === 'route') return '<div class="rv-sub">静的候補・到達は未確認</div>';
+      if (e.group === 'route') {
+        var pr = probeOf(e);
+        return '<div class="rv-sub">' + (pr && pr.status === 'observed' ? '静的候補・到達は System 03 で実測' : '静的候補・到達は未確認') + '</div>';
+      }
       return '';
     }
     function tableHtml(rows) {
@@ -432,11 +464,18 @@
         if (dr.length) h += '<h3 class="rv-h3">診断の根拠</h3>' + tableHtml(dr);
         h += diagHtml();
       } else {
-        if (tab === 'route' || tab === 'all') h += probeNoteHtml();
-        h += tableHtml(rowsFor(tab));
+        var na = tab === 'route' && routeUnavailable();
+        if (!na && (tab === 'route' || tab === 'all')) h += probeNoteHtml();
+        if (na) h += '<div data-slot="route-na"></div>';
+        else h += tableHtml(rowsFor(tab));
         if (tab === 'module') h += depsHtml();
       }
       return h + '</div>';
+    }
+
+    function paintPanel() {
+      var el = slot('route-na');
+      if (el) W.state(el, { kind: 'unavailable', title: 'Route は provider から取得不可', message: ROUTE_NA_MSG, next: ROUTE_NA_NEXT });
     }
 
     /* ---------- 全体 ---------- */
@@ -454,7 +493,16 @@
       paintBar();
       paintRunMsg();
       paintState();
-      if (hasBody) W.kpis(slot('kpis'), kpiItems());
+      if (hasBody) {
+        var items = kpiItems();
+        W.kpis(slot('kpis'), items);
+        var ks = slot('kpis') ? slot('kpis').children : [];
+        items.forEach(function (it, i) {
+          var v = it.unavailable && ks[i] && ks[i].querySelector('.c-kpi__value');
+          if (v) v.classList.add('is-unmeasured');
+        });
+        paintPanel();
+      }
       if (data.running && !runningLocal) startPoll();
     }
     function redrawBody() {
@@ -465,6 +513,7 @@
       tmp.innerHTML = tabsHtml();
       tabs.parentNode.replaceChild(tmp.firstChild, tabs);
       body.innerHTML = panelHtml();
+      paintPanel();
     }
 
     /* ---------- ドロワー（WS2D.drawer 固定順: 主張→実測事実→推論→制限→出典） ---------- */
@@ -488,8 +537,12 @@
       } else if (e.group === 'route') {
         lim.push('到達確認（System 03）: 未確認' + (p ? '（' + (p.status_label || '到達未確認') + (p.reason ? '：' + p.reason : '') + '）' : '（探索未実施）') + '。URL の到達は機能の正常動作を意味しません。');
       }
+      var reached = !!(p && p.status === 'observed');
       if (e.origin === 'static') {
-        if (e.group === 'route') inf.push('ソースに画面ルートの宣言がある。実際に到達できるかは未確認。');
+        if (e.group === 'route') {
+          inf.push(reached ? 'ソースに画面ルートの宣言がある。到達は「実測事実」の System 03 の確認による（画面内容・機能の正しさは未確認）。'
+            : 'ソースに画面ルートの宣言がある。実際に到達できるかは未確認。');
+        }
         if (e.group === 'api') inf.push('ソースに API 呼び出しがある。実行されるか・HTTP method は' + (e.method ? ' ' + e.method + ' と記述されている。' : '不明のまま（GET とは見なさない）。'));
         if (e.relation) inf.push('実行時の記録との対応: ' + e.relation);
       }
@@ -498,7 +551,7 @@
       W.drawer.open({
         title: (e.kind_label || '根拠') + ': ' + (e.value || ''),
         state: code, stateReason: EV_REASON[code],
-        claim: e.claim, facts: facts, inferences: inf, limitations: lim, sources: src, returnFocus: row
+        claim: reached ? String(e.claim || '').replace('（到達は未確認）', '（到達は System 03 で実測。機能の正常動作は未確認）') : e.claim, facts: facts, inferences: inf, limitations: lim, sources: src, returnFocus: row
       });
     }
 

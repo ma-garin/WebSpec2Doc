@@ -41,7 +41,7 @@ from generator.mermaid_generator import generate_mermaid
 from graph.transition_graph import build_graph
 
 if TYPE_CHECKING:
-    from ux.axe_runner import AxeViolation
+    from ux.a11y.models import PageA11yResult
 
 DEFAULT_OUTPUT_DIR = Path("output")
 DEFAULT_FORMATS = "md"
@@ -319,7 +319,7 @@ def parse_args() -> argparse.Namespace:
         "--ux-review",
         action="store_true",
         help=(
-            "UX自動エキスパートレビュー: axe-core によるWCAG違反検査とニールセン10原則の"
+            "UX自動エキスパートレビュー: WCAG 違反検査（自社実装）とニールセン10原則の"
             "ヒューリスティック評価を行い ux_review.json / report.html「UX所見」タブを生成する"
             "（OPENAI_API_KEY 未設定時は rules ベースの評価で完走する）"
         ),
@@ -327,7 +327,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--no-a11y-audit",
         action="store_true",
-        help="標準の axe-core アクセシビリティ監査を明示的に無効化する",
+        help="標準のアクセシビリティ監査を明示的に無効化する",
     )
     parser.add_argument(
         "--refresh-doc",
@@ -826,20 +826,6 @@ def _run_crawl(args: argparse.Namespace, auth_path: Path | None) -> None:
     ux_review_enabled = bool(getattr(args, "ux_review", False))
     accessibility_audit_enabled = not bool(getattr(args, "no_a11y_audit", False))
     axe_capture_enabled = ux_review_enabled or accessibility_audit_enabled
-    if axe_capture_enabled:
-        from ux.axe_runner import AxeAssetError, verify_axe_asset
-
-        try:
-            verify_axe_asset()
-        except AxeAssetError as exc:
-            logger.error("%s", exc)
-            sys.stdout.write(
-                "UX_REVIEW_ASSET_ERROR\n" if ux_review_enabled else "A11Y_AUDIT_ASSET_ERROR\n"
-            )
-            sys.stdout.flush()
-            if bool(getattr(args, "ci", False)):
-                emit_ci_error("accessibility_asset_error")
-            sys.exit(2)
 
     formats = _parse_formats(str(args.format))
     output_dir = _out_dir(args, primary_url)
@@ -848,10 +834,10 @@ def _run_crawl(args: argparse.Namespace, auth_path: Path | None) -> None:
     auth_state = Path(auth_path) if auth_path else None
     _STOP_REQUESTED.clear()
     checkpoint_pages: list[PageData] = []
-    ux_axe_results: dict[str, tuple[AxeViolation, ...]] = {}
+    ux_axe_results: dict[str, PageA11yResult] = {}
     ux_axe_lock = threading.Lock()
 
-    def on_ux_result(url: str, violations: tuple[AxeViolation, ...]) -> None:
+    def on_ux_result(url: str, violations: PageA11yResult) -> None:
         # 並列クロール時は複数ワーカースレッドから呼ばれるためロックする。
         with ux_axe_lock:
             ux_axe_results[url] = violations

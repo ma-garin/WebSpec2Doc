@@ -333,29 +333,6 @@ class TestRun:
 
         assert exc.value.code == 1
 
-    def test_run_axe_asset_failure_is_nonzero(self, tmp_path: Path) -> None:
-        from ux.axe_runner import AxeAssetError
-
-        args = argparse.Namespace(
-            url="https://example.com/",
-            depth=1,
-            max_pages=5,
-            output=tmp_path,
-            llm=False,
-            format="md",
-        )
-        with (
-            patch(
-                "ux.axe_runner.verify_axe_asset",
-                side_effect=AxeAssetError("asset missing"),
-            ),
-            pytest.raises(SystemExit) as exc,
-        ):
-            run(args)
-
-        assert exc.value.code == 2
-
-
 # ----------追加カバレッジ: main.py 主要パス ----------
 
 

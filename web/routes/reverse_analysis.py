@@ -68,7 +68,8 @@ _LIMITATION.update(
     {
         "route_candidate_from_static_syntax": "静的な構文から見つけた route 候補（画面遷移の実測ではない）",
         "unsupported_nodes": "解析対象外の要素がある",
-        "provider_route_nodes_not_provided": "provider（REA）から route を取得できない（route が 0 件という意味ではない）",
+        "route_nodes_not_provided": "この解析では route を取得できない（対応外の書き方。route が 0 件という意味ではない）",
+        "provider_route_nodes_not_provided": "この解析では route を取得できない（対応外の書き方。route が 0 件という意味ではない）",
     }
 )
 
@@ -130,11 +131,11 @@ def _static_evidence(doc: dict, version: str | None) -> list[dict]:
                 "location": _loc(
                     loc.get("artifact_path"), loc.get("start_line"), loc.get("start_column")
                 ),
-                "provider": "静的解析" + (f"（rea-agents {version}）" if version else ""),
+                "provider": "静的解析",
                 "claim": claim,
                 "relation": _BASIS.get(basis or "", basis or "対応付けなし"),
                 "limitations": _limitations(c.get("limitations", [])),
-                "rea_version": version,
+                "engine_version": version,
             }
         )
     return out
@@ -158,7 +159,7 @@ def _runtime_evidence(doc: dict) -> list[dict]:
                 "claim": f"実行時に {method or '不明'} {path} を観測（{r.get('status_code')}）",
                 "relation": _BASIS["runtime_only"],
                 "limitations": [],
-                "rea_version": None,
+                "engine_version": None,
             }
         )
     return out
@@ -166,7 +167,7 @@ def _runtime_evidence(doc: dict) -> list[dict]:
 
 def _dependencies(doc: dict) -> list[dict]:
     out = []
-    for e in (doc.get("provider_evidence") or {}).get("dependency_edges", []):
+    for e in (doc.get("provenance") or doc.get("provider_evidence") or {}).get("dependency_edges", []):
         props = e.get("properties") or {}
         lv = ((e.get("location") or {}).get("value")) or {}
         start = lv.get("start") or {}
@@ -231,10 +232,10 @@ def _summary(run: dict) -> list[dict]:
     def row(key: str, label: str, mkey: str, note: str = "") -> dict:
         return {"key": key, "label": label, "before": b.get(mkey), "after": a.get(mkey), "note": note}
 
-    # REA が route 宣言を出さなかったときは「取得不可」。0 件（見つからなかった）とは区別して画面に渡す。
+    # 解析が route 宣言を取得できなかったときは「取得不可」。0 件（見つからなかった）とは区別して画面に渡す。
     route_unavailable = bool(a) and a.get("route_candidates") is None
     route = row("route", "Route", "route_candidates",
-                "provider（REA）から取得不可: route 宣言が出力されなかった（ルートが 0 件という意味ではない）"
+                "この解析では取得不可: route 宣言を取得できなかった（ルートが 0 件という意味ではない）"
                 if route_unavailable else "静的な宣言。到達は未確認")  # fmt: skip
     route["unavailable"] = route_unavailable
     return [
@@ -250,7 +251,6 @@ def _summary(run: dict) -> list[dict]:
 
 
 def _run_meta(domain: str, run: dict | None) -> dict:
-    provider = runner.provider_status()
     running = runner.is_running(domain)
     snapshot = runner.latest_snapshot(_base(), domain)
     reason = nxt = None
@@ -258,18 +258,12 @@ def _run_meta(domain: str, run: dict | None) -> dict:
         reason, nxt = "このサイトのリバース解析を実行中です。", "完了すると結果が自動で更新されます。"
     elif snapshot is None:
         reason, nxt = "このサイトの実行時記録がありません。", "先にドキュメント作成でサイトを解析してください。"
-    elif not provider.available:
-        reason, nxt = provider.reason, provider.next_action
     last = None
     if run:
         last = {k: run.get(k) for k in ("finished_at", "seconds", "js_files", "source_maps")}
         last["status"] = {"complete": "complete", "partial": "partial"}.get(run.get("status") or "", "failed")
     return {
         "site": {"domain": domain},
-        "provider_status": {
-            "available": provider.available, "version": provider.version,
-            "reason": provider.reason, "next_action": provider.next_action,
-        },
         "last_run": last,
         "running": running,
         "can_run": reason is None,
@@ -299,7 +293,8 @@ def _payload(domain: str) -> dict:
                 "message": "保存されている結果の対象を、このサイトの実行記録で確かめられませんでした。",
                 "next_action": "「リバース解析を実行」で、このサイトの結果を作り直してください。"}  # fmt: skip
     producer = doc.get("producer") or {}
-    version = producer.get("provider_version")
+    version = (producer.get("engine_version") or producer.get("provider_version")
+               or run.get("engine_version") or run.get("provider_version"))
     diagnostics = _diagnostics(doc.get("diagnostics", []))
     latest = runner.latest_snapshot(_base(), domain)
     if latest is not None and latest.name != run.get("snapshot"):
@@ -313,7 +308,7 @@ def _payload(domain: str) -> dict:
         **meta,
         "state": "ok",
         "status": doc.get("status"),
-        "provider": {"name": "rea-agents", "version": version} if version else None,
+        "engine_version": version,
         "input_label": domain,
         "summary": _summary(run),
         "added_seconds": run.get("seconds"),
@@ -363,8 +358,7 @@ def api_reverse_analysis() -> tuple[dict, int] | dict:
         }
 
 
-_HTTP = {"success": 200, "partial": 200, "busy": 409, "no_runtime": 422,
-         "provider_unavailable": 422, "error": 500}  # fmt: skip
+_HTTP = {"success": 200, "partial": 200, "busy": 409, "no_runtime": 422, "error": 500}  # fmt: skip
 
 
 @bp.post("/api/sites/<domain>/reverse-analysis/run")

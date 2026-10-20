@@ -159,7 +159,7 @@ def test_run_saves_and_status_reports(site, monkeypatch):
     assert res.result == "success"
     assert nav.opened == [f"{SITE_ORIGIN}/ok", f"{SITE_ORIGIN}/moved"]  # 起点は DOMAIN 一致の最初のページ
     doc = json.loads(store.probe_path(site, DOMAIN).read_text())
-    assert doc["rea_snapshot_sha256"] == SHA and len(doc["items"]) == 3
+    assert doc["analysis_snapshot_sha256"] == SHA and len(doc["items"]) == 3
     real = probe.build_status(site, DOMAIN, ev)  # 実際の観点文言: 到達を実測した route は「到達は未確認」と書かない
     assert real["items"][0]["system02_viewpoints"] and all("到達は未確認" not in t for t in real["items"][0]["system02_viewpoints"])
     monkeypatch.setattr(probe, "build_viewpoints", lambda e, probe=None: {"viewpoints": [
@@ -356,3 +356,15 @@ def test_no_auth_path_or_content_leaks(site, monkeypatch):
     status = json.dumps(probe.build_status(site, DOMAIN, _routes("mine")), ensure_ascii=False)
     for text in (saved, status, res.message, res.next_action):
         assert SECRET not in text and "auth.json" not in text and str(p.parent) not in text
+
+
+def test_legacy_probe_key_is_read_and_new_key_written(site):
+    """旧名 rea_snapshot_sha256 で保存済みの確認結果も、現在の解析結果と一致すれば有効。不一致は None。"""
+    path = store.probe_path(site, DOMAIN)
+    doc = {"domain": DOMAIN, "rea_snapshot_sha256": SHA, "items": []}
+    path.write_text(json.dumps(doc))
+    assert store.load(site, DOMAIN) == doc
+    path.write_text(json.dumps({**doc, "rea_snapshot_sha256": "x" * 64}))
+    assert store.load(site, DOMAIN) is None
+    path.write_text(json.dumps({"domain": DOMAIN, "analysis_snapshot_sha256": SHA, "items": []}))
+    assert store.load(site, DOMAIN) is not None

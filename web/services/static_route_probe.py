@@ -335,7 +335,7 @@ _NO_REA = ProbeRun("no_rea", "このサイトには到達確認できる静的 r
 def run_probe(base: Path, domain: str, evidence: dict[str, Any],
               open_navigator: OpenNavigator | None = None) -> ProbeRun:  # fmt: skip
     candidates = static_route_candidates(evidence)
-    sha = store.current_rea_sha(base, domain)
+    sha = store.current_analysis_sha(base, domain)
     if not candidates or not sha:
         return _NO_REA
     with _running_lock:
@@ -367,7 +367,7 @@ def run_probe(base: Path, domain: str, evidence: dict[str, Any],
             return ProbeRun("error", "ブラウザを起動できず、到達確認を完了できませんでした。結果は更新していません。",
                             "管理者にブラウザ（Playwright）の導入を確認してください。")  # fmt: skip
         store.save(base, domain, {
-            "domain": domain, "rea_snapshot_sha256": sha,
+            "domain": domain, "analysis_snapshot_sha256": sha,
             "started_at": started.isoformat(timespec="seconds"),
             "finished_at": datetime.now(_JST).isoformat(timespec="seconds"),
             "seconds": round(time.monotonic() - t0, 1), "items": items,

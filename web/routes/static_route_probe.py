@@ -1,7 +1,7 @@
 """静的 route 候補の到達確認（System 03）の API。
 
 POST /api/sites/<domain>/static-routes/probe  GET の遷移だけで候補を開く（同期・サイト単位で二重実行不可）
-GET  /api/sites/<domain>/static-routes/probe  直近の到達確認の結果（現在の REA 結果に対するものだけ）
+GET  /api/sites/<domain>/static-routes/probe  直近の到達確認の結果（現在のリバース解析結果に対するものだけ）
 """
 
 from __future__ import annotations

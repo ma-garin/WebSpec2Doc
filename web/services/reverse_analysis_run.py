@@ -17,7 +17,6 @@ from __future__ import annotations
 
 import hashlib
 import json
-import os
 import re
 import shutil
 import threading
@@ -37,7 +36,6 @@ INPUTS_DIR = "inputs"
 RUN_FILE = "run.json"
 RESULT_FILE = "reverse_analysis.json"
 
-_DEFAULT_REA = Path.home() / ".local/share/webspec2doc-tools/rea-6.7.0/bin/rea"
 _MAX_PAGES = 20
 _MAX_SCRIPTS = 40
 _MAX_FILE_BYTES = 8 * 1024 * 1024
@@ -53,22 +51,9 @@ _running_lock = threading.Lock()
 
 @dataclass(frozen=True)
 class RunResult:
-    result: str  # success | partial | error | provider_unavailable | busy | no_runtime
+    result: str  # success | partial | error | busy | no_runtime
     message: str
     next_action: str
-
-
-@dataclass(frozen=True)
-class ProviderStatus:
-    available: bool
-    version: str | None
-    reason: str | None
-    next_action: str | None
-
-
-def rea_command() -> str:
-    """REA 実行ファイル。画面からは変えられない（環境変数か既定の導入先だけ）。"""
-    return os.environ.get("WEBSPEC2DOC_REA_COMMAND") or str(_DEFAULT_REA)
 
 
 def site_dir(base: Path, domain: str) -> Path:
@@ -87,43 +72,6 @@ def latest_snapshot(base: Path, domain: str) -> Path | None:
 
 def sha256_file(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
-
-
-_provider_cache: dict[tuple[str, float], tuple[ProviderStatus, float]] = {}
-# 版確認の失敗（起動直後の node の冷えた起動で 5 秒を超える等）は一時的なことがある。
-# 失敗を実行ファイルの更新まで覚えると、再起動するまで「利用不可」が続くため、失敗だけ短く覚える。
-_PROVIDER_FAILURE_TTL = 30.0
-
-
-def provider_status() -> ProviderStatus:
-    """REA が使えるか。版確認（--version）は実行ファイルの更新時刻ごとに 1 回だけ行う（失敗は 30 秒だけ覚える）。"""
-    command = rea_command()
-    path = Path(command)
-    if not path.is_file() or not os.access(path, os.X_OK):
-        return ProviderStatus(
-            False, None, "静的解析ツール（REA）が導入されていません。",
-            "管理者に REA 6.7.0 の導入を依頼してください。",
-        )  # fmt: skip
-    try:
-        from reverse_analysis.rea_adapter import probe_version
-    except ImportError:
-        return ProviderStatus(
-            False, None, "リバース解析の機能がこの環境に含まれていません。",
-            "管理者にリバース解析機能の導入を依頼してください。",
-        )  # fmt: skip
-    key = (command, path.stat().st_mtime)
-    cached = _provider_cache.get(key)
-    if cached is not None and (cached[0].available or time.monotonic() - cached[1] < _PROVIDER_FAILURE_TTL):
-        return cached[0]
-    version, diag = probe_version(command)
-    status = (
-        ProviderStatus(True, version, None, None)
-        if diag is None
-        else ProviderStatus(False, version, diag.message, diag.next_action)
-    )
-    _provider_cache.clear()
-    _provider_cache[key] = (status, time.monotonic())
-    return status
 
 
 # ------------------------------------------------------------------ JS の取得
@@ -207,11 +155,12 @@ def capture_scripts(pages: list[str], domain: str, dest: Path) -> tuple[int, int
 
 def _metrics(doc: dict[str, Any] | None, runtime_calls: int) -> dict[str, int | None]:
     static = (doc or {}).get("static_candidates", [])
-    edges = ((doc or {}).get("provider_evidence") or {}).get("dependency_edges", [])
+    d0 = doc or {}
+    edges = (d0.get("provenance") or d0.get("provider_evidence") or {}).get("dependency_edges", [])
     routes = sum(1 for c in static if c.get("kind") == "route")
-    # provider が route を出さない版では、0 件ではなく「取得できない」（None）として扱う
+    # 解析が route を出せない書き方では、0 件ではなく「取得できない」（None）として扱う
     route_unavailable = not routes and any(
-        d.get("code") == "provider_route_not_provided" for d in (doc or {}).get("diagnostics", []))
+        d.get("code") in ("route_not_provided", "provider_route_not_provided") for d in d0.get("diagnostics", []))
     return {
         "static_candidates": len(static),
         "route_candidates": None if route_unavailable else routes,
@@ -238,10 +187,6 @@ def _run(base: Path, domain: str) -> RunResult:
     snapshot = latest_snapshot(base, domain)
     if snapshot is None:
         return RunResult("no_runtime", "このサイトの実行時記録がありません。", "先にドキュメント作成でサイトを解析してください。")
-    provider = provider_status()
-    if not provider.available:
-        return RunResult("provider_unavailable", provider.reason or "静的解析ツールを利用できません。",
-                         provider.next_action or "管理者に確認してください。")
     pages_raw = json.loads(snapshot.read_text(encoding="utf-8"))
     pages = [p.get("url", "") for p in pages_raw if isinstance(p, dict)]
     runtime_calls = sum(len(p.get("api_calls") or []) for p in pages_raw if isinstance(p, dict))
@@ -265,8 +210,8 @@ def _run(base: Path, domain: str) -> RunResult:
     from reverse_analysis.service import ReverseAnalysisRequest, run_reverse_analysis
 
     request = ReverseAnalysisRequest(
-        js_input=str(inputs), runtime_snapshot=str(snapshot), rea_command=rea_command(),
-        output_dir=str(root / RESULT_DIR), include_provider_evidence=True,
+        js_input=str(inputs), runtime_snapshot=str(snapshot),
+        output_dir=str(root / RESULT_DIR), include_provenance=True,
     )  # fmt: skip
     t0 = time.monotonic()
     try:
@@ -287,7 +232,7 @@ def _run(base: Path, domain: str) -> RunResult:
         "finished_at": datetime.now(_JST).isoformat(timespec="seconds"),
         "seconds": seconds,
         "status": status,
-        "provider_version": provider.version,
+        "engine_version": (outcome.document.get("producer") or {}).get("engine_version"),
         "js_files": scripts,
         "source_maps": maps,
         "repetitions": 1,

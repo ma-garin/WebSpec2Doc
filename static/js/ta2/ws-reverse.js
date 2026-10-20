@@ -40,8 +40,8 @@
   var KPI_TAB = { static: 'all', route: 'route', api_static: 'api', api_runtime: 'api', module_dep: 'module', source_map: 'source', qa: 'all' };
   var KPI_CAT = { api_runtime: 'fact', qa: 'unverified' };
   var STATUS_LABEL = { complete: '完了', partial: '一部のみ', failed: '失敗' };
-  var RESULT_TITLE = { success: '解析が完了しました', partial: '一部のみ取得しました', error: '失敗しました', provider_unavailable: '実行できません', busy: '実行中のため待機しています', no_runtime: '実行時の記録がありません' };
-  var RESULT_KIND = { partial: 'partial', error: 'error', provider_unavailable: 'unavailable', busy: 'unavailable', no_runtime: 'unverified' };
+  var RESULT_TITLE = { success: '解析が完了しました', partial: '一部のみ取得しました', error: '失敗しました', busy: '実行中のため待機しています', no_runtime: '実行時の記録がありません' };
+  var RESULT_KIND = { partial: 'partial', error: 'error', busy: 'unavailable', no_runtime: 'unverified' };
   var seq = 0;
 
   function isNum(v) { return typeof v === 'number' && isFinite(v); }
@@ -116,7 +116,6 @@
       if (isRunning()) return 'running';
       var st = data.state;
       if (st === 'empty') return 'not_started';
-      if (st === 'provider_unavailable') return 'unavailable';
       if (st === 'error') return 'failed';
       if (st === 'mismatch') return 'unverified';
       if (st === 'ok') {
@@ -127,20 +126,13 @@
       }
       return 'unverified';
     }
-    /* 結果はあるが解析ツールが使えない（再実行できない）。前回の結果を成功の現在値に見せない */
-    function providerDown() { return !isRunning() && data.state === 'ok' && !!data.provider_status && data.provider_status.available === false; }
     function reasonOf() {
       var d = data;
       if (isRunning()) return { t: 'リバース解析を実行しています（数十秒かかることがあります）。完了すると結果を更新します。', k: 'info' };
       if (netErr) return { t: netErr.message + '前回の結果を表示しています。', k: 'error' };
       if (d.state === 'empty') return { t: d.message || 'このサイトのリバース解析結果はまだありません。', k: 'info' };
-      if (d.state === 'provider_unavailable') return { t: d.message || '静的解析ツールを利用できません。', k: 'warning' };
       if (d.state === 'error') return { t: d.message || '結果を表示できません。', k: 'error' };
       if (d.state === 'mismatch') return { t: '保存済みの結果が現在のサイトの記録と対応しないため、未確認として扱い表示しません。', k: 'warning' };
-      if (providerDown()) {
-        var when = d.last_run && fmtTime(d.last_run.finished_at);
-        return { t: '静的解析ツールを利用できないため再実行できません。表示中の結果は前回' + (when ? '（' + when + '）' : '') + 'のもので、保持しています。', k: 'warning' };
-      }
       if (d.status !== 'complete') return { t: '一部のみ取得しました。取得できた範囲だけを表示しており、成功とは扱いません。', k: 'warning' };
       var warn = (d.diagnostics || []).filter(function (x) { return x.severity === 'warning'; })[0];
       if (warn) return { t: warn.message, k: 'warning' };
@@ -158,7 +150,7 @@
       var h = '<div class="c-page-head"><div class="c-page-head__main"><h2 class="c-page-head__title">リバース解析</h2>' +
         '<p class="c-page-head__desc">実行時観測だけでは見えなかった構造を、静的解析で補完します。静的な根拠は「推論」で、動作の確認ではありません。</p>' +
         '<div class="c-page-head__state">' + W.status.html(statusCode()) +
-        (providerDown() ? ' ' + W.status.html('unavailable', '再実行不可・解析ツール利用不可') : '') + '</div></div>';
+        '</div></div>';
       if (d.site) {
         h += '<div class="c-page-head__actions"><button type="button" class="c-btn c-btn--primary" data-rv="run"' + (dis ? ' disabled' : '') + '>' + esc(runLabel()) + '</button></div>';
       }
@@ -170,17 +162,13 @@
       var lr = d.last_run;
       var last = (lr && fmtTime(lr.finished_at)) ? esc(fmtTime(lr.finished_at)) : '<span class="rv-unk">未実行</span>';
       var secs = (lr && isNum(lr.seconds)) ? lr.seconds.toFixed(1) + ' 秒' : '<span class="rv-unk">未計測</span>';
-      var pv = d.provider_status || {};
-      var prov = pv.available
-        ? '<span class="rv-pchip rv-pchip-ok">利用可能・REA ' + esc(pv.version || '不明') + '</span>'
-        : W.status.html('unavailable', '利用不可・静的解析ツール');
       var h = '<div class="c-context" aria-label="現在の解析対象">' +
         '<span class="c-context__item">対象 <b>' + esc(d.site.domain) + '</b></span>' +
         '<span class="c-context__item">最終解析 <b>' + last + '</b></span>' +
         '<span class="c-context__item">所要 <b>' + secs + '</b></span>' +
         '<span class="c-context__item">状態 ' + W.status.html(statusCode()) +
         (lr && STATUS_LABEL[lr.status] ? ' <span class="rv-chip">前回: ' + esc(STATUS_LABEL[lr.status]) + '</span>' : '') + '</span>' +
-        '<span class="c-context__item">解析ツール ' + prov + '</span></div>';
+        '</div>';
       if (!d.can_run && !isRunning() && d.state !== 'empty') {  // 結果が無い状態では下の状態カードが理由を出す
         if (d.cannot_run_reason) h += '<p class="rv-runhint rv-runhint-ng">実行できない理由: ' + esc(d.cannot_run_reason) + '</p>';
         if (d.cannot_run_next) h += '<p class="rv-runhint">次の行動: ' + esc(d.cannot_run_next) + '</p>';
@@ -249,8 +237,6 @@
         cfg = (!d.can_run && !isRunning() && d.cannot_run_reason)
           ? { kind: 'unavailable', title: 'リバース解析結果はまだありません（いまは実行できません）', message: d.cannot_run_reason, next: d.cannot_run_next }
           : { kind: 'empty', title: 'リバース解析結果はまだありません', next: d.next_action };
-      } else if (d.state === 'provider_unavailable') {
-        cfg = { kind: 'unavailable', title: '静的解析ツールを利用できません', message: d.message, next: d.next_action, retained: true, actionLabel: '再読み込み', onAction: load };
       } else if (d.state === 'error') {
         cfg = { kind: 'error', title: 'リバース解析の結果を表示できません', message: d.message, next: d.next_action, retained: true, actionLabel: '再読み込み', onAction: load };
       } else if (d.state === 'mismatch') {
@@ -272,9 +258,9 @@
       });
     }
 
-    /* route を REA が出さなかった（取得不可）。0 件（見つからなかった）とは区別する */
+    /* route を取得できなかった（取得不可）。0 件（見つからなかった）とは区別する */
     var ROUTE_NA = '取得不可';
-    var ROUTE_NA_MSG = 'provider（REA）から route を取得できません。0 件という意味ではありません。';
+    var ROUTE_NA_MSG = 'この解析では route を取得できません（対応外の書き方）。0 件という意味ではありません。';
     var ROUTE_NA_NEXT = '画面ルートは既存クロールの画面一覧（画面仕様）で確認してください。';
     function routeUnavailable() {
       var r = (data.summary || []).filter(function (x) { return x.key === 'route'; })[0];
@@ -290,7 +276,7 @@
         var sub;
         if (it.key === 'route' && routeUnavailable()) {
           return {
-            label: it.label, value: ROUTE_NA, sub: 'provider（REA）から取得不可・0 件ではない', category: 'unverified', unavailable: true,
+            label: it.label, value: ROUTE_NA, sub: 'この解析では取得不可・0 件ではない', category: 'unverified', unavailable: true,
             onClick: function () { selectTab('route', false); var b = host.querySelector('#rv-body'); if (b && b.scrollIntoView) b.scrollIntoView({ block: 'nearest' }); }
           };
         }
@@ -475,7 +461,7 @@
 
     function paintPanel() {
       var el = slot('route-na');
-      if (el) W.state(el, { kind: 'unavailable', title: 'Route は provider から取得不可', message: ROUTE_NA_MSG, next: ROUTE_NA_NEXT });
+      if (el) W.state(el, { kind: 'unavailable', title: 'Route はこの解析では取得不可', message: ROUTE_NA_MSG, next: ROUTE_NA_NEXT });
     }
 
     /* ---------- 全体 ---------- */
@@ -547,7 +533,7 @@
         if (e.relation) inf.push('実行時の記録との対応: ' + e.relation);
       }
       var src = [{ label: '出所', value: e.provider || '不明' }, { label: '起点', value: ORIGIN_LABEL[e.origin] || '不明' },
-        { label: '位置', value: e.location || '位置なし' }, { label: '解析バージョン', value: e.rea_version || '不明' }, { label: 'ID', value: e.id || '' }];
+        { label: '位置', value: e.location || '位置なし' }, { label: '解析バージョン', value: e.engine_version || '不明' }, { label: 'ID', value: e.id || '' }];
       W.drawer.open({
         title: (e.kind_label || '根拠') + ': ' + (e.value || ''),
         state: code, stateReason: EV_REASON[code],

@@ -2,7 +2,7 @@
 
 - 結果は run.json（対象サイト・snapshot digest）と一致するときだけ表示する
 - 状態を取り違えない（静的 route を到達済みにしない・method 不明を GET にしない 等）
-- 実行は CLI と同じ service を通す（実 REA が導入済みの環境だけ実行系を通しで確かめる）
+- 実行は CLI と同じ service を通す（）
 """
 
 from __future__ import annotations
@@ -10,6 +10,7 @@ from __future__ import annotations
 import hashlib
 import importlib.util
 import json
+import re
 import shutil
 import threading
 from pathlib import Path
@@ -18,7 +19,6 @@ import pytest
 from web.services import reverse_analysis_run as runner
 
 ROOT = Path(__file__).resolve().parents[1]
-REAL_PROVIDER_STATUS = runner.provider_status
 DOMAIN = "app.example.com"
 ORIGIN = {"Origin": "http://localhost"}
 SNAPSHOT = [
@@ -34,9 +34,6 @@ def client(tmp_path, monkeypatch):
     import web.routes.reverse_analysis as mod
 
     monkeypatch.setattr(mod, "scoped_output_dir", lambda _base: tmp_path)
-    monkeypatch.setattr(
-        runner, "provider_status", lambda: runner.ProviderStatus(True, "6.7.0", None, None)
-    )
     from web import create_app
 
     app = create_app()
@@ -55,7 +52,7 @@ def _snapshot(base: Path, name: str = "20261019-000000.json") -> str:
 def _doc(sha: str, status: str = "complete") -> dict:
     return {
         "status": status,
-        "producer": {"provider_version": "6.7.0"},
+        "producer": {"engine_version": "webspec2doc-native/1"},
         "inputs": {"runtime_snapshot_sha256": sha},
         "static_candidates": [
             {"id": "s1", "kind": "route", "path": "/users/:id", "epistemic_state": "inferred",
@@ -187,19 +184,31 @@ def test_newer_snapshot_is_warned(client):
     assert body["state"] == "ok" and "前の実行時記録" in body["diagnostics"][0]["message"]
 
 
-def test_provider_unavailable_blocks_run_but_keeps_result(client, monkeypatch):
+def test_no_provider_path_and_no_rea_text_in_api(client):
+    """未導入で失敗する経路が無い。API 応答（結果・run 可否）に REA の文字列が出ない。"""
     c, base = client
     sha = _snapshot(base)
     _place(base, _doc(sha), _run(sha))
-    monkeypatch.setattr(
-        runner, "provider_status",
-        lambda: runner.ProviderStatus(False, None, "静的解析ツール（REA）が導入されていません。", "依頼"),
-    )  # fmt: skip
     body = _get(c)
-    assert body["state"] == "ok" and body["can_run"] is False
-    assert body["provider_status"]["available"] is False
-    r = c.post(f"/api/sites/{DOMAIN}/reverse-analysis/run", headers=ORIGIN)
-    assert r.status_code == 422 and r.get_json()["result"] == "provider_unavailable"
+    assert body["state"] == "ok" and body["can_run"] is True
+    assert "provider_status" not in body
+    assert not hasattr(runner, "provider_status") and not hasattr(runner, "rea_command")
+    assert not re.search(r"\bREA\b", json.dumps(body, ensure_ascii=False))
+
+
+def test_legacy_run_json_provider_version_is_readable(client):
+    """旧形式 run.json（provider_version のみ）と旧 producer でも mismatch にならず version が出る。"""
+    c, base = client
+    sha = _snapshot(base)
+    doc = _doc(sha)
+    doc["producer"] = {"provider_version": "6.7.0"}
+    run = _run(sha)
+    run.pop("engine_version", None)
+    run["provider_version"] = "6.7.0"
+    _place(base, doc, run)
+    body = _get(c)
+    assert body["state"] == "ok" and body["engine_version"] == "6.7.0"
+    assert not re.search(r"\bREA\b", json.dumps(body, ensure_ascii=False))
 
 
 # ------------------------------------------------------------------ 実行
@@ -274,13 +283,12 @@ def test_capture_only_same_site(tmp_path, monkeypatch):
 
 
 @pytest.mark.skipif(
-    not Path(runner.rea_command()).is_file() or importlib.util.find_spec("reverse_analysis") is None,
-    reason="実 REA 6.7.0 またはリバース解析機能が導入されていない環境",
+    importlib.util.find_spec("reverse_analysis.native") is None,
+    reason="リバース解析の組立モジュールがこの環境に無い",
 )
-def test_run_end_to_end_with_real_rea(client, monkeypatch):
-    """実 REA で service を通しで実行し、結果がこのサイトに結び付くこと。"""
+def test_run_end_to_end_native(client, monkeypatch):
+    """service を通しで実行し、結果がこのサイトに結び付くこと（外部プロセスなし）。"""
     c, base = client
-    monkeypatch.setattr(runner, "provider_status", REAL_PROVIDER_STATUS)
     _snapshot(base)
     fixture = ROOT / "tests/fixtures/reverse_analysis/real/app"
     monkeypatch.setattr(
@@ -316,7 +324,7 @@ def test_gui_uses_ws2d_parts_and_keeps_product_truth():
 
 
 def test_route_not_provided_is_unavailable_not_zero(client):
-    """REA が route 宣言を出さなかったときは「取得不可」。0 件と区別できる印を画面へ渡す。"""
+    """route 宣言を取得できなかったときは「取得不可」。0 件と区別できる印を画面へ渡す。"""
     c, base = client
     sha = _snapshot(base)
     run = _run(sha)
@@ -340,42 +348,11 @@ def test_route_measured_is_not_unavailable(client):
     assert route["unavailable"] is False and route["after"] == 1
 
 
-def test_provider_failure_is_not_cached_forever(tmp_path, monkeypatch):
-    """版確認の一時的な失敗（冷えた起動の timeout 等）を、再起動するまで覚え続けない。"""
-    rea_adapter = pytest.importorskip("reverse_analysis.rea_adapter")
-    exe = tmp_path / "rea"
-    exe.write_text("#!/bin/sh\n")
-    exe.chmod(0o755)
-    monkeypatch.setattr(runner, "rea_command", lambda: str(exe))
-    runner._provider_cache.clear()
-    calls = []
-
-    class Diag:
-        message, next_action = "応答なし", "確認してください"
-
-    def probe(_cmd):
-        calls.append(1)
-        return (None, Diag()) if len(calls) == 1 else ("6.7.0", None)
-
-    monkeypatch.setattr(rea_adapter, "probe_version", probe)
-    clock = [1000.0]
-    monkeypatch.setattr(runner.time, "monotonic", lambda: clock[0])
-    try:
-        assert runner.provider_status().available is False
-        assert runner.provider_status().available is False and len(calls) == 1  # 短い間は覚える
-        clock[0] += runner._PROVIDER_FAILURE_TTL + 1
-        assert runner.provider_status().available is True and len(calls) == 2
-        clock[0] += 10_000
-        assert runner.provider_status().available is True and len(calls) == 2  # 成功は覚え続ける
-    finally:
-        runner._provider_cache.clear()
-
-
-def test_gui_route_unavailable_and_provider_down_wording():
+def test_gui_route_unavailable_wording():
     """route 取得不可を 0 と出さない／解析ツール利用不可で前回結果を「現在の成功」に見せない。"""
     js = (ROOT / "static/js/ta2/ws-reverse.js").read_text(encoding="utf-8")
     assert "取得不可" in js and "0 件という意味ではありません" in js
-    assert "再実行不可・解析ツール利用不可" in js
+    assert not re.search(r"\bREA\b", js) and "provider_status" not in js
     assert "到達は System 03 で実測" in js  # 実測済み route に「到達は未確認」と書かない
     assert "いまは実行できません" in js  # 実行できないのに「実行を押す」と案内しない
     spec = (ROOT / "static/js/ta2/ws-spec.js").read_text(encoding="utf-8")

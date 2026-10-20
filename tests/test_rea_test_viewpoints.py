@@ -178,12 +178,12 @@ def test_origin_vocabulary_matches_contract():
     by = {v["evidence_id"]: v for v in out["viewpoints"]}
     assert by["r1"]["origin_label"] == "認証済み実測" and by["r1"]["ev_code"] == "observed_auth"
     assert by["r2"]["origin_label"] == "静的" and by["r2"]["ev_code"] == "static"
-    assert by["r3"]["origin_label"] == "REA 追加" and by["r3"]["ev_code"] == "inferred"
+    assert by["r3"]["origin_label"] == "解析で追加" and by["r3"]["ev_code"] == "inferred"
     assert by["r4"]["origin_label"] == "未確認" and by["r4"]["ev_code"] == "unverified"
     assert by["rt"]["origin_label"] == "元候補"
     probe_noauth = build_viewpoints(_routes(), 0, _obs("r1"), tests=[])["viewpoints"][0]
     assert probe_noauth["origin_label"] == "未認証実測" and probe_noauth["ev_code"] == "observed"
-    assert {v["origin_label"] for v in out["viewpoints"]} <= {"元候補", "REA 追加", "静的", "未認証実測", "認証済み実測", "未確認"}
+    assert {v["origin_label"] for v in out["viewpoints"]} <= {"元候補", "解析で追加", "静的", "未認証実測", "認証済み実測", "未確認"}
 
 
 

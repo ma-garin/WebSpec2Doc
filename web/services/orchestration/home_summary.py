@@ -6,7 +6,7 @@
 
 null になる指標:
 - changes_today / latest_change: 変更を日付つきで返す集計源が無い。
-- unverified / evidence: リバース解析（REA）の結果があるサイトだけ数える。1 件も無ければ null。
+- unverified / evidence: リバース解析の結果があるサイトだけ数える。1 件も無ければ null。
   結果の無いサイトの数は unanalyzed に出す（保存ビュー「未確認」にも含める）。
 """
 
@@ -80,7 +80,7 @@ def _stage_of(run: ConductorRun | None) -> dict[str, str] | None:
 
 
 def classify_evidence(items: list[dict[str, Any]]) -> dict[str, int]:
-    """REA の evidence 配列を 事実／推論／未確認 に数える（曖昧・未知の state は未確認）。"""
+    """リバース解析の evidence 配列を 事実／推論／未確認 に数える（曖昧・未知の state は未確認）。"""
     out = {"fact": 0, "inference": 0, "unverified": 0}
     for item in items:
         state = str(item.get("state") or "")
@@ -120,7 +120,7 @@ def _with_route_probe(domain: str, items: list[dict[str, Any]]) -> list[dict[str
         from web.tenancy import scoped_output_dir
 
         probe = store.by_evidence(store.load(scoped_output_dir(OUTPUT_DIR), domain))
-    except Exception:  # noqa: BLE001 - 探索結果が読めなくても REA の区分はそのまま出す
+    except Exception:  # noqa: BLE001 - 探索結果が読めなくても リバース解析の区分はそのまま出す
         logger.exception("home_summary: route probe の取得に失敗 %s", domain)
         return items
     out = []
@@ -278,7 +278,7 @@ def _counts(src: _Sources, sites: list[dict[str, Any]], sites_ok: bool) -> dict[
         "human_action": sum(1 for s in sites if s["human_action"]),
         "awaiting_approval": _sum_or_null([s["awaiting_reports"] for s in sites]),
         "unverified": sum(e["unverified"] for e in ev) if ev else None,
-        # 根拠（REA）の結果が無く、根拠の健全性を確かめられていないサイトの数
+        # 根拠の結果が無く、根拠の健全性を確かめられていないサイトの数
         "unanalyzed": sum(1 for s in sites if s["evidence"] is None),
         "changes_today": None,
         "tests_today": steps_today.get("run") if steps_today is not None else None,

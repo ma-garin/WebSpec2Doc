@@ -1148,9 +1148,17 @@
       yes.type = 'button';
       yes.addEventListener('click', function () { decideBundle('reject', note.value, yes); });
       var no = el('button', 'hl-btn hl-btn-sm', 'やめる');
-      no.addEventListener('click', function () { confirm.hidden = true; confirm.setAttribute('inert', ''); });
+      no.type = 'button';
+      // 確認は開いたら「やめる」へフォーカスを移し（誤って却下しない側）、Esc・やめるで閉じて「却下」へ戻す
+      var closeConfirm = function () { confirm.hidden = true; confirm.setAttribute('inert', ''); reject.focus(); };
+      no.addEventListener('click', closeConfirm);
+      confirm.setAttribute('role', 'group');
+      confirm.setAttribute('aria-label', '却下の確認');
+      confirm.addEventListener('keydown', function (ev) {
+        if (ev.key === 'Escape' || ev.key === 'Esc') { ev.preventDefault(); ev.stopPropagation(); closeConfirm(); }
+      });
       confirm.appendChild(yes); confirm.appendChild(no);
-      reject.addEventListener('click', function () { confirm.hidden = false; confirm.removeAttribute('inert'); });
+      reject.addEventListener('click', function () { confirm.hidden = false; confirm.removeAttribute('inert'); no.focus(); });
       box.appendChild(reject);
       box.appendChild(confirm);
 

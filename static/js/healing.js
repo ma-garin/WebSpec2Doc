@@ -773,15 +773,11 @@
 
       // 行内は 2 つまで。4 つ並べると 1280px で押し出されて押せなくなる。
       var tdActions = el('td', 'hl-row-actions');
-      var useBtn = el('button', isSelected ? 'btn-primary' : 'btn-outline-sm', isSelected ? '対象' : '対象にする');
+      // 既に対象の行は「実行へ進む」にする。接続先が 1 件だけだと、ここ以外に実行画面へ入る導線が無いため
+      var useBtn = el('button', isSelected ? 'btn-primary' : 'btn-outline-sm', isSelected ? '対象 · 実行へ進む' : '対象にする');
       useBtn.type = 'button';
       useBtn.setAttribute('aria-pressed', isSelected ? 'true' : 'false');
-      if (isSelected) {
-        // 既に対象の行で押せるように見せない。押しても何も起きない操作は出さない。
-        useBtn.disabled = true;
-      } else {
-        useBtn.addEventListener('click', function () { selectProject(p.project_id); switchView('run'); });
-      }
+      useBtn.addEventListener('click', function () { selectProject(p.project_id); switchView('run'); });
 
       // 「対象にする」は行の選択と閲覧（GET /runs）だけで、書き込み API を叩かない。
       // 誰でも押せるので管理者判定の外に置く。

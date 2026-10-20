@@ -343,3 +343,7 @@ textarea.cw-input { height: auto; padding: 7px 9px; resize: vertical; }
 .ch-tab-n { font-variant-numeric: tabular-nums; color: var(--color-text-secondary, #475569); }
 .ch-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 .ch-home .c-table td { white-space: normal; }
+
+/* 行から「なぜこの状態か」を開く（根拠ドロワー） */
+.ch-site__name { display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-2, 8px); }
+.ch-site__name .ch-why { min-height: 24px; padding: 0 var(--space-2, 8px); border: 1px solid var(--color-border, #d1d5db); }

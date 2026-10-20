@@ -218,8 +218,16 @@
   .app-sidebar .app-brand { justify-content: center; padding: 0; }
   /* 細いレールではシステム切替を「切替」1 語にする（名前は読み上げ用に残す） */
   .app-sidebar .sys-switcher { position: relative; justify-content: center; width: 100%; padding: 4px 2px; gap: 0; }
-  .app-sidebar .sys-switcher-label,
+  .app-sidebar .app-nav { width: 100%; align-items: stretch; }
+  /* 細いレールでも今のシステム名を出す（2 行で切る。全文は title / 読み上げ） */
+  .app-sidebar .sys-switcher { flex-direction: column; gap: 2px; padding: 4px 2px; }
   .app-sidebar .sys-switcher-cur {
+    position: static !important; clip: auto; clip-path: none; margin: 0; width: auto; height: auto;
+    font-size: 10px; line-height: 1.25; text-align: center; font-weight: 700; max-width: 100%;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+    white-space: normal; overflow-wrap: anywhere;
+  }
+  .app-sidebar .sys-switcher-label {
     position: absolute !important; width: 1px; height: 1px; margin: -1px; padding: 0;
     overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; border: 0;
   }

@@ -27,6 +27,8 @@ class RegisteredCase:
 
 _REGISTRY: list[RegisteredCase] = []
 _ANNOTATIONS: list[dict[str, str]] = []
+# 生成 spec が実行中のステップ ID（例: "S3"）を書き込み、ランナーが失敗ステップとして読む。
+LAST_STEP: str = ""
 
 
 def case(label: str, skip: bool = False) -> Callable[[Callable[[Any], None]], Callable[[Any], None]]:

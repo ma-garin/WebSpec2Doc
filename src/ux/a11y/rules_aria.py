@@ -10,8 +10,8 @@ from __future__ import annotations
 import re
 from typing import Callable
 
-from src.ux.a11y.data import aria_spec as S
-from src.ux.a11y.models import Finding
+from .data import aria_spec as S
+from .models import Finding
 
 _INT = re.compile(r"^[+-]?\d+$")
 _NUM = re.compile(r"^[+-]?(\d+(\.\d*)?|\.\d+)([eE][+-]?\d+)?$")

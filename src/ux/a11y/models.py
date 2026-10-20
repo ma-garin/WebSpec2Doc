@@ -101,13 +101,17 @@ class RuleSpec:
 class Finding:
     """ルールが要素 1 件について出した判定（NodeResult の実体）。"""
 
-    rule_id: str
-    status: Status
+    rule_id: str = ""
+    status: Status = Status.CANT_TELL
     selector: str = ""
-    bbox: tuple[int, int, int, int] | None = None
+    bbox: Any = None
     evidence: Mapping[str, Any] = field(default_factory=dict)
     impact: str = ""
     message: str = ""
+
+    def __post_init__(self) -> None:
+        # 文字列で渡されても Status に正規化する（"violation" 等）
+        object.__setattr__(self, "status", Status(getattr(self.status, "value", self.status)))
 
 
 NodeResult = Finding

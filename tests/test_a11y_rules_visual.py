@@ -1,8 +1,8 @@
 """視覚・操作系ルール（rules_visual / color）の単体テスト。"""
 import pytest
 
-from src.ux.a11y import color as C
-from src.ux.a11y import rules_visual as V
+from ux.a11y import color as C
+from ux.a11y import rules_visual as V
 
 
 def el(i, tag="p", parent=None, **kw):

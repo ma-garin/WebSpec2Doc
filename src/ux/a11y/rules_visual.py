@@ -13,8 +13,8 @@ import math
 import re
 from typing import Callable
 
-from src.ux.a11y.color import RGBA, blend, contrast_ratio, parse_color
-from src.ux.a11y.models import Finding
+from .color import RGBA, blend, contrast_ratio, parse_color
+from .models import Finding
 
 CONTRAST = "visual.contrast"
 TARGET = "visual.target-size"

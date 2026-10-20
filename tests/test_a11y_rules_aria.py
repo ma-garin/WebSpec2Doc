@@ -1,5 +1,5 @@
 """ARIA ルール（rules_aria）の単体テスト。各ルール: 違反・合格・判定不能/適用外。"""
-from src.ux.a11y import rules_aria as R
+from ux.a11y import rules_aria as R
 
 
 def mk(snaps):

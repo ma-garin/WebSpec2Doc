@@ -2,7 +2,7 @@
 // page.evaluate に関数式として渡す。DOM・計算済みスタイル・名前計算に必要な素材だけを
 // 決定論的な JSON で返す（ルール判定と accname 計算は Python 側）。
 (maxElements) => {
-  const SKIP = new Set(['SCRIPT', 'STYLE', 'TEMPLATE', 'NOSCRIPT', 'LINK', 'META', 'HEAD', 'BASE']);
+  const SKIP = new Set(['SCRIPT', 'STYLE', 'TEMPLATE', 'NOSCRIPT', 'LINK', 'BASE']);
   const IDREF_ATTRS = ['aria-labelledby', 'aria-describedby', 'aria-controls', 'aria-owns',
     'aria-activedescendant', 'aria-details', 'aria-flowto', 'aria-errormessage'];
   const STYLE_KEYS = ['display', 'visibility', 'opacity', 'color', 'backgroundColor',
@@ -35,10 +35,13 @@
     for (let n = el; n && n.nodeType === 1; ) {
       const tag = n.tagName.toLowerCase();
       const rootNode = n.getRootNode();
-      if (n.id && rootNode.querySelectorAll && rootNode.querySelectorAll('[id="' + CSS.escape(n.id).replace(/"/g, '\\"') + '"]').length === 1) {
-        parts.unshift('#' + CSS.escape(n.id)); break;
+      let idPart = '';
+      if (n.id && rootNode.querySelectorAll) {
+        const same = rootNode.querySelectorAll('[id="' + n.id.replace(/"/g, '\\"') + '"]').length;
+        if (same === 1) { parts.unshift('#' + CSS.escape(n.id)); break; }
+        idPart = '#' + CSS.escape(n.id);  // 重複 id: 識別のため tag#id + nth-of-type にする
       }
-      let part = tag;
+      let part = tag + idPart;
       const par = n.parentElement;
       if (par) {
         const same = Array.prototype.filter.call(par.children, (s) => s.tagName === n.tagName);

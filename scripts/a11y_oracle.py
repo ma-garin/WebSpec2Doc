@@ -29,16 +29,17 @@ CLASSES = ("見逃し", "誤検出", "ルール未実装", "対応付け不能")
 
 # ---------------------------------------------------------------- 純粋関数（ブラウザ不要）
 def normalize_selector(sel) -> str:
-    """要素の突合キー。#id があれば最後の #id、無ければ先頭タグ名。空は ''。"""
+    """要素の突合キー。末尾の複合セレクタの #id、無ければそのタグ名。空は ''。"""
     if isinstance(sel, (list, tuple)):
         sel = sel[-1] if sel else ""
     s = re.sub(r"\s+", " ", str(sel or "")).strip()
     if not s:
         return ""
-    ids = re.findall(r"#([A-Za-z_][\w-]*)", s)
-    if ids:
-        return "#" + ids[-1]
-    m = re.match(r"[A-Za-z][\w-]*", s)
+    last = re.split(r"\s*[>+~ ]\s*", s)[-1]
+    m = re.search(r"#([A-Za-z_][\w-]*)", last)
+    if m:
+        return "#" + m.group(1)
+    m = re.match(r"[A-Za-z][\w-]*", last)
     return m.group(0).lower() if m else ""
 
 

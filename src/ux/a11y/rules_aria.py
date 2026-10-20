@@ -76,7 +76,7 @@ def check_valid_attr(snapshot: dict) -> list[Finding]:
 
 
 # ---- aria.valid-attr-value ------------------------------------------------
-def _check_value(name: str, raw: str, ids: set[str]) -> tuple[str, str]:
+def _check_value(name: str, raw: str, ids: set[str], attrs: dict | None = None) -> tuple[str, str]:
     """('ok'|'bad'|'unsure', 理由)。"""
     typ, extra = S.ATTR_TYPES[name]
     v = raw.strip()
@@ -91,7 +91,15 @@ def _check_value(name: str, raw: str, ids: set[str]) -> tuple[str, str]:
             return "bad", "単一の ID が必要"
         if all(p in ids for p in parts):
             return "ok", ""
-        return "unsure", "参照先 ID が文書内に見つからない"
+        attrs = attrs or {}
+        # 参照先が無い: labelledby/describedby は名前の別経路があり得るため要確認。
+        # aria-controls は折りたたみ（expanded/selected=false）で遅延生成され得るため要確認。それ以外は違反。
+        if name in ("aria-labelledby", "aria-describedby") or (
+            name == "aria-controls"
+            and (attrs.get("aria-expanded", "").lower() == "false" or attrs.get("aria-selected", "").lower() == "false")
+        ):
+            return "unsure", "参照先 ID が文書内に見つからない"
+        return "bad", "参照先 ID が文書内に存在しない"
     if not v:
         return "bad", "空の値"
     if typ == "bool":
@@ -122,7 +130,7 @@ def check_valid_attr_value(snapshot: dict) -> list[Finding]:
         for name, raw in _attrs(el).items():
             if name not in S.ATTR_TYPES:
                 continue
-            verdict, why = _check_value(name, raw, ids)
+            verdict, why = _check_value(name, raw, ids, _attrs(el))
             if verdict == "bad":
                 bad.append({"attr": name, "value": raw, "reason": why})
             elif verdict == "unsure":
@@ -370,9 +378,10 @@ def check_hidden_focus(snapshot: dict) -> list[Finding]:
         bad = [e for e in _subtree(root, idx)
                if e.get("visible", True) and e.get("focusable") and _tabbable(e)]
         if bad:
-            out.append(_f("aria.hidden-focus", "violation", root, "serious",
-                          "aria-hidden 内にフォーカス可能な要素がある",
-                          focusable=[e.get("selector", "") for e in bad]))
+            for e in bad:  # 違反の対象はフォーカス可能な要素そのもの（axe と同じ粒度）
+                out.append(_f("aria.hidden-focus", "violation", e, "serious",
+                              "aria-hidden 内にフォーカス可能な要素がある",
+                              hidden_root=root.get("selector", "")))
         else:
             out.append(_f("aria.hidden-focus", "pass", root, "serious",
                           "aria-hidden 内にタブ到達可能な要素なし"))

@@ -127,6 +127,9 @@ class RuleResult:
     counts: Mapping[str, int] = field(default_factory=dict)
     message: str = ""
 
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "status", Status(getattr(self.status, "value", self.status)))
+
 
 @dataclass(frozen=True)
 class PageA11yResult:

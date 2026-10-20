@@ -92,7 +92,7 @@ def test_viewport_absent_is_inapplicable_and_last_meta_wins():
 
 # ---------------- doc.bypass
 def test_bypass():
-    assert st(rd.check_bypass, body='<a href="#main">本文へ</a><div id="main">x</div>') == "pass"
+    assert st(rd.check_bypass, body='<a href="#main">本文へ</a><div id="main">x</div>') == "cant_tell"  # 有効性は人の確認
     assert st(rd.check_bypass, body="<main>本文</main>") == "pass"
     assert st(rd.check_bypass, body="<p>のみ</p>") == "violation"
     assert st(rd.check_bypass, body="<h1>見出し</h1><p>x</p>") == "cant_tell"

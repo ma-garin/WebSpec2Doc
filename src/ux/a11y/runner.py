@@ -14,6 +14,7 @@ import importlib
 import inspect
 import logging
 import time
+from dataclasses import replace
 from collections.abc import Callable, Iterable
 from typing import Any
 
@@ -38,26 +39,37 @@ RuleFn = Callable[..., "Iterable[Finding]"]
 ResolveFn = Callable[[RuleSpec], "RuleFn | None"]
 
 
+_NAME_TAGS = frozenset({
+    "img", "input", "select", "textarea", "button", "a", "area", "iframe", "frame", "svg", "object",
+    "summary", "meter", "progress", "h1", "h2", "h3", "h4", "h5", "h6", "fieldset", "table", "figure",
+})
+_FULL_NAME_LIMIT = 4000
+
+
 def to_rule_view(snap: Snapshot) -> dict[str, Any]:
     """Snapshot をルール層の入力 dict（id/selector/tag/attrs/role/bbox/parent/children/text/style/scroll）へ。"""
-    from .accname import effective_role
+    from .accname import compute_name, effective_role
     from .data import aria_spec
 
     elements = []
+    full = len(snap.elements) <= _FULL_NAME_LIMIT
     for e in snap.elements:
+        wants_name = full or e.tag in _NAME_TAGS or e.has("role") or e.has("aria-label") or e.has("aria-labelledby")
         text = "".join(k for k in e.kids if isinstance(k, str))
         elements.append({
-            "id": e.i, "selector": e.selector, "tag": e.tag, "attrs": dict(e.attrs),
+            "id": e.i, "idx": e.i, "selector": e.selector, "tag": e.tag, "attrs": dict(e.attrs),
             "role": effective_role(snap, e, aria_spec.VALID_ROLES),
             "visible": e.rendered and e.visible, "focusable": e.focusable, "tab_stop": e.tab_stop,
             "bbox": {"x": e.box[0], "y": e.box[1], "width": e.box[2], "height": e.box[3]},
             "parent": e.parent if e.parent >= 0 else None,
             "children": [k for k in e.kids if isinstance(k, int)],
+            "labels": list(e.labels), "accname": compute_name(snap, e.i).name if wants_name else None,
             "text": text, "style": dict(e.style),
             "scroll": {"scrollWidth": e.scroll[0], "clientWidth": e.scroll[1],
                        "scrollHeight": e.scroll[2], "clientHeight": e.scroll[3]},
         })
-    return {"url": snap.url, "doc": snap.doc, "elements": elements, "snapshot": snap}
+    return {"url": snap.url, "doc": snap.doc, "elements": elements, "title": snap.doc.title,
+            "truncated": snap.truncated, "snapshot": snap}
 
 
 def _wrap(fn: RuleFn) -> RuleFn:
@@ -120,7 +132,12 @@ def run_native_a11y(
             rules.append(aggregate_rule(spec, (), executed=False, message=msg))
             continue
         try:
-            found = tuple(fn(view, spec))
+            produced = fn(view, spec)
+            if isinstance(produced, RuleResult):  # 集約済みを返す実装（rules_name / rules_document）
+                nodes = tuple(n if n.rule_id else replace(n, rule_id=spec.rule_id) for n in produced.nodes)
+                rules.append(aggregate_rule(spec, nodes, message=produced.message))
+                continue
+            found = tuple(produced)
         except Exception as exc:  # noqa: BLE001 - 1 ルールの失敗で全体を止めない
             logger.warning("a11y ルール %s の実行に失敗: %s", spec.rule_id, exc)
             rules.append(aggregate_rule(spec, (), executed=False, message=f"実行エラー: {type(exc).__name__}"))

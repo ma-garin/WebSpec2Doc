@@ -28,6 +28,8 @@ NON_FIELD_INPUT_TYPES = {"hidden", "submit", "reset", "button", "image"}
 # aria-*-name 系（旧 axe: aria-command/input-field/toggle-field/tooltip/tab/meter/progressbar-name）
 ARIA_NAME_ROLES = {
     "menuitem": "aria-command-name",
+    "button": "aria-command-name",
+    "link": "aria-command-name",
     "combobox": "aria-input-field-name",
     "listbox": "aria-input-field-name",
     "searchbox": "aria-input-field-name",

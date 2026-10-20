@@ -171,7 +171,7 @@ def check_bypass(snapshot: dict) -> RuleResult:
             and len(attr_text(e, "href")) > 1 and attr_text(e, "href")[1:] in ids]
     main = [e for e in els if tag(e) == "main" or explicit_role(e) == "main"]
     if skip:
-        return make_result(rid, [_doc_node(PASS, els, "serious", "スキップリンクがある（有効性は未検証）",
+        return make_result(rid, [_doc_node(CANT_TELL, els, "serious", "スキップリンクはあるが、有効に機能するかは人の確認が必要",
                                            mechanism="skip-link", target=attr_text(skip[0], "href"))])
     if main:
         return make_result(rid, [_doc_node(PASS, els, "serious", "main ランドマークがある（有効性は未検証）",

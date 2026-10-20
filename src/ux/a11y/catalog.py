@@ -105,13 +105,17 @@ _RULES: tuple[RuleSpec, ...] = (
     _r("op.scroll-focusable", ("scrollable-region-focusable",), (), ("2.1.1", "2.1.3"), A, F, "operable",
        "スクロール領域がキーボードで到達できる", "moderate"),
     # E. 構造系 best-practice（W3 後半）。WCAG A/AA ではないため wcag_sc は空
-    _r("bp.landmark", ("landmark-banner-is-top-level", "landmark-contentinfo-is-top-level",
-                       "landmark-main-is-top-level", "landmark-no-duplicate-banner",
-                       "landmark-no-duplicate-contentinfo", "landmark-no-duplicate-main",
-                       "landmark-one-main", "landmark-unique", "landmark-complementary-is-top-level"),
-       (), (), BP, F, "best_practice", "ランドマークが一意かつ適切な位置にある", "moderate"),
-    _r("bp.region", ("region",), (), (), BP, F, "best_practice",
-       "ページ内容がランドマークに含まれる", "moderate"),
+    _r("bp.landmark-banner-is-top-level", ("landmark-banner-is-top-level",), (), (), BP, F, "best_practice", "banner がトップレベルにある", "moderate"),
+    _r("bp.landmark-contentinfo-is-top-level", ("landmark-contentinfo-is-top-level",), (), (), BP, F, "best_practice", "contentinfo がトップレベルにある", "moderate"),
+    _r("bp.landmark-main-is-top-level", ("landmark-main-is-top-level",), (), (), BP, F, "best_practice", "main がトップレベルにある", "moderate"),
+    _r("bp.landmark-no-duplicate-banner", ("landmark-no-duplicate-banner",), (), (), BP, F, "best_practice", "banner が重複していない", "moderate"),
+    _r("bp.landmark-no-duplicate-contentinfo", ("landmark-no-duplicate-contentinfo",), (), (), BP, F, "best_practice", "contentinfo が重複していない", "moderate"),
+    _r("bp.landmark-no-duplicate-main", ("landmark-no-duplicate-main",), (), (), BP, F, "best_practice", "main が重複していない", "moderate"),
+    _r("bp.landmark-one-main", ("landmark-one-main",), (), (), BP, F, "best_practice", "main ランドマークが 1 つある", "moderate"),
+    _r("bp.landmark-unique", ("landmark-unique",), (), (), BP, F, "best_practice", "同種のランドマークが区別できる", "moderate"),
+    _r("bp.landmark-complementary-is-top-level", ("landmark-complementary-is-top-level",), (), (), BP, N, "best_practice", "complementary がトップレベルにある", "moderate", "現行の WebSpec2Doc は未対応"),
+    _r("bp.region", ("region",), (), (), BP, N, "best_practice",
+       "ページ内容がランドマークに含まれる", "moderate", "現行の WebSpec2Doc は未対応（今後のバージョンで検討）"),
     _r("bp.heading-order", ("heading-order",), (), (), BP, F, "best_practice",
        "見出しレベルが飛ばずに増える", "moderate"),
     _r("bp.page-has-heading-one", ("page-has-heading-one",), (), (), BP, F, "best_practice",
@@ -161,6 +165,7 @@ _RULES: tuple[RuleSpec, ...] = (
 )
 
 CATALOG: tuple[RuleSpec, ...] = _RULES
+RULES = CATALOG  # レポート層・オラクルが参照する別名
 CATALOG_BY_ID: dict[str, RuleSpec] = {r.rule_id: r for r in CATALOG}
 LEGACY_TO_NATIVE: dict[str, str] = {a: r.rule_id for r in CATALOG for a in r.legacy_axe_ids}
 

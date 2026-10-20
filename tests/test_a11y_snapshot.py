@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from pathlib import Path
-
 import pytest
 
 from ux.a11y.accname import compute_name, effective_role
@@ -37,18 +35,13 @@ def _idx(snap, dom_id):
 @pytest.fixture(scope="module")
 def page():
     sync_api = pytest.importorskip("playwright.sync_api")
+    from browser_detect import BrowserUnavailable, launch_browser
+
     with sync_api.sync_playwright() as pw:
         try:
-            browser = pw.chromium.launch()
-        except Exception as exc:  # ブラウザ未導入、またはビルド番号違いの代替を探す
-            alt = sorted(Path.home().glob(
-                "Library/Caches/ms-playwright/chromium_headless_shell-*/*/chrome-headless-shell"))
-            try:
-                browser = pw.chromium.launch(executable_path=str(alt[-1])) if alt else None
-            except Exception:
-                browser = None
-            if browser is None:
-                pytest.skip(f"chromium を起動できない: {exc}")
+            browser = launch_browser(pw)  # 製品と同じ Chrome / Edge の channel 起動
+        except BrowserUnavailable as exc:
+            pytest.skip(f"Chrome/Edge を起動できない: {exc}")
         pg = browser.new_page()
         requests = []
         pg.on("request", lambda r: requests.append(r.url))

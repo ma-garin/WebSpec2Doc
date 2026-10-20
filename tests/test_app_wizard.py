@@ -160,8 +160,9 @@ def test_first_wave_onboarding_is_local_and_replayable() -> None:
         "restart-tour",
     ):
         assert f'id="{element_id}"' in html
-    assert "vendor/driver.js/driver.css" in html
-    assert "vendor/driver.js/driver.js.iife.js" in html
+    assert "js/wsd-tour.js" in html
+    assert "vendor/driver.js/" not in html
+    assert "wsd-tour-popover" in Path("static/css/components.css").read_text(encoding="utf-8")
     assert "js/onboarding.js" in html
     assert "cdn.jsdelivr.net/npm/driver.js" not in html
 

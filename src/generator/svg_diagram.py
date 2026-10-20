@@ -8,8 +8,9 @@ shape: box | round | diamond | cyl | para / cls: frontend | backend | db | user 
 
 from __future__ import annotations
 
+import hashlib
 import html
-import itertools
+import json
 from collections import defaultdict
 from typing import Any
 
@@ -36,7 +37,6 @@ _COLORS = {
     "user": ("#F4F4F4", "#525252", "#161616"),
 }
 _DEFAULT_COLOR = ("#FFFFFF", "#8D8D8D", "#161616")
-_uid = itertools.count(1)
 
 
 def _esc(value: Any) -> str:
@@ -274,7 +274,9 @@ def render_svg(model: dict, direction: str = "TD", title: str = "図") -> str:
     groups = {str(g["id"]): [str(m) for m in g.get("members", [])] for g in model.get("groups", [])}
     lay = layout(model, direction)
     pos = lay["pos"]
-    marker = f"wsd-arrow-{next(_uid)}"
+    # Content-derived IDs keep repeated reports stable and distinguish diagrams.
+    identity = json.dumps([model, direction, title], sort_keys=True, ensure_ascii=False)
+    marker = "wsd-arrow-" + hashlib.sha256(identity.encode("utf-8")).hexdigest()[:20]
 
     body: list[str] = []
     min_x = min_y = 0.0

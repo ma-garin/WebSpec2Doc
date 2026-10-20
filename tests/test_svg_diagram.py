@@ -51,3 +51,18 @@ def test_empty_and_single_and_large():
     svg = render_svg(_model(200), "TD")
     assert time.time() - t < 1.0
     assert svg.count('class="wsd-node"') == 200
+
+
+def test_marker_ids_are_stable_and_distinguish_diagrams():
+    import re
+
+    model = _model(3)
+    first = render_svg(model, "LR", "Flow")
+    render_svg(_model(5), "TD", "Other")
+    assert render_svg(model, "LR", "Flow") == first
+    changed = render_svg(model, "LR", "Other title")
+    marker = re.search(r'<marker id="([^"]+)"', first).group(1)
+    changed_marker = re.search(r'<marker id="([^"]+)"', changed).group(1)
+    assert marker != changed_marker
+    assert f'url(#{marker})' in first
+    assert f'url(#{changed_marker})' in changed

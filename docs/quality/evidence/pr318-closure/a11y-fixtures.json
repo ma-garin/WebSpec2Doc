@@ -1,0 +1,47 @@
+{
+ "native_version": "webspec2doc-native-a11y",
+ "browser": "chrome",
+ "axe_version": "4.10.2",
+ "fixtures": {
+  "tp": 54,
+  "fp": 0,
+  "fn": 0,
+  "precision": 1.0,
+  "recall": 1.0,
+  "severe": {
+   "fixtures": 50,
+   "evaluated": 50,
+   "not_evaluated": 0,
+   "recall": 1.0,
+   "tp": 52,
+   "fn": 0
+  },
+  "not_evaluated_fixtures": 0,
+  "not_evaluated_rules": [],
+  "failure_classes": {
+   "見逃し": 0,
+   "誤検出": 0,
+   "ルール未実装": 0,
+   "対応付け不能": 0
+  },
+  "gate": {
+   "precision": "PASS",
+   "recall": "PASS",
+   "severe_recall": "PASS"
+  }
+ },
+ "axe_vs_truth": {
+  "tp": 43,
+  "fp": 1,
+  "fn": 11,
+  "precision": 0.9772727272727273,
+  "recall": 0.7962962962962963
+ },
+ "failures": [],
+ "scope": {
+  "declared_fixtures": 151,
+  "undeclared_skipped": 0,
+  "pending_rules": {},
+  "pending_fixtures": 0
+ }
+}

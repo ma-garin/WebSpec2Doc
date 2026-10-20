@@ -147,6 +147,8 @@ def load_cases(spec_path: Path) -> list[Case]:
         raise ImportError(f"spec を読み込めません: {spec_path}")
     module = importlib.util.module_from_spec(mod_spec)
     api = sys.modules.get("web.services.pw_spec_api")
+    if api is not None and hasattr(api, "reset_registry"):
+        api.reset_registry()
     if api is not None and hasattr(api, "CASES"):
         api.CASES.clear()
     mod_spec.loader.exec_module(module)
@@ -156,6 +158,10 @@ def load_cases(spec_path: Path) -> list[Case]:
         meta = getattr(obj, "__pw_case__", None)
         if callable(obj) and isinstance(meta, dict):
             cases.append(Case(str(meta.get("label", obj.__name__)), obj, bool(meta.get("skip"))))
+    if not cases:
+        api = sys.modules.get("web.services.pw_spec_api")
+        if api is not None and hasattr(api, "registered_cases"):
+            cases.extend(Case(item.label, item.fn, item.skip) for item in api.registered_cases())
     if not cases:
         api = sys.modules.get("web.services.pw_spec_api")
         for meta in getattr(api, "CASES", []) or []:

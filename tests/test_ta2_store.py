@@ -801,11 +801,28 @@ class TestEditedLocatorRuns:
         spec = Path(generate_spec(rows, tmp_path / "spec-loc")["spec_path"]).read_text(
             encoding="utf-8"
         )
-        assert "await page.locator(" in spec
-        assert "submit_order" in spec
+        import ast
+
+        tree = ast.parse(spec)
+        # 製品内実行は Python。編集済み selector が click の実呼出しまで届く。
+        clicks = [
+            node for node in ast.walk(tree)
+            if isinstance(node, ast.Call)
+            and isinstance(node.func, ast.Attribute) and node.func.attr == "click"
+        ]
+        assert any(
+            isinstance(node.func.value, ast.Attribute) and node.func.value.attr == "first"
+            and isinstance(node.func.value.value, ast.Call)
+            and isinstance(node.func.value.value.func, ast.Attribute)
+            and node.func.value.value.func.attr == "locator"
+            and node.func.value.value.args
+            and isinstance(node.func.value.value.args[0], ast.Constant)
+            and node.func.value.value.args[0].value == 'button[name="submit_order"]'
+            for node in clicks
+        )
         assert "未対応の操作のためスキップ" not in spec
         # テスト本体はラベル一致に落ちない（編集したロケータがそのまま走る）
-        assert "clickByLabel(page," not in spec.split("test(")[-1]
+        assert "clickByLabel(page," not in spec
 
 
 class TestFailedStepIndex:

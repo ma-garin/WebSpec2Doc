@@ -123,7 +123,9 @@
         "src/generator/architecture_generator.py",
         "src/generator/feature_catalog.py",
         "src/generator/test_design.py",
-        "src/crawler/performance_probe.py"
+        "src/crawler/performance_probe.py",
+        "src/browser_detect.py",
+        "src/generator/svg_diagram.py"
       ],
       "symbols": [
         "crawl_site",
@@ -394,7 +396,13 @@
         "web/services/auto_run_preview.py",
         "web/services/failure_classifier.py",
         "src/crawler/data_flow.py",
-        "src/crawler/form_navigator.py"
+        "src/crawler/form_navigator.py",
+        "web/services/browser_blocked.py",
+        "web/services/pw_runner.py",
+        "web/services/pw_spec_api.py",
+        "web/services/spec_py_generator.py",
+        "web/services/testcase_spec_py_generator.py",
+        "web/services/ts_export.py"
       ],
       "symbols": [
         "track_reflections",
@@ -405,7 +413,9 @@
         "Playwright candidates",
         "execution logs",
         "data reflection flows",
-        "page object spec.ts"
+        "page object spec.ts",
+        "Python Playwright 製品内実行結果",
+        "TypeScript export: generated / not executed / not verified"
       ],
       "persistence": [
         "output/{domain}/qa_process/"
@@ -417,7 +427,8 @@
         "cancel",
         "execution_timeout_partial_result",
         "result_parse_failure",
-        "form_submit_disabled_by_default"
+        "form_submit_disabled_by_default",
+        "browser_unavailable_blocked_without_download"
       ],
       "required_tests": [
         "happy_path",
@@ -1000,13 +1011,12 @@
     },
     {
       "feature_id": "ux_review",
-      "name": "UX自動エキスパートレビュー（axe-core＋ニールセン10原則ヒューリスティック）",
+      "name": "UX自動レビュー（自社アクセシビリティ検査・ヒューリスティック）",
       "risk_level": "medium",
       "status": "implemented",
       "ui_files": [],
       "route_files": [],
       "core_files": [
-        "src/ux/axe_runner.py",
         "src/ux/heuristics.py",
         "src/llm/provider.py",
         "src/crawler/page_crawler.py",
@@ -1014,31 +1024,45 @@
         "src/generator/html_reporter.py",
         "src/main.py",
         "src/generator/accessibility_reporter.py",
-        "src/ux/usability_smells.py"
+        "src/ux/usability_smells.py",
+        "src/ux/a11y/catalog.py",
+        "src/ux/a11y/runner.py",
+        "src/ux/a11y/color.py",
+        "src/ux/a11y/accname.py",
+        "src/ux/a11y/models.py",
+        "src/ux/a11y/rules_aria.py",
+        "src/ux/a11y/__init__.py",
+        "src/ux/a11y/rules_document.py",
+        "src/ux/a11y/rules_name.py",
+        "src/ux/a11y/rules_visual.py",
+        "src/ux/a11y/snapshot.py",
+        "src/ux/a11y/data/lang_autocomplete.py",
+        "src/ux/a11y/data/__init__.py",
+        "src/ux/a11y/data/aria_spec.py"
       ],
       "symbols": [
-        "run_axe",
-        "verify_axe_asset",
         "generate_ux_findings_by_rules",
         "validate_ux_payload",
         "filter_hallucinated_findings",
         "build_ux_review",
         "save_ux_outputs",
-        "detect_smells"
+        "detect_smells",
+        "run_native_a11y"
       ],
       "outputs": [
         "ux_review.json",
         "report.html「UX 所見」タブ",
-        "usability smells"
+        "usability smells",
+        "ルール単位の PASS / FAIL / NOT_EVALUATED と制約"
       ],
       "persistence": [
         "output/{domain}/ux_review.json"
       ],
       "failure_modes": [
-        "axe_missing_asset",
-        "axe_runtime_error",
         "llm_hallucination",
-        "llm_unavailable"
+        "llm_unavailable",
+        "snapshot_unavailable",
+        "rule_not_evaluated_not_passed"
       ],
       "required_tests": [
         "happy_path",
@@ -2631,7 +2655,10 @@
         "web/services/healing/project_store.py",
         "web/services/healing/run_store.py",
         "web/services/healing/monitor.py",
-        "web/services/healing/types.py"
+        "web/services/healing/types.py",
+        "web/services/healing/git_common.py",
+        "web/services/healing/git_read.py",
+        "web/services/healing/git_write.py"
       ],
       "symbols": [
         "start_run",
@@ -3392,7 +3419,6 @@
       "core_files": [
         "src/reverse_analysis/models.py",
         "src/reverse_analysis/runtime.py",
-        "src/reverse_analysis/rea_adapter.py",
         "src/reverse_analysis/normalize.py",
         "src/reverse_analysis/api_resolve.py",
         "src/reverse_analysis/reconcile.py",
@@ -3402,12 +3428,22 @@
         "web/services/static_route_probe_store.py",
         "web/services/rea_impact_layer.py",
         "web/services/rea_test_viewpoints.py",
-        "web/services/reverse_analysis_run.py"
+        "web/services/reverse_analysis_run.py",
+        "src/reverse_analysis/native/facts.py",
+        "src/reverse_analysis/native/parser_ts.py",
+        "src/reverse_analysis/native/__init__.py",
+        "src/reverse_analysis/native/module_graph.py",
+        "src/reverse_analysis/native/parser.py",
+        "src/reverse_analysis/native/evidence.py",
+        "src/reverse_analysis/native/sourcemap.py",
+        "src/reverse_analysis/native/extract.py",
+        "src/reverse_analysis/native/routes.py",
+        "src/reverse_analysis/canonical.py",
+        "src/reverse_analysis/files.py"
       ],
       "symbols": [
         "load_runtime_observations",
         "run_static_analysis",
-        "normalize_static",
         "reconcile",
         "summarize",
         "build_document",
@@ -3416,7 +3452,7 @@
       ],
       "outputs": [
         "{--output}/reverse_analysis.json（schema_version 1）",
-        "--reverse-provider-evidence 時のみ provider_evidence（route/API 上流出典・imports edge・source map 所見）",
+        "Native 静的候補と出典・module edge・source map 所見。静的推論と実測を区別",
         "CLI 要約（実測・静的構文の事実・対応推論・未確認・coverage・欠測理由・出力先）"
       ],
       "persistence": [
@@ -3426,15 +3462,15 @@
         "flag_off_no_provider_probe_or_import",
         "missing_inputs_or_crawl_mode_conflict_rejected",
         "output_inside_input_or_snapshot_dir_or_symlink_rejected",
-        "provider_missing_saves_runtime_with_static_unavailable",
-        "provider_timeout_cancel_or_invalid_output_non_success_exit",
+        "native_parse_failure_preserves_runtime_evidence",
+        "native_timeout_cancel_or_invalid_output_non_success_exit",
         "write_failure_reported_without_claiming_artifact",
         "unknown_schema_version_rejected",
         "method_path_only_never_matched",
         "page_url_origin_not_used_as_api_origin",
         "route_classified_inferred_not_compared_to_runtime",
         "missing_http_method_not_fabricated",
-        "source_map_missing_or_malformed_provider_reason_kept"
+        "source_map_missing_or_malformed_reason_kept"
       ],
       "required_tests": [
         "happy_path",

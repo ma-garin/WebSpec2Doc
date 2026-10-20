@@ -173,13 +173,18 @@ def _dependencies(doc: dict) -> list[dict]:
         start = lv.get("start") or {}
         source = lv.get("source") or "（位置なし）"
         external = props.get("resolution_status") == "external"
+        native = e.get("extractor_operation") == "native.module_graph"
+        if native:
+            source = e.get("source_node_id") or source
+            start = e.get("location") or {}
+            external = e.get("target_kind") == "external-module"
         out.append(
             {
                 "source": source,
-                "target": props.get("resolved_path") or props.get("specifier") or "（不明）",
+                "target": (e.get("target_node_id") if native else None) or props.get("resolved_path") or props.get("specifier") or "（不明）",
                 "relation_label": _IMPORT_KIND.get(props.get("kind", ""), props.get("kind") or "依存"),
                 "state": _STATIC_STATE.get(e.get("provider_state", ""), "unknown"),
-                "location": _loc(lv.get("source"), start.get("line"), start.get("column")),
+                "location": _loc(source if native else lv.get("source"), start.get("line"), start.get("col") if native else start.get("column")),
                 "external": external,
                 "limitations": _limitations(e.get("provider_limitations", [])),
             }

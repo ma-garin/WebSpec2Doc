@@ -360,3 +360,61 @@ def test_gui_route_unavailable_wording():
     assert "いまは実行できません" in js  # 実行できないのに「実行を押す」と案内しない
     spec = (ROOT / "static/js/ta2/ws-spec.js").read_text(encoding="utf-8")
     assert "aria-pressed" in spec and "get('view')" in spec  # ?view=reverse で直接開ける
+
+
+def test_native_evidence_survives_system01_03_02_09(tmp_path, monkeypatch):
+    """Native 保存JSONの同一ID・位置・到達状態を最終影響出力まで運ぶ。"""
+    import contextlib
+    from reverse_analysis.service import ReverseAnalysisRequest, run_reverse_analysis
+    from web.routes import reverse_analysis as view
+    from web.services import static_route_probe as probe, static_route_probe_store as store
+    from web.services.rea_test_viewpoints import build_viewpoints
+    from web.services.rea_impact_layer import build_layer
+
+    base = tmp_path.resolve()
+    snap_sha = _snapshot(base)
+    snap = runner.latest_snapshot(base, DOMAIN)
+    root = runner.site_dir(base, DOMAIN)
+    request = ReverseAnalysisRequest(
+        str(ROOT / "tests/fixtures/reverse_analysis/real/app"), str(snap),
+        str(root / runner.RESULT_DIR), True,
+    )
+    outcome = run_reverse_analysis(request)
+    assert outcome.status == "complete" and outcome.output_path is not None
+    (root / runner.RUN_FILE).write_text(json.dumps({
+        "domain": DOMAIN, "snapshot_sha256": snap_sha, "snapshot": snap.name,
+    }))
+    monkeypatch.setattr(view, "_base", lambda: base)
+    evidence = view.site_evidence(DOMAIN)
+    assert evidence["state"] == "ok"
+    edges = evidence["dependencies"]
+    edge = next(e for e in edges if e["source"] == "routes/app.js" and e["target"] == "routes/lib.js")
+    assert edge["location"] == "routes/app.js:1:1" and edge["state"] == "static"
+    assert next(e for e in edges if e["target"] == "react-router-dom")["external"] is True
+
+    class Navigator:
+        def goto(self, url):
+            return probe.NavResult(200, url)
+        def states(self):
+            return 2
+
+    @contextlib.contextmanager
+    def opener():
+        yield Navigator()
+
+    monkeypatch.setattr(probe, "_is_safe_target", lambda url: True)
+    assert probe.run_probe(base, DOMAIN, evidence, opener).result == "success"
+    reached = store.by_evidence(store.load(base, DOMAIN))
+    system02 = build_viewpoints(evidence, 0, reached)
+    route = next(e for e in evidence["evidence"] if e["group"] == "route" and e["value"] == "/settings")
+    candidate = next(v for v in system02["viewpoints"] if v["evidence_id"] == route["id"])
+    assert candidate["evidence_state"] == "inferred" and candidate["reach_status"] == "observed"
+    assert candidate["runnable"] is True and "正しさは未確認" in candidate["claim"]
+    assert system02["metrics"]["executed"] is None
+    system09 = build_layer(DOMAIN, evidence, "routes/app.js", reached)
+    rows = system09["own"]["routes"]
+    propagated = next(r for r in rows if r["id"] == route["id"])
+    assert propagated["state"] == "inferred" and propagated["reach_status"] == "observed"
+    assert propagated["location"] == route["location"]
+    assert any(t["evidence_id"] == route["id"] for t in system09["own"]["tests"])
+    assert system09["metrics"]["after"]["tests"] > 0

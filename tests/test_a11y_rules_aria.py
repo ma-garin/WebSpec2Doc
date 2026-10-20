@@ -70,7 +70,7 @@ def test_prohibited_attr():
     s = mk([("div", {"role": "presentation", "aria-label": "x"}, "presentation", None, None),
             ("div", {"role": "button", "aria-label": "x"}, "button", None, None),
             ("div", {"aria-label": "x"}, "generic", None, None)])
-    assert statuses(R.check_prohibited_attr, s) == ["violation", "pass", "cant_tell"]
+    assert statuses(R.check_prohibited_attr, s) == ["violation", "pass", "violation"]
     assert R.check_prohibited_attr(mk([("div", {"role": "none"}, "none", None, None)])) == []
 
 
@@ -81,7 +81,7 @@ def test_required_children():
     bad = mk([("div", {"role": "tablist"}, "tablist", None, None), ("button", {}, "button", 0, None)])
     assert statuses(R.check_required_children, bad) == ["violation"]
     empty = mk([("div", {"role": "listbox"}, "listbox", None, None)])
-    assert statuses(R.check_required_children, empty) == ["cant_tell"]
+    assert statuses(R.check_required_children, empty) == ["violation"]
     owns = mk([("div", {"role": "menu", "aria-owns": "x"}, "menu", None, None), ("div", {}, "generic", 0, None)])
     assert statuses(R.check_required_children, owns) == ["cant_tell"]
     assert R.check_required_children(mk([("div", {}, None, None, None)])) == []
@@ -138,3 +138,18 @@ def test_invisible_ignored_and_runner():
     assert R.check_roles(s) == []
     res = R.run_aria_rules(s)
     assert set(res) == set(R.ARIA_RULES) and len(res) == 11
+
+
+def test_implicit_generic_name_prohibition_and_explicit_role_override():
+    s = mk([("span", {"aria-labelledby": "label"}, "generic", None, None),
+            ("div", {"role": "group", "aria-label": "group"}, "group", None, None),
+            ("div", {"aria-label": ""}, "generic", None, None)])
+    assert statuses(R.check_prohibited_attr, s) == ["violation", "pass"]
+
+
+def test_empty_required_children_requires_explicit_loading_evidence():
+    for role in ("list", "grid", "menu", "tablist"):
+        empty = mk([("div", {"role": role}, role, None, None)])
+        assert statuses(R.check_required_children, empty) == ["violation"]
+        busy = mk([("div", {"role": role, "aria-busy": "true"}, role, None, None)])
+        assert statuses(R.check_required_children, busy) == ["cant_tell"]

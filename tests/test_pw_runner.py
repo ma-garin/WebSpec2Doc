@@ -122,3 +122,22 @@ def test_egress_budget(tmp_path):
     h(a), h(b)
     assert (a.out, b.out) == ("continue", "abort")
     assert "budget" in (tmp_path / "e.ndjson").read_text()
+
+
+def test_load_cases_accepts_product_spec_api_and_clears_previous_registry(tmp_path):
+    spec = tmp_path / "generated_spec.py"
+    spec.write_text(
+        'from web.services.pw_spec_api import case\n'
+        '@case("product generated")\ndef generated(page):\n    pass\n'
+        '@case("not ready", skip=True)\ndef pending(page):\n    pass\n'
+    )
+    first = r.load_cases(spec)
+    second = r.load_cases(spec)
+    assert [(c.label, c.skip) for c in first] == [("product generated", False), ("not ready", True)]
+    assert [(c.label, c.skip) for c in second] == [(c.label, c.skip) for c in first]
+    another = tmp_path / "another_spec.py"
+    another.write_text('from web.services.pw_spec_api import case\n@case("other")\ndef other(page):\n    pass\n')
+    assert [c.label for c in r.load_cases(another)] == ["other"]
+    empty = tmp_path / "empty_spec.py"
+    empty.write_text('from web.services.pw_spec_api import case\n')
+    assert r.load_cases(empty) == []

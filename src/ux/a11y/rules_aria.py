@@ -234,10 +234,10 @@ def check_prohibited_attr(snapshot: dict) -> list[Finding]:
             else:
                 out.append(_f("aria.prohibited-attr", "pass", el, "serious", "名前の付与が許可されたロール", role=role))
         elif el.get("role") == "generic" or el.get("role") in (None, ""):
-            # 暗黙の generic（div/span 等）。ブラウザ・支援技術の扱いが分かれるため判定不能
+            # 暗黙の generic も明示の generic と同じ命名禁止制約を持つ。
             if el.get("tag") in ("div", "span") or el.get("role") == "generic":
-                out.append(_f("aria.prohibited-attr", "cant_tell", el, "serious",
-                              "ロールの無い要素の aria-label は要確認", prohibited=used))
+                out.append(_f("aria.prohibited-attr", "violation", el, "serious",
+                              "generic ロールに名前は付けられない", role="generic", prohibited=used))
     return out
 
 
@@ -276,9 +276,6 @@ def check_required_children(snapshot: dict) -> list[Finding]:
         found = _owned_roles(el, idx, role)
         if found:
             out.append(_f("aria.required-children", "pass", el, "critical", "必須の子あり", role=role))
-        elif not el.get("children") and role in S.REVIEW_EMPTY:
-            out.append(_f("aria.required-children", "cant_tell", el, "critical",
-                          "子が無い（動的生成の可能性）", role=role))
         else:
             out.append(_f("aria.required-children", "violation", el, "critical",
                           "必須の子ロールが無い", role=role, required_any_of=list(S.REQUIRED_CHILDREN[role])))

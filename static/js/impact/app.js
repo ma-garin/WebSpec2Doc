@@ -32,7 +32,13 @@
     override: ['admin', 'analyst'], actuals: ['admin', 'analyst'], approve: ['admin', 'approver'], audit_view: ['admin', 'approver']
   };
   function can(role, action) { return (CAN[action] || []).indexOf(role) >= 0; }
-  function statusBadge(s) { return '<span class="im-st st-' + esc(s) + '">' + esc(STATUS[s] || s) + '</span>'; }
+  // CR は分析の完了後も「レビューに回す」まで analyzing のまま。終わっているのに「分析中」と見せないため、
+  // CR を渡されたときは分析結果の有無で言い分ける
+  function statusBadge(s, cr) {
+    var label = STATUS[s] || s;
+    if (s === 'analyzing' && cr && (cr.analyzed_at || Number((cr.summary || {}).total) > 0)) label = '分析済み（レビュー前）';
+    return '<span class="im-st st-' + esc(s) + '">' + esc(label) + '</span>';
+  }
   function priBadge(p) { return p ? '<span class="im-pri p' + esc(p) + '">P' + esc(p) + '</span>' : '<span class="im-pri p0">—</span>'; }
 
   function loading(el, msg) { el.innerHTML = '<div class="im-state" role="status" aria-live="polite"><span class="im-spin" aria-hidden="true"></span>' + esc(msg || '読み込み中…') + '</div>'; }

@@ -43,7 +43,10 @@ def _bootstrap_initial_admin() -> None:
     ここを通らないため、テスト用の空DB前提を壊さない。E2E は
     WEBSPEC2DOC_BOOTSTRAP_ADMIN=0 で明示的に無効化する。
     """
-    if os.environ.get(BOOTSTRAP_ADMIN_ENV, "1").strip().lower() in ("0", "off", "false"):
+    # 外部から到達できる構成（TRUSTED_HOSTS 設定時）で未設定なら作らない。既知の
+    # admin / password で公開しないため。最初の管理者は /auth/setup で自分で決める
+    default = "0" if os.environ.get("WEBSPEC2DOC_TRUSTED_HOSTS", "").strip() else "1"
+    if os.environ.get(BOOTSTRAP_ADMIN_ENV, default).strip().lower() in ("0", "off", "false"):
         return
     from web.services.auth_store import INITIAL_ADMIN_LOGIN_ID, get_auth_store
 

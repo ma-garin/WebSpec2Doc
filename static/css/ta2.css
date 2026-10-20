@@ -15,7 +15,7 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:var(--san
 button{font:inherit;cursor:pointer}
 input,select{font:inherit}
 code{font-family:var(--mono);font-size:11px}
-.app{position:absolute;inset:0;display:grid;grid-template-columns:56px 280px 1fr}
+.app{position:absolute;inset:0;display:grid;grid-template-columns:56px 280px minmax(0,1fr)}
 
 /* ---------- rail ---------- */
 .rail:not(.app-sidebar){background:var(--sf);border-right:1px solid var(--line);display:flex;flex-direction:column;align-items:center;padding:14px 0;gap:6px;position:relative;z-index:20}
@@ -69,7 +69,7 @@ code{font-family:var(--mono);font-size:11px}
    ボタン統一ブロック(.btn:disabled の再定義)で確実に上書きする。 */
 
 /* ---------- editor ---------- */
-.main{display:grid;grid-template-rows:56px 1fr;min-height:0;position:relative}
+.main{display:grid;grid-template-columns:minmax(0,1fr);grid-template-rows:56px 1fr;min-height:0;min-width:0;position:relative}
 .ed-h{display:flex;align-items:center;gap:12px;padding:0 22px;background:var(--sf);border-bottom:1px solid var(--line)}
 .ed-h h1{font-size:16px;font-weight:700;letter-spacing:-.01em;max-width:420px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .ed-h h1[contenteditable]:focus{outline:2px solid var(--ac);border-radius:4px;padding:0 4px}

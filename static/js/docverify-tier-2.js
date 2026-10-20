@@ -110,7 +110,7 @@
     vb.innerHTML = '<svg viewBox="0 0 24 24">' + v[1] + '</svg>' + esc(s.level_label || v[0]) + '・指摘 ' + act.length + ' 件';
     var total = fs.length, n = fs.filter(function (f) { return status(s, f, ck) > 0; }).length;
     var all = n >= total;
-    $('[data-count]').textContent = total ? '確認済み ' + n + ' / ' + total : '指摘はありません';
+    $('[data-count]').textContent = total ? '確認済み ' + n + ' / ' + total : '規則で見つかる指摘はありません（見落としが多い規則もあるため、人の確認は必要です）';
     $('[data-bar]').style.width = (total ? n / total * 100 : 100) + '%';
     $('[data-why]').textContent = !total ? '' : all ? 'すべて確認しました。次へ進めます'
       : 'あと ' + (total - n) + ' 件' + (lvl === 'fail' ? '・重大が残っています' : '');

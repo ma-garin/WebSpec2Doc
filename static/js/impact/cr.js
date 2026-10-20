@@ -106,12 +106,14 @@
   }
   function header(cr, ctx) {
     var s = cr.summary || {}, e = cr.engine || {};
-    var k = [['total', '影響'], ['p1', 'P1'], ['p2', 'P2'], ['p3', 'P3'], ['open', '要確認'], ['retest', '再テスト'], ['test_gap', 'テストの抜け']];
+    var k = [['total', '影響の候補'], ['p1', 'P1'], ['p2', 'P2'], ['p3', 'P3'], ['open', '要確認'], ['retest', '再テスト'], ['test_gap', 'テストの抜け']];
     var degraded = e.mode && e.mode !== 'llm' && e.mode !== 'embedding';
-    return '<div class="im-crhead"><div class="im-crtitle"><code>' + esc(cr.code) + '</code><h2>' + esc(cr.title) + '</h2>' + ui.statusBadge(cr.status) + '</div>' +
+    return '<div class="im-crhead"><div class="im-crtitle"><code>' + esc(cr.code) + '</code><h2>' + esc(cr.title) + '</h2>' + ui.statusBadge(cr.status, cr) + '</div>' +
       '<div class="im-cracts">' + actions(cr, ctx) + '</div></div>' +
       '<div class="kpis im-kpis7">' + k.map(function (x) { return '<div class="kpi' + ((x[0] === 'p1' || x[0] === 'test_gap' || x[0] === 'open') && Number(s[x[0]]) > 0 ? ' ng' : '') + '"><b>' + esc(s[x[0]] || 0) + '</b><span>' + x[1] + '</span></div>'; }).join('') + '</div>' +
-      (degraded || e.reason ? '<div class="bt-sample im-engine" role="note"><b>' + (degraded ? '縮退して分析しました' : '分析の方式') + '</b>: ' + esc(e.reason || e.mode) + '</div>' : '') +
+      (degraded || e.reason ? '<div class="bt-sample im-engine" role="note"><b>' + (degraded ? '縮退して分析しました' : '分析の方式') + '</b>: ' + esc(e.reason || e.mode) +
+        // 規則のみの判定は見落としも空振りも多い。数字を出して、一覧が候補であることを伝える
+        (degraded && e.recall != null && e.precision != null ? ' 実測の再現率 ' + Math.round(e.recall * 100) + '%・適合率 ' + Math.round(e.precision * 100) + '%。一覧は影響の候補で、見落としもあり得ます。人が確かめてください。' : '') + '</div>' : '') +
       '<div id="im-job"></div>';
   }
   function bindHeader(el, cr, ctx) {
@@ -212,7 +214,7 @@
         list.innerHTML = table(['優先度', '項目', 'I', '状態', 'テスト'], rows.map(function (i) {
           var e = eff(i), t = arr(i.tests);
           return '<tr class="im-irow" data-id="' + esc(i.id) + '" tabindex="0" aria-label="' + esc(i.item_code) + ' の詳細を開く"><td>' + ui.priBadge(e.P) + '</td><td><code>' + esc(i.item_code) + '</code><small>' + esc(String(i.text || '').slice(0, 40)) + '</small></td>' +
-            '<td class="num">' + esc(e.I) + '</td><td>' + esc(RES[i.state] || i.state) + '</td><td>' + (t.length ? t.length + ' 件' : '<span class="im-ng">抜け</span>') + '</td></tr>'; }), '影響の一覧');
+            '<td class="num">' + esc(e.I) + '</td><td>' + esc(RES[i.state] || i.state) + '</td><td>' + (t.length ? t.length + ' 件' : '<span class="im-ng">抜け</span>') + '</td></tr>'; }), '影響の候補の一覧');
         var pick = function (tr) {
           $$('.im-irow', list).forEach(function (x) { x.classList.toggle('on', x === tr); });
           var row = rows.filter(function (r) { return String(r.id) === tr.dataset.id; })[0];
@@ -258,7 +260,7 @@
     withImpacts(el, function (rows) {
       var ch = cr.changes || [];
       if (!rows.length || !ch.length) { el.innerHTML = ui.empty({ title: 'マトリクスに出す影響がありません', desc: '分析すると、変更箇所 × 影響した項目の対応を表示します。' }); return; }
-      el.innerHTML = table(['影響した項目'].concat(ch.map(function (c) { return '<code>' + esc(c.code || c.id) + '</code>'; })), rows.map(function (i) {
+      el.innerHTML = table(['影響の候補（要確認を含む）'].concat(ch.map(function (c) { return '<code>' + esc(c.code || c.id) + '</code>'; })), rows.map(function (i) {
         var ids = arr(i.change_ids);
         return '<tr><th scope="row">' + ui.priBadge(eff(i).P) + ' <code>' + esc(i.item_code) + '</code></th>' + ch.map(function (c) { return '<td class="im-mx">' + (ids.indexOf(c.id) >= 0 || ids.indexOf(c.code) >= 0 ? '<span aria-label="影響あり">●</span>' : '') + '</td>'; }).join('') + '</tr>'; }), '変更箇所 × 影響した項目', 'im-matrix');
     });

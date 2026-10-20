@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from dataclasses import dataclass
 
 from analyzer.html_analyzer import analyze_pages
 from crawler.page_crawler import FieldData, FormData, PageData
@@ -13,8 +14,32 @@ from generator.ux_reporter import (
     save_ux_outputs,
 )
 from graph.transition_graph import build_graph
-from ux.axe_runner import AxeViolation
+from ux.a11y.models import NodeResult, PageA11yResult, RuleResult
 from ux.heuristics import pop_hallucination_drop_count
+
+
+@dataclass(frozen=True)
+class _LegacyViolation:
+    """旧形式（違反オブジェクトのタプル）入力の互換確認用。"""
+
+    rule_id: str
+    impact: str
+    description: str
+    wcag_tags: tuple
+    evidence: object
+    help_url: str = ""
+    confidence: float = 1.0
+
+
+def _native_result(url: str) -> PageA11yResult:
+    node = NodeResult(status="violation", selector="img.hero", impact="critical", message="alt なし")
+    return PageA11yResult(
+        url=url,
+        rules=(
+            RuleResult("name.image", "violation", (node,), {"violation": 1}),
+            RuleResult("bp.region", "not_implemented", (), {}),
+        ),
+    )
 
 
 def _sample_page(url: str = "https://example.com/") -> PageData:
@@ -63,7 +88,7 @@ class TestBuildUxScreenInfo:
 
         from crawler.page_crawler import SourceEvidence
 
-        violation = AxeViolation(
+        violation = _LegacyViolation(
             rule_id="label",
             impact="serious",
             description="desc",
@@ -84,7 +109,7 @@ class TestBuildAndSaveUxReview:
         page_data = _sample_page()
         from crawler.page_crawler import SourceEvidence
 
-        violation = AxeViolation(
+        violation = _LegacyViolation(
             rule_id="image-alt",
             impact="critical",
             description="desc",
@@ -125,3 +150,21 @@ class TestBuildAndSaveUxReview:
         assert path.name == "ux_review.json"
         loaded = json.loads(path.read_text(encoding="utf-8"))
         assert loaded == review
+
+
+class TestNativeResultInput:
+    def test_native_result_fills_new_and_legacy_keys(self) -> None:
+        page = _sample_page()
+        review = build_ux_review([page], {page.url: "P001"}, {page.url: _native_result(page.url)}, {})
+        screen = review["screens"][0]
+        assert screen["a11y_violations"] == screen["axe_violations"]
+        assert screen["a11y_violations"][0]["rule_id"] == "image-alt"
+        assert screen["a11y_violations"][0]["native_rule_id"] == "name.image"
+        statuses = {r["rule_id"]: r["status"] for r in screen["a11y_rule_results"]}
+        assert statuses["bp.region"] == "not_implemented"
+
+    def test_screen_info_accepts_native_result(self) -> None:
+        page = _sample_page()
+        info = build_ux_screen_info(page, _native_result(page.url))
+        assert "img.hero" in info["known_selectors"]
+        assert info["axe_violation_summary"][0]["rule_id"] == "image-alt"

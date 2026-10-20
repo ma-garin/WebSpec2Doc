@@ -258,7 +258,7 @@ def _collect(
         provenance.append(_provenance(cand, "api", cand.expression, "native.extract"))
     diagnostics.extend(api_diags)
     _check(cancel)
-    mapped = map_fn([_with_ref_url(p) for p in parsed_files], root)
+    mapped = map_fn(parsed_files, root)
     diagnostics.extend(mapped.diagnostics)
     findings = tuple(sorted(
         (_finding(f) for f in mapped.findings), key=lambda f: (f.path or "", f.finding, f.node_id)
@@ -278,19 +278,6 @@ def _collect(
         (_edge(e) for e in (*graph.edges, *graph.dynamic_candidates)), key=lambda e: e.edge_id
     ))
     return candidates, provenance, edges, findings, map_files, diagnostics
-
-
-class _RefUrl(str):
-    """sourceMappingURL の文字列。宣言位置の情報は .fact に残す（str として読む側にも url 属性として読む側にも合う）。"""
-
-    @property
-    def url(self) -> str:
-        return str(self)
-
-
-def _with_ref_url(parsed: Any) -> Any:
-    ref = parsed.source_map_ref
-    return parsed if ref is None else replace(parsed, source_map_ref=_RefUrl(ref.url))
 
 
 def _finding(raw: Any) -> SourceMapFinding:

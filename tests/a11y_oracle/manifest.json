@@ -1,0 +1,1929 @@
+{
+ "schema": 1,
+ "note": "expect は人が付けた正解（ACT 規則の期待・自作判断）。axe の出力を正解にしない。severe=重大な WCAG A/AA 違反 fixture。",
+ "source": "自作 fixture（出典付き ACT ケースは未収録）",
+ "fixtures": {
+  "image-alt/fail_no_alt.html": {
+   "axe_rule": "image-alt",
+   "native_rule": "name.image",
+   "kind": "fail",
+   "expect": "violation",
+   "violations": [
+    "#v1"
+   ],
+   "severe": true,
+   "wcag": [
+    "1.1.1"
+   ],
+   "level": "A"
+  },
+  "image-alt/fail_two_missing.html": {
+   "axe_rule": "image-alt",
+   "native_rule": "name.image",
+   "kind": "fail",
+   "expect": "violation",
+   "violations": [
+    "#v1",
+    "#v2"
+   ],
+   "severe": true,
+   "wcag": [
+    "1.1.1"
+   ],
+   "level": "A"
+  },
+  "image-alt/pass_alt_text.html": {
+   "axe_rule": "image-alt",
+   "native_rule": "name.image",
+   "kind": "pass",
+   "expect": "pass",
+   "violations": [],
+   "severe": false,
+   "wcag": [
+    "1.1.1"
+   ],
+   "level": "A"
+  },
+  "image-alt/pass_aria_label.html": {
+   "axe_rule": "image-alt",
+   "native_rule": "name.image",
+   "kind": "pass",
+   "expect": "pass",
+   "violations": [],
+   "severe": false,
+   "wcag": [
+    "1.1.1"
+   ],
+   "level": "A"
+  },
+  "image-alt/boundary_decorative_empty_alt.html": {
+   "axe_rule": "image-alt",
+   "native_rule": "name.image",
+   "kind": "boundary",
+   "expect": "pass",
+   "violations": [],
+   "severe": false,
+   "wcag": [
+    "1.1.1"
+   ],
+   "level": "A"
+  },
+  "image-alt/boundary_role_img_no_name.html": {
+   "axe_rule": "image-alt",
+   "native_rule": "name.image",
+   "kind": "boundary",
+   "expect": "violation",
+   "violations": [
+    "#v1"
+   ],
+   "severe": true,
+   "wcag": [
+    "1.1.1"
+   ],
+   "level": "A"
+  },
+  "image-alt/inapplicable_no_images.html": {
+   "axe_rule": "image-alt",
+   "native_rule": "name.image",
+   "kind": "inapplicable",
+   "expect": "inapplicable",
+   "violations": [],
+   "severe": false,
+   "wcag": [
+    "1.1.1"
+   ],
+   "level": "A"
+  },
+  "input-image-alt/fail_no_alt.html": {
+   "axe_rule": "input-image-alt",
+   "native_rule": "name.input-image",
+   "kind": "fail",
+   "expect": "violation",
+   "violations": [
+    "#v1"
+   ],
+   "severe": true,
+   "wcag": [
+    "1.1.1",
+    "4.1.2"
+   ],
+   "level": "A"
+  },
+  "input-image-alt/pass_alt.html": {
+   "axe_rule": "input-image-alt",
+   "native_rule": "name.input-image",
+   "kind": "pass",
+   "expect": "pass",
+   "violations": [],
+   "severe": false,
+   "wcag": [
+    "1.1.1",
+    "4.1.2"
+   ],
+   "level": "A"
+  },
+  "input-image-alt/pass_aria_label.html": {
+   "axe_rule": "input-image-alt",
+   "native_rule": "name.input-image",
+   "kind": "pass",
+   "expect": "pass",
+   "violations": [],
+   "severe": false,
+   "wcag": [
+    "1.1.1",
+    "4.1.2"
+   ],
+   "level": "A"
+  },
+  "input-image-alt/inapplicable_none.html": {
+   "axe_rule": "input-image-alt",
+   "native_rule": "name.input-image",
+   "kind": "inapplicable",
+   "expect": "inapplicable",
+   "violations": [],
+   "severe": false,
+   "wcag": [
+    "1.1.1",
+    "4.1.2"
+   ],
+   "level": "A"
+  },
+  "label/fail_no_label.html": {
+   "axe_rule": "label",
+   "native_rule": "name.form-field",
+   "kind": "fail",
+   "expect": "violation",
+   "violations": [
+    "#v1"
+   ],
+   "severe": true,
+   "wcag": [
+    "4.1.2"
+   ],
+   "level": "A"
+  },
+  "label/fail_placeholder_only.html": {
+   "axe_rule": "label",
+   "native_rule": "name.form-field",
+   "kind": "fail",
+   "expect": "violation",
+   "violations": [
+    "#v1"
+   ],
+   "severe": true,
+   "wcag": [
+    "4.1.2"
+   ],
+   "level": "A"
+  },
+  "label/pass_label_for.html": {
+   "axe_rule": "label",
+   "native_rule": "name.form-field",
+   "kind": "pass",
+   "expect": "pass",
+   "violations": [],
+   "severe": false,
+   "wcag": [
+    "4.1.2"
+   ],
+   "level": "A"
+  },
+  "label/pass_wrapping_label.html": {
+   "axe_rule": "label",
+   "native_rule": "name.form-field",
+   "kind": "pass",
+   "expect": "pass",
+   "violations": [],
+   "severe": false,
+   "wcag": [
+    "4.1.2"
+   ],
+   "level": "A"
+  },
+  "label/pass_aria_label.html": {
+   "axe_rule": "label",
+   "native_rule": "name.form-field",
+   "kind": "pass",
+   "expect": "pass",
+   "violations": [],
+   "severe": false,
+   "wcag": [
+    "4.1.2"
+   ],
+   "level": "A"
+  },
+  "label/boundary_hidden_input.html": {
+   "axe_rule": "label",
+   "native_rule": "name.form-field",
+   "kind": "boundary",
+   "expect": "pass",
+   "violations": [],
+   "severe": false,
+   "wcag": [
+    "4.1.2"
+   ],
+   "level": "A"
+  },
+  "label/boundary_submit_button.html": {
+   "axe_rule": "label",
+   "native_rule": "name.form-field",
+   "kind": "boundary",
+   "expect": "pass",
+   "violations": [],
+   "severe": false,
+   "wcag": [
+    "4.1.2"
+   ],
+   "level": "A"
+  },
+  "label/inapplicable_no_fields.html": {
+   "axe_rule": "label",
+   "native_rule": "name.form-field",
+   "kind": "inapplicable",
+   "expect": "inapplicable",
+   "violations": [],
+   "severe": false,
+   "wcag": [
+    "4.1.2"
+   ],
+   "level": "A"
+  },
+  "select-name/fail_no_name.html": {
+   "axe_rule": "select-name",
+   "native_rule": "name.select",
+   "kind": "fail",
+   "expect": "violation",
+   "violations": [
+    "#v1"
+   ],
+   "severe": true,
+   "wcag": [
+    "4.1.2"
+   ],
+   "level": "A"
+  },
+  "select-name/pass_label.html": {
+   "axe_rule": "select-name",
+   "native_rule": "name.select",
+   "kind": "pass",
+   "expect": "pass",
+   "violations": [],
+   "severe": false,
+   "wcag": [
+    "4.1.2"
+   ],
+   "level": "A"
+  },
+  "select-name/pass_aria_label.html": {
+   "axe_rule": "select-name",
+   "native_rule": "name.select",
+   "kind": "pass",
+   "expect": "pass",
+   "violations": [],
+   "severe": false,
+   "wcag": [
+    "4.1.2"
+   ],
+   "level": "A"
+  },
+  "select-name/inapplicable_none.html": {
+   "axe_rule": "select-name",
+   "native_rule": "name.select",
+   "kind": "inapplicable",
+   "expect": "inapplicable",
+   "violations": [],
+   "severe": false,
+   "wcag": [
+    "4.1.2"
+   ],
+   "level": "A"
+  },
+  "button-name/fail_empty_button.html": {
+   "axe_rule": "button-name",
+   "native_rule": "name.button",
+   "kind": "fail",
+   "expect": "violation",
+   "violations": [
+    "#v1"
+   ],
+   "severe": true,
+   "wcag": [
+    "4.1.2"
+   ],
+   "level": "A"
+  },
+  "button-name/fail_icon_only.html": {
+   "axe_rule": "button-name",
+   "native_rule": "name.button",
+   "kind": "fail",
+   "expect": "violation",
+   "violations": [
+    "#v1"
+   ],
+   "severe": true,
+   "wcag": [
+    "4.1.2"
+   ],
+   "level": "A"
+  },
+  "button-name/fail_input_button_no_value.html": {
+   "axe_rule": "button-name",
+   "native_rule": "name.button",
+   "kind": "fail",
+   "expect": "violation",
+   "violations": [
+    "#v1"
+   ],
+   "severe": true,
+   "wcag": [
+    "4.1.2"
+   ],
+   "level": "A"
+  },
+  "button-name/pass_text.html": {
+   "axe_rule": "button-name",
+   "native_rule": "name.button",
+   "kind": "pass",
+   "expect": "pass",
+   "violations": [],
+   "severe": false,
+   "wcag": [
+    "4.1.2"
+   ],
+   "level": "A"
+  },
+  "button-name/pass_aria_label.html": {
+   "axe_rule": "button-name",
+   "native_rule": "name.button",
+   "kind": "pass",
+   "expect": "pass",
+   "violations": [],
+   "severe": false,
+   "wcag": [
+    "4.1.2"
+   ],
+   "level": "A"
+  },
+  "button-name/pass_input_value.html": {
+   "axe_rule": "button-name",
+   "native_rule": "name.button",
+   "kind": "pass",
+   "expect": "pass",
+   "violations": [],
+   "severe": false,
+   "wcag": [
+    "4.1.2"
+   ],
+   "level": "A"
+  },
+  "button-name/inapplicable_none.html": {
+   "axe_rule": "button-name",
+   "native_rule": "name.button",
+   "kind": "inapplicable",
+   "expect": "inapplicable",
+   "violations": [],
+   "severe": false,
+   "wcag": [
+    "4.1.2"
+   ],
+   "level": "A"
+  },
+  "link-name/fail_empty_link.html": {
+   "axe_rule": "link-name",
+   "native_rule": "name.link",
+   "kind": "fail",
+   "expect": "violation",
+   "violations": [
+    "#v1"
+   ],
+   "severe": true,
+   "wcag": [
+    "2.4.4",
+    "4.1.2"
+   ],
+   "level": "A"
+  },
+  "link-name/fail_image_link_no_alt.html": {
+   "axe_rule": "link-name",
+   "native_rule": "name.link",
+   "kind": "fail",
+   "expect": "violation",
+   "violations": [
+    "#v1"
+   ],
+   "severe": true,
+   "wcag": [
+    "2.4.4",
+    "4.1.2"
+   ],
+   "level": "A"
+  },
+  "link-name/pass_text.html": {
+   "axe_rule": "link-name",
+   "native_rule": "name.link",
+   "kind": "pass",
+   "expect": "pass",
+   "violations": [],
+   "severe": false,
+   "wcag": [
+    "2.4.4",
+    "4.1.2"
+   ],
+   "level": "A"
+  },
+  "link-name/pass_image_link_alt.html": {
+   "axe_rule": "link-name",
+   "native_rule": "name.link",
+   "kind": "pass",
+   "expect": "pass",
+   "violations": [],
+   "severe": false,
+   "wcag": [
+    "2.4.4",
+    "4.1.2"
+   ],
+   "level": "A"
+  },
+  "link-name/boundary_anchor_without_href.html": {
+   "axe_rule": "link-name",
+   "native_rule": "name.link",
+   "kind": "boundary",
+   "expect": "pass",
+   "violations": [],
+   "severe": false,
+   "wcag": [
+    "2.4.4",
+    "4.1.2"
+   ],
+   "level": "A"
+  },
+  "link-name/inapplicable_none.html": {
+   "axe_rule": "link-name",
+   "native_rule": "name.link",
+   "kind": "inapplicable",
+   "expect": "inapplicable",
+   "violations": [],
+   "severe": false,
+   "wcag": [
+    "2.4.4",
+    "4.1.2"
+   ],
+   "level": "A"
+  },
+  "frame-title/fail_no_title.html": {
+   "axe_rule": "frame-title",
+   "native_rule": "name.frame",
+   "kind": "fail",
+   "expect": "violation",
+   "violations": [
+    "#v1"
+   ],
+   "severe": true,
+   "wcag": [
+    "4.1.2"
+   ],
+   "level": "A"
+  },
+  "frame-title/pass_title.html": {
+   "axe_rule": "frame-title",
+   "native_rule": "name.frame",
+   "kind": "pass",
+   "expect": "pass",
+   "violations": [],
+   "severe": false,
+   "wcag": [
+    "4.1.2"
+   ],
+   "level": "A"
+  },
+  "frame-title/pass_aria_label.html": {
+   "axe_rule": "frame-title",
+   "native_rule": "name.frame",
+   "kind": "pass",
+   "expect": "pass",
+   "violations": [],
+   "severe": false,
+   "wcag": [
+    "4.1.2"
+   ],
+   "level": "A"
+  },
+  "frame-title/inapplicable_none.html": {
+   "axe_rule": "frame-title",
+   "native_rule": "name.frame",
+   "kind": "inapplicable",
+   "expect": "inapplicable",
+   "violations": [],
+   "severe": false,
+   "wcag": [
+    "4.1.2"
+   ],
+   "level": "A"
+  },
+  "aria-command-name/fail_role_button_empty.html": {
+   "axe_rule": "aria-command-name",
+   "native_rule": "name.aria-role-required",
+   "kind": "fail",
+   "expect": "violation",
+   "violations": [
+    "#v1"
+   ],
+   "severe": true,
+   "wcag": [
+    "4.1.2"
+   ],
+   "level": "A"
+  },
+  "aria-command-name/fail_role_link_empty.html": {
+   "axe_rule": "aria-command-name",
+   "native_rule": "name.aria-role-required",
+   "kind": "fail",
+   "expect": "violation",
+   "violations": [
+    "#v1"
+   ],
+   "severe": true,
+   "wcag": [
+    "4.1.2"
+   ],
+   "level": "A"
+  },
+  "aria-command-name/pass_role_button_text.html": {
+   "axe_rule": "aria-command-name",
+   "native_rule": "name.aria-role-required",
+   "kind": "pass",
+   "expect": "pass",
+   "violations": [],
+   "severe": false,
+   "wcag": [
+    "4.1.2"
+   ],
+   "level": "A"
+  },
+  "aria-command-name/inapplicable_none.html": {
+   "axe_rule": "aria-command-name",
+   "native_rule": "name.aria-role-required",
+   "kind": "inapplicable",
+   "expect": "inapplicable",
+   "violations": [],
+   "severe": false,
+   "wcag": [
+    "4.1.2"
+   ],
+   "level": "A"
+  },
+  "aria-progressbar-name/fail_no_name.html": {
+   "axe_rule": "aria-progressbar-name",
+   "native_rule": "name.aria-role-required",
+   "kind": "fail",
+   "expect": "violation",
+   "violations": [
+    "#v1"
+   ],
+   "severe": true,
+   "wcag": [
+    "1.1.1"
+   ],
+   "level": "A"
+  },
+  "aria-progressbar-name/pass_named.html": {
+   "axe_rule": "aria-progressbar-name",
+   "native_rule": "name.aria-role-required",
+   "kind": "pass",
+   "expect": "pass",
+   "violations": [],
+   "severe": false,
+   "wcag": [
+    "1.1.1"
+   ],
+   "level": "A"
+  },
+  "aria-progressbar-name/inapplicable_none.html": {
+   "axe_rule": "aria-progressbar-name",
+   "native_rule": "name.aria-role-required",
+   "kind": "inapplicable",
+   "expect": "inapplicable",
+   "violations": [],
+   "severe": false,
+   "wcag": [
+    "1.1.1"
+   ],
+   "level": "A"
+  },
+  "aria-meter-name/fail_no_name.html": {
+   "axe_rule": "aria-meter-name",
+   "native_rule": "name.aria-role-required",
+   "kind": "fail",
+   "expect": "violation",
+   "violations": [
+    "#v1"
+   ],
+   "severe": true,
+   "wcag": [
+    "1.1.1"
+   ],
+   "level": "A"
+  },
+  "aria-meter-name/pass_named.html": {
+   "axe_rule": "aria-meter-name",
+   "native_rule": "name.aria-role-required",
+   "kind": "pass",
+   "expect": "pass",
+   "violations": [],
+   "severe": false,
+   "wcag": [
+    "1.1.1"
+   ],
+   "level": "A"
+  },
+  "aria-meter-name/inapplicable_none.html": {
+   "axe_rule": "aria-meter-name",
+   "native_rule": "name.aria-role-required",
+   "kind": "inapplicable",
+   "expect": "inapplicable",
+   "violations": [],
+   "severe": false,
+   "wcag": [
+    "1.1.1"
+   ],
+   "level": "A"
+  },
+  "aria-tab-name/fail_no_name.html": {
+   "axe_rule": "aria-tab-name",
+   "native_rule": "name.aria-role-required",
+   "kind": "fail",
+   "expect": "violation",
+   "violations": [
+    "#v1"
+   ],
+   "severe": true,
+   "wcag": [
+    "4.1.2"
+   ],
+   "level": "A"
+  },
+  "aria-tab-name/pass_named.html": {
+   "axe_rule": "aria-tab-name",
+   "native_rule": "name.aria-role-required",
+   "kind": "pass",
+   "expect": "pass",
+   "violations": [],
+   "severe": false,
+   "wcag": [
+    "4.1.2"
+   ],
+   "level": "A"
+  },
+  "aria-tab-name/inapplicable_none.html": {
+   "axe_rule": "aria-tab-name",
+   "native_rule": "name.aria-role-required",
+   "kind": "inapplicable",
+   "expect": "inapplicable",
+   "violations": [],
+   "severe": false,
+   "wcag": [
+    "4.1.2"
+   ],
+   "level": "A"
+  },
+  "document-title/fail_no_title.html": {
+   "axe_rule": "document-title",
+   "native_rule": "doc.title",
+   "kind": "fail",
+   "expect": "violation",
+   "violations": [
+    "html"
+   ],
+   "severe": true,
+   "wcag": [
+    "2.4.2"
+   ],
+   "level": "A"
+  },
+  "document-title/fail_empty_title.html": {
+   "axe_rule": "document-title",
+   "native_rule": "doc.title",
+   "kind": "fail",
+   "expect": "violation",
+   "violations": [
+    "html"
+   ],
+   "severe": true,
+   "wcag": [
+    "2.4.2"
+   ],
+   "level": "A"
+  },
+  "document-title/pass_title.html": {
+   "axe_rule": "document-title",
+   "native_rule": "doc.title",
+   "kind": "pass",
+   "expect": "pass",
+   "violations": [],
+   "severe": false,
+   "wcag": [
+    "2.4.2"
+   ],
+   "level": "A"
+  },
+  "document-title/boundary_whitespace_title.html": {
+   "axe_rule": "document-title",
+   "native_rule": "doc.title",
+   "kind": "boundary",
+   "expect": "violation",
+   "violations": [
+    "html"
+   ],
+   "severe": true,
+   "wcag": [
+    "2.4.2"
+   ],
+   "level": "A"
+  },
+  "html-has-lang/fail_no_lang.html": {
+   "axe_rule": "html-has-lang",
+   "native_rule": "doc.lang-present",
+   "kind": "fail",
+   "expect": "violation",
+   "violations": [
+    "html"
+   ],
+   "severe": true,
+   "wcag": [
+    "3.1.1"
+   ],
+   "level": "A"
+  },
+  "html-has-lang/pass_lang.html": {
+   "axe_rule": "html-has-lang",
+   "native_rule": "doc.lang-present",
+   "kind": "pass",
+   "expect": "pass",
+   "violations": [],
+   "severe": false,
+   "wcag": [
+    "3.1.1"
+   ],
+   "level": "A"
+  },
+  "html-has-lang/boundary_empty_lang.html": {
+   "axe_rule": "html-has-lang",
+   "native_rule": "doc.lang-present",
+   "kind": "boundary",
+   "expect": "violation",
+   "violations": [
+    "html"
+   ],
+   "severe": true,
+   "wcag": [
+    "3.1.1"
+   ],
+   "level": "A"
+  },
+  "html-lang-valid/fail_invalid_lang.html": {
+   "axe_rule": "html-lang-valid",
+   "native_rule": "doc.lang-valid",
+   "kind": "fail",
+   "expect": "violation",
+   "violations": [
+    "html"
+   ],
+   "severe": true,
+   "wcag": [
+    "3.1.1"
+   ],
+   "level": "A"
+  },
+  "html-lang-valid/fail_garbage_lang.html": {
+   "axe_rule": "html-lang-valid",
+   "native_rule": "doc.lang-valid",
+   "kind": "fail",
+   "expect": "violation",
+   "violations": [
+    "html"
+   ],
+   "severe": true,
+   "wcag": [
+    "3.1.1"
+   ],
+   "level": "A"
+  },
+  "html-lang-valid/pass_en.html": {
+   "axe_rule": "html-lang-valid",
+   "native_rule": "doc.lang-valid",
+   "kind": "pass",
+   "expect": "pass",
+   "violations": [],
+   "severe": false,
+   "wcag": [
+    "3.1.1"
+   ],
+   "level": "A"
+  },
+  "html-lang-valid/pass_ja.html": {
+   "axe_rule": "html-lang-valid",
+   "native_rule": "doc.lang-valid",
+   "kind": "pass",
+   "expect": "pass",
+   "violations": [],
+   "severe": false,
+   "wcag": [
+    "3.1.1"
+   ],
+   "level": "A"
+  },
+  "html-lang-valid/boundary_region_subtag.html": {
+   "axe_rule": "html-lang-valid",
+   "native_rule": "doc.lang-valid",
+   "kind": "boundary",
+   "expect": "pass",
+   "violations": [],
+   "severe": false,
+   "wcag": [
+    "3.1.1"
+   ],
+   "level": "A"
+  },
+  "html-lang-valid/inapplicable_no_lang_attr.html": {
+   "axe_rule": "html-lang-valid",
+   "native_rule": "doc.lang-valid",
+   "kind": "inapplicable",
+   "expect": "inapplicable",
+   "violations": [],
+   "severe": false,
+   "wcag": [
+    "3.1.1"
+   ],
+   "level": "A"
+  },
+  "meta-viewport/fail_user_scalable_no.html": {
+   "axe_rule": "meta-viewport",
+   "native_rule": "doc.viewport-zoom",
+   "kind": "fail",
+   "expect": "violation",
+   "violations": [
+    "meta"
+   ],
+   "severe": true,
+   "wcag": [
+    "1.4.4"
+   ],
+   "level": "AA"
+  },
+  "meta-viewport/fail_max_scale_1.html": {
+   "axe_rule": "meta-viewport",
+   "native_rule": "doc.viewport-zoom",
+   "kind": "fail",
+   "expect": "violation",
+   "violations": [
+    "meta"
+   ],
+   "severe": true,
+   "wcag": [
+    "1.4.4"
+   ],
+   "level": "AA"
+  },
+  "meta-viewport/pass_default.html": {
+   "axe_rule": "meta-viewport",
+   "native_rule": "doc.viewport-zoom",
+   "kind": "pass",
+   "expect": "pass",
+   "violations": [],
+   "severe": false,
+   "wcag": [
+    "1.4.4"
+   ],
+   "level": "AA"
+  },
+  "meta-viewport/boundary_max_scale_2.html": {
+   "axe_rule": "meta-viewport",
+   "native_rule": "doc.viewport-zoom",
+   "kind": "boundary",
+   "expect": "pass",
+   "violations": [],
+   "severe": false,
+   "wcag": [
+    "1.4.4"
+   ],
+   "level": "AA"
+  },
+  "meta-viewport/inapplicable_no_viewport.html": {
+   "axe_rule": "meta-viewport",
+   "native_rule": "doc.viewport-zoom",
+   "kind": "inapplicable",
+   "expect": "inapplicable",
+   "violations": [],
+   "severe": false,
+   "wcag": [
+    "1.4.4"
+   ],
+   "level": "AA"
+  },
+  "duplicate-id-aria/fail_dup_labelledby_target.html": {
+   "axe_rule": "duplicate-id-aria",
+   "native_rule": "doc.duplicate-id-aria",
+   "kind": "fail",
+   "expect": "violation",
+   "violations": [
+    "#d1"
+   ],
+   "severe": true,
+   "wcag": [
+    "4.1.2"
+   ],
+   "level": "A"
+  },
+  "duplicate-id-aria/pass_unique.html": {
+   "axe_rule": "duplicate-id-aria",
+   "native_rule": "doc.duplicate-id-aria",
+   "kind": "pass",
+   "expect": "pass",
+   "violations": [],
+   "severe": false,
+   "wcag": [
+    "4.1.2"
+   ],
+   "level": "A"
+  },
+  "duplicate-id-aria/boundary_dup_not_referenced.html": {
+   "axe_rule": "duplicate-id-aria",
+   "native_rule": "doc.duplicate-id-aria",
+   "kind": "boundary",
+   "expect": "pass",
+   "violations": [],
+   "severe": false,
+   "wcag": [
+    "4.1.2"
+   ],
+   "level": "A"
+  },
+  "duplicate-id-aria/inapplicable_no_ids.html": {
+   "axe_rule": "duplicate-id-aria",
+   "native_rule": "doc.duplicate-id-aria",
+   "kind": "inapplicable",
+   "expect": "inapplicable",
+   "violations": [],
+   "severe": false,
+   "wcag": [
+    "4.1.2"
+   ],
+   "level": "A"
+  },
+  "list/fail_div_in_ul.html": {
+   "axe_rule": "list",
+   "native_rule": "struct.list",
+   "kind": "fail",
+   "expect": "violation",
+   "violations": [
+    "#v1"
+   ],
+   "severe": true,
+   "wcag": [
+    "1.3.1"
+   ],
+   "level": "A"
+  },
+  "list/pass_ok.html": {
+   "axe_rule": "list",
+   "native_rule": "struct.list",
+   "kind": "pass",
+   "expect": "pass",
+   "violations": [],
+   "severe": false,
+   "wcag": [
+    "1.3.1"
+   ],
+   "level": "A"
+  },
+  "list/boundary_script_in_ul.html": {
+   "axe_rule": "list",
+   "native_rule": "struct.list",
+   "kind": "boundary",
+   "expect": "pass",
+   "violations": [],
+   "severe": false,
+   "wcag": [
+    "1.3.1"
+   ],
+   "level": "A"
+  },
+  "list/inapplicable_none.html": {
+   "axe_rule": "list",
+   "native_rule": "struct.list",
+   "kind": "inapplicable",
+   "expect": "inapplicable",
+   "violations": [],
+   "severe": false,
+   "wcag": [
+    "1.3.1"
+   ],
+   "level": "A"
+  },
+  "listitem/fail_li_in_div.html": {
+   "axe_rule": "listitem",
+   "native_rule": "struct.listitem",
+   "kind": "fail",
+   "expect": "violation",
+   "violations": [
+    "#v1"
+   ],
+   "severe": true,
+   "wcag": [
+    "1.3.1"
+   ],
+   "level": "A"
+  },
+  "listitem/pass_li_in_ul.html": {
+   "axe_rule": "listitem",
+   "native_rule": "struct.listitem",
+   "kind": "pass",
+   "expect": "pass",
+   "violations": [],
+   "severe": false,
+   "wcag": [
+    "1.3.1"
+   ],
+   "level": "A"
+  },
+  "listitem/boundary_li_role_listitem_parent.html": {
+   "axe_rule": "listitem",
+   "native_rule": "struct.listitem",
+   "kind": "boundary",
+   "expect": "pass",
+   "violations": [],
+   "severe": false,
+   "wcag": [
+    "1.3.1"
+   ],
+   "level": "A"
+  },
+  "listitem/inapplicable_none.html": {
+   "axe_rule": "listitem",
+   "native_rule": "struct.listitem",
+   "kind": "inapplicable",
+   "expect": "inapplicable",
+   "violations": [],
+   "severe": false,
+   "wcag": [
+    "1.3.1"
+   ],
+   "level": "A"
+  },
+  "autocomplete-valid/fail_bad_token.html": {
+   "axe_rule": "autocomplete-valid",
+   "native_rule": "form.autocomplete",
+   "kind": "fail",
+   "expect": "violation",
+   "violations": [
+    "#v1"
+   ],
+   "severe": true,
+   "wcag": [
+    "1.3.5"
+   ],
+   "level": "AA"
+  },
+  "autocomplete-valid/pass_email.html": {
+   "axe_rule": "autocomplete-valid",
+   "native_rule": "form.autocomplete",
+   "kind": "pass",
+   "expect": "pass",
+   "violations": [],
+   "severe": false,
+   "wcag": [
+    "1.3.5"
+   ],
+   "level": "AA"
+  },
+  "autocomplete-valid/pass_given_name.html": {
+   "axe_rule": "autocomplete-valid",
+   "native_rule": "form.autocomplete",
+   "kind": "pass",
+   "expect": "pass",
+   "violations": [],
+   "severe": false,
+   "wcag": [
+    "1.3.5"
+   ],
+   "level": "AA"
+  },
+  "autocomplete-valid/boundary_section_prefix.html": {
+   "axe_rule": "autocomplete-valid",
+   "native_rule": "form.autocomplete",
+   "kind": "boundary",
+   "expect": "pass",
+   "violations": [],
+   "severe": false,
+   "wcag": [
+    "1.3.5"
+   ],
+   "level": "AA"
+  },
+  "autocomplete-valid/inapplicable_no_autocomplete.html": {
+   "axe_rule": "autocomplete-valid",
+   "native_rule": "form.autocomplete",
+   "kind": "inapplicable",
+   "expect": "inapplicable",
+   "violations": [],
+   "severe": false,
+   "wcag": [
+    "1.3.5"
+   ],
+   "level": "AA"
+  },
+  "aria-roles/fail_unknown_role.html": {
+   "axe_rule": "aria-roles",
+   "native_rule": "aria.roles",
+   "kind": "fail",
+   "expect": "violation",
+   "violations": [
+    "#v1"
+   ],
+   "severe": true,
+   "wcag": [
+    "4.1.2"
+   ],
+   "level": "A"
+  },
+  "aria-roles/fail_abstract_role.html": {
+   "axe_rule": "aria-roles",
+   "native_rule": "aria.roles",
+   "kind": "fail",
+   "expect": "violation",
+   "violations": [
+    "#v1"
+   ],
+   "severe": true,
+   "wcag": [
+    "4.1.2"
+   ],
+   "level": "A"
+  },
+  "aria-roles/pass_valid.html": {
+   "axe_rule": "aria-roles",
+   "native_rule": "aria.roles",
+   "kind": "pass",
+   "expect": "pass",
+   "violations": [],
+   "severe": false,
+   "wcag": [
+    "4.1.2"
+   ],
+   "level": "A"
+  },
+  "aria-roles/boundary_role_fallback_list.html": {
+   "axe_rule": "aria-roles",
+   "native_rule": "aria.roles",
+   "kind": "boundary",
+   "expect": "pass",
+   "violations": [],
+   "severe": false,
+   "wcag": [
+    "4.1.2"
+   ],
+   "level": "A"
+  },
+  "aria-roles/inapplicable_none.html": {
+   "axe_rule": "aria-roles",
+   "native_rule": "aria.roles",
+   "kind": "inapplicable",
+   "expect": "inapplicable",
+   "violations": [],
+   "severe": false,
+   "wcag": [
+    "4.1.2"
+   ],
+   "level": "A"
+  },
+  "aria-valid-attr/fail_unknown_attr.html": {
+   "axe_rule": "aria-valid-attr",
+   "native_rule": "aria.valid-attr",
+   "kind": "fail",
+   "expect": "violation",
+   "violations": [
+    "#v1"
+   ],
+   "severe": true,
+   "wcag": [
+    "4.1.2"
+   ],
+   "level": "A"
+  },
+  "aria-valid-attr/pass_known.html": {
+   "axe_rule": "aria-valid-attr",
+   "native_rule": "aria.valid-attr",
+   "kind": "pass",
+   "expect": "pass",
+   "violations": [],
+   "severe": false,
+   "wcag": [
+    "4.1.2"
+   ],
+   "level": "A"
+  },
+  "aria-valid-attr/inapplicable_none.html": {
+   "axe_rule": "aria-valid-attr",
+   "native_rule": "aria.valid-attr",
+   "kind": "inapplicable",
+   "expect": "inapplicable",
+   "violations": [],
+   "severe": false,
+   "wcag": [
+    "4.1.2"
+   ],
+   "level": "A"
+  },
+  "aria-valid-attr-value/fail_bad_boolean.html": {
+   "axe_rule": "aria-valid-attr-value",
+   "native_rule": "aria.valid-attr-value",
+   "kind": "fail",
+   "expect": "violation",
+   "violations": [
+    "#v1"
+   ],
+   "severe": true,
+   "wcag": [
+    "4.1.2"
+   ],
+   "level": "A"
+  },
+  "aria-valid-attr-value/fail_missing_idref.html": {
+   "axe_rule": "aria-valid-attr-value",
+   "native_rule": "aria.valid-attr-value",
+   "kind": "fail",
+   "expect": "violation",
+   "violations": [
+    "#v1"
+   ],
+   "severe": true,
+   "wcag": [
+    "4.1.2"
+   ],
+   "level": "A"
+  },
+  "aria-valid-attr-value/pass_ok.html": {
+   "axe_rule": "aria-valid-attr-value",
+   "native_rule": "aria.valid-attr-value",
+   "kind": "pass",
+   "expect": "pass",
+   "violations": [],
+   "severe": false,
+   "wcag": [
+    "4.1.2"
+   ],
+   "level": "A"
+  },
+  "aria-valid-attr-value/inapplicable_none.html": {
+   "axe_rule": "aria-valid-attr-value",
+   "native_rule": "aria.valid-attr-value",
+   "kind": "inapplicable",
+   "expect": "inapplicable",
+   "violations": [],
+   "severe": false,
+   "wcag": [
+    "4.1.2"
+   ],
+   "level": "A"
+  },
+  "aria-required-attr/fail_checkbox_no_checked.html": {
+   "axe_rule": "aria-required-attr",
+   "native_rule": "aria.required-attr",
+   "kind": "fail",
+   "expect": "violation",
+   "violations": [
+    "#v1"
+   ],
+   "severe": true,
+   "wcag": [
+    "4.1.2"
+   ],
+   "level": "A"
+  },
+  "aria-required-attr/fail_slider_no_value.html": {
+   "axe_rule": "aria-required-attr",
+   "native_rule": "aria.required-attr",
+   "kind": "fail",
+   "expect": "violation",
+   "violations": [
+    "#v1"
+   ],
+   "severe": true,
+   "wcag": [
+    "4.1.2"
+   ],
+   "level": "A"
+  },
+  "aria-required-attr/pass_checkbox_checked.html": {
+   "axe_rule": "aria-required-attr",
+   "native_rule": "aria.required-attr",
+   "kind": "pass",
+   "expect": "pass",
+   "violations": [],
+   "severe": false,
+   "wcag": [
+    "4.1.2"
+   ],
+   "level": "A"
+  },
+  "aria-required-attr/inapplicable_none.html": {
+   "axe_rule": "aria-required-attr",
+   "native_rule": "aria.required-attr",
+   "kind": "inapplicable",
+   "expect": "inapplicable",
+   "violations": [],
+   "severe": false,
+   "wcag": [
+    "4.1.2"
+   ],
+   "level": "A"
+  },
+  "aria-allowed-attr/fail_checked_on_button.html": {
+   "axe_rule": "aria-allowed-attr",
+   "native_rule": "aria.allowed-attr",
+   "kind": "fail",
+   "expect": "violation",
+   "violations": [
+    "#v1"
+   ],
+   "severe": true,
+   "wcag": [
+    "4.1.2"
+   ],
+   "level": "A"
+  },
+  "aria-allowed-attr/pass_pressed_on_button.html": {
+   "axe_rule": "aria-allowed-attr",
+   "native_rule": "aria.allowed-attr",
+   "kind": "pass",
+   "expect": "pass",
+   "violations": [],
+   "severe": false,
+   "wcag": [
+    "4.1.2"
+   ],
+   "level": "A"
+  },
+  "aria-allowed-attr/inapplicable_none.html": {
+   "axe_rule": "aria-allowed-attr",
+   "native_rule": "aria.allowed-attr",
+   "kind": "inapplicable",
+   "expect": "inapplicable",
+   "violations": [],
+   "severe": false,
+   "wcag": [
+    "4.1.2"
+   ],
+   "level": "A"
+  },
+  "aria-prohibited-attr/fail_label_on_generic_div.html": {
+   "axe_rule": "aria-prohibited-attr",
+   "native_rule": "aria.prohibited-attr",
+   "kind": "fail",
+   "expect": "violation",
+   "violations": [
+    "#v1"
+   ],
+   "severe": true,
+   "wcag": [
+    "4.1.2"
+   ],
+   "level": "A"
+  },
+  "aria-prohibited-attr/pass_label_on_region.html": {
+   "axe_rule": "aria-prohibited-attr",
+   "native_rule": "aria.prohibited-attr",
+   "kind": "pass",
+   "expect": "pass",
+   "violations": [],
+   "severe": false,
+   "wcag": [
+    "4.1.2"
+   ],
+   "level": "A"
+  },
+  "aria-prohibited-attr/inapplicable_none.html": {
+   "axe_rule": "aria-prohibited-attr",
+   "native_rule": "aria.prohibited-attr",
+   "kind": "inapplicable",
+   "expect": "inapplicable",
+   "violations": [],
+   "severe": false,
+   "wcag": [
+    "4.1.2"
+   ],
+   "level": "A"
+  },
+  "aria-required-children/fail_list_no_items.html": {
+   "axe_rule": "aria-required-children",
+   "native_rule": "aria.required-children",
+   "kind": "fail",
+   "expect": "violation",
+   "violations": [
+    "#v1"
+   ],
+   "severe": true,
+   "wcag": [
+    "1.3.1"
+   ],
+   "level": "A"
+  },
+  "aria-required-children/pass_list_items.html": {
+   "axe_rule": "aria-required-children",
+   "native_rule": "aria.required-children",
+   "kind": "pass",
+   "expect": "pass",
+   "violations": [],
+   "severe": false,
+   "wcag": [
+    "1.3.1"
+   ],
+   "level": "A"
+  },
+  "aria-required-children/boundary_aria_owns.html": {
+   "axe_rule": "aria-required-children",
+   "native_rule": "aria.required-children",
+   "kind": "boundary",
+   "expect": "pass",
+   "violations": [],
+   "severe": false,
+   "wcag": [
+    "1.3.1"
+   ],
+   "level": "A"
+  },
+  "aria-required-children/inapplicable_none.html": {
+   "axe_rule": "aria-required-children",
+   "native_rule": "aria.required-children",
+   "kind": "inapplicable",
+   "expect": "inapplicable",
+   "violations": [],
+   "severe": false,
+   "wcag": [
+    "1.3.1"
+   ],
+   "level": "A"
+  },
+  "aria-required-parent/fail_listitem_orphan.html": {
+   "axe_rule": "aria-required-parent",
+   "native_rule": "aria.required-parent",
+   "kind": "fail",
+   "expect": "violation",
+   "violations": [
+    "#v1"
+   ],
+   "severe": true,
+   "wcag": [
+    "1.3.1"
+   ],
+   "level": "A"
+  },
+  "aria-required-parent/pass_in_list.html": {
+   "axe_rule": "aria-required-parent",
+   "native_rule": "aria.required-parent",
+   "kind": "pass",
+   "expect": "pass",
+   "violations": [],
+   "severe": false,
+   "wcag": [
+    "1.3.1"
+   ],
+   "level": "A"
+  },
+  "aria-required-parent/inapplicable_none.html": {
+   "axe_rule": "aria-required-parent",
+   "native_rule": "aria.required-parent",
+   "kind": "inapplicable",
+   "expect": "inapplicable",
+   "violations": [],
+   "severe": false,
+   "wcag": [
+    "1.3.1"
+   ],
+   "level": "A"
+  },
+  "aria-hidden-body/fail_body_hidden.html": {
+   "axe_rule": "aria-hidden-body",
+   "native_rule": "aria.hidden-body",
+   "kind": "fail",
+   "expect": "violation",
+   "violations": [
+    "body"
+   ],
+   "severe": true,
+   "wcag": [
+    "1.3.1",
+    "4.1.2"
+   ],
+   "level": "A"
+  },
+  "aria-hidden-body/pass_ok.html": {
+   "axe_rule": "aria-hidden-body",
+   "native_rule": "aria.hidden-body",
+   "kind": "pass",
+   "expect": "pass",
+   "violations": [],
+   "severe": false,
+   "wcag": [
+    "1.3.1",
+    "4.1.2"
+   ],
+   "level": "A"
+  },
+  "aria-hidden-focus/fail_hidden_button.html": {
+   "axe_rule": "aria-hidden-focus",
+   "native_rule": "aria.hidden-focus",
+   "kind": "fail",
+   "expect": "violation",
+   "violations": [
+    "#v1"
+   ],
+   "severe": true,
+   "wcag": [
+    "1.3.1",
+    "4.1.2"
+   ],
+   "level": "A"
+  },
+  "aria-hidden-focus/pass_hidden_disabled.html": {
+   "axe_rule": "aria-hidden-focus",
+   "native_rule": "aria.hidden-focus",
+   "kind": "pass",
+   "expect": "pass",
+   "violations": [],
+   "severe": false,
+   "wcag": [
+    "1.3.1",
+    "4.1.2"
+   ],
+   "level": "A"
+  },
+  "aria-hidden-focus/pass_hidden_tabindex_minus1.html": {
+   "axe_rule": "aria-hidden-focus",
+   "native_rule": "aria.hidden-focus",
+   "kind": "pass",
+   "expect": "pass",
+   "violations": [],
+   "severe": false,
+   "wcag": [
+    "1.3.1",
+    "4.1.2"
+   ],
+   "level": "A"
+  },
+  "aria-hidden-focus/inapplicable_none.html": {
+   "axe_rule": "aria-hidden-focus",
+   "native_rule": "aria.hidden-focus",
+   "kind": "inapplicable",
+   "expect": "inapplicable",
+   "violations": [],
+   "severe": false,
+   "wcag": [
+    "1.3.1",
+    "4.1.2"
+   ],
+   "level": "A"
+  },
+  "nested-interactive/fail_button_role_with_link.html": {
+   "axe_rule": "nested-interactive",
+   "native_rule": "aria.nested-interactive",
+   "kind": "fail",
+   "expect": "violation",
+   "violations": [
+    "#v1"
+   ],
+   "severe": true,
+   "wcag": [
+    "4.1.2"
+   ],
+   "level": "A"
+  },
+  "nested-interactive/pass_button_text.html": {
+   "axe_rule": "nested-interactive",
+   "native_rule": "aria.nested-interactive",
+   "kind": "pass",
+   "expect": "pass",
+   "violations": [],
+   "severe": false,
+   "wcag": [
+    "4.1.2"
+   ],
+   "level": "A"
+  },
+  "nested-interactive/inapplicable_none.html": {
+   "axe_rule": "nested-interactive",
+   "native_rule": "aria.nested-interactive",
+   "kind": "inapplicable",
+   "expect": "inapplicable",
+   "violations": [],
+   "severe": false,
+   "wcag": [
+    "4.1.2"
+   ],
+   "level": "A"
+  },
+  "color-contrast/fail_light_gray_on_white.html": {
+   "axe_rule": "color-contrast",
+   "native_rule": "visual.contrast",
+   "kind": "fail",
+   "expect": "violation",
+   "violations": [
+    "#v1"
+   ],
+   "severe": true,
+   "wcag": [
+    "1.4.3"
+   ],
+   "level": "AA"
+  },
+  "color-contrast/fail_inherited_bg.html": {
+   "axe_rule": "color-contrast",
+   "native_rule": "visual.contrast",
+   "kind": "fail",
+   "expect": "violation",
+   "violations": [
+    "#v1"
+   ],
+   "severe": true,
+   "wcag": [
+    "1.4.3"
+   ],
+   "level": "AA"
+  },
+  "color-contrast/pass_black_on_white.html": {
+   "axe_rule": "color-contrast",
+   "native_rule": "visual.contrast",
+   "kind": "pass",
+   "expect": "pass",
+   "violations": [],
+   "severe": false,
+   "wcag": [
+    "1.4.3"
+   ],
+   "level": "AA"
+  },
+  "color-contrast/boundary_large_text_3_1.html": {
+   "axe_rule": "color-contrast",
+   "native_rule": "visual.contrast",
+   "kind": "boundary",
+   "expect": "pass",
+   "violations": [],
+   "severe": false,
+   "wcag": [
+    "1.4.3"
+   ],
+   "level": "AA"
+  },
+  "color-contrast/cant_tell_bg_image.html": {
+   "axe_rule": "color-contrast",
+   "native_rule": "visual.contrast",
+   "kind": "cant_tell",
+   "expect": "cant_tell",
+   "violations": [],
+   "severe": false,
+   "wcag": [
+    "1.4.3"
+   ],
+   "level": "AA"
+  },
+  "color-contrast/cant_tell_gradient.html": {
+   "axe_rule": "color-contrast",
+   "native_rule": "visual.contrast",
+   "kind": "cant_tell",
+   "expect": "cant_tell",
+   "violations": [],
+   "severe": false,
+   "wcag": [
+    "1.4.3"
+   ],
+   "level": "AA"
+  },
+  "color-contrast/inapplicable_no_text.html": {
+   "axe_rule": "color-contrast",
+   "native_rule": "visual.contrast",
+   "kind": "inapplicable",
+   "expect": "inapplicable",
+   "violations": [],
+   "severe": false,
+   "wcag": [
+    "1.4.3"
+   ],
+   "level": "AA"
+  },
+  "target-size/fail_tiny_buttons.html": {
+   "axe_rule": "target-size",
+   "native_rule": "visual.target-size",
+   "kind": "fail",
+   "expect": "violation",
+   "violations": [
+    "#v1",
+    "#v2"
+   ],
+   "severe": true,
+   "wcag": [
+    "2.5.8"
+   ],
+   "level": "AA"
+  },
+  "target-size/pass_big_button.html": {
+   "axe_rule": "target-size",
+   "native_rule": "visual.target-size",
+   "kind": "pass",
+   "expect": "pass",
+   "violations": [],
+   "severe": false,
+   "wcag": [
+    "2.5.8"
+   ],
+   "level": "AA"
+  },
+  "target-size/boundary_exactly_24.html": {
+   "axe_rule": "target-size",
+   "native_rule": "visual.target-size",
+   "kind": "boundary",
+   "expect": "pass",
+   "violations": [],
+   "severe": false,
+   "wcag": [
+    "2.5.8"
+   ],
+   "level": "AA"
+  },
+  "target-size/boundary_inline_link_in_sentence.html": {
+   "axe_rule": "target-size",
+   "native_rule": "visual.target-size",
+   "kind": "boundary",
+   "expect": "pass",
+   "violations": [],
+   "severe": false,
+   "wcag": [
+    "2.5.8"
+   ],
+   "level": "AA"
+  },
+  "target-size/inapplicable_none.html": {
+   "axe_rule": "target-size",
+   "native_rule": "visual.target-size",
+   "kind": "inapplicable",
+   "expect": "inapplicable",
+   "violations": [],
+   "severe": false,
+   "wcag": [
+    "2.5.8"
+   ],
+   "level": "AA"
+  },
+  "scrollable-region-focusable/fail_scroll_no_focusable.html": {
+   "axe_rule": "scrollable-region-focusable",
+   "native_rule": "op.scroll-focusable",
+   "kind": "fail",
+   "expect": "violation",
+   "violations": [
+    "#v1"
+   ],
+   "severe": true,
+   "wcag": [
+    "2.1.1"
+   ],
+   "level": "A"
+  },
+  "scrollable-region-focusable/pass_tabindex0.html": {
+   "axe_rule": "scrollable-region-focusable",
+   "native_rule": "op.scroll-focusable",
+   "kind": "pass",
+   "expect": "pass",
+   "violations": [],
+   "severe": false,
+   "wcag": [
+    "2.1.1"
+   ],
+   "level": "A"
+  },
+  "scrollable-region-focusable/pass_has_focusable_child.html": {
+   "axe_rule": "scrollable-region-focusable",
+   "native_rule": "op.scroll-focusable",
+   "kind": "pass",
+   "expect": "pass",
+   "violations": [],
+   "severe": false,
+   "wcag": [
+    "2.1.1"
+   ],
+   "level": "A"
+  },
+  "scrollable-region-focusable/inapplicable_no_scroll.html": {
+   "axe_rule": "scrollable-region-focusable",
+   "native_rule": "op.scroll-focusable",
+   "kind": "inapplicable",
+   "expect": "inapplicable",
+   "violations": [],
+   "severe": false,
+   "wcag": [
+    "2.1.1"
+   ],
+   "level": "A"
+  },
+  "bypass/fail_no_skip_no_landmark.html": {
+   "axe_rule": "bypass",
+   "native_rule": "doc.bypass",
+   "kind": "fail",
+   "expect": "violation",
+   "violations": [
+    "html"
+   ],
+   "severe": true,
+   "wcag": [
+    "2.4.1"
+   ],
+   "level": "A"
+  },
+  "bypass/pass_main_landmark.html": {
+   "axe_rule": "bypass",
+   "native_rule": "doc.bypass",
+   "kind": "pass",
+   "expect": "pass",
+   "violations": [],
+   "severe": false,
+   "wcag": [
+    "2.4.1"
+   ],
+   "level": "A"
+  },
+  "bypass/cant_tell_skip_link_effect_unknown.html": {
+   "axe_rule": "bypass",
+   "native_rule": "doc.bypass",
+   "kind": "cant_tell",
+   "expect": "cant_tell",
+   "violations": [],
+   "severe": false,
+   "wcag": [
+    "2.4.1"
+   ],
+   "level": "A"
+  },
+  "tabindex/fail_positive_tabindex.html": {
+   "axe_rule": "tabindex",
+   "native_rule": "bp.tabindex",
+   "kind": "fail",
+   "expect": "violation",
+   "violations": [
+    "#v1"
+   ],
+   "severe": false,
+   "wcag": [],
+   "level": "best_practice"
+  },
+  "tabindex/pass_zero.html": {
+   "axe_rule": "tabindex",
+   "native_rule": "bp.tabindex",
+   "kind": "pass",
+   "expect": "pass",
+   "violations": [],
+   "severe": false,
+   "wcag": [],
+   "level": "best_practice"
+  },
+  "tabindex/inapplicable_none.html": {
+   "axe_rule": "tabindex",
+   "native_rule": "bp.tabindex",
+   "kind": "inapplicable",
+   "expect": "inapplicable",
+   "violations": [],
+   "severe": false,
+   "wcag": [],
+   "level": "best_practice"
+  },
+  "heading-order/fail_skip_level.html": {
+   "axe_rule": "heading-order",
+   "native_rule": "bp.heading-order",
+   "kind": "fail",
+   "expect": "violation",
+   "violations": [
+    "#v1"
+   ],
+   "severe": false,
+   "wcag": [],
+   "level": "best_practice"
+  },
+  "heading-order/pass_sequential.html": {
+   "axe_rule": "heading-order",
+   "native_rule": "bp.heading-order",
+   "kind": "pass",
+   "expect": "pass",
+   "violations": [],
+   "severe": false,
+   "wcag": [],
+   "level": "best_practice"
+  },
+  "heading-order/inapplicable_no_headings.html": {
+   "axe_rule": "heading-order",
+   "native_rule": "bp.heading-order",
+   "kind": "inapplicable",
+   "expect": "inapplicable",
+   "violations": [],
+   "severe": false,
+   "wcag": [],
+   "level": "best_practice"
+  }
+ }
+}

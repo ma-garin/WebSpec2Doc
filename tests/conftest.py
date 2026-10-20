@@ -15,6 +15,13 @@ from crawler.page_crawler import FieldData, FormData, PageData
 SAMPLE_SITE_DIR = Path(__file__).parent / "fixtures" / "sample_site"
 
 
+@pytest.fixture(autouse=True)
+def _clear_llm_endpoint_env(monkeypatch) -> None:
+    """開発者の環境に残った LLM 接続先で「キー無し」前提のテストが外部通信しないようにする。"""
+    monkeypatch.delenv("WEBSPEC2DOC_LLM_BASE_URL", raising=False)
+    monkeypatch.delenv("WEBSPEC2DOC_LLM_API_KEY", raising=False)
+
+
 @pytest.fixture(autouse=True, scope="session")
 def isolate_auth_db_for_session(tmp_path_factory) -> Iterator[None]:
     """セッション全体の既定として、認証DBを実環境から切り離す。

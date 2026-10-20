@@ -1,11 +1,21 @@
 from __future__ import annotations
 
 import json
+import os
 import urllib.error
 import urllib.parse
 import urllib.request
 from typing import Any
 
+from llm.openai_client import (
+    ENV_API_KEY,
+    ENV_BASE_URL,
+    ENV_MODEL,
+    LLMResponseError,
+    LLMUnavailableError,
+    request_structured_json,
+    resolve_endpoint,
+)
 from web.config import DEFAULT_OPENAI_MODEL
 from web.env_store import _read_env
 
@@ -23,8 +33,72 @@ class OpenAIQAError(RuntimeError):
     """Raised when OpenAI QA artifact generation cannot complete."""
 
 
+#: ローカル宛て（Ollama 等）の既定モデルとタイムアウト（秒）。
+LOCAL_DEFAULT_MODEL = "qwen2.5:3b"
+LOCAL_TIMEOUT_SEC = 180
+REMOTE_TIMEOUT_SEC = 90
+
+
+def llm_env() -> dict[str, str]:
+    """共通クライアントへ渡す設定。接続先系は os.environ と .env（.env 優先）、OpenAI キーは .env のみ。"""
+    dotenv = _read_env()
+    env = {k: os.environ[k] for k in (ENV_BASE_URL, ENV_MODEL, ENV_API_KEY) if k in os.environ}
+    env.update({k: v for k, v in dotenv.items() if k in (ENV_BASE_URL, ENV_MODEL, ENV_API_KEY)})
+    env["OPENAI_API_KEY"] = dotenv.get("OPENAI_API_KEY", "")
+    return env
+
+
 def has_openai_api_key() -> bool:
-    return bool(_read_env().get("OPENAI_API_KEY", "").strip())
+    """AI が使えるか。ローカル宛て（Ollama 等）はキー不要、OpenAI 宛てはキーの有無で判定する。"""
+    return bool(resolve_endpoint(env=llm_env()).api_key)
+
+
+def call_structured(
+    system: str,
+    user_json: str,
+    schema_name: str,
+    schema: dict[str, Any],
+    max_tokens: int,
+) -> tuple[dict[str, Any], str]:
+    """共通クライアント経由で構造化 JSON を得る。(応答, 使用モデル名) を返す。"""
+    dotenv = _read_env()
+    env = llm_env()
+    endpoint = resolve_endpoint(env=env)
+    if not endpoint.api_key:
+        raise OpenAIQAError("OPENAI_API_KEY が設定されていません。設定画面で接続先かキーを設定してください。")
+    if endpoint.is_local:
+        model = (env.get(ENV_MODEL) or "").strip() or LOCAL_DEFAULT_MODEL
+        headers = None
+        timeout = LOCAL_TIMEOUT_SEC
+    else:
+        model = dotenv.get("OPENAI_MODEL", "").strip() or DEFAULT_OPENAI_MODEL
+        headers = {
+            k: v
+            for k, v in _openai_headers(endpoint.api_key, dotenv).items()
+            if k.startswith("OpenAI-")
+        } or None
+        timeout = REMOTE_TIMEOUT_SEC
+    try:
+        result = request_structured_json(
+            endpoint.api_key,
+            model,
+            user_json,
+            schema_name,
+            schema,
+            timeout_sec=timeout,
+            base_url=endpoint.base_url,
+            purpose=schema_name,
+            system=system,
+            max_tokens=max_tokens,
+            extra_headers=headers,
+        )
+    except urllib.error.HTTPError as exc:
+        raise OpenAIQAError(f"LLM API error: HTTP {exc.code}") from exc
+    except LLMUnavailableError as exc:
+        raise OpenAIQAError(f"LLM API request failed: {exc}") from exc
+    except LLMResponseError as exc:
+        raise OpenAIQAError(f"LLM の応答が不正です: {exc}") from exc
+    return result, model
 
 
 def _is_local_base_url(base_url: str) -> bool:
@@ -99,72 +173,26 @@ def test_openai_connection() -> tuple[bool, str]:
 def generate_openai_qa(
     domain: str, report: dict[str, Any], viewpoints: list[dict[str, Any]] | None = None
 ) -> dict[str, Any]:
-    env = _read_env()
-    api_key = env.get("OPENAI_API_KEY", "").strip()
-    if not api_key:
-        raise OpenAIQAError("OPENAI_API_KEY が設定されていません。")
-
-    model = env.get("OPENAI_MODEL", "").strip() or DEFAULT_OPENAI_MODEL
-    payload = {
-        "model": model,
-        "input": [
-            {
-                "role": "system",
-                "content": (
-                    "あなたはWebアプリケーションのQAプロセス設計者です。"
-                    "入力されたreport.json由来の画面構造だけを根拠に、"
-                    "テスト計画、テスト分析、テスト設計、テストケース、横断レビュー、QAプロセスレポートを"
-                    "JSONで生成してください。"
-                    "不明な業務ルール、期待結果、権限、外部連携条件は必ず「質問待ち」として扱ってください。"
-                    "各テストケースには元画面、元入力項目、元仕様へ戻れるtrace_idを付与してください。"
-                    "自動化できるもの、手動確認が必要なもの、未実装またはN/Aのものを区別してください。"
-                    "qa_viewpoint_catalog がある場合は、テスト分析・設計・ケース・横断レビューの観点として必ず反映してください。"
-                ),
-            },
-            {
-                "role": "user",
-                "content": json.dumps(
-                    _safe_report_payload(domain, report, viewpoints or []), ensure_ascii=False
-                ),
-            },
-        ],
-        "text": {
-            "format": {
-                "type": "json_schema",
-                "name": "webspec2doc_qa_process",
-                "description": "WebSpec2Doc QA process artifacts with traceability and review notes.",
-                "strict": True,
-                "schema": QA_ARTIFACT_SCHEMA,
-            }
-        },
-    }
-
-    request = urllib.request.Request(
-        OPENAI_RESPONSES_URL,
-        data=json.dumps(payload).encode("utf-8"),
-        headers=_openai_headers(api_key, env),
-        method="POST",
+    system = (
+        "あなたはWebアプリケーションのQAプロセス設計者です。"
+        "入力されたreport.json由来の画面構造だけを根拠に、"
+        "テスト計画、テスト分析、テスト設計、テストケース、横断レビュー、QAプロセスレポートを"
+        "JSONで生成してください。"
+        "不明な業務ルール、期待結果、権限、外部連携条件は必ず「質問待ち」として扱ってください。"
+        "各テストケースには元画面、元入力項目、元仕様へ戻れるtrace_idを付与してください。"
+        "自動化できるもの、手動確認が必要なもの、未実装またはN/Aのものを区別してください。"
+        "qa_viewpoint_catalog がある場合は、テスト分析・設計・ケース・横断レビューの観点として必ず反映してください。"
     )
-    try:
-        with urllib.request.urlopen(request, timeout=90) as response:  # nosec B310
-            response_data = json.loads(response.read().decode("utf-8"))
-    except urllib.error.HTTPError as exc:
-        body = exc.read().decode("utf-8", errors="replace")
-        raise OpenAIQAError(f"OpenAI API error: HTTP {exc.code} {body[:300]}") from exc
-    except (urllib.error.URLError, TimeoutError, OSError) as exc:
-        raise OpenAIQAError(f"OpenAI API request failed: {exc}") from exc
-    except json.JSONDecodeError as exc:
-        raise OpenAIQAError("OpenAI API response is not valid JSON.") from exc
-
-    text = _extract_output_text(response_data)
-    if not text:
-        raise OpenAIQAError("OpenAI API response did not include output text.")
-    try:
-        artifact = json.loads(text)
-    except json.JSONDecodeError as exc:
-        raise OpenAIQAError("OpenAI QA artifact is not valid JSON.") from exc
-    if not isinstance(artifact, dict):
-        raise OpenAIQAError("OpenAI QA artifact must be an object.")
+    artifact, model = call_structured(
+        system,
+        json.dumps(_safe_report_payload(domain, report, viewpoints or []), ensure_ascii=False),
+        "webspec2doc_qa_process",
+        QA_ARTIFACT_SCHEMA,
+        max_tokens=8192,
+    )
+    missing = [key for key in QA_ARTIFACT_SCHEMA.get("required", []) if key not in artifact]
+    if missing:
+        raise OpenAIQAError(f"AI の応答に必須項目がありません: {', '.join(missing)}")
     artifact["mode_version"] = artifact.get("mode_version") or QA_ARTIFACT_VERSION
     artifact["model"] = model
     return artifact

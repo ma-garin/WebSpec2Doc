@@ -6,11 +6,10 @@ LLM 版は OpenAI の gpt-4o-mini を使用し、API キーが不要な
 
 from __future__ import annotations
 
-import json
 import logging
-import urllib.error
-import urllib.request
 from dataclasses import dataclass
+
+from llm.openai_client import request_structured_json, resolve_endpoint
 
 logger = logging.getLogger(__name__)
 
@@ -24,7 +23,27 @@ SCREEN_FORM = "form"
 SCREEN_GENERAL = "general"
 
 _LLM_MODEL = "gpt-4o-mini"
-_OPENAI_CHAT_URL = "https://api.openai.com/v1/chat/completions"
+_PRIORITIES = ("critical", "high", "medium", "low")
+_SCREEN_TYPES = (
+    SCREEN_PAYMENT,
+    SCREEN_PERSONAL_INFO,
+    SCREEN_AUTH,
+    SCREEN_SEARCH,
+    SCREEN_LIST,
+    SCREEN_FORM,
+    SCREEN_GENERAL,
+)
+_SCHEMA = {
+    "type": "object",
+    "additionalProperties": False,
+    "required": ["screen_type", "confidence", "keywords", "test_priority"],
+    "properties": {
+        "screen_type": {"type": "string", "enum": list(_SCREEN_TYPES)},
+        "confidence": {"type": "number"},
+        "keywords": {"type": "array", "items": {"type": "string"}},
+        "test_priority": {"type": "string", "enum": list(_PRIORITIES)},
+    },
+}
 
 # キーワードマップ: (screen_type, test_priority, keywords_tuple)
 _RULE_TABLE: tuple[tuple[str, str, tuple[str, ...]], ...] = (
@@ -139,27 +158,29 @@ def _call_llm(
         '"confidence": 0.0〜1.0, "keywords": ["...", ...], '
         '"test_priority": "critical/high/medium/low"}'
     )
-    payload = {
-        "model": _LLM_MODEL,
-        "messages": [{"role": "user", "content": prompt}],
-        "response_format": {"type": "json_object"},
-        "temperature": 0,
-    }
-    request = urllib.request.Request(
-        _OPENAI_CHAT_URL,
-        data=json.dumps(payload).encode("utf-8"),
-        headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
-        method="POST",
+    endpoint = resolve_endpoint()
+    key = api_key or endpoint.api_key
+    if not key:
+        raise RuntimeError("LLM の接続先またはキーが未設定です。")
+    model = endpoint.model if endpoint.is_local else _LLM_MODEL
+    parsed = request_structured_json(
+        key,
+        model,
+        prompt,
+        "screen_classification",
+        _SCHEMA,
+        base_url=endpoint.base_url,
+        purpose="screen_classifier",
     )
-    with urllib.request.urlopen(request, timeout=30) as resp:  # nosec B310
-        data = json.loads(resp.read().decode("utf-8"))
-    text = data["choices"][0]["message"]["content"]
-    parsed = json.loads(text)
+    screen_type = str(parsed["screen_type"])
+    priority = str(parsed["test_priority"])
+    if screen_type not in _SCREEN_TYPES or priority not in _PRIORITIES:
+        raise ValueError(f"想定外の分類結果です: {screen_type}/{priority}")
     return ScreenClassification(
-        screen_type=str(parsed["screen_type"]),
+        screen_type=screen_type,
         confidence=float(parsed["confidence"]),
         keywords=tuple(str(k) for k in parsed.get("keywords", [])),
-        test_priority=str(parsed["test_priority"]),
+        test_priority=priority,
     )
 
 

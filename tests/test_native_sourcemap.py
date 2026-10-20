@@ -3,7 +3,7 @@ import json
 
 import pytest
 
-from reverse_analysis.native.facts import ParsedFile
+from reverse_analysis.native.facts import ParsedFile, SourceMapRef
 from reverse_analysis.native.sourcemap import (SourceMapError, analyze_source_maps, decode_mappings,
                                                find_source_mapping_url, parse_source_map, vlq_decode, vlq_encode)
 
@@ -71,13 +71,13 @@ def test_analyze_external_data_and_failures(tmp_path):
     (tmp_path / "sub" / "good.js.map").write_text(json.dumps(MAP))
     (tmp_path / "bad.map").write_text("{broken")
     data = "data:application/json;base64," + base64.b64encode(json.dumps(MAP).encode()).decode()
-    pfs = [ParsedFile("sub/good.js", "s1", source_map_ref="good.js.map"),
-           ParsedFile("inline.js", "s2", source_map_ref=data),
-           ParsedFile("b.js", "s3", source_map_ref="bad.map"),
-           ParsedFile("m.js", "s4", source_map_ref="missing.map"),
-           ParsedFile("r.js", "s5", source_map_ref="https://cdn.example/a.map"),
-           ParsedFile("e.js", "s6", source_map_ref="../outside.map"),
-           ParsedFile("n.js", "s7")]
+    pfs = [ParsedFile(path="sub/good.js", sha256="s1", source_map_ref=SourceMapRef(file="x", line=1, col=1, end_line=1, end_col=2, url="good.js.map")),
+           ParsedFile(path="inline.js", sha256="s2", source_map_ref=SourceMapRef(file="x", line=1, col=1, end_line=1, end_col=2, url=data)),
+           ParsedFile(path="b.js", sha256="s3", source_map_ref=SourceMapRef(file="x", line=1, col=1, end_line=1, end_col=2, url="bad.map")),
+           ParsedFile(path="m.js", sha256="s4", source_map_ref=SourceMapRef(file="x", line=1, col=1, end_line=1, end_col=2, url="missing.map")),
+           ParsedFile(path="r.js", sha256="s5", source_map_ref=SourceMapRef(file="x", line=1, col=1, end_line=1, end_col=2, url="https://cdn.example/a.map")),
+           ParsedFile(path="e.js", sha256="s6", source_map_ref=SourceMapRef(file="x", line=1, col=1, end_line=1, end_col=2, url="../outside.map")),
+           ParsedFile(path="n.js", sha256="s7")]
     r = analyze_source_maps(pfs, tmp_path)
     assert set(r.maps) == {"sub/good.js", "inline.js"}
     assert r.maps["inline.js"].lookup(1, 0).source == "src/a.ts"

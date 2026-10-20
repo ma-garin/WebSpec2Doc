@@ -49,22 +49,39 @@ def classify_call(callee: str, expression: str = "") -> tuple[str, str | None] |
     return None
 
 
-def _ctx(call, name: str, *alts: str):
-    for n in (name, *alts):
-        if hasattr(call, n):
-            return getattr(call, n)
-    raise AttributeError(name)
+def _cp_col(lines: list[str] | None, line: int, byte_col: int) -> int:
+    """facts の列（1 始まり・UTF-8 バイト）を api_resolve の列（0 始まり・文字数）へ。"""
+    if lines and 1 <= line <= len(lines):
+        return len(lines[line - 1].encode("utf-8")[:max(byte_col - 1, 0)].decode("utf-8", "ignore"))
+    return max(byte_col - 1, 0)
 
 
-def _initial(pf, call, kind: str, method: str | None) -> StaticCandidate:
-    line, col = _ctx(call, "line", "start_line"), _ctx(call, "col", "column", "start_col")
-    eline, ecol = _ctx(call, "end_line"), _ctx(call, "end_col", "end_column")
-    loc = SourceLocation(artifact_path=pf.path, unit="line_column_utf16", start_line=line, start_column=col,
-                         end_line=eline, end_column=ecol)
+def _read_lines(js_input: Path | None, root_label: str, path: str) -> list[str] | None:
+    if js_input is None:
+        return None
+    rel = path[len(root_label) + 1:] if root_label and path.startswith(root_label + "/") else path
+    try:
+        return (Path(js_input) / rel).read_text(encoding="utf-8").split("\n")
+    except (OSError, UnicodeDecodeError):
+        return None
+
+
+def _expression(lines: list[str] | None, call, sl: int, sc: int, el: int, ec: int) -> str:
+    if lines and el <= len(lines):
+        if sl == el:
+            return lines[sl - 1][sc:ec]
+        return "\n".join([lines[sl - 1][sc:], *lines[sl:el - 1], lines[el - 1][:ec]])
+    return f"{call.callee}({', '.join(a.expression for a in call.args)})"
+
+
+def _initial(pf, call, kind: str, method: str | None, lines: list[str] | None) -> StaticCandidate:
+    sc, ec = _cp_col(lines, call.line, call.col), _cp_col(lines, call.end_line, call.end_col)
+    loc = SourceLocation(artifact_path=pf.path, unit="line_column_utf16", start_line=call.line, start_column=sc,
+                         end_line=call.end_line, end_column=ec)
     return StaticCandidate(
         id=static_candidate_id(pf.sha256, loc, "api"), kind="api", artifact_path=pf.path, artifact_sha256=pf.sha256,
         location=loc, resolution="partial", epistemic_state="inferred", authority=AUTHORITY, method=method,
-        expression=(call.expression or "")[:200],
+        expression=_expression(lines, call, call.line, sc, call.end_line, ec)[:200],
         limitations=(f"call_kind:{kind}", "path_not_syntactically_determined",
                      "provider:Static syntax does not prove that this relationship executes at runtime."))
 
@@ -76,10 +93,12 @@ def extract_api_candidates(parsed_files: Iterable, js_input: Path | None = None,
     sha: dict[str, str] = {}
     for pf in parsed_files:
         sha[pf.path] = pf.sha256
+        lines = _read_lines(js_input, root_label, pf.path)
         for call in pf.calls:
-            hit = classify_call(call.callee, call.expression or "")
+            hit = classify_call(call.callee, _expression(lines, call, call.line, _cp_col(lines, call.line, call.col),
+                                                         call.end_line, _cp_col(lines, call.end_line, call.end_col)))
             if hit is not None:
-                initial.append(_initial(pf, call, *hit))
+                initial.append(_initial(pf, call, *hit, lines))
     if js_input is not None:
         refined, diags = api_resolve.refine(tuple(initial), Path(js_input), root_label, sha)
     else:

@@ -25,7 +25,7 @@ MAX_CONST_DEPTH = 8
 AUTHORITY = "webspec2doc-bounded-static-resolution"
 _ID = r"[A-Za-z_$][\w$]*"
 _HTTP_METHODS = ("GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS")
-_NETWORK = re.compile(r"(?:^|\.)(?:fetch|open)$|^(?:axios|\$|jQuery)(?:\.(?:get|post|put|patch|delete|head|request|ajax))?$")
+_NETWORK = re.compile(r"(?:^|\.)(?:fetch|open)$|^(?:axios|\$http|\$|jQuery)(?:\.(?:get|post|put|patch|delete|head|request|ajax))?$")
 _DECL = re.compile(rf"\b(const|let|var)\s+({_ID})\s*=\s*")
 _FUNC_DEFS = (
     re.compile(rf"\bfunction\s+({_ID})\s*\(([^)]*)\)\s*\{{"),

@@ -254,6 +254,7 @@ def analyze_source_maps(parsed_files: Iterable, js_input: Path) -> SourceMapResu
     findings: list[SourceMapFinding] = []
     for pf in parsed_files:
         ref = getattr(pf, "source_map_ref", None)
+        ref = getattr(ref, "url", ref)  # SourceMapRef（facts）または URL 文字列
         if not ref:
             continue
         try:

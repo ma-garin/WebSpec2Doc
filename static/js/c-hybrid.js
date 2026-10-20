@@ -19,7 +19,7 @@
 
   /* ---- 語彙 ---- */
   var STATUS = {
-    not_started: ['未開始', '○'], preparing: ['準備中', '◔'], running: ['実行中', '▶'],
+    not_started: ['未開始', '○'], preparing: ['準備中', '⋯'], running: ['実行中', '▶'],
     waiting_review: ['確認待ち', '?'], waiting_approval: ['承認待ち', '!'], partial: ['一部完了', '◐'],
     done: ['完了', '✓'], failed: ['失敗', '×'], cancelled: ['中止', '■'],
     unverified: ['未確認', '◌'], unavailable: ['利用不可', '⊘']

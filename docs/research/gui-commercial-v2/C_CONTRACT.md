@@ -13,7 +13,7 @@
 | code | 表示 | 形 |
 |---|---|---|
 | not_started | 未開始 | ○ |
-| preparing | 準備中 | ◔ |
+| preparing | 準備中 | ⋯（◔ は既定のフォントで「・」に化けるため変更） |
 | running | 実行中 | ▶ |
 | waiting_review | 確認待ち | ? |
 | waiting_approval | 承認待ち | ! |

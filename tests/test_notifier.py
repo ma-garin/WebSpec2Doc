@@ -5,7 +5,6 @@ from dataclasses import dataclass
 from unittest.mock import MagicMock
 
 import pytest
-
 from web.services.notifier import ALLOW_ENV as _ALLOW_ENV
 
 
@@ -134,7 +133,7 @@ def test_send_drift_notification_slack_success(monkeypatch: pytest.MonkeyPatch) 
     mock_cm = MagicMock()
     mock_cm.__enter__ = MagicMock(return_value=mock_cm)
     mock_cm.__exit__ = MagicMock(return_value=False)
-    monkeypatch.setattr("urllib.request.urlopen", lambda *a, **kw: mock_cm)
+    monkeypatch.setattr("web.services.notifier.safe_urlopen", lambda *a, **kw: mock_cm)
 
     result = send_drift_notification(_make_slack_config(), _sample_notification())
 
@@ -147,7 +146,7 @@ def test_send_drift_notification_slack_failure_hides_webhook_secret(
     def _raise(*args: object, **kwargs: object) -> None:
         raise urllib.error.URLError("connection refused")
 
-    monkeypatch.setattr("urllib.request.urlopen", _raise)
+    monkeypatch.setattr("web.services.notifier.safe_urlopen", _raise)
 
     result = send_drift_notification(_make_slack_config(), _sample_notification())
 
@@ -173,7 +172,7 @@ def test_send_drift_notification_teams_posts_workflow_text(
         cm.__exit__ = MagicMock(return_value=False)
         return cm
 
-    monkeypatch.setattr("urllib.request.urlopen", _fake_urlopen)
+    monkeypatch.setattr("web.services.notifier.safe_urlopen", _fake_urlopen)
     config = NotifierConfig(
         notifier_type=NOTIFIER_TEAMS,
         endpoint="https://prod.example.logic.azure.com/workflows/example",
@@ -196,7 +195,7 @@ def test_send_crawl_failure_notification_uses_failure_event(
         cm.__exit__ = MagicMock(return_value=False)
         return cm
 
-    monkeypatch.setattr("urllib.request.urlopen", _fake_urlopen)
+    monkeypatch.setattr("web.services.notifier.safe_urlopen", _fake_urlopen)
     config = NotifierConfig(
         notifier_type=NOTIFIER_WEBHOOK,
         endpoint="https://api.example.com/webhook",
@@ -228,7 +227,7 @@ def test_send_drift_notification_webhook_success(monkeypatch: pytest.MonkeyPatch
         cm.__exit__ = MagicMock(return_value=False)
         return cm
 
-    monkeypatch.setattr("urllib.request.urlopen", _fake_urlopen)
+    monkeypatch.setattr("web.services.notifier.safe_urlopen", _fake_urlopen)
 
     config = NotifierConfig(
         notifier_type=NOTIFIER_WEBHOOK,

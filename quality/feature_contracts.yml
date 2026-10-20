@@ -1157,8 +1157,7 @@
         "scripts/notify_drift.py",
         "web/services/drift_summary.py",
         "web/services/notifier.py",
-        "web/services/job_queue.py",
-        ".github/workflows/spec-drift.yml"
+        "web/services/job_queue.py"
       ],
       "symbols": [
         "save_drift_summary",
@@ -2692,7 +2691,8 @@
         "web/services/orchestration/agents/tests_agent.py",
         "web/services/orchestration/agents/run_agent.py",
         "web/services/orchestration/agents/healing_agent.py",
-        "web/services/cli_orchestration.py"
+        "web/services/cli_orchestration.py",
+        "web/services/orchestration/home_summary.py"
       ],
       "symbols": [
         "start_if_idle",
@@ -2874,7 +2874,8 @@
       "route_files": [
         "web/routes/backend_test.py",
         "web/routes/backend_test_stages.py",
-        "web/routes/backend_test_run.py"
+        "web/routes/backend_test_run.py",
+        "web/routes/backend_test_envs.py"
       ],
       "core_files": [
         "web/services/backendtest/store.py",
@@ -3172,7 +3173,8 @@
       "core_files": [
         "web/services/backendtest/runner.py",
         "web/services/backendtest/evidence.py",
-        "web/services/backendtest/results.py"
+        "web/services/backendtest/results.py",
+        "web/services/backendtest/run_prep.py"
       ],
       "symbols": [
         "start",
@@ -3282,7 +3284,8 @@
         "web/routes/doc_verify_r2.py",
         "web/routes/doc_verify_r3.py",
         "web/routes/doc_verify_r4.py",
-        "web/routes/doc_verify_r5.py"
+        "web/routes/doc_verify_r5.py",
+        "web/routes/doc_verify_tier.py"
       ],
       "core_files": [
         "web/services/docverify/accuracy.py",
@@ -3304,7 +3307,21 @@
         "web/services/docverify/settings.py",
         "web/services/docverify/store.py",
         "web/services/docverify/trace.py",
-        "web/services/docverify/unread.py"
+        "web/services/docverify/unread.py",
+        "web/services/docverify/pair/__init__.py",
+        "web/services/docverify/pair/contradiction.py",
+        "web/services/docverify/pair/engine.py",
+        "web/services/docverify/pair/link.py",
+        "web/services/docverify/pair/segment.py",
+        "web/services/docverify/pair/semantic.py",
+        "web/services/docverify/pair/single.py",
+        "web/services/docverify/pair/table.py",
+        "web/services/docverify/pair/terms.py",
+        "web/services/docverify/tierflow/__init__.py",
+        "web/services/docverify/tierflow/links.py",
+        "web/services/docverify/tierflow/rules.py",
+        "web/services/docverify/tierflow/tiers.py",
+        "web/services/docverify/viewpoints.py"
       ],
       "symbols": [
         "candidates",
@@ -3348,7 +3365,9 @@
       "status": "implemented",
       "ui_files": [],
       "route_files": [
-        "src/main.py"
+        "src/main.py",
+        "web/routes/reverse_analysis.py",
+        "web/routes/static_route_probe.py"
       ],
       "core_files": [
         "src/reverse_analysis/models.py",
@@ -3357,7 +3376,12 @@
         "src/reverse_analysis/normalize.py",
         "src/reverse_analysis/reconcile.py",
         "src/reverse_analysis/reporter.py",
-        "src/reverse_analysis/service.py"
+        "src/reverse_analysis/service.py",
+        "web/services/static_route_probe.py",
+        "web/services/static_route_probe_store.py",
+        "web/services/rea_impact_layer.py",
+        "web/services/rea_test_viewpoints.py",
+        "web/services/reverse_analysis_run.py"
       ],
       "symbols": [
         "load_runtime_observations",
@@ -3395,6 +3419,67 @@
         "happy_path",
         "error_path",
         "evidence"
+      ]
+    },
+    {
+      "feature_id": "impact_analysis",
+      "name": "影響分析（変更要求から影響範囲を推定・v2 API）",
+      "risk_level": "high",
+      "status": "implemented",
+      "ui_files": [],
+      "route_files": [
+        "web/routes/impact.py",
+        "web/routes/impact_api.py",
+        "web/routes/impact_api_cr.py"
+      ],
+      "core_files": [
+        "web/services/impact/analyze.py",
+        "web/services/impact/jobs.py",
+        "web/services/impact/report.py",
+        "web/services/impact/db.py",
+        "web/services/impact/engine/candidates.py",
+        "web/services/impact/engine/changes.py",
+        "web/services/impact/engine/embed.py",
+        "web/services/impact/engine/llm_judge.py",
+        "web/services/impact/engine/risk.py",
+        "web/services/impact/engine/run.py",
+        "web/services/impact/engine/tests.py",
+        "web/services/impact/engine/text.py",
+        "web/services/impact/llm.py",
+        "web/services/impact/migrate.py",
+        "web/services/impact/repo/actuals.py",
+        "web/services/impact/repo/approvals.py",
+        "web/services/impact/repo/audit.py",
+        "web/services/impact/repo/baselines.py",
+        "web/services/impact/repo/crs.py",
+        "web/services/impact/repo/documents.py",
+        "web/services/impact/repo/errors.py",
+        "web/services/impact/repo/impacts.py",
+        "web/services/impact/repo/links.py",
+        "web/services/impact/repo/systems.py",
+        "web/services/impact/roles.py",
+        "web/services/impact/store.py"
+      ],
+      "symbols": [
+        "tokens"
+      ],
+      "outputs": [
+        "影響分析ジョブの結果 JSON・レポート"
+      ],
+      "persistence": [
+        "web/services/impact/db.py"
+      ],
+      "failure_modes": [
+        "non_admin_write_rejected",
+        "unknown_job_returns_error"
+      ],
+      "required_tests": [
+        "tests/test_impact.py",
+        "tests/test_impact_analyzer.py",
+        "tests/test_impact_api.py",
+        "tests/test_impact_engine.py",
+        "tests/test_impact_repo.py",
+        "tests/test_impact_system.py"
       ]
     }
   ]

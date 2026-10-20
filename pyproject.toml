@@ -21,6 +21,9 @@ no_implicit_optional = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+# healing_demo は自己修復の実証用素材（わざと 1 件失敗させる）。通常の収集から外し、
+# 実証するときは `pytest tests/healing_demo` とパスを明示して実行する
+norecursedirs = ["healing_demo", "*.egg", ".*", "build", "dist", "node_modules", "venv"]
 pythonpath = ["."]
 filterwarnings = [
     "error::pytest.PytestCollectionWarning",

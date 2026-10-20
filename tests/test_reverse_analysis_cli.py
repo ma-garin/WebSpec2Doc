@@ -314,6 +314,8 @@ def test_出力先の検査で例外が出てもtracebackを出さず次の行�
     capsys: pytest.CaptureFixture[str], fault: str,
 ) -> None:  # fmt: skip
     out = tmp_path / "ra-out"
+    if fault == "unreadable_dir" and hasattr(os, "geteuid") and os.geteuid() == 0:
+        pytest.skip("root は権限 000 のディレクトリも読めるため、読めない出力先を作れない")
     if fault == "unreadable_dir":
         locked = tmp_path / "locked"
         locked.mkdir()

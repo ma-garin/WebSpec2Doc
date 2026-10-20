@@ -77,6 +77,13 @@
       });
     });
   }
+  // 実行状況 API は passed / failed で返す。一覧・KPI の語彙（pass / fail）にそろえる。
+  // そろえないと実行中の失敗が既定の「成功」表示に落ち、KPI も数えられない。
+  function liveStatus(v) {
+    if (v === 'passed') return 'pass';
+    if (v === 'failed') return 'fail';
+    return v;
+  }
   function counts(list) {
     var c = { all: list.length, pass: 0, fail: 0, flaky: 0, fixed: 0, new: 0, running: 0 };
     list.forEach(function (t) { if (c[t.status] != null) c[t.status] += 1; });
@@ -135,7 +142,16 @@
     var meta = $('#run-meta'); if (meta) meta.textContent = runMetaText();
 
     var kpis = $('#kpis');
-    if (kpis) {
+    var rs = state().run || {};
+    if (kpis && rs.running) {
+      // 実行中は今回の実行だけを数える（帯と同じ値）。前回の結果と混ぜない。
+      // 不安定は実行の完了後にしか判定できないので、0 ではなく「—」にする。
+      kpis.innerHTML =
+        '<div class="kpi ok"><b>' + (rs.passed || 0) + '</b><span>成功（今回）</span></div>' +
+        '<div class="kpi ng"><b>' + (rs.failed || 0) + '</b><span>失敗（今回）</span></div>' +
+        '<div class="kpi wa"><b>—</b><span>不安定（完了後に判定）</span></div>' +
+        '<div class="kpi"><b>' + Math.max(0, (Number(rs.total) || 0) - (Number(rs.done) || 0)) + '</b><span>実行待ち</span></div>';
+    } else if (kpis) {
       kpis.innerHTML =
         '<div class="kpi ok"><b>' + c.pass + '</b><span>成功</span></div>' +
         '<div class="kpi ng"><b>' + c.fail + '</b><span>失敗</span></div>' +
@@ -400,8 +416,9 @@
     api().runStatus(domain()).then(function (st) {
       live = {};
       (st.tests || []).forEach(function (x) {
-        live[x.id] = { status: x.status, duration_ms: x.duration_ms, error: x.error };
+        live[x.id] = { status: liveStatus(x.status), duration_ms: x.duration_ms, error: x.error };
       });
+      if (st.running && st.current_id && !live[st.current_id]) live[st.current_id] = { status: 'running' };
       if (TA().state) {
         var prev = TA().state.run || {};
         if (st && !Array.isArray(st.skipped) && Array.isArray(prev.skipped)) st.skipped = prev.skipped;

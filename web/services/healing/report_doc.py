@@ -42,8 +42,8 @@ logger = logging.getLogger(__name__)
 
 #: エージェント ID から報告書に書く表示名へ。顧客が読むので英字 ID を出さない。
 _AGENT_LABELS: dict[str, str] = {
-    "claude": "AI（Claude Code）",
-    "codex": "AI（Codex）",
+    "claude": "AI（旧エージェント）",
+    "codex": "AI（旧エージェント）",
     "openai": "AI（OpenAI）",
     "ollama": "AI（Ollama・ローカル）",
     "dryrun": "動作確認用",

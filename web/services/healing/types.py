@@ -88,8 +88,8 @@ class HealingProject:
     remote: str = "origin"
     #: "owner/name" 形式。空なら PR 機能を無効にする。
     github_repo: str = ""
-    #: agents.py のレジストリキー（"claude" / "codex" / "dryrun"）。
-    agent: str = "claude"
+    #: agents.py のレジストリキー（"openai" / "ollama" / "dryrun"）。
+    agent: str = "openai"
     #: ループの上限周回数。ここに達したら緑でなくても止める。
     max_iterations: int = 3
     #: 同時に走らせるエージェント数。1 欠陥 1 エージェント 1 worktree。
@@ -111,6 +111,13 @@ class HealingProject:
     monitor_time: str = ""
     #: 最後に回した日（"YYYY-MM-DD"）。同じ日に二度回さないための記録。
     monitor_last_run_on: str = ""
+
+    def __post_init__(self) -> None:
+        # 撤去済みの旧エージェント名（保存済みデータ）は読込時に openai として扱う。
+        # ファイルは書き換えない（frozen のため object.__setattr__）。
+        legacy = {"claude", "codex"}
+        if self.agent in legacy or not self.agent:
+            object.__setattr__(self, "agent", "openai")
 
     def to_dict(self) -> dict[str, Any]:
         from dataclasses import asdict
@@ -259,7 +266,7 @@ class FixProposal:
 class HealingAgent(Protocol):
     """修正エージェントの契約。
 
-    実装は別プロセス（claude / codex CLI）でも、プロセス内でもよい。
+    実装は LLM API（OpenAI / Ollama）でも、プロセス内の決定論的な処理でもよい。
     orchestrator はこの Protocol にしか依存しない。差し替え・並列化・
     外部への切り出しはすべてこの境界で行う。
     """

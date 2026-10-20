@@ -417,6 +417,25 @@
       e.stopPropagation();
       setOpen(pop.hidden);
     });
+    // .spec.ts は候補データがある解析でしか作れない。無いときに JSON の 404 へ飛ばさず、
+    // 先に確かめて理由をこの画面で伝える
+    pop.addEventListener('click', function (e) {
+      var a = e.target.closest && e.target.closest('#spec-ex-ts');
+      if (!a) return;
+      e.preventDefault();
+      var url = a.getAttribute('href');
+      fetch(url, { method: 'GET' }).then(function (r) {
+        if (r.ok) { location.href = url; return; }
+        return r.json().catch(function () { return {}; }).then(function (d) {
+          var msg = 'Playwright 用スペックを書き出せません: ' + (d.error || ('HTTP ' + r.status)) + '。この解析には Playwright 用の候補データがありません。';
+          if (T && T.toast) T.toast(msg, 'ng'); else window.alert(msg);
+        });
+      }, function () {
+        var msg = 'Playwright 用スペックを書き出せません。サーバに接続できませんでした。';
+        if (T && T.toast) T.toast(msg, 'ng'); else window.alert(msg);
+      });
+      setOpen(false);
+    });
     document.addEventListener('click', function (e) {
       if (pop.hidden) return;
       if (e.target.closest && e.target.closest('.pop-wrap')) return;

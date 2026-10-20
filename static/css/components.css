@@ -333,7 +333,7 @@
 .sys-switcher:hover { border-color: var(--color-primary); }
 .sys-switcher-label {
   font-weight: 700; letter-spacing: .06em; text-transform: uppercase;
-  color: var(--color-text-disabled); font-size: 10px;
+  color: var(--color-text-secondary); font-size: 10px;
 }
 .sys-switcher-cur { font-weight: 800; font-size: var(--text-sm); color: var(--color-text); }
 .sys-switcher-swap {

@@ -77,7 +77,7 @@ def _work(db_file: Path, job_id: str, sid: str, cr_code: str, cr_id: str, actor:
             _set_cr(conn, cr_id, "draft")
             return
         _update(conn, job_id, status="done", stage="done", progress=100, finished_at=_now(),
-                message=f"影響 {result['counts']['impacts']} 件を見つけました。",
+                message=f"影響の候補 {result['counts']['impacts']} 件を見つけました（要確認）。",
                 engine=json.dumps(result["engine"], ensure_ascii=False))
     except Exception as exc:  # noqa: BLE001 - スレッド内の失敗はすべて jobs 表へ記録する
         log.exception("影響度分析のジョブが失敗しました: job=%s", job_id)

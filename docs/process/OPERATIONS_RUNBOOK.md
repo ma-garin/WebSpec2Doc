@@ -97,7 +97,7 @@ curl -s http://127.0.0.1:8765/api/v1/healthz   # 死活確認（認証なしで�
 ## 3. 認証
 
 - 既定 `auto` は、ユーザーが 1 人も居ない間は認証なしで使える。**本番は `WEBSPEC2DOC_AUTH_MODE=required` にする。**
-- 初回起動時に初期管理者（ログインID `admin`／パスワード `password`）が作られる。**初回ログイン直後に変更する。** 事前に管理者を用意済みなら `WEBSPEC2DOC_BOOTSTRAP_ADMIN=0`。
+- 初回起動時に初期管理者（ログインID `admin`／パスワード `password`）が作られる。**初回ログイン直後に変更する。** 事前に管理者を用意済みなら `WEBSPEC2DOC_BOOTSTRAP_ADMIN=0`。`WEBSPEC2DOC_TRUSTED_HOSTS` を設定した外部公開構成では既定で作らない。最初の管理者は `/auth/setup` で作る。
 - **モック認証は既定で有効（パスワードなしでユーザー一覧から選択）。本番は `WEBSPEC2DOC_AUTH_MOCK=0` を必ず設定する。** 無効にするとパスワードポリシーが強制される。
 - HTTPS 配下では `WEBSPEC2DOC_SECURE_COOKIES=1`。
 - 認証なしで到達できるのは `/api/v1/healthz`・ログイン関連・静的ファイルのみ。

@@ -505,9 +505,19 @@ def api_ta2_run() -> dict:
 
     worker = _execute
     try:  # テナント別の出力先を解決できるよう、リクエストコンテキストを引き継ぐ
-        from flask import copy_current_request_context
+        from flask import copy_current_request_context, g
 
-        worker = copy_current_request_context(_execute)
+        # copy_current_request_context は g を引き継がない（新しいアプリコンテキストになる）。
+        # g.tenant が無いとスレッド側の保存先がテナントの外になり、認証ありの構成で
+        # 実行結果が画面に出ない。認証ガードが設定した値を持ち越す
+        carried = {k: getattr(g, k) for k in ("tenant", "auth_user") if hasattr(g, k)}
+
+        def _execute_in_tenant(*args: Any) -> None:
+            for key, value in carried.items():
+                setattr(g, key, value)
+            _execute(*args)
+
+        worker = copy_current_request_context(_execute_in_tenant)
     except Exception:  # noqa: BLE001
         logger.warning("TA2: リクエストコンテキストを引き継げませんでした", exc_info=True)
 

@@ -227,7 +227,7 @@
   color: var(--color-text);
   line-height: 1.5;
 }
-.tcard-slug { display: block; font-size: var(--text-xs); color: var(--color-text-disabled); font-family: var(--font-mono); }
+.tcard-slug { display: block; font-size: var(--text-xs); color: var(--color-text-secondary); font-family: var(--font-mono); }
 .tcard-foot {
   display: flex;
   align-items: center;

@@ -119,13 +119,15 @@
 
 /* ---- トップバー（templates/partials/topbar.html: .app-topbar） ---- */
 .app-topbar {
+  /* グリッド／フレックスの子として置かれるので、中身の幅で親を押し広げない（横スクロールの原因） */
+  min-width: 0;
   min-height: 48px;
   padding: 6px var(--s5, 20px);
   background: var(--color-surface);
   border-bottom: 1px solid var(--color-border);
   gap: 12px;
 }
-.app-topbar-lead { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; column-gap: 4px; row-gap: 0; }
+.app-topbar-lead { flex: 1 1 auto; min-width: 0; display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; column-gap: 4px; row-gap: 0; }
 .app-topbar-lead > .app-topbar-title { grid-column: 1 / -1; }
 .app-breadcrumb {
   margin: 0;
@@ -138,7 +140,7 @@
 }
 .app-breadcrumb a { color: var(--color-text-secondary); }
 .app-breadcrumb a:hover { color: var(--color-primary); text-decoration: underline; }
-.app-breadcrumb .sep { color: var(--color-border-strong); }
+.app-breadcrumb .sep { color: var(--color-text-secondary); }
 .app-breadcrumb span:last-child { color: var(--color-text); font-weight: 700; }
 .app-topbar-title {
   font-size: 14px;

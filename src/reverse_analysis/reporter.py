@@ -1,6 +1,6 @@
 """reverse_analysis.json の組み立て・検証・原子的保存・CLI 要約。
 
-出力は同じ入力・provider 応答から同じ JSON になる（時刻・PID・絶対 root・生 stderr・
+出力は同じ入力・解析結果から同じ JSON になる（時刻・PID・絶対 root・生 stderr・
 source 本文を持たない）。トップレベルのキーと schema_version は固定し、未知の版は拒否する。
 """
 
@@ -14,6 +14,8 @@ from pathlib import Path
 from typing import Any
 
 from reverse_analysis.models import (
+    ENGINE_VERSION_KEY,
+    LEGACY_ENGINE_VERSION_KEY,
     SCHEMA_VERSION,
     Artifact,
     Coverage,
@@ -48,11 +50,11 @@ TOP_LEVEL_KEYS = (
     "diagnostics",
     "summary",
 )
-# opt-in（--reverse-provider-evidence）のときだけ末尾に足す。既定の出力は従来と同じキー
+# opt-in（--reverse-provenance）のときだけ末尾に足す。既定の出力は従来と同じキー
 PROVIDER_EVIDENCE_KEY = "provider_evidence"
 PROVIDER_EVIDENCE_KEYS = ("candidate_provenance", "dependency_edges", "source_map_findings")
 _OBJECT_KEYS = {
-    "producer": ("name", "version", "provider_version"),
+    "producer": ("name", "version", ENGINE_VERSION_KEY),
     "inputs": ("static_root_label", "static_artifact_sha256", "runtime_snapshot_sha256"),
     "coverage": ("static", "runtime"),
     "summary": (
@@ -64,6 +66,8 @@ _OBJECT_KEYS = {
         "matched_relations",
     ),
 }
+# 旧名（provider_version）で保存済みの文書も検証できるようにする（書込は新名のみ）
+_LEGACY_PRODUCER_KEYS = ("name", "version", LEGACY_ENGINE_VERSION_KEY)
 _LIST_KEYS = (
     "artifacts",
     "static_candidates",
@@ -80,7 +84,7 @@ class ReportSchemaError(ValueError):
 def build_document(
     *,
     status: str,
-    provider_version: str | None,
+    engine_version: str | None,
     static_root_label: str,
     static_artifact_sha256: str | None,
     runtime_snapshot_sha256: str | None,
@@ -101,7 +105,7 @@ def build_document(
         "producer": {
             "name": PRODUCER_NAME,
             "version": PRODUCER_VERSION,
-            "provider_version": provider_version,
+            ENGINE_VERSION_KEY: engine_version,
         },
         "inputs": {
             "static_root_label": static_root_label,
@@ -147,7 +151,8 @@ def validate_document(document: Any) -> None:
         raise ReportSchemaError(f"status の値が不正です: {document['status']!r}")
     for key, expected in _OBJECT_KEYS.items():
         value = document[key]
-        if not isinstance(value, Mapping) or tuple(value.keys()) != expected:
+        accepted = (expected, _LEGACY_PRODUCER_KEYS) if key == "producer" else (expected,)
+        if not isinstance(value, Mapping) or tuple(value.keys()) not in accepted:
             raise ReportSchemaError(f"{key} のキーが schema と一致しません")
     for key in _LIST_KEYS:
         if not isinstance(document[key], list):
@@ -223,7 +228,7 @@ def format_summary(document: Mapping[str, Any], output_label: str | None) -> lis
     extra = document.get(PROVIDER_EVIDENCE_KEY)
     if isinstance(extra, Mapping):
         lines.append(
-            f"REA 出典（opt-in）: 候補出典={len(extra['candidate_provenance'])} "
+            f"解析出典（opt-in）: 候補出典={len(extra['candidate_provenance'])} "
             f"imports={len(extra['dependency_edges'])} "
             f"source map 所見={len(extra['source_map_findings'])}"
         )

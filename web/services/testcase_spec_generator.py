@@ -226,7 +226,10 @@ async function expectNoServerError(page) {{
 
 
 def generate_spec(rows: Sequence[Mapping[str, Any]], out_dir: Path) -> dict[str, Any]:
-    """実行可能な行から spec.ts を生成する。戻り値は spec パスと対応表。"""
+    """実行可能な行から実行用 Python spec とエクスポート用 spec.ts を生成する。
+
+    戻り値の ``spec_path`` は実行用 Python spec、``ts_path`` はエクスポート専用 TypeScript。
+    """
     targets = [r for r in rows if is_executable(r)]
     if not targets:
         raise SpecGenerationError(
@@ -237,6 +240,7 @@ def generate_spec(rows: Sequence[Mapping[str, Any]], out_dir: Path) -> dict[str,
     fixture_import = f"./{EGRESS_FIXTURE_NAME.removesuffix('.ts')}"
     lines: list[str] = [
         "// 自動生成 — テストケース表（9列）から生成。手で編集しても再生成で上書きされます。",
+        "// TypeScript エクスポート: generated / not executed / not verified（製品内の実行は Python spec のみ）",
         f"import {{ test, expect }} from {_ts(fixture_import)};",
         _HELPERS,
     ]
@@ -270,15 +274,24 @@ def generate_spec(rows: Sequence[Mapping[str, Any]], out_dir: Path) -> dict[str,
             lines.extend(_as_step(assertion_ix[i], _assertion_lines(assertion)))
         lines.append("});")
 
+    # TypeScript はエクスポート専用（実行しない）。状態を meta に残す。
     spec_path = out_dir / SPEC_FILE_NAME
     spec_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
     meta_path = out_dir / METADATA_FILE_NAME
-    meta_path.write_text(
-        json.dumps({"tests": mapping}, ensure_ascii=False, indent=2), encoding="utf-8"
-    )
+    from web.services.ts_export import TS_EXPORT_STATE, merge_meta
+
+    merge_meta(meta_path, {"tests": mapping, "ts_export": dict(TS_EXPORT_STATE)})
+
+    # 実行用は Python spec。spec_path は常に実行できる Python 版を指す。
+    from web.services.testcase_spec_py_generator import generate_py_spec
+
+    py_path, py_meta_path, _ = generate_py_spec(targets, out_dir)
     return {
-        "spec_path": str(spec_path),
-        "meta_path": str(meta_path),
+        "spec_path": str(py_path),
+        "meta_path": str(py_meta_path),
+        "ts_path": str(spec_path),
+        "ts_meta_path": str(meta_path),
         "test_count": len(targets),
         "skipped_count": len(rows) - len(targets),
+        "mapping": mapping,
     }

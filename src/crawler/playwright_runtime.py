@@ -1,9 +1,8 @@
-"""Playwright ブラウザをプロジェクト単位で管理・検証する。"""
+"""Playwright の実行環境（顧客環境の Chrome / Edge）を検証する。ブラウザの取得・同梱はしない。"""
 
 from __future__ import annotations
 
 import os
-import sys
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -36,20 +35,19 @@ def verify_playwright_runtime() -> PlaywrightRuntimeInfo:
     browsers_path = configure_playwright_browsers_path()
 
     try:
+        from browser_detect import launch_browser
         from playwright.sync_api import sync_playwright
 
         with sync_playwright() as playwright:
-            browser = playwright.chromium.launch(headless=True)
+            browser = launch_browser(playwright, headless=True)
             try:
                 version = browser.version
             finally:
                 browser.close()
     except Exception as exc:
-        command = f"{Path(sys.executable)} scripts/manage_playwright_runtime.py install"
         raise PlaywrightRuntimeError(
-            "解析用Chromiumを起動できません。"
-            f"PLAYWRIGHT_BROWSERS_PATH={browsers_path}。"
-            f"'{command}' を実行してください。"
+            "解析用のブラウザを起動できません。"
+            "Google Chrome または Microsoft Edge をインストールして再実行してください。"
         ) from exc
 
     return PlaywrightRuntimeInfo(

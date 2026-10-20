@@ -9,22 +9,24 @@ import hashlib
 import json
 import math
 import os
-import urllib.request
 from pathlib import Path
 from typing import Callable
+
+from llm.openai_client import request_embeddings, resolve_endpoint
 
 from . import link
 from . import terms as _terms
 from .segment import Unit
 
 MODEL = "text-embedding-3-small"
-ENDPOINT = "https://api.openai.com/v1/embeddings"
+LOCAL_MODEL = "nomic-embed-text"
+ENV_EMBED_MODEL = "WEBSPEC2DOC_EMBED_MODEL"
 # 未調整（pair_v1 で調整予定）。キー設定後に pair_v1 の適合率・再現率で決める暫定値
 T_EXTRA = 0.30
 T_TERM = 0.60
 BATCH = 96
 OFF_ENV = "WEBSPEC2DOC_DOCVERIFY_SEMANTIC"
-NO_KEY_ERROR = "未実行: OPENAI_API_KEY 未設定"
+NO_KEY_ERROR = "未実行: LLM の接続先またはキーが未設定"
 
 Embedder = Callable[[list[str]], "list[list[float]] | None"]
 _override: Embedder | None = None
@@ -40,13 +42,28 @@ def disabled() -> bool:
     return os.environ.get(OFF_ENV, "").strip().lower() == "off"
 
 
-def _api_key() -> str:
+def _env() -> dict[str, str]:
+    """接続先系は os.environ と .env（.env 優先）、OpenAI キーは .env を優先して合成する。"""
+    env = dict(os.environ)
     try:
         from web.env_store import _read_env
-        key = _read_env().get("OPENAI_API_KEY", "")
+        env.update({k: v for k, v in _read_env().items() if v})
     except Exception:
-        key = ""
-    return (key or os.environ.get("OPENAI_API_KEY", "")).strip()
+        pass
+    return env
+
+
+def _api_key() -> str:
+    """埋め込みに使うキー。ローカル宛て（Ollama 等）は置き値、OpenAI 宛てでキー無しは空。"""
+    return resolve_endpoint(env=_env()).api_key
+
+
+def _model() -> str:
+    """実効モデル。OpenAI 宛ては MODEL、ローカル宛ては WEBSPEC2DOC_EMBED_MODEL（無ければ既定）。"""
+    env = _env()
+    if resolve_endpoint(env=env).is_local:
+        return (env.get(ENV_EMBED_MODEL) or "").strip() or LOCAL_MODEL
+    return MODEL
 
 
 def available() -> bool:
@@ -66,17 +83,15 @@ def _cache_dir() -> Path:
 
 
 def _ckey(text: str) -> str:
-    return hashlib.sha256((MODEL + text).encode("utf-8")).hexdigest()
+    return hashlib.sha256((_model() + text).encode("utf-8")).hexdigest()
 
 
 def _post(texts: list[str], key: str) -> list[list[float]] | None:
-    body = json.dumps({"model": MODEL, "input": texts}).encode("utf-8")
-    req = urllib.request.Request(ENDPOINT, data=body, headers={
-        "Content-Type": "application/json", "Authorization": f"Bearer {key}"})
+    endpoint = resolve_endpoint(env=_env())
     try:
-        with urllib.request.urlopen(req, timeout=60) as res:
-            data = json.loads(res.read().decode("utf-8"))["data"]
-        return [d["embedding"] for d in sorted(data, key=lambda d: d["index"])]
+        return request_embeddings(
+            texts, _model(), base_url=endpoint.base_url, api_key=key, purpose="docverify_semantic"
+        )
     except Exception:
         return None
 

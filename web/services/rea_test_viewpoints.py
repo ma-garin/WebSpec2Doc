@@ -162,7 +162,7 @@ def _module_rows(dependencies: list[dict]) -> list[dict]:
 # 「由来と根拠」の区分（C_CONTRACT の Evidence 語彙に対応）: (区分コード, 表示, WS2D.evidence の code)
 ORIGIN_LABEL = {
     "existing_candidate": "元候補",
-    "rea_added": "REA 追加",
+    "rea_added": "解析で追加",
     "static": "静的",
     "observed": "未認証実測",
     "observed_auth": "認証済み実測",

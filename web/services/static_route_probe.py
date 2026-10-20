@@ -282,13 +282,11 @@ class _PlaywrightNavigator:
 
 @contextlib.contextmanager
 def playwright_navigator(storage_state: str | None = None) -> Iterator[_PlaywrightNavigator]:
-    from crawler.playwright_runtime import configure_playwright_browsers_path
-
-    configure_playwright_browsers_path()
+    from browser_detect import launch_browser
     from playwright.sync_api import sync_playwright
 
     with sync_playwright() as pw:
-        browser = pw.chromium.launch(headless=True)
+        browser = launch_browser(pw, headless=True)
         try:
             context = browser.new_context(storage_state=storage_state) if storage_state else browser.new_context()
             page = context.new_page()
@@ -335,7 +333,7 @@ _NO_REA = ProbeRun("no_rea", "このサイトには到達確認できる静的 r
 def run_probe(base: Path, domain: str, evidence: dict[str, Any],
               open_navigator: OpenNavigator | None = None) -> ProbeRun:  # fmt: skip
     candidates = static_route_candidates(evidence)
-    sha = store.current_rea_sha(base, domain)
+    sha = store.current_analysis_sha(base, domain)
     if not candidates or not sha:
         return _NO_REA
     with _running_lock:
@@ -367,7 +365,7 @@ def run_probe(base: Path, domain: str, evidence: dict[str, Any],
             return ProbeRun("error", "ブラウザを起動できず、到達確認を完了できませんでした。結果は更新していません。",
                             "管理者にブラウザ（Playwright）の導入を確認してください。")  # fmt: skip
         store.save(base, domain, {
-            "domain": domain, "rea_snapshot_sha256": sha,
+            "domain": domain, "analysis_snapshot_sha256": sha,
             "started_at": started.isoformat(timespec="seconds"),
             "finished_at": datetime.now(_JST).isoformat(timespec="seconds"),
             "seconds": round(time.monotonic() - t0, 1), "items": items,

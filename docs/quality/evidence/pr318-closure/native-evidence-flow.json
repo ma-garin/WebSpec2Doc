@@ -1,0 +1,21 @@
+{
+  "status": "PASS",
+  "native_status": "complete",
+  "seconds": 0.084,
+  "candidates": 20,
+  "routes": 4,
+  "s02_route_viewpoints": 4,
+  "s02_executed": null,
+  "s09_metrics": {
+    "dependency_edges": 3,
+    "candidates": 2,
+    "routes": 4,
+    "apis": 6,
+    "tests": 9,
+    "observed_routes": 3,
+    "observed_routes_authenticated": 0
+  },
+  "product_truth_violations": 0,
+  "navigation": "fake navigator 200; no real reach claim outside fixture",
+  "root": "/private/var/folders/lz/vmfc81g93p53cwm220jphs980000gn/T/ws2d-flow-kizxoh_q"
+}

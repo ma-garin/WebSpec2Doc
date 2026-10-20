@@ -17,6 +17,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Literal
 
+from web.services.browser_blocked import BLOCKED_MESSAGE, is_browser_unavailable
 from web.services.drift_summary import drift_count, load_drift_summary, should_notify_drift
 
 _JOBS: dict[str, CrawlJob] = {}
@@ -163,6 +164,8 @@ def _run_job(
         proc.wait()
         log_text = "".join(log_buf)[-MAX_LOG_BYTES:]
         status: JobStatus = "completed" if proc.returncode == 0 else "failed"
+        if proc.returncode != 0 and is_browser_unavailable(log_text):
+            log_text = f"{BLOCKED_MESSAGE}\n{log_text}"[-MAX_LOG_BYTES:]
         _update(job, status=status, exit_code=proc.returncode, log_tail=log_text)
         _notify_done(job, on_done)
         if status == "completed" and compare:

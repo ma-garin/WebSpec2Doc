@@ -1,0 +1,9 @@
+{
+  "name": "a11y-oracle",
+  "version": "0.0.0",
+  "private": true,
+  "description": "開発時専用: Native a11y 検査の突合用オラクル（axe-core）。製品の runtime・配布物には含めない。",
+  "devDependencies": {
+    "axe-core": "4.10.2"
+  }
+}

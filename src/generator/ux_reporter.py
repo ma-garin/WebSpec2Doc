@@ -1,6 +1,6 @@
 """UX 自動エキスパートレビューの出力層（ux_review.json 生成）。
 
-axe-core（rules 層・confidence 1.0）とニールセン10原則評価
+自社 Accessibility チェッカー（rules 層・confidence 1.0）とニールセン10原則評価
 （rules または LLM 層・confidence<=0.9）の所見を画面単位で統合し、
 別ファイル（output/{domain}/ux_review.json）として永続化する。
 report.json のスキーマ・report_hash には一切影響しない（AC-7）。
@@ -13,12 +13,11 @@ import logging
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-from ux.axe_runner import axe_violation_to_dict
+from generator.accessibility_reporter import rule_result_dicts, violation_dicts
 from ux.heuristics import pop_hallucination_drop_count
 
 if TYPE_CHECKING:
     from crawler.page_crawler import PageData
-    from ux.axe_runner import AxeViolation
 
 logger = logging.getLogger(__name__)
 
@@ -37,26 +36,31 @@ UX_REVIEW_DISCLAIMER = (
 def build_ux_review(
     pages: list[PageData],
     page_ids: dict[str, str],
-    axe_results: dict[str, tuple[AxeViolation, ...]],
+    a11y_results: dict[str, Any],
     ux_findings: dict[str, list[dict[str, Any]]],
 ) -> dict[str, Any]:
-    """画面ごとの axe 違反・ニールセン所見を統合した ux_review.json 用 dict を構築する。
+    """画面ごとのアクセシビリティ違反・ニールセン所見を統合した ux_review.json 用 dict を構築する。
 
-    axe_results / ux_findings は正規化済み URL をキーとする（crawl_page の normalized_url）。
+    a11y_results は URL → PageA11yResult（旧形式: 違反タプルも可）。
+    ``axe_violations`` は 1 リリース互換のため残し、値は ``a11y_violations`` と同じ。
+    a11y_results / ux_findings は正規化済み URL をキーとする（crawl_page の normalized_url）。
     呼び出し後、幻覚フィルタの累積破棄カウンタは pop_hallucination_drop_count() で読み出し
     リセットする（1 回の生成につき 1 回だけ呼ぶこと）。
     """
     screens = []
     for page in pages:
         page_id = page_ids.get(page.url, "")
-        axe_list = axe_results.get(page.url, ())
+        item = a11y_results.get(page.url, ())
+        violations = violation_dicts(item, page.screenshot_path)
         findings = ux_findings.get(page.url, [])
         screens.append(
             {
                 "page_id": page_id,
                 "url": page.url,
                 "title": page.title,
-                "axe_violations": [axe_violation_to_dict(v) for v in axe_list],
+                "axe_violations": violations,
+                "a11y_violations": violations,
+                "a11y_rule_results": rule_result_dicts(item),
                 "ux_findings": list(findings),
             }
         )
@@ -70,12 +74,10 @@ def build_ux_review(
     }
 
 
-def build_ux_screen_info(
-    page_data: PageData, axe_violations: tuple[AxeViolation, ...]
-) -> dict[str, Any]:
-    """PageData と axe 検査結果から provider.generate_ux_review 用の screen_info を構築する。
+def build_ux_screen_info(page_data: PageData, a11y_violations: Any) -> dict[str, Any]:
+    """PageData とアクセシビリティ検査結果から provider.generate_ux_review 用の screen_info を構築する。
 
-    known_selectors には実在するフィールド・axe 違反のセレクタのみを含める
+    known_selectors には実在するフィールド・違反のセレクタのみを含める
     （幻覚フィルタが参照する「実在セレクタのインベントリ」§5-3）。
     """
     from crawler.page_crawler import evidence_to_dict
@@ -100,12 +102,12 @@ def build_ux_screen_info(
                 }
             )
     axe_summary: list[dict[str, Any]] = []
-    for violation in axe_violations:
-        selector = violation.evidence.selector
+    for violation in violation_dicts(a11y_violations, page_data.screenshot_path):
+        selector = str((violation.get("evidence") or {}).get("selector") or "")
         if selector:
             known_selectors.add(selector)
         axe_summary.append(
-            {"rule_id": violation.rule_id, "impact": violation.impact, "selector": selector}
+            {"rule_id": violation["rule_id"], "impact": violation["impact"], "selector": selector}
         )
     return {
         "title": page_data.title,

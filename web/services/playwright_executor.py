@@ -4,7 +4,6 @@ import html as html_mod
 import json
 import os
 import re
-import shutil
 import subprocess
 import sys
 from collections.abc import Callable
@@ -12,16 +11,6 @@ from importlib.metadata import PackageNotFoundError
 from importlib.metadata import version as _pkg_version
 from pathlib import Path
 from typing import Any, Final
-
-# AutoRun が生成した .spec.ts を実行するための共有 node_modules の場所
-_PW_ENV_DIR = Path("output/.playwright_env")
-
-# Playwright HTML レポートのサブディレクトリ名
-_PW_HTML_SUBDIR = "playwright-report"
-
-# spec ファイルと並べて生成する一時 JS コンフィグ／進捗レポーター名
-_PW_CONFIG_NAME = "_autorun_pw.config.js"
-_PW_PROGRESS_REPORTER_NAME = "_autorun_pw.progress_reporter.js"
 
 # subprocess の下限タイムアウト（自動スケール時の最低保証値）
 _SUBPROCESS_MIN_SEC = 600
@@ -40,16 +29,12 @@ def _max_exec_sec() -> int:
 
 
 def _count_tests_in_spec(spec_path: Path) -> int:
-    """spec.ts 内のテスト件数を粗く数える（test( 呼び出しの数）。
-
-    正確な AST 解析はしない（オーバーエンジニアリング）。件数はタイムアウトの
-    自動スケールにのみ使うため、多少のズレがあっても安全側（下限600秒保証）に倒れる。
-    """
+    """spec 内のテスト件数を粗く数える（case 登録の数）。タイムアウトの自動スケール専用。"""
     try:
         text = spec_path.read_text(encoding="utf-8")
     except OSError:
         return 0
-    return len(re.findall(r"(?<![.\w])test\s*\(", text))
+    return len(re.findall(r"^\s*@case\s*\(", text, flags=re.M))
 
 
 def _resolve_timeout_sec(
@@ -80,110 +65,82 @@ def run_playwright(
     device: str = "pc",
     workers: int = 1,
     egress_policy: Any = None,
-    browser: str = "chromium",
+    browser: str = "auto",
     headed: bool = False,
     on_proc: Callable[[Any], None] | None = None,
     grep: str = "",
 ) -> dict[str, Any]:
     """
-    ローカル @playwright/test CLI でスペックを実行し、結果を返す。
+    Python spec（``*_spec.py``）を Python Playwright ランナーで実行し、結果を返す。
+
+    実行は子プロセス ``python -m web.services.pw_runner``。顧客環境の Google Chrome /
+    Microsoft Edge を使い、外部コマンドの導入・実行時ダウンロードは一切行わない。
+    ブラウザが無ければ成功扱いにせず ``unavailable=True / blocked=True`` で返す。
 
     Args:
-        spec_path: .spec.ts ファイルのパス
+        spec_path: ``*_spec.py`` のパス（``.spec.ts`` は実行不可＝エクスポート専用）
         output_dir: レポート出力先ディレクトリ
-        per_test_timeout_sec: 1テストあたりの制限時間（Playwright config の timeout）
-        timeout_sec: subprocess 全体の最大待機時間。None なら
-            spec 内のテスト件数から自動算出する（既定の挙動）。
-        device: "pc"（既定）または "mobile"（iPhone 13相当のビューポート/UA）。
-            ホワイトリスト外の値は "pc" として扱う。
-        workers: 並列実行数。既定は1（対象サイトへ同時多数アクセスしないための配慮）。
-            対象へ一切アクセスしない自己検証（mutation_verifier）等、外部への
-            配慮が不要な用途でのみ増やすこと。
-        egress_policy: K1 送信ゲートウェイの方針（`EgressPolicy`）。
-            省略時は既定方針を使う。生成テストは必ずゲートウェイを経由するため、
-            ここで SSRF 遮断・予算上限・全件記録が強制される。
-        headed: True でブラウザ画面を表示して実行する（`--headed`）。既定はヘッドレス。
-            画面はこのプロセスが動くマシンに開くため、実行中の様子を人が直接見たい
-            ローカル運用でのみ意味を持つ。
-        on_proc: 起動した子プロセス（Popen）を受け取るフック。AutoRun の中止は
-            ジョブに登録された子プロセスしか殺せないため、中止可能にしたい呼び出し元は
-            ここで登録する。省略時は従来どおり subprocess.run で実行する。
-        grep: 指定するとその文字列（正規表現）にタイトルが一致するテストだけを
-            実行する（Playwright の --grep）。空なら従来どおり spec 内の全件。
+        per_test_timeout_sec: 1テストあたりの制限時間
+        timeout_sec: 子プロセス全体の最大待機時間。None なら件数から自動算出する。
+        device: "pc"（既定）または "mobile"。ホワイトリスト外は "pc"。
+        workers: 並列実行数（送信方針の予算計算にのみ使う。ランナーは直列で実行する）。
+        egress_policy: K1 送信ゲートウェイの方針。省略時は既定方針。
+        browser: "auto"（既定）/ "chrome" / "msedge"。
+        headed: True でブラウザ画面を表示して実行する。
+        on_proc: 起動した子プロセス（Popen）を受け取るフック（AutoRun の中止用）。
+        grep: タイトルが一致するテストだけを実行する（正規表現）。
     """
     if device not in ("pc", "mobile"):
         device = "pc"
     output_dir.mkdir(parents=True, exist_ok=True)
     json_report_path = output_dir / "playwright_report.json"
     fallback_html_path = output_dir / "playwright_report.html"
-    pw_html_dir = output_dir / _PW_HTML_SUBDIR
     progress_path = output_dir / "playwright_progress.ndjson"
+    raw_json_path = output_dir / "playwright_raw.json"
 
     def _log(msg: str) -> None:
         if add_log:
             add_log(msg)
 
-    if not shutil.which("npx"):
-        return _unavailable_result(
-            "npx が見つかりません。Node.js をインストールしてください。",
+    if spec_path.suffix != ".py":
+        return _error_result(
+            f"{spec_path.name} は実行できません。TypeScript はエクスポート専用です。"
+            "Python の spec（*_spec.py）を生成して実行してください。",
             json_report_path,
             fallback_html_path,
         )
 
-    # @playwright/test パッケージを確認・インストール（playwright CLI の有無とは独立）。
-    # _pw_test_available() は単なる存在確認ではなく、Python側 playwright との
-    # バージョン一致・ブラウザ実在まで確認する（そうしないと、異なるバージョンで
-    # 既にインストール済み・ブラウザ未導入のケースを見逃し、実行時に
-    # browserType.launch: Executable doesn't exist で全滅する）。
-    if not _pw_test_available():
-        _log("実行環境をセットアップしています…")
-        ok, msg = _ensure_pw_env(_PW_ENV_DIR)
-        _log(msg)
-        if not ok:
-            return _unavailable_result(msg, json_report_path, fallback_html_path)
-
-    # ローカル CLI を優先（global CLI との version mismatch を回避）
-    # resolve() はシンボリックリンクを辿って cli.js を返すため使わない
-    local_cli = _PW_ENV_DIR / "node_modules" / ".bin" / "playwright"
-    cli_cmd = str(local_cli) if local_cli.is_file() else "npx"
-
-    # K1 送信ゲートウェイのフィクスチャを spec の隣へ生成する。
-    # 生成 spec は `./_autorun_egress` から test を import するため、
-    # これが無いと実行できない＝ゲートウェイの迂回が構造的に不可能。
     from web.services.egress_gateway import (
         EGRESS_LOG_NAME,
+        POLICY_ENV,
         EgressPolicy,
-        write_egress_fixture,
+        read_egress_report,
     )
 
     policy = egress_policy if egress_policy is not None else EgressPolicy(workers=workers)
     egress_log_path = output_dir / EGRESS_LOG_NAME
     if egress_log_path.exists():
         egress_log_path.unlink()
-    write_egress_fixture(spec_path.parent, egress_log_path)
-
-    raw_json_path = output_dir / "playwright_raw.json"
-    # JS コンフィグを spec ファイルの隣に生成（レポーター含め全設定を記述）
-    config_path = _write_pw_config(
-        spec_path=spec_path,
-        html_output_dir=pw_html_dir,
-        per_test_timeout_ms=per_test_timeout_sec * 1000,
-        json_output_path=raw_json_path,
-        progress_path=progress_path,
-        device=device,
-        workers=workers,
-        browser=browser,
-    )
+    if raw_json_path.exists():
+        raw_json_path.unlink()
 
     resolved_timeout_sec = _resolve_timeout_sec(spec_path, per_test_timeout_sec, timeout_sec)
 
-    env_node_modules = str((_PW_ENV_DIR / "node_modules").resolve())
-    # --reporter=json は config の reporter 配列を上書きするため使わない
-    # config で json (ファイル) + html (ファイル) + 進捗(ndjson) の全設定済み
-    if cli_cmd == "npx":
-        cmd = ["npx", "playwright", "test", "--config", str(config_path.resolve())]
-    else:
-        cmd = [cli_cmd, "test", "--config", str(config_path.resolve())]
+    cmd = [
+        sys.executable,
+        "-m",
+        "web.services.pw_runner",
+        "--spec",
+        str(spec_path),
+        "--out",
+        str(output_dir),
+        "--egress-log",
+        str(egress_log_path),
+        "--device",
+        device,
+        "--per-test-timeout",
+        str(per_test_timeout_sec),
+    ]
     if headed:
         cmd.append("--headed")
     if grep:
@@ -197,12 +154,10 @@ def run_playwright(
 
     try:
         env = os.environ.copy()
-        existing = env.get("NODE_PATH", "")
-        env["NODE_PATH"] = f"{env_node_modules}:{existing}" if existing else env_node_modules
-        # K1: 送信方針をフィクスチャへ渡す（SSRF遮断・予算・全件記録）
-        from web.services.egress_gateway import POLICY_ENV
-
         env[POLICY_ENV] = policy.to_json()
+        channel = normalize_browser(browser)
+        if channel in _CHANNELS:
+            env[_BROWSER_ENV] = channel
         proc = _spawn_and_wait(cmd, resolved_timeout_sec, env, on_proc)
     except subprocess.TimeoutExpired as exc:
         return _interrupted_result(
@@ -219,14 +174,11 @@ def run_playwright(
 
     raw_json = _read_raw_json(raw_json_path, proc.stdout)
     result = _parse_results(raw_json, proc.stdout, proc.stderr, proc.returncode)
-    # K1: 実際に何が送信され、何が遮断されたかの記録。
-    # 「送信0」を主張する用途（自己検証）では、これが唯一の証拠になる。
-    from web.services.egress_gateway import read_egress_report
-
     result["egress"] = read_egress_report(egress_log_path).to_dict()
     json_report_path.write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8")
     fallback_html_path.write_text(_build_html_report(result), encoding="utf-8")
     return result
+
 
 
 def _spawn_and_wait(
@@ -279,277 +231,37 @@ def _parse_stdout_json(stdout: str) -> dict[str, Any]:
         return {}
 
 
-def _write_progress_reporter(reporter_path: Path) -> None:
-    """途中終了しても実行済みテストが追記されていく NDJSON 進捗レポーターを生成する。
-
-    onTestEnd で1行/テスト追記するため、subprocess が SIGKILL されても
-    直前までの実行済みテストの結果はファイルに残る（部分結果の回収を可能にする）。
-    """
-    reporter_js = """
-const fs = require('fs');
-
-class ProgressReporter {
-  constructor(options) {
-    this._path = (options && options.progressPath) || 'playwright_progress.ndjson';
-    this._failedStep = {};
-    fs.writeFileSync(this._path, '');
-  }
-  _key(test) {
-    return String((test && (test.id || test.title)) || '');
-  }
-  // 生成 spec は 1 手順を test.step('S<n>') で包む。最初に失敗した境界だけを覚える。
-  onStepEnd(test, result, step) {
-    if (!step || !step.error) return;
-    if (step.category !== 'test.step') return;
-    const key = this._key(test);
-    if (!this._failedStep[key]) this._failedStep[key] = String(step.title || '');
-  }
-  _append(obj) {
-    fs.appendFileSync(this._path, JSON.stringify(obj) + '\\n');
-  }
-  onBegin(config, suite) {
-    let total = 0;
-    try { total = suite.allTests().length; } catch (e) { total = 0; }
-    this._append({ event: 'begin', total });
-  }
-  onTestEnd(test, result) {
-    let message = '';
-    if (result.errors && result.errors.length) {
-      message = String(result.errors[0].message || result.errors[0].value || '').slice(0, 400);
-    }
-    this._append({
-      event: 'test',
-      title: test.title,
-      status: result.status,
-      duration: result.duration || 0,
-      error: message,
-      failed_step: this._failedStep[this._key(test)] || '',
-    });
-  }
-}
-
-module.exports = ProgressReporter;
-"""
-    reporter_path.write_text(reporter_js, encoding="utf-8")
-
-
-def _write_pw_config(
-    spec_path: Path,
-    html_output_dir: Path,
-    per_test_timeout_ms: int = 30_000,
-    json_output_path: Path | None = None,
-    progress_path: Path | None = None,
-    device: str = "pc",
-    workers: int = 1,
-    browser: str = "chromium",
-) -> Path:
-    """JS 形式の playwright config を生成する（TypeScript import 不要）。
-
-    device="mobile" 時のみ use ブロックに iPhone 13 相当のビューポート/UA を
-    追記する（R3-02: PC/モバイル選択）。ホワイトリスト外の値は "pc" として扱う。
-    """
-    if device not in ("pc", "mobile"):
-        device = "pc"
-    if browser not in SUPPORTED_BROWSERS:
-        browser = "chromium"
-    config_path = spec_path.parent / _PW_CONFIG_NAME
-    reporter_path = spec_path.parent / _PW_PROGRESS_REPORTER_NAME
-    spec_dir_abs = str(spec_path.parent.resolve())
-    html_dir_abs = str(html_output_dir.resolve())
-    # テスト成果物（スクショ・トレース）の保存先
-    artifacts_dir_abs = str((html_output_dir.parent / "test-results").resolve())
-    # アクションタイムアウト: per-test timeout の半分（最大 15s）
-    action_timeout_ms = min(per_test_timeout_ms // 2, 15_000)
-    # ナビゲーションタイムアウト: per-test timeout（最大 30s）
-    nav_timeout_ms = min(per_test_timeout_ms, 30_000)
-
-    reporters = [
-        "    ['html', " + json.dumps({"outputFolder": html_dir_abs, "open": "never"}) + "],"
-    ]
-    if json_output_path is not None:
-        reporters.insert(
-            0,
-            "    ['json', " + json.dumps({"outputFile": str(json_output_path.resolve())}) + "],",
-        )
-    else:
-        reporters.insert(0, "    ['json'],")
-    if progress_path is not None:
-        _write_progress_reporter(reporter_path)
-        reporters.append(
-            "    ["
-            + json.dumps(str(reporter_path.resolve()))
-            + ", "
-            + json.dumps({"progressPath": str(progress_path.resolve())})
-            + "],"
-        )
-
-    mobile_use = (
-        (
-            "    viewport: { width: 390, height: 844 },\n"
-            "    isMobile: true,\n"
-            "    hasTouch: true,\n"
-            "    deviceScaleFactor: 3,\n"
-            "    userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) "
-            "AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1',\n"
-        )
-        if device == "mobile"
-        else ""
-    )
-
-    config_js = (
-        "module.exports = {\n"
-        f"  testDir: {json.dumps(spec_dir_abs)},\n"
-        f"  testMatch: {json.dumps(spec_path.name)},\n"
-        f"  timeout: {per_test_timeout_ms},\n"
-        f"  workers: {int(workers) if workers and workers > 0 else 1},\n"
-        f"  outputDir: {json.dumps(artifacts_dir_abs)},\n"
-        "  use: {\n"
-        f"    browserName: {json.dumps(browser)},\n"
-        "    screenshot: 'on',\n"
-        "    trace: 'retain-on-failure',\n"
-        f"    actionTimeout: {action_timeout_ms},\n"
-        f"    navigationTimeout: {nav_timeout_ms},\n"
-        f"{mobile_use}"
-        "  },\n"
-        "  reporter: [\n" + "\n".join(reporters) + "\n"
-        "  ],\n"
-        "};\n"
-    )
-    config_path.write_text(config_js, encoding="utf-8")
-    return config_path
-
-
-def _pw_test_available() -> bool:
-    """ローカルまたは共有 env に @playwright/test があり、実行可能な状態かを確認する。
-
-    共有 env（_PW_ENV_DIR）については、単に存在するかだけでなく Python 側
-    playwright とのバージョン一致・ブラウザ実在まで確認する。どちらか欠けて
-    いれば False を返し、呼び出し側で _ensure_pw_env()（再構築・自動導入）
-    を実行させる（バージョン不一致のまま「セットアップ済み」と誤判定すると、
-    実行時に browserType.launch: Executable doesn't exist で全滅する）。
-    """
-    local = Path("node_modules/@playwright/test")
-    if local.is_dir():
-        return True
-    shared = _PW_ENV_DIR / "node_modules/@playwright/test"
-    if shared.is_dir():
-        target_ver = _python_playwright_version()
-        installed_ver = _installed_pw_test_version(_PW_ENV_DIR)
-        if target_ver and installed_ver and installed_ver != target_ver:
-            return False
-        if not _browsers_present(_configured_browsers_path(), target_ver):
-            return False
-        return True
-    try:
-        result = subprocess.run(
-            ["node", "-e", "require.resolve('@playwright/test')"],
-            capture_output=True,
-            timeout=10,
-        )
-        return result.returncode == 0
-    except Exception:
-        return False
-
-
-def _get_cli_version() -> str:
-    """npx playwright の version 文字列を返す（例: '1.59.1'）。
-
-    diagnostics 表示専用。npm パッケージのバージョン決定には使わない
-    （_python_playwright_version 参照 — npx解決の最新版に追従すると
-    Python 側 playwright パッケージの導入済み Chromium と食い違う）。
-    """
-    try:
-        proc = subprocess.run(
-            ["npx", "playwright", "--version"],
-            capture_output=True,
-            text=True,
-            timeout=10,
-        )
-        # "Version 1.59.1" → "1.59.1"
-        parts = proc.stdout.strip().split()
-        if len(parts) >= 2:
-            return parts[-1]
-    except Exception:
-        pass
-    return ""
-
-
 def _python_playwright_version() -> str:
-    """この Python 環境にインストールされている playwright パッケージのバージョンを返す。
-
-    AutoRun が使う npm @playwright/test は、このバージョンに必ずピン止めする。
-    `npx playwright --version` で決めていた旧実装は、npx が解決する最新版
-    （Python 側より新しいことが多い）を拾ってしまい、Python 側の playwright が
-    .runtime/ms-playwright に導入した Chromium ビルドと一致しない
-    バージョンの @playwright/test がテストを実行しようとして
-    'browserType.launch: Executable doesn't exist' で全滅する不具合の原因だった。
-    """
+    """この Python 環境の playwright パッケージのバージョン（診断表示用）。"""
     try:
         return _pkg_version("playwright")
     except PackageNotFoundError:
         return ""
 
 
-def _installed_pw_test_version(env_dir: Path) -> str:
-    """env_dir に既にインストールされている @playwright/test のバージョンを返す。"""
-    pkg_json = env_dir / "node_modules" / "@playwright" / "test" / "package.json"
-    if not pkg_json.is_file():
-        return ""
-    try:
-        data = json.loads(pkg_json.read_text(encoding="utf-8"))
-        return str(data.get("version", ""))
-    except (OSError, json.JSONDecodeError):
-        return ""
-
-
-def _configured_browsers_path() -> Path:
-    """PLAYWRIGHT_BROWSERS_PATH を解決する（未設定ならリポジトリ既定へ固定）。"""
-    if str(Path("src").resolve()) not in sys.path:
-        sys.path.insert(0, str(Path("src").resolve()))
-    from crawler.playwright_runtime import configure_playwright_browsers_path
-
-    return configure_playwright_browsers_path()
-
-
-def _required_browser_globs(pw_test_version: str) -> tuple[str, ...]:
-    """@playwright/test の版が実行時に要求するブラウザディレクトリの glob を返す。
-
-    1.49 以降は headless 実行の既定が chromium_headless_shell-<build> の別バイナリに
-    変わったため、chromium-* だけでは 'Executable doesn't exist' で全滅する
-    （R3-08: chromium-1117 のみ導入済みで chromium_headless_shell-1217 が無い環境で再発）。
-    """
-    try:
-        major, minor = (int(x) for x in pw_test_version.split(".")[:2])
-    except (ValueError, AttributeError):
-        return ("chromium-*", "chromium_headless_shell-*")  # 不明時は両方要求（安全側）
-    if (major, minor) >= (1, 49):
-        return ("chromium-*", "chromium_headless_shell-*")
-    return ("chromium-*",)
-
-
-#: 実行できるブラウザ。Playwright の browserName にそのまま渡せる値のみを許す。
-#: 利用者の自由入力（「Firefox で見たい」等）はここへ正規化する。
-SUPPORTED_BROWSERS: Final = ("chromium", "firefox", "webkit")
-
-#: 自由入力からブラウザ名を引くための別名。表記ゆれを吸収する。
+#: 製品内実行で使えるブラウザ（顧客環境の Google Chrome / Microsoft Edge のみ）。
+#: firefox / webkit は非対応（バンドルも導入もしない）。
+SUPPORTED_BROWSERS: Final = ("auto", "chrome", "msedge")
+_CHANNELS: Final = ("chrome", "msedge")
+_BROWSER_ENV: Final = "WEBSPEC2DOC_BROWSER"
 _BROWSER_ALIASES: Final = {
-    "chromium": "chromium",
-    "chrome": "chromium",
-    "google chrome": "chromium",
-    "edge": "chromium",
-    "firefox": "firefox",
-    "ff": "firefox",
-    "mozilla": "firefox",
-    "webkit": "webkit",
-    "safari": "webkit",
+    "msedge": "msedge",
+    "edge": "msedge",
+    "chrome": "chrome",
+    "chromium": "auto",
+    "auto": "auto",
 }
+
+#: ブラウザが無いときの案内（導入コマンドは案内しない。Chrome / Edge の導入を促す）
+BROWSER_UNAVAILABLE_GUIDE: Final = (
+    "browser unavailable: Google Chrome または Microsoft Edge をインストールして、もう一度実行してください。"
+)
 
 
 def normalize_browser(raw: str) -> str:
-    """利用者の指定をブラウザ名へ正規化する。判別できなければ空文字。
+    """利用者の指定を "auto" / "chrome" / "msedge" へ正規化する。判別できなければ空文字。
 
-    黙って Chromium へ読み替えない。判別できないことは呼び出し側へ返し、
-    「指定した環境で確認したつもり」を作らせない。
+    黙って別ブラウザへ読み替えない。判別できないことは呼び出し側へ返す。
     """
     text = (raw or "").strip().lower()
     if not text:
@@ -560,184 +272,18 @@ def normalize_browser(raw: str) -> str:
     return ""
 
 
-def _browsers_present(browsers_path: Path, pw_test_version: str) -> bool:
-    """必要ブラウザが全て導入済みか（版対応・AND判定）。実行ファイル実在まで確認する。
-
-    ディレクトリだけ残って中身が空のケース（インストール強制終了・ボリューム
-    破損等）も「欠落」として扱う。version 不一致のまま OR 判定していた旧実装は、
-    chromium-* だけ残っていて chromium_headless_shell-* が無い環境を
-    「導入済み」と誤判定し、自動修復をスキップしてテスト全滅を招いていた。
-    """
-    if not browsers_path.is_dir():
-        return False
-    for pattern in _required_browser_globs(pw_test_version):
-        dirs = list(browsers_path.glob(pattern))
-        if not dirs:
-            return False
-        # ディレクトリだけ残って中身が空のケース（強制終了等）も欠落として扱う
-        if not any(p.is_file() for d in dirs for p in d.rglob("*")):
-            return False
-    return True
-
-
-#: 追加で導入したいブラウザ（実行条件で指定されたときに積む）。
-_EXTRA_BROWSERS: list[str] = []
-
-
-def request_browser_install(browser: str) -> None:
-    """次回の導入時に、指定ブラウザも入れるよう記録する。"""
-    if browser in SUPPORTED_BROWSERS and browser not in _EXTRA_BROWSERS:
-        _EXTRA_BROWSERS.append(browser)
-
-
-def _browsers_to_install() -> list[str]:
-    return ["chromium", *_EXTRA_BROWSERS]
-
-
 def ensure_browser_available(browser: str) -> tuple[bool, str]:
-    """指定ブラウザを実行できる状態にする。できなければ理由を返す。"""
+    """指定ブラウザが使えるかを「検出のみ」で確かめる。導入はしない。"""
     if browser not in SUPPORTED_BROWSERS:
-        return False, f"対応していないブラウザです: {browser}"
-    if browser == "chromium":
-        return True, ""
-    browsers_path = _configured_browsers_path()
-    if any(browsers_path.glob(f"{browser}-*")):
-        return True, ""
-    if not shutil.which("npx"):
-        return False, "npx が見つからず、指定ブラウザを自動導入できません。"
-    request_browser_install(browser)
-    env = os.environ.copy()
-    env["PLAYWRIGHT_BROWSERS_PATH"] = str(browsers_path)
-    try:
-        proc = subprocess.run(
-            ["npx", "playwright", "install", browser],
-            capture_output=True,
-            text=True,
-            timeout=600,
-            cwd=str(_PW_ENV_DIR),
-            env=env,
-        )
-    except (OSError, subprocess.SubprocessError) as exc:
-        return False, f"{browser} の導入に失敗しました: {exc}"
-    if proc.returncode != 0:
-        return False, f"{browser} の導入に失敗しました: {proc.stderr[:300]}"
-    return (
-        (True, "")
-        if any(browsers_path.glob(f"{browser}-*"))
-        else (False, f"{browser} が導入されませんでした")
-    )
-
-
-def _ensure_browsers_installed(pw_test_version: str) -> tuple[bool, str]:
-    """chromium ブラウザ本体の実在を確認し、無ければ自動導入する。
-
-    npm @playwright/test を Python 版と同一バージョンにピン止めしても、
-    .runtime/ms-playwright にブラウザが一度も導入されていない環境
-    （新規チェックアウト・コンテナ再作成直後等）では、実行時に
-    'browserType.launch: Executable doesn't exist' で全滅する。
-    """
-    browsers_path = _configured_browsers_path()
-    if _browsers_present(browsers_path, pw_test_version):
-        return True, ""
-    if not shutil.which("npx"):
-        return False, "npx が見つからず Playwright ブラウザを自動導入できません。"
-    env = os.environ.copy()
-    env["PLAYWRIGHT_BROWSERS_PATH"] = str(browsers_path)
-    try:
-        proc = subprocess.run(
-            ["npx", "playwright", "install", *_browsers_to_install()],
-            capture_output=True,
-            text=True,
-            timeout=300,
-            cwd=str(_PW_ENV_DIR),
-            env=env,
-        )
-        if proc.returncode != 0:
-            return False, f"Playwright ブラウザの自動導入に失敗しました: {proc.stderr[:300]}"
-        # 自動導入後も再検証する（導入コマンドが chromium_headless_shell を
-        # 含んでいない版・部分的に失敗した場合を見逃さないため）。
-        if not _browsers_present(browsers_path, pw_test_version):
-            missing = [
-                pattern
-                for pattern in _required_browser_globs(pw_test_version)
-                if not any(browsers_path.glob(pattern))
-            ]
-            missing_desc = ", ".join(missing) if missing else "実行ファイル"
-            return False, f"自動導入後もブラウザが不足しています: {missing_desc}"
-        return True, "Playwright ブラウザ（chromium）を自動導入しました。"
-    except subprocess.TimeoutExpired:
-        return False, "Playwright ブラウザの自動導入がタイムアウトしました。"
-    except Exception as exc:
-        return False, f"Playwright ブラウザの自動導入エラー: {exc}"
-
-
-def _ensure_pw_env(env_dir: Path) -> tuple[bool, str]:
-    """@playwright/test を env_dir にインストールする（Python側 playwright と同バージョン）。
-
-    バージョン不一致（既存インストール済みの @playwright/test が Python 側と
-    異なる場合。過去は npx 解決の最新版でインストールしていたため必ず発生していた）
-    を検出した場合は node_modules を破棄して再構築する。
-    """
-    env_dir.mkdir(parents=True, exist_ok=True)
-    pkg_json = env_dir / "package.json"
-
-    target_ver = _python_playwright_version()
-    if not target_ver:
-        return False, (
-            "Python側 playwright のバージョンを特定できないため実行を中止しました"
-            "（latest の暗黙インストールはブラウザ不一致全滅の原因になるため行いません）。"
-            "venv を有効化し `pip show playwright` で確認してください。"
-        )
-    installed_ver = _installed_pw_test_version(env_dir)
-    version_mismatch = bool(installed_ver) and installed_ver != target_ver
-
-    if version_mismatch:
-        # 既存envがPython側と異なるバージョンでインストールされている
-        # （旧実装のnpx最新版インストール等）→ ブラウザ実行不能を防ぐため再構築する
-        shutil.rmtree(env_dir / "node_modules", ignore_errors=True)
-
-    already_installed = (env_dir / "node_modules/@playwright/test").is_dir()
-    if already_installed and not version_mismatch:
-        ok, msg = _ensure_browsers_installed(target_ver)
-        if not ok:
-            return False, msg
-        return True, "@playwright/test は既にセットアップ済みです。"
-
-    if not shutil.which("npm"):
-        return False, "npm が見つかりません。Node.js をインストールしてください。"
-
-    dep_spec = target_ver
-    pkg_json.write_text(
-        json.dumps(
-            {
-                "name": "autorun-env",
-                "private": True,
-                "dependencies": {"@playwright/test": dep_spec},
-            }
-        ),
-        encoding="utf-8",
-    )
-
-    pkg = f"@playwright/test@{target_ver}"
+        return False, f"対応していないブラウザです: {browser}（Chrome か Edge を指定してください）"
+    from src.browser_detect import BrowserUnavailable, detect_browser
 
     try:
-        proc = subprocess.run(
-            ["npm", "install", pkg, "--prefix", str(env_dir)],
-            capture_output=True,
-            text=True,
-            timeout=180,
-        )
-        if proc.returncode != 0:
-            return False, f"npm install 失敗: {proc.stderr[:300]}"
-    except subprocess.TimeoutExpired:
-        return False, "npm install タイムアウト"
-    except Exception as exc:
-        return False, f"npm install エラー: {exc}"
+        detect_browser(prefer=None if browser == "auto" else browser)
+    except BrowserUnavailable:
+        return False, BROWSER_UNAVAILABLE_GUIDE
+    return True, ""
 
-    ok, msg = _ensure_browsers_installed(target_ver)
-    if not ok:
-        return False, msg
-    return True, f"@playwright/test {target_ver or ''} のインストールが完了しました。"
 
 
 _STEP_TITLE_RE = re.compile(r"^S\d+$")
@@ -776,6 +322,28 @@ def _parse_results(
 
     # stderr の先頭 500 文字をエラー診断用に保存
     stderr_snippet = (stderr or "")[:500]
+
+    # ブラウザ未検出（ランナーが BLOCKED を書いた）。成功扱いにせず理由を伝搬する。
+    if str(raw.get("status", "")).upper() == "BLOCKED":
+        reason = str(raw.get("reason") or "browser unavailable")
+        return {
+            "ok": False,
+            "passed": 0,
+            "failed": 0,
+            "skipped": 0,
+            "total": 0,
+            "duration_ms": 0,
+            "tests": [],
+            "status": "BLOCKED",
+            "blocked": True,
+            "unavailable": True,
+            "reason": reason,
+            "error": f"{reason}: {BROWSER_UNAVAILABLE_GUIDE}",
+            "tried": raw.get("tried") or [],
+            "stdout": stdout[:4000] if stdout else "",
+            "stderr": stderr[:2000] if stderr else "",
+            "stderr_snippet": stderr_snippet,
+        }
 
     # evidence-only: suites も stats も無い（＝そもそも結果を解析できなかった）場合、
     # returncode==0 であっても「成功」を偽装してはいけない。0/0/0 を無言で成功扱いに

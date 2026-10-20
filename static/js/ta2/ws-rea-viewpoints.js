@@ -1,6 +1,6 @@
 /* ws-rea-viewpoints.js — テスト候補の由来と実行（System 02「実行と結果」）
  * T.reaViewpointsRender(host, domain): GET /api/sites/<domain>/rea-test-viewpoints を C. Hybrid 部品（window.WS2D）で描く。
- * 区別する 8 語: 元候補 / REA 追加 / 静的 / 未認証実測 / 認証済み実測 / 未確認 / 実行対象 / 実行済み。
+ * 区別する 8 語: 元候補 / 解析で追加 / 静的 / 未認証実測 / 認証済み実測 / 未確認 / 実行対象 / 実行済み。
  * 実行対象（System 03 が到達を実測した route）≠ 実行済み（実行記録が観点に結び付いたものだけ。取れなければ「未計測」）。
  * 状態は文字＋形で示す（色だけにしない）。テキストは WS2D.esc / textContent 経由。
  */
@@ -24,7 +24,7 @@
   var EV_BY = {};
   EV.forEach(function (e) { EV_BY[e.key] = e; });
 
-  /** 観点 1 件の根拠区分（純関数・tests/js で検証）。由来（元候補 / REA 追加）と根拠の強さを分けて返す */
+  /** 観点 1 件の根拠区分（純関数・tests/js で検証）。由来（元候補 / 解析で追加）と根拠の強さを分けて返す */
   function evKey(v) {
     if (!v.is_new) return 'base';
     var o = v.origin;
@@ -38,7 +38,7 @@
   var FILTERS = {
     all: { label: 'すべて', test: function () { return true; } },
     base: { label: '元候補', test: function (v) { return !v.is_new; } },
-    'new': { label: 'REA 追加', test: function (v) { return !!v.is_new; } },
+    'new': { label: '解析で追加', test: function (v) { return !!v.is_new; } },
     target: { label: '実行対象', test: isTarget },
     executed: { label: '実行済み', test: isExecuted }
   };
@@ -50,7 +50,7 @@
   function esc(s) { return W() ? W().esc(s) : String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
 
   function fallbackNotice(host, d) {
-    var msg = (d.message || 'リバース解析の根拠がありません。') + '（元候補 ' + ((d.metrics || {}).before || 0) + ' 件のみ。REA 追加 0 件・実行対象 0 件は「無い」ではなく未確認です）';
+    var msg = (d.message || 'リバース解析の根拠がありません。') + '（元候補 ' + ((d.metrics || {}).before || 0) + ' 件のみ。解析で追加 0 件・実行対象 0 件は「無い」ではなく未確認です）';
     var next = d.next_action || 'System01 でリバース解析を実行すると観点が増えます';
     if (W()) { W().state(host, { kind: 'unverified', title: 'テスト候補の由来: リバース解析の根拠なし', message: msg, next: next }); return; }
     host.textContent = msg + ' 次の操作: ' + next;
@@ -71,7 +71,7 @@
   function openDrawer(v, ret) {
     var ex = v.execution || {};
     var k = EV_BY[evKey(v)];
-    var facts = [{ label: '由来', value: v.is_new ? 'REA 追加（リバース解析で増えた観点）' : '元候補（既存のテスト候補）' }];
+    var facts = [{ label: '由来', value: v.is_new ? '解析で追加（リバース解析で増えた観点）' : '元候補（既存のテスト候補）' }];
     if (v.kind === 'route') {
       facts.push({ label: '到達の実測（System 03）', value: (v.reach_label || '未探索') });
       if (v.reach_observed_at) facts.push({ label: '実測日時', value: v.reach_observed_at });
@@ -84,7 +84,7 @@
       inf.push('根拠: ' + k.label + '（' + (v.evidence_state_label || v.source_label || '不明') + '）');
       if (!v.runnable) inf.push('到達・動作は実測で確認していません。');
     }
-    var sources = [{ label: '位置', value: v.location || '未確認' }, { label: 'provider', value: 'リバース解析（System 01）' }];
+    var sources = [{ label: '位置', value: v.location || '未確認' }, { label: '出所', value: 'リバース解析（System 01）' }];
     if (v.evidence_id) sources.push({ label: '根拠 ID', value: String(v.evidence_id) });
     W().drawer.open({
       title: v.text, state: k.ev, stateReason: k.label,
@@ -98,9 +98,9 @@
     var tr = document.createElement('tr');
     tr.setAttribute('tabindex', '0');
     var k = EV_BY[evKey(v)];
-    tr.setAttribute('aria-label', v.text + '。由来 ' + (v.is_new ? 'REA 追加' : '元候補') + '、根拠 ' + k.label + '、' + targetText(v) + '。根拠を開く');
+    tr.setAttribute('aria-label', v.text + '。由来 ' + (v.is_new ? '解析で追加' : '元候補') + '、根拠 ' + k.label + '、' + targetText(v) + '。根拠を開く');
     tr.innerHTML = '<td data-label="観点"><span class="rt-text">' + esc(v.text) + '</span></td>'
-      + '<td data-label="由来"><span class="rt-origin">' + (v.is_new ? 'REA 追加' : '元候補') + '</span></td>'
+      + '<td data-label="由来"><span class="rt-origin">' + (v.is_new ? '解析で追加' : '元候補') + '</span></td>'
       + '<td data-label="根拠">' + W().evidence.html(k.ev, k.label) + '</td>'
       + '<td data-label="実行対象"><span class="' + (isTarget(v) ? 'rt-run-target' : 'rt-run-none') + '">' + esc(targetText(v)) + '</span></td>'
       + '<td data-label="実行済み">' + executedHTML(v) + '</td>';
@@ -132,10 +132,10 @@
 
     host.innerHTML = '<div class="rt-wrap">'
       + '<div class="rv-head-main"><h3 class="rv-title">テスト候補の由来と実行</h3>'
-      + '<p class="rv-lead">元候補にリバース解析（REA）の観点を足した一覧です。<b>実行対象</b>は System 03 が到達を実測した route、<b>実行済み</b>は実行記録が観点に結び付いたものだけで、別の数です（探索済み ' + esc(m.probed || 0) + ' 件）。</p></div>'
+      + '<p class="rv-lead">元候補にリバース解析の観点を足した一覧です。<b>実行対象</b>は System 03 が到達を実測した route、<b>実行済み</b>は実行記録が観点に結び付いたものだけで、別の数です（探索済み ' + esc(m.probed || 0) + ' 件）。</p></div>'
       + '<ol class="rt-flow" aria-label="テスト候補の流れ（数を押すと一覧を絞り込みます）">'
       + flowStep(1, 'base', '元候補', m.before, m.before_basis || '既存のテスト候補')
-      + flowStep(2, 'new', 'REA 追加', m['new'], '根拠 ID 付き ' + (m.with_evidence == null ? '未計測' : m.with_evidence) + ' 件', 'is-inference')
+      + flowStep(2, 'new', '解析で追加', m['new'], '根拠 ID 付き ' + (m.with_evidence == null ? '未計測' : m.with_evidence) + ' 件', 'is-inference')
       + flowStep(3, 'all', '合計', m.after, '元 ' + m.before + ' ＋ 追加 ' + m['new'])
       + flowStep(4, 'target', '実行対象', m.runnable, '到達を実測した route', 'is-fact')
       + flowStep(5, 'executed', '実行済み', m.executed, m.executed == null ? '実行記録を取得できません' : '実行記録が結び付いた観点', 'is-fact')

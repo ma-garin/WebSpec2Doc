@@ -87,7 +87,7 @@
         { label: '関連 module', value: r.module || '' }],
       inferences: ['module との関係は静的依存からの推論です（状態: ' + (STATE[r.state] || '未確認') + '）。'],
       limitations: [NOTICE, '到達できたことは、機能が正常に動くことを意味しません。', '認証済み実測は保存済みの認証状態で開いた結果です。'],
-      sources: [{ label: '位置', value: r.location || '不明' }, { label: 'provider', value: 'System 01 リバース解析（静的）／到達: System 03 到達確認（実測）' }]
+      sources: [{ label: '位置', value: r.location || '不明' }, { label: '出所', value: 'System 01 リバース解析（静的）／到達: System 03 到達確認（実測）' }]
     }, btn);
   }
   function testDrawer(t, btn) {
@@ -95,7 +95,7 @@
       title: 'テスト観点', state: 'static', stateReason: t.source === 'runtime' ? '実測由来の観点です。' : '静的候補由来です。実行・合格を示しません。',
       claim: t.text || '', facts: [], inferences: ['この観点は変更元に関連する根拠から導いた候補です。'],
       limitations: ['生成された観点は実行済みを意味しません。', NOTICE],
-      sources: [{ label: '根拠 id', value: t.evidence_id || '' }, { label: 'provider', value: 'System 02 テスト観点（リバース解析由来）' }]
+      sources: [{ label: '根拠 id', value: t.evidence_id || '' }, { label: '出所', value: 'System 02 テスト観点（リバース解析由来）' }]
     }, btn);
   }
   function moduleDrawer(m, via, btn) {
@@ -105,7 +105,7 @@
       claim: via ? m + ' は変更元と import 関係でつながっています。' : m + ' が変更元です。',
       facts: [], inferences: via ? [(v.source || '') + ' → ' + (v.target || '') + '／' + (v.relation_label || '依存')] : [],
       limitations: [NOTICE, '影響候補であり、実際に影響するとは限りません。'],
-      sources: [{ label: '位置', value: v.location || '不明' }, { label: 'provider', value: 'System 01 リバース解析（静的）' }]
+      sources: [{ label: '位置', value: v.location || '不明' }, { label: '出所', value: 'System 01 リバース解析（静的）' }]
     }, btn);
   }
   function rowBtn(cls, label, extra) { return '<li><button type="button" class="im-rea-row" data-rid="' + cls + '">' + label + '</button>' + (extra || '') + '</li>'; }

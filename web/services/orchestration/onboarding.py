@@ -12,14 +12,11 @@ run を起こすのは呼び出し側（routes/orchestration.py）の責任に�
 from __future__ import annotations
 
 import logging
-import os
 import re
-import shutil
-import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 
-from web.services.healing import project_store, verification
+from web.services.healing import git_ops, project_store, verification
 from web.services.healing.types import HealingError
 from web.validation import _domain_of
 
@@ -40,10 +37,6 @@ _GITHUB_RE = re.compile(
 )
 #: "owner/name" 形式（_ensure_clone が受け取った値を再検証するためだけに使う）。
 _OWNER_NAME_RE = re.compile(r"^[\w.-]+/[\w.-]+$")
-
-#: GitHub からの取得（git clone）に許す時間。HTTP のリクエストスレッドで
-#: 走るので、利用者を待たせてよい上限として短く取る。
-_CLONE_TIMEOUT_SEC = 60
 
 #: repo 入力の上限。長すぎるパスは OS が例外にする（Errno 63）ため、
 #: ファイルシステムに触る前にここで断る。
@@ -96,20 +89,11 @@ def _ensure_clone(github_repo: str) -> Path:
         return dest
     dest.parent.mkdir(parents=True, exist_ok=True)
     url = f"https://github.com/{owner}/{name}.git"
-    # 認証を聞かれてもプロンプトで止まらせない。止まると timeout まで
-    # HTTP のレスポンスが返らず、利用者には「固まった」としか見えない。
-    env = {**os.environ, "GIT_TERMINAL_PROMPT": "0", "GIT_ASKPASS": "echo"}
-    try:
-        subprocess.run(  # noqa: S603 - shell=False固定・引数は正規表現で検証済み
-            ["git", "clone", "--depth", "1", url, str(dest)],
-            check=True, capture_output=True, timeout=_CLONE_TIMEOUT_SEC,
-            shell=False, env=env,
-        )
-    except (subprocess.CalledProcessError, subprocess.SubprocessError, OSError) as exc:
-        # 途中まで置かれたものを残さない。次回「.git がある」と誤認して
-        # 壊れた取得結果をそのまま接続先にしてしまう。
-        shutil.rmtree(dest, ignore_errors=True)
-        raise ValueError(f"GitHub から取得できませんでした: {exc}") from exc
+    # dulwich の clone は認証プロンプトを出さない（止まって「固まった」に見えるのを防ぐ）。
+    # 失敗時は clone_shallow が途中のディレクトリを消す（次回「.git がある」と誤認させない）。
+    result = git_ops.clone_shallow(url, dest, depth=1)
+    if not result.ok:
+        raise ValueError(f"GitHub から取得できませんでした: {result.stderr}")
     return dest
 
 

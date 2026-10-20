@@ -18,6 +18,7 @@ from urllib.parse import urljoin, urlparse, urlunparse
 from urllib.robotparser import RobotFileParser
 
 from playwright.sync_api import Browser, Page, sync_playwright
+from browser_detect import launch_browser
 from playwright.sync_api import Error as PlaywrightError
 
 from crawler.playwright_runtime import configure_playwright_browsers_path
@@ -38,7 +39,7 @@ from crawler.url_safety import is_safe_target
 
 if TYPE_CHECKING:
     from analyzer.stack_detector import StackInfo
-    from ux.axe_runner import AxeViolation
+    from ux.a11y.models import PageA11yResult
 
 CRAWL_DELAY_SEC = 0
 DEFAULT_DEPTH = 3
@@ -84,9 +85,9 @@ logger = logging.getLogger(__name__)
 CrawlEventCallback = Callable[[dict[str, object]], None]
 CheckpointCallback = Callable[[list["PageData"]], None]
 StopRequested = Callable[[], bool]
-# --ux-review 時、画面ごとの axe 検査結果をサイドチャネルで受け取るコールバック。
+# --ux-review 時、画面ごとのアクセシビリティ検査結果をサイドチャネルで受け取るコールバック。
 # PageData のスキーマは変更しない（report.json 互換保護。SPEC-3-4 §5-2）
-UxResultCallback = Callable[[str, tuple["AxeViolation", ...]], None]
+UxResultCallback = Callable[[str, "PageA11yResult"], None]
 
 
 class LoginWallDetected(RuntimeError):
@@ -273,7 +274,7 @@ def _browser_page(auth_state: Path | None, viewport: Any | None = None) -> Itera
         # メッセージが日本語で得られるようにする（context の locale だけでは
         # validationMessage の言語は変わらないため launch 引数で指定する）。
         # 基底言語コード（BROWSER_UI_LANG="ja"）を渡す点に注意（"ja-JP" は不可）。
-        browser = playwright.chromium.launch(headless=True, args=[f"--lang={BROWSER_UI_LANG}"])
+        browser = launch_browser(playwright, headless=True, args=[f"--lang={BROWSER_UI_LANG}"])
         try:
             context_options: dict[str, Any] = {
                 "user_agent": USER_AGENT,
@@ -927,14 +928,14 @@ def crawl_page(
         a11y_issues = tuple(extract_a11y_issues(page))
         embedded_frames = tuple(collect_embedded_frames(page, normalized_url))
         if ux_review:
-            # axe-core 検査は既存抽出の後に実行する（AC-1〜3）。
+            # アクセシビリティ検査（自社実装）は既存抽出の後に実行する（AC-1〜3）。
             # 結果は PageData に追加せず（スキーマ互換保護 §5-2）、
             # コールバック経由のサイドチャネルで収集する。
-            from ux.axe_runner import run_axe
+            from ux.a11y.runner import run_native_a11y
 
-            axe_violations = run_axe(page, screenshot_path)
+            a11y_result = run_native_a11y(page, screenshot_path, url=normalized_url)
             if on_ux_result is not None:
-                on_ux_result(normalized_url, axe_violations)
+                on_ux_result(normalized_url, a11y_result)
         page_html = page.content()
         state_id = compute_state_signature(page_html)
         # DOM を変更する探索・実測は静的抽出の完了後に行う

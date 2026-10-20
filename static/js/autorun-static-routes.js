@@ -295,7 +295,7 @@
       claim: 'リバース解析の静的解析が、Route「' + it.route + '」が宣言されていると示しています（静的候補）。',
       facts: facts, inferences: inf, limitations: lim,
       sources: [{ label: '位置', value: it.location || '-' },
-        { label: 'provider', value: it.provider || (d && d.provider) || '静的解析（リバース解析）' }],
+        { label: '出所', value: it.provider || (d && d.provider) || '静的解析（リバース解析）' }],
       returnFocus: row
     });
   }

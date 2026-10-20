@@ -27,6 +27,7 @@ from typing import Any
 
 from web.config import DISCOVER_TIMEOUT_SEC
 from web.services.auto_run_job import AutoRunJob, _job_out, logger
+from web.services.browser_blocked import BLOCKED_MESSAGE, BrowserBlocked, is_browser_unavailable
 from web.services.document_autorun import candidate_filename, run_document_autorun_phase
 from web.services.evidence_pack_service import attach_evidence_pack
 from web.services.failure_classifier import (
@@ -38,7 +39,9 @@ from web.services.playwright_executor import run_playwright
 from web.services.qa.advanced_generator import _generate_advanced_outputs
 from web.services.qa.doc_generator import _generate_outputs
 from web.services.qa.helpers import _load_report, use_output_dir, use_viewpoint_snapshot
+from web.services.spec_py_generator import generate_spec_py
 from web.services.spec_ts_generator import compute_filter_counts, generate_spec_ts
+from web.services.ts_export import TS_EXPORT_STATE, add_header, merge_meta
 from web.services.viewpoint_store import ViewpointStoreError, get_viewpoint_store
 from web.validation import _domain_of
 
@@ -373,13 +376,15 @@ def _run_child_process(
     )
     job.register_proc(proc)
     try:
-        stdout, _ = proc.communicate(input=input_text, timeout=timeout)
+        stdout, stderr = proc.communicate(input=input_text, timeout=timeout)
     except subprocess.TimeoutExpired:
         proc.kill()
         proc.communicate()
         raise
     finally:
         job._proc = None
+    if proc.returncode and is_browser_unavailable(stderr, stdout):
+        raise BrowserBlocked(BLOCKED_MESSAGE)
     return stdout
 
 
@@ -413,6 +418,9 @@ def _phase_discover(job: AutoRunJob, depth: int, max_pages: int) -> None:
         pages: list[dict[str, Any]] = data.get("pages", [])
     except subprocess.TimeoutExpired:
         job.add_log("到達確認タイムアウト。そのまま観測を続行します。")
+        return
+    except BrowserBlocked as exc:
+        _mark_job_failed(job, str(exc))
         return
     except Exception as exc:
         if job._cancelled:
@@ -515,6 +523,7 @@ def _phase_crawl(job: AutoRunJob, depth: int, max_pages: int) -> None:
             cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, bufsize=1
         )
         job._proc = proc
+        out_tail: list[str] = []
         for line in proc.stdout or []:
             if job._cancelled:
                 proc.terminate()
@@ -522,6 +531,8 @@ def _phase_crawl(job: AutoRunJob, depth: int, max_pages: int) -> None:
             line = line.rstrip()
             if not line:
                 continue
+            out_tail.append(line)
+            del out_tail[:-40]
             # クロールの進捗イベントは、いま何を取得しているか・何が取れたかを
             # その場で見せる形に整える。生ログのままだと中身が読み取れない。
             readable = _format_crawl_event(line)
@@ -532,6 +543,9 @@ def _phase_crawl(job: AutoRunJob, depth: int, max_pages: int) -> None:
             job.add_log(f"[cli] {line}")
         proc.wait(timeout=600)
         job._proc = None
+        if proc.returncode and is_browser_unavailable("\n".join(out_tail)):
+            _mark_job_failed(job, BLOCKED_MESSAGE)
+            return
     except subprocess.TimeoutExpired:
         if proc:
             proc.kill()
@@ -704,7 +718,7 @@ def _phase_generate_scripts(job: AutoRunJob) -> None:
         return
     job.status = "generating_scripts"
     job.step_label = "Playwright スクリプトを生成中"
-    job.add_log("Playwright .spec.ts を生成しています…")
+    job.add_log("Playwright スクリプト（Python）を生成しています…")
 
     candidates_filename = candidate_filename(job.mode)
     candidates_path = _job_out(job) / job.domain / "qa_process" / candidates_filename
@@ -713,7 +727,8 @@ def _phase_generate_scripts(job: AutoRunJob) -> None:
         return
 
     spec_dir = _job_out(job) / job.domain / "qa_process"
-    spec_path = spec_dir / "autorun.spec.ts"
+    spec_path = spec_dir / "autorun_spec.py"  # 実行用（Python）
+    ts_path = spec_dir / "autorun.spec.ts"  # エクスポート用（実行しない）
 
     # 仕様14: 承認済みのローレベルテストケースを自動化の入力にする。
     # 対応づく候補だけを対象にし、対応の無いケースは「未自動化」として残す。
@@ -721,12 +736,13 @@ def _phase_generate_scripts(job: AutoRunJob) -> None:
 
     try:
         # 実行条件で「送信まで実行」が選ばれた場合のみ、送信手順を生成する。
-        generate_spec_ts(
+        generate_spec_py(
             job.domain,
             source_path,
             spec_path,
             allow_submit=bool(job.run_policy.get("allow_submit")),
         )
+        _export_ts(job, source_path, ts_path)
     except Exception as exc:
         _mark_job_failed(job, f"スクリプト生成エラー: {exc}")
         return
@@ -736,10 +752,27 @@ def _phase_generate_scripts(job: AutoRunJob) -> None:
         job.step_data["scripts"] = compute_filter_counts(raw.get("candidates", []))
     except Exception:
         job.step_data["scripts"] = {}
-    job.outputs["spec_ts"] = str(spec_path.resolve())
+    job.outputs["spec_py"] = str(spec_path.resolve())
+    job.outputs["spec_ts"] = str(ts_path.resolve())  # エクスポート専用（generated / not executed / not verified）
     job.add_log(f"スクリプト生成完了: {spec_path.name}")
     _run_mutation_self_check(job, spec_path, spec_dir)
     _publish_playwright_stage(job, spec_dir)
+
+
+def _export_ts(job: AutoRunJob, source_path: Path, ts_path: Path, **kwargs: Any) -> None:
+    """TypeScript をエクスポート用に併産し、meta に 3 区分の状態を merge する（実行しない）。"""
+    try:
+        generate_spec_ts(
+            job.domain,
+            source_path,
+            ts_path,
+            allow_submit=bool(job.run_policy.get("allow_submit")),
+            **kwargs,
+        )
+        add_header(ts_path)
+        merge_meta(ts_path.with_name("autorun.meta.json"), {"ts_export": dict(TS_EXPORT_STATE)})
+    except Exception as exc:  # noqa: BLE001 - エクスポート失敗で実行は止めない
+        job.add_log(f"TypeScript エクスポートを作れませんでした（実行には影響しません）: {exc}")
 
 
 def _run_nonfunctional_analysis(job: AutoRunJob) -> None:
@@ -947,9 +980,9 @@ def _execute_tests(job: AutoRunJob) -> None:
     job.step_label = "Playwright テストを実行中"
     job.add_log("Playwright テスト実行を開始します…")
 
-    spec_path_str = job.outputs.get("spec_ts", "")
+    spec_path_str = job.outputs.get("spec_py", "")
     if not spec_path_str:
-        _mark_job_failed(job, "spec.ts が見つかりません")
+        _mark_job_failed(job, "実行用の Python スクリプトが見つかりません")
         return
 
     spec_path = Path(spec_path_str)
@@ -967,14 +1000,22 @@ def _execute_tests(job: AutoRunJob) -> None:
         candidates_path = _job_out(job) / job.domain / "qa_process" / candidate_filename(job.mode)
         if candidates_path.is_file():
             try:
-                generate_spec_ts(
+                generate_spec_py(
                     job.domain,
                     candidates_path,
                     spec_path,
                     filter_mode=filter_mode,
-                    generate_page_object=page_object,
                     allow_submit=bool(job.run_policy.get("allow_submit")),
                 )
+                ts_out = job.outputs.get("spec_ts")
+                if ts_out:
+                    _export_ts(
+                        job,
+                        candidates_path,
+                        Path(ts_out),
+                        filter_mode=filter_mode,
+                        generate_page_object=page_object,
+                    )
                 detail = f"フィルター '{filter_mode}'" + (
                     "・Page Object形式" if page_object else ""
                 )
@@ -995,7 +1036,7 @@ def _execute_tests(job: AutoRunJob) -> None:
             add_log=job.add_log,
             device=device,
             egress_policy=EgressPolicy(allow_local=_local_targets_allowed()),
-            browser=str(job.run_policy.get("browser", "chromium")),
+            browser=str(job.run_policy.get("browser", "auto")),
             # 中止からPlaywrightプロセスを終了させるための登録。
             # 未登録だと「中止する」を押しても最後の1件まで走り続ける。
             on_proc=job.register_proc,

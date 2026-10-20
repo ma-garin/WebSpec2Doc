@@ -11,6 +11,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from playwright.sync_api import Page, sync_playwright
+from browser_detect import launch_browser
 
 from analyzer.login_wall import PageAuthSignals, detect_login_wall
 from crawler.link_extractor import extract_forms, has_password_field
@@ -54,7 +55,7 @@ def scrape_login_fields(url: str) -> ScrapeResult:
     """ログインページのフォームフィールドを取得する。"""
     normalized = normalize_url(url)
     with sync_playwright() as pw:
-        browser = pw.chromium.launch(headless=True)
+        browser = launch_browser(pw, headless=True)
         try:
             ctx = browser.new_context(user_agent=USER_AGENT)
             page = ctx.new_page()
@@ -81,7 +82,7 @@ def submit_login_form(
     normalized = normalize_url(current_url)
     storage = str(temp_session_path) if temp_session_path and temp_session_path.exists() else None
     with sync_playwright() as pw:
-        browser = pw.chromium.launch(headless=True)
+        browser = launch_browser(pw, headless=True)
         try:
             ctx = browser.new_context(user_agent=USER_AGENT, storage_state=storage)
             page = ctx.new_page()
@@ -149,7 +150,7 @@ def submit_login_simple(
     フィールドのname属性に依存せず、input[type]で対象を特定するためサイト差異に強い。"""
     normalized = normalize_url(login_url)
     with sync_playwright() as pw:
-        browser = pw.chromium.launch(headless=True)
+        browser = launch_browser(pw, headless=True)
         try:
             ctx = browser.new_context(user_agent=USER_AGENT)
             page = ctx.new_page()

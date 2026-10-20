@@ -1,0 +1,14 @@
+{
+  "url": "https://docs.python.org/3/_static/documentation_options.js",
+  "HTTP": 200,
+  "bytes": 330,
+  "seconds": 0.419,
+  "status": "complete",
+  "candidates": 1,
+  "dependencies": 0,
+  "runtime_executed": false,
+  "write_requests": 0,
+  "limitations": [
+    "route_declarations_not_recognized:react-router,vue-router,nextjs"
+  ]
+}

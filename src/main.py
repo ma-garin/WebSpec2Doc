@@ -41,7 +41,7 @@ from generator.mermaid_generator import generate_mermaid
 from graph.transition_graph import build_graph
 
 if TYPE_CHECKING:
-    from ux.axe_runner import AxeViolation
+    from ux.a11y.models import PageA11yResult
 
 DEFAULT_OUTPUT_DIR = Path("output")
 DEFAULT_FORMATS = "md"
@@ -319,7 +319,7 @@ def parse_args() -> argparse.Namespace:
         "--ux-review",
         action="store_true",
         help=(
-            "UX自動エキスパートレビュー: axe-core によるWCAG違反検査とニールセン10原則の"
+            "UX自動エキスパートレビュー: WCAG 違反検査（自社実装）とニールセン10原則の"
             "ヒューリスティック評価を行い ux_review.json / report.html「UX所見」タブを生成する"
             "（OPENAI_API_KEY 未設定時は rules ベースの評価で完走する）"
         ),
@@ -327,7 +327,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--no-a11y-audit",
         action="store_true",
-        help="標準の axe-core アクセシビリティ監査を明示的に無効化する",
+        help="標準のアクセシビリティ監査を明示的に無効化する",
     )
     parser.add_argument(
         "--refresh-doc",
@@ -347,9 +347,9 @@ def parse_args() -> argparse.Namespace:
     return args
 
 
-_REVERSE_ANALYSIS_INPUTS = ("js_input", "runtime_snapshot", "rea_command")
+_REVERSE_ANALYSIS_INPUTS = ("js_input", "runtime_snapshot")
 _REVERSE_ANALYSIS_KEYS = frozenset(
-    {"reverse_analysis", "output", "reverse_provider_evidence", *_REVERSE_ANALYSIS_INPUTS}
+    {"reverse_analysis", "output", "reverse_provenance", *_REVERSE_ANALYSIS_INPUTS}
 )
 
 
@@ -358,30 +358,29 @@ def _add_reverse_analysis_args(parser: argparse.ArgumentParser) -> None:
         "--reverse-analysis",
         action="store_true",
         help=(
-            "ローカル JS の静的候補（REA）と既存 snapshot の API 実測を限定的に対応付け、"
+            "ローカル JS の静的候補（Native 静的解析）と既存 snapshot の API 実測を限定的に対応付け、"
             "--output の専用ディレクトリへ reverse_analysis.json だけを保存する（クロールしない）"
         ),
     )
     parser.add_argument("--js-input", help="--reverse-analysis: 解析するローカル JS ディレクトリ")
     parser.add_argument("--runtime-snapshot", help="--reverse-analysis: 既存の snapshot.json")
     parser.add_argument(
-        "--rea-command", help="--reverse-analysis: 導入済み rea 実行ファイルの絶対パス"
-    )
-    parser.add_argument(
-        "--reverse-provider-evidence",
+        "--reverse-provenance",
+        "--reverse-provider-evidence",  # 旧名（非推奨の別名）
+        dest="reverse_provenance",
         action="store_true",
-        help="--reverse-analysis: REA の出典（route/API の上流 node・imports・source map 所見）も保存する",
+        help="--reverse-analysis: 解析の出典（route/API の出典・imports・source map 所見）も保存する",
     )
 
 
 def _validate_reverse_analysis_args(
     parser: argparse.ArgumentParser, args: argparse.Namespace
 ) -> None:
-    """--reverse-analysis は 3 入力と専用 --output を必須にし、他のモードとの併用を拒否する。"""
+    """--reverse-analysis は 2 入力と専用 --output を必須にし、他のモードとの併用を拒否する。"""
     if not args.reverse_analysis:
         given = [name for name in _REVERSE_ANALYSIS_INPUTS if getattr(args, name) is not None]
-        if getattr(args, "reverse_provider_evidence", False):
-            given.append("reverse_provider_evidence")
+        if getattr(args, "reverse_provenance", False):
+            given.append("reverse_provenance")
         if given:
             flags = ", ".join("--" + name.replace("_", "-") for name in given)
             parser.error(f"{flags} は --reverse-analysis と一緒に指定してください")
@@ -409,9 +408,8 @@ def _run_reverse_analysis(args: argparse.Namespace) -> int:
     request = ReverseAnalysisRequest(
         js_input=str(args.js_input),
         runtime_snapshot=str(args.runtime_snapshot),
-        rea_command=str(args.rea_command),
         output_dir=str(args.output),
-        include_provider_evidence=bool(args.reverse_provider_evidence),
+        include_provenance=bool(args.reverse_provenance),
     )
     try:
         outcome = run_reverse_analysis(request, cancel_event=_STOP_REQUESTED)
@@ -828,20 +826,6 @@ def _run_crawl(args: argparse.Namespace, auth_path: Path | None) -> None:
     ux_review_enabled = bool(getattr(args, "ux_review", False))
     accessibility_audit_enabled = not bool(getattr(args, "no_a11y_audit", False))
     axe_capture_enabled = ux_review_enabled or accessibility_audit_enabled
-    if axe_capture_enabled:
-        from ux.axe_runner import AxeAssetError, verify_axe_asset
-
-        try:
-            verify_axe_asset()
-        except AxeAssetError as exc:
-            logger.error("%s", exc)
-            sys.stdout.write(
-                "UX_REVIEW_ASSET_ERROR\n" if ux_review_enabled else "A11Y_AUDIT_ASSET_ERROR\n"
-            )
-            sys.stdout.flush()
-            if bool(getattr(args, "ci", False)):
-                emit_ci_error("accessibility_asset_error")
-            sys.exit(2)
 
     formats = _parse_formats(str(args.format))
     output_dir = _out_dir(args, primary_url)
@@ -850,10 +834,10 @@ def _run_crawl(args: argparse.Namespace, auth_path: Path | None) -> None:
     auth_state = Path(auth_path) if auth_path else None
     _STOP_REQUESTED.clear()
     checkpoint_pages: list[PageData] = []
-    ux_axe_results: dict[str, tuple[AxeViolation, ...]] = {}
+    ux_axe_results: dict[str, PageA11yResult] = {}
     ux_axe_lock = threading.Lock()
 
-    def on_ux_result(url: str, violations: tuple[AxeViolation, ...]) -> None:
+    def on_ux_result(url: str, violations: PageA11yResult) -> None:
         # 並列クロール時は複数ワーカースレッドから呼ばれるためロックする。
         with ux_axe_lock:
             ux_axe_results[url] = violations

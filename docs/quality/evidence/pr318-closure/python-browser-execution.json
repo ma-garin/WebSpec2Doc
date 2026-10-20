@@ -1,0 +1,27 @@
+{
+  "ok": true,
+  "passed": 1,
+  "failed": 0,
+  "skipped": 0,
+  "total": 1,
+  "duration_ms": 2842,
+  "tests": [
+    {
+      "title": "T1 \u753b\u9762\u8868\u793a\u30b9\u30e2\u30fc\u30af [P001]",
+      "status": "passed",
+      "duration_ms": 891,
+      "error": "",
+      "failed_step": ""
+    }
+  ],
+  "stdout": "",
+  "stderr": "",
+  "stderr_snippet": "",
+  "egress": {
+    "allowed": 1,
+    "denied": 0,
+    "denied_reasons": {},
+    "budget_exhausted": false,
+    "total": 1
+  }
+}

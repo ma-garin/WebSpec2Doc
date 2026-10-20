@@ -156,24 +156,6 @@ def test_ci_missing_target_is_execution_error(tmp_path: Path, capsys) -> None:
     assert summary["exit_code"] == 2
 
 
-def test_ci_axe_asset_error_ends_with_machine_summary(tmp_path: Path, capsys) -> None:
-    from ux.axe_runner import AxeAssetError
-
-    args = _ci_args(tmp_path)
-    args.no_a11y_audit = False
-    with (
-        patch("ux.axe_runner.verify_axe_asset", side_effect=AxeAssetError("missing")),
-        pytest.raises(SystemExit) as exc_info,
-    ):
-        run(args)
-
-    lines = capsys.readouterr().out.splitlines()
-    assert exc_info.value.code == 2
-    assert "A11Y_AUDIT_ASSET_ERROR" in lines
-    assert lines[-1].startswith("CI_SUMMARY:")
-    assert json.loads(lines[-1][11:])["error"] == "accessibility_asset_error"
-
-
 def test_ci_unexpected_exception_is_normalized_to_exit_two(capsys) -> None:
     import main as main_module
 

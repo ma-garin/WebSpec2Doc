@@ -1,0 +1,134 @@
+{
+  "scope": [
+    "web",
+    "src",
+    "static",
+    "templates",
+    "app.py"
+  ],
+  "files_examined": 675,
+  "python_execution_sites": 19,
+  "forbidden_literal_invocations": [],
+  "count": 0,
+  "limitations": "Literal executable gate plus manual command-construction review; customer-supplied verify_command may use external tools, not a required product runtime dependency. Playwright packaged driver internals excluded.",
+  "execution_sites": [
+    {
+      "file": "web/routes/crawl.py",
+      "line": 170,
+      "command": "cmd",
+      "literal_executable": null
+    },
+    {
+      "file": "web/routes/discover.py",
+      "line": 42,
+      "command": "cmd",
+      "literal_executable": null
+    },
+    {
+      "file": "web/routes/discover.py",
+      "line": 96,
+      "command": "cmd",
+      "literal_executable": null
+    },
+    {
+      "file": "web/routes/record.py",
+      "line": 94,
+      "command": "cmd",
+      "literal_executable": null
+    },
+    {
+      "file": "web/routes/record.py",
+      "line": 163,
+      "command": "cmd",
+      "literal_executable": null
+    },
+    {
+      "file": "web/routes/login.py",
+      "line": 66,
+      "command": "cmd",
+      "literal_executable": null
+    },
+    {
+      "file": "web/routes/login.py",
+      "line": 96,
+      "command": "cmd",
+      "literal_executable": null
+    },
+    {
+      "file": "web/routes/login.py",
+      "line": 140,
+      "command": "cmd",
+      "literal_executable": null
+    },
+    {
+      "file": "web/routes/login.py",
+      "line": 202,
+      "command": "cmd",
+      "literal_executable": null
+    },
+    {
+      "file": "web/routes/report.py",
+      "line": 565,
+      "command": "['open', str(target)]",
+      "literal_executable": "open"
+    },
+    {
+      "file": "web/services/playwright_executor.py",
+      "line": 197,
+      "command": "cmd",
+      "literal_executable": null
+    },
+    {
+      "file": "web/services/playwright_executor.py",
+      "line": 196,
+      "command": "cmd",
+      "literal_executable": null
+    },
+    {
+      "file": "web/services/auto_run_pipeline.py",
+      "line": 370,
+      "command": "cmd",
+      "literal_executable": null
+    },
+    {
+      "file": "web/services/auto_run_pipeline.py",
+      "line": 522,
+      "command": "cmd",
+      "literal_executable": null
+    },
+    {
+      "file": "web/services/scheduler.py",
+      "line": 569,
+      "command": "cmd",
+      "literal_executable": null
+    },
+    {
+      "file": "web/services/job_queue.py",
+      "line": 158,
+      "command": "cmd",
+      "literal_executable": null
+    },
+    {
+      "file": "web/services/backendtest/runner.py",
+      "line": 271,
+      "command": "_command(run)",
+      "literal_executable": null
+    },
+    {
+      "file": "web/services/healing/verification.py",
+      "line": 136,
+      "command": "args",
+      "literal_executable": null
+    },
+    {
+      "file": "web/services/orchestration/agents/run_agent.py",
+      "line": 249,
+      "command": "['pgrep', '-P', str(parent)]",
+      "literal_executable": "pgrep"
+    }
+  ],
+  "tracked_target_vendor_files": 0,
+  "observed_browser_external_requests": 0,
+  "observed_browser_http_errors": 0,
+  "observed_browser_pageerrors": 0
+}

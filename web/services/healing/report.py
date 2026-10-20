@@ -38,8 +38,8 @@ _REASON_LABELS: dict[str, str] = {
 #: 修正エージェントの表示ラベル。agents.py のレジストリキーが正。
 #: 未知の値は原文のまま出す（勝手に別名へ寄せない）。
 _AGENT_LABELS: dict[str, str] = {
-    "claude": "Claude Code",
-    "codex": "Codex",
+    "claude": "AI（旧エージェント）",
+    "codex": "AI（旧エージェント）",
     "openai": "OpenAI",
     "ollama": "Ollama",
     "dryrun": "動作確認用",

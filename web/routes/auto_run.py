@@ -594,9 +594,9 @@ def _apply_decisions_to_policy(job: AutoRunJob) -> None:
         resolved = normalize_browser(requested)
         if not resolved:
             # 判別できないものを黙って Chromium へ読み替えない。
-            job.run_policy["browser"] = "chromium"
+            job.run_policy["browser"] = "auto"
             job.add_log(
-                f"ブラウザ指定「{requested}」を判別できませんでした。Chromium で実行します"
+                f"ブラウザ指定「{requested}」を判別できませんでした。Chrome または Edge（自動選択）で実行します"
                 "（指定した環境での確認にはなっていません）"
             )
         else:
@@ -605,13 +605,13 @@ def _apply_decisions_to_policy(job: AutoRunJob) -> None:
                 job.run_policy["browser"] = resolved
                 job.add_log(f"ブラウザ: {resolved} で実行します")
             else:
-                job.run_policy["browser"] = "chromium"
+                job.run_policy["browser"] = "auto"
                 job.add_log(
-                    f"{resolved} を使えないため Chromium で実行します（{reason}）。"
+                    f"{resolved} を使えないため自動選択で実行します（{reason}）。"
                     "この実行は指定した環境での確認になっていません"
                 )
     else:
-        job.run_policy["browser"] = "chromium"
+        job.run_policy["browser"] = "auto"
 
     if job.decisions_note:
         job.run_policy["note"] = job.decisions_note

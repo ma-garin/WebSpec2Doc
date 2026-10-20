@@ -1,4 +1,4 @@
-"""影響度分析（System 09）に System 01 のリバース解析（REA）の module 依存を別の Evidence 層として流す。
+"""影響度分析（System 09）に System 01 のリバース解析の module 依存を別の Evidence 層として流す。
 
 既存の文書項目 BFS（web/services/impact/）は置換しない。ここは layer="code_static" の別結果を返す純関数だけを持つ。
 状態（inferred / ambiguous / unknown）は提供元の値をそのまま通し、上げない。依存は静的で実行時の依存ではない。
@@ -169,7 +169,7 @@ def list_sources(deps: list) -> list[dict]:
 
 
 def build_layer(site: str, ev: dict, module: str = "", probe: dict | None = None) -> dict:
-    """REA の site_evidence 結果から layer="code_static" の結果を作る。state != ok は 0 件・未確認。
+    """リバース解析の site_evidence 結果から layer="code_static" の結果を作る。state != ok は 0 件・未確認。
 
     probe: System 03 の到達確認結果（by_evidence）。route の到達は実測、module 依存は静的として区別する。
     """
@@ -237,7 +237,7 @@ def build_layer(site: str, ev: dict, module: str = "", probe: dict | None = None
 
 
 def _viewpoints_by_evidence(ev: dict) -> dict[str, dict]:
-    """System 02 の REA 由来テスト観点（新規分）を根拠 id で引けるようにする。"""
+    """System 02 の リバース解析由来テスト観点（新規分）を根拠 id で引けるようにする。"""
     from web.services.rea_test_viewpoints import build_viewpoints
 
     return {
@@ -248,7 +248,7 @@ def _viewpoints_by_evidence(ev: dict) -> dict[str, dict]:
 
 
 def sites_with_result(base: Path, valid, site_dir, result_dir: str, result_file: str) -> list[str]:
-    """output 配下で REA 結果ファイルを持つサイト名の一覧。"""
+    """output 配下で リバース解析の結果ファイルを持つサイト名の一覧。"""
     if not base.is_dir():
         return []
     out = []

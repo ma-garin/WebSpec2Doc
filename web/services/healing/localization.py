@@ -21,7 +21,6 @@ from __future__ import annotations
 
 import json
 import re
-import subprocess
 import time
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
@@ -108,25 +107,10 @@ def _extract_imports_from_test(test_file: str, repo: Path) -> list[str]:
 
 
 def _get_recent_files(repo: Path) -> list[str]:
-    """git log から直近 20 commit で変更されたファイルを抽出。"""
-    try:
-        result = subprocess.run(
-            ["git", "log", "-n", "20", "--name-only", "--pretty=format:"],
-            cwd=repo,
-            capture_output=True,
-            text=True,
-            timeout=10,
-            shell=False,
-        )
-        if result.returncode != 0:
-            return []
-        return [
-            line.strip()
-            for line in result.stdout.splitlines()
-            if line.strip() and line.endswith(".py")
-        ]
-    except Exception:
-        return []
+    """直近 20 commit で変更された .py ファイルを抽出（dulwich。git コマンドは使わない）。"""
+    from web.services.healing import git_ops
+
+    return [name for name in git_ops.recent_changed_files(repo, 20) if name.endswith(".py")]
 
 
 def _guess_source_from_test_id(test_id: str) -> str | None:

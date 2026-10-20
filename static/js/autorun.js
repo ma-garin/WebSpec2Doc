@@ -1165,6 +1165,10 @@ function _autorunShowLoginModal(inputRequest) {
   if (msgEl) msgEl.textContent = inputRequest.message || 'ログインが必要です。';
   if (urlEl) urlEl.value = inputRequest.login_url || '';
   if (typeof toggleShortcutHelp === 'function') toggleShortcutHelp(false);
+  // 閉じたときにフォーカスを戻す先（開いた元の操作）。再描画で要素が作り直されても戻せるよう id と文言も控える
+  const opener = document.activeElement;
+  _autorunLoginOpener = opener && opener !== document.body
+    ? { el: opener, id: opener.id || '', text: (opener.textContent || '').trim() } : null;
   // 先に hidden を外してから focus する（非表示要素への focus は効かないため）
   modal.classList.remove('hidden');
   document.getElementById('autorun-login-username')?.focus();
@@ -1188,6 +1192,19 @@ function autorunDismissLoginModal() {
   _autoRunLoginSuppressed = true;
   _autorunHideLoginModal();
   if (window._autoRunLastData) _autorunRender(window._autoRunLastData);
+  _autorunRestoreLoginFocus();
+}
+
+let _autorunLoginOpener = null;
+function _autorunRestoreLoginFocus() {
+  const o = _autorunLoginOpener;
+  _autorunLoginOpener = null;
+  if (!o) return;
+  let target = o.el && o.el.isConnected ? o.el : (o.id ? document.getElementById(o.id) : null);
+  if (!target && o.text) {
+    target = Array.from(document.querySelectorAll('button')).find((b) => b.offsetParent && b.textContent.trim() === o.text) || null;
+  }
+  if (target && typeof target.focus === 'function') target.focus();
 }
 
 async function _autorunSubmitLogin(skip) {

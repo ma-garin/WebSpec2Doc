@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>管理コンソール | あおぞらポータル</title><link rel="stylesheet" href="css/h.css"></head>
+<body>
+<header class="hdr"><a href="index.html">メニュー</a></header>
+<main>
+<h1>管理コンソール</h1>
+<p>このページはログインが必要です。</p>
+<form id="ad" action="h17.html" method="post">
+<div id="ad-err"></div>
+<div class="row"><label for="f1">管理者ID</label><input type="text" id="f1" name="admin_id" required maxlength="20"></div>
+<div class="row"><label for="f2">パスワード</label><input type="password" id="f2" name="admin_pw" required minlength="8"></div>
+<input type="submit" value="ログイン">
+</form>
+<div hidden><h2>ようこそ、管理者さん</h2><p>契約数 1,204件</p></div>
+<a href="h13.html">請求書一覧へ</a>
+<script>(function(){var f=document.getElementById("ad");var box=document.getElementById("ad-err");f.addEventListener("submit",function(ev){ev.preventDefault();var errs=[];if(f.elements["admin_id"].value===''){errs.push("管理者IDを入力してください");}if(f.elements["admin_pw"].value.length<8){errs.push("パスワードは8文字以上で入力してください");}box.innerHTML="";errs.forEach(function(m){var q=document.createElement("p");q.className="error";q.textContent=m;box.appendChild(q);});if(!errs.length){fetch("/api/admin/login",{method:"POST",body:new FormData(f)}).then(function(r){if(!r.ok){throw new Error("x");}return r.json();}).catch(function(){var q=document.createElement("p");q.className="error";q.textContent="ログインに失敗しました";box.appendChild(q);});}});})();</script>
+</main>
+</body></html>

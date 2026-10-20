@@ -1,0 +1,13 @@
+<!doctype html>
+<html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>出荷処理 | あおぞらポータル</title><link rel="stylesheet" href="css/h.css"></head>
+<body>
+<header class="hdr"><a href="index.html">メニュー</a></header>
+<main>
+<h1>出荷処理</h1>
+<section class="spec"><h2>画面の説明</h2><ul><li>注文の状態は「受付」→「出荷準備」→「出荷済み」→「配達完了」と進む。「出荷済み」になった注文はキャンセルできない。</li><li>「出荷する」を押せるのは「出荷担当」ロールだけ。他のロールではボタンが無効になる。</li><li>状態の更新は /api/orders/status に PUT する。</li><li>更新に失敗したら「更新に失敗しました」と表示し、「再試行」ボタンで再送できる。</li></ul></section>
+<section><h2>画面</h2>
+<p>注文 #4410 の状態: <strong>出荷準備</strong></p><button type="button" id="go">出荷する</button><button type="button">再試行</button><button type="button">キャンセル</button><p id="msg"></p>
+</section>
+<script>(function(){var b=document.getElementById("go");if(!b){return;}b.addEventListener("click",function(){fetch("/api/orders/status",{method:"PUT"}).then(function(r){if(!r.ok){throw new Error("x");}return r.json();}).catch(function(){document.getElementById("msg").textContent="更新に失敗しました";});});})();</script>
+</main>
+</body></html>

@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>成績一括入力 | あおぞらポータル</title><link rel="stylesheet" href="css/h.css"></head>
+<body>
+<header class="hdr"><a href="index.html">メニュー</a></header>
+<main>
+<h1>成績一括入力</h1>
+<h2>採点対象</h2>
+<p>Python入門 第3回小テスト</p>
+<h2>成績表</h2>
+<div id="g-err"></div>
+<table><thead><tr><th>受講者</th><th>得点</th><th>評価</th><th>備考</th></tr></thead><tbody><tr><td>山田 さん</td><td><input type="number" id="f1" name="score_1" required min="0" max="100" aria-label="山田さんの得点"></td><td><select id="f2" name="grade_1" aria-label="山田さんの評価"><option value="a">A</option><option value="b">B</option><option value="c">C</option></select></td><td><input type="text" id="f3" name="memo_1" maxlength="60" placeholder="備考"></td></tr><tr><td>佐藤 さん</td><td><input type="number" id="f4" name="score_2" required min="0" max="100" aria-label="佐藤さんの得点"></td><td><select id="f5" name="grade_2" aria-label="佐藤さんの評価"><option value="a">A</option><option value="b">B</option><option value="c">C</option></select></td><td><input type="text" id="f6" name="memo_2" maxlength="60" placeholder="備考"></td></tr><tr><td>鈴木 さん</td><td><input type="number" id="f7" name="score_3" required min="0" max="100" aria-label="鈴木さんの得点"></td><td><select id="f8" name="grade_3" aria-label="鈴木さんの評価"><option value="a">A</option><option value="b">B</option><option value="c">C</option></select></td><td><input type="text" id="f9" name="memo_3" maxlength="60" placeholder="備考"></td></tr></tbody></table>
+<button id="bulk" type="button">一括保存</button>
+<button type="button">全員に満点を入力</button>
+<div class="gone"><h3>採点履歴</h3><button type="button">採点を取り消す</button></div>
+<script>(function(){var b=document.getElementById("bulk");var box=document.getElementById("g-err");function show(m){var q=document.createElement("p");q.className="error";q.textContent=m;box.appendChild(q);}b.addEventListener("click",function(){box.innerHTML="";var ins=document.querySelectorAll("input[name^=score_]");var ok=true;for(var i=0;i<ins.length;i++){if(ins[i].value===""){ok=false;}}if(!ok){show("すべての得点を入力してください");return;}fetch("/api/grades",{method:"PUT",body:"{}"}).then(function(r){if(!r.ok){throw new Error("x");}return r.json();}).catch(function(){show("成績の保存に失敗しました");});});})();</script>
+<a href="h04.html">進捗に戻る</a>
+</main>
+</body></html>

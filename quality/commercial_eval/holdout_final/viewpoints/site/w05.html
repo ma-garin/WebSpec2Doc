@@ -1,0 +1,13 @@
+<!doctype html>
+<html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>荷物追跡 | あおぞらポータル</title><link rel="stylesheet" href="css/h.css"></head>
+<body>
+<header class="hdr"><a href="index.html">メニュー</a></header>
+<main>
+<h1>荷物追跡</h1>
+<section class="spec"><h2>画面の説明</h2><ul><li>追跡番号は半角数字 12 桁で入力する。必須。</li><li>「追跡する」で /api/tracking を取得して配送状況を表示する。</li><li>通信に失敗した場合は「通信エラーが発生しました」と表示し、「再試行」ボタンで同じ要求を再送できる。</li></ul></section>
+<section><h2>画面</h2>
+<form><label for="no">追跡番号</label><input type="text" id="no" name="no" required pattern="^[0-9]{12}$"><button type="button" id="go">追跡する</button><button type="button" id="retry">再試行</button></form><p id="msg"></p>
+</section>
+<script>(function(){var b=document.getElementById("go");if(!b){return;}b.addEventListener("click",function(){fetch("/api/tracking",{method:"GET"}).then(function(r){if(!r.ok){throw new Error("x");}return r.json();}).catch(function(){document.getElementById("msg").textContent="通信エラーが発生しました";});});})();</script>
+</main>
+</body></html>

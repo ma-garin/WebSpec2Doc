@@ -212,10 +212,10 @@ def _decide_viewpoint(job, item_id, decision, value, reason, actor):
             raise StoreError("同じ番号の観点がすでにあります。別の番号にしてください。")
         item = {**copy.deepcopy(value), "decision": "adopted", "reason": reason or "", "added_by": actor}
         return {**job, "viewpoints": [*(job.get("viewpoints") or []), item]}
-    if decision not in {"adopted", "edited", "discarded"}:
-        raise StoreError("観点の採否は採用・修正・破棄・追加から選んでください。")
-    if decision == "discarded" and not (reason or "").strip():
-        raise StoreError("破棄するときは理由が必要です。理由を入れてください。")
+    if decision not in {"emit", "adopted", "edited", "excluded", "discarded"}:
+        raise StoreError("観点の扱いは出す・採用・修正して採用・対象外・破棄・追加から選んでください。")
+    if decision in {"excluded", "discarded"} and not (reason or "").strip():
+        raise StoreError("対象外・破棄にするときは理由が必要です。理由を入れてください。")
     edits = {}
     if decision == "edited":
         if not isinstance(value, dict):

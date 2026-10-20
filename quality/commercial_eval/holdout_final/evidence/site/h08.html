@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>集荷依頼 | あおぞらポータル</title><link rel="stylesheet" href="css/h.css"></head>
+<body>
+<header class="hdr"><a href="index.html">メニュー</a></header>
+<main>
+<h1>集荷の依頼</h1>
+<h2>依頼者</h2>
+<form id="pk" action="h08.html" method="post">
+<div id="pk-err"></div>
+<div class="row"><label for="f1">お名前</label><input type="text" id="f1" name="requester" required maxlength="30"></div>
+<div class="row"><label for="f2">電話番号</label><input type="tel" id="f2" name="req_tel" required maxlength="11" pattern="^0[0-9]{9,10}$"></div>
+<h2>届け先</h2>
+<div class="row"><label for="f3">電話番号</label><input type="tel" id="f3" name="dest_tel" maxlength="11" pattern="^0[0-9]{9,10}$"></div>
+<div class="row"><label for="f4">集荷日</label><input type="date" id="f4" name="pickup_date" required min="2026-10-21" max="2026-12-31"></div>
+<fieldset><legend>時間帯</legend><div class="row"><input type="radio" id="slot-1" name="slot" value="am" required><label for="slot-1">午前</label></div><div class="row"><input type="radio" id="slot-2" name="slot" value="pm" required><label for="slot-2">午後</label></div><div class="row"><input type="radio" id="slot-3" name="slot" value="ng" required><label for="slot-3">夜間</label></div></fieldset>
+<fieldset><legend>荷物の種類</legend><div class="row"><input type="checkbox" id="kind-1" name="kind" value="fragile"><label for="kind-1">割れ物</label></div><div class="row"><input type="checkbox" id="kind-2" name="kind" value="frozen"><label for="kind-2">冷凍</label></div><div class="row"><input type="checkbox" id="kind-3" name="kind" value="valuable"><label for="kind-3">貴重品</label></div></fieldset>
+<div class="row"><label for="f11">個数</label><input type="number" id="f11" name="count" required min="1" max="20"></div>
+<div class="row"><label for="f12">サイズ</label><select id="f12" name="size" required><option value="">選択してください</option><option value="60">60サイズ</option><option value="80">80サイズ</option><option value="100">100サイズ</option></select></div>
+<div hidden><h2>法人契約の集荷</h2><p>法人コードを入力してください</p></div>
+<button type="button">入力内容を確認</button>
+<input type="submit" value="依頼する">
+</form>
+<script>(function(){var f=document.getElementById("pk");var box=document.getElementById("pk-err");f.addEventListener("submit",function(ev){ev.preventDefault();var errs=[];if(f.elements["requester"].value===''){errs.push("お名前を入力してください");}if(!f.elements["slot"].value){errs.push("時間帯を選択してください");}if(f.elements["count"].value===''){errs.push("個数を入力してください");}box.innerHTML="";errs.forEach(function(m){var q=document.createElement("p");q.className="error";q.textContent=m;box.appendChild(q);});if(!errs.length){fetch("/api/pickups",{method:"POST",body:new FormData(f)}).then(function(r){if(!r.ok){throw new Error("x");}return r.json();}).catch(function(){var q=document.createElement("p");q.className="error";q.textContent="集荷の依頼に失敗しました";box.appendChild(q);});}});})();</script>
+</main>
+</body></html>

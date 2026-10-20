@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>申請状況の確認 | あおぞらポータル</title><link rel="stylesheet" href="css/h.css"></head>
+<body>
+<header class="hdr"><a href="index.html">メニュー</a></header>
+<main>
+<h1>申請状況の確認</h1>
+<p class="error" role="alert">一部の申請の状況を表示できません</p>
+<form id="st" action="h11.html" method="get">
+<h2>受付番号で探す</h2>
+<div class="row"><label for="receipt">受付番号</label><input type="text" id="receipt" name="receipt" required maxlength="9" pattern="^MV-[0-9]{6}$"></div>
+<input type="submit" value="照会">
+</form>
+<h2>直近の申請</h2>
+<div class="row"><label for="f2">直近の受付番号</label><input type="text" id="f2" name="last_no" value="MV-004512" disabled></div>
+<div class="row"><label for="f3">申請種別</label><select id="f3" name="last_type" disabled><option value="mv">転入届</option></select></div>
+<div class="row"><label for="f4">申請者名</label><input type="text" id="f4" name="last_name" value="青空 太郎" readonly></div>
+<h2>申請履歴</h2>
+<table><thead><tr><th>受付番号</th><th>種別</th><th>状態</th></tr></thead><tbody><tr><td><a href="h12.html?id=MV-004512">MV-004512</a></td><td>転入届</td><td>受付済み</td></tr><tr><td>MV-004098</td><td>転出届</td><td>完了</td></tr></tbody></table>
+<div id="more"></div>
+<div id="st-err"></div>
+<script>(function(){var m=document.getElementById("more");var box=document.getElementById("st-err");var a=document.createElement("a");a.href="h10.html?resubmit=1";a.textContent="再申請する";m.appendChild(a);var b=document.createElement("button");b.type="button";b.textContent="状況を更新";m.appendChild(b);var r=document.getElementById("receipt");r.addEventListener("blur",function(){box.innerHTML="";if(r.value!==""&&!/^MV-[0-9]{6}$/.test(r.value)){var q=document.createElement("p");q.className="error";q.textContent="受付番号の形式が正しくありません";box.appendChild(q);}});fetch("/api/applications").then(function(r){if(!r.ok){throw new Error("x");}return r.json();}).catch(function(){});})();</script>
+</main>
+</body></html>

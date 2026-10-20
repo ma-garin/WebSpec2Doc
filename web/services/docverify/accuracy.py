@@ -13,9 +13,10 @@ log = logging.getLogger(__name__)
 
 RESULT_PATH = Path(__file__).resolve().parents[3] / "quality" / "docverify_eval" / "result.json"
 # 規則の調整に使っていない、別の作成者による検証用セットの結果（scripts/commercial_eval/docverify_holdout_eval.py）。
-# あれば規則ごとに低い方の値を採る（調整に使ったセットの値だけで有効・無効を決めない）
-HOLDOUT_PATH = Path(__file__).resolve().parents[3] / "quality" / "commercial_eval" / "docverify_holdout" / "result.json"
-MIN_PRECISION = 0.7  # FR-06-170（暫定）。これ未満の規則は既定で無効
+# あれば規則ごとに最も低い値を採る（調整に使ったセットの値だけで有効・無効を決めない）。最後が改善に一度も使っていない最終評価用
+_EVAL = Path(__file__).resolve().parents[3] / "quality" / "commercial_eval"
+HOLDOUT_PATHS = (_EVAL / "docverify_holdout" / "result.json", _EVAL / "holdout_final" / "docverify" / "result.json")
+MIN_PRECISION = 0.75  # 商用品質の基準。これ未満の規則は既定で無効
 MIN_RECALL = 0.7  # これ未満の規則は有効のままにするが、見落としが多い限定的な検出と明示する
 UNMEASURED = "未測定"
 
@@ -58,23 +59,24 @@ def load(path: Path | None = None) -> dict | None:
 
 
 def _apply_holdout(data: dict) -> None:
-    """検証用セットの値があれば、規則ごとに適合率・再現率の低い方を採る（元の値は tuning_set に残す）。"""
-    try:
-        hold = json.loads(HOLDOUT_PATH.read_text(encoding="utf-8")) if HOLDOUT_PATH.exists() else None
-    except (OSError, json.JSONDecodeError):
-        log.warning("docverify accuracy: 検証用セットの結果 %s を読めない", HOLDOUT_PATH)
-        return
-    if not isinstance(hold, dict):
-        return
-    for rid, r in data["rules"].items():
-        h = (hold.get("rules") or {}).get(rid)
-        if not isinstance(h, dict):
+    """検証用セットの値があれば、規則ごとに適合率・再現率の最も低い値を採る（元の値は tuning_set に残す）。"""
+    for path in HOLDOUT_PATHS:
+        try:
+            hold = json.loads(path.read_text(encoding="utf-8")) if path.exists() else None
+        except (OSError, json.JSONDecodeError):
+            log.warning("docverify accuracy: 検証用セットの結果 %s を読めない", path)
             continue
-        r["tuning_set"] = {"precision": r.get("precision"), "recall": r.get("recall"), "n": r.get("n")}
-        r["holdout"] = {"precision": h.get("precision"), "recall": h.get("recall"), "n": hold.get("n")}
-        for key in ("precision", "recall"):
-            vals = [v for v in (r.get(key), h.get(key)) if v is not None]
-            r[key] = min(vals) if vals else None
+        if not isinstance(hold, dict):
+            continue
+        for rid, r in data["rules"].items():
+            h = (hold.get("rules") or {}).get(rid)
+            if not isinstance(h, dict):
+                continue
+            r.setdefault("tuning_set", {"precision": r.get("precision"), "recall": r.get("recall"), "n": r.get("n")})
+            r["holdout"] = {"precision": h.get("precision"), "recall": h.get("recall"), "n": hold.get("n")}
+            for key in ("precision", "recall"):
+                vals = [v for v in (r.get(key), h.get(key)) if v is not None]
+                r[key] = min(vals) if vals else None
 
 
 def fmt(v) -> str:

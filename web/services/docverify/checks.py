@@ -52,15 +52,19 @@ _QUANT = re.compile(r"以内|までに|以上|以下(?!の|に示|のとおり|�
 _NUM = re.compile(r"[0-9０-９]")
 _TOC = re.compile(r"\.{3,}|…{2,}|・{3,}|目次|^\s*(?:第?[0-9０-９]+(?:[.．][0-9０-９]+)*[章節.]?)\s*[^。\s]{0,30}\s*$|^\s*[-–]?\s*\d+\s*[-–]?\s*$|^\s*(?:page|p\.)\s*\d+", re.I)
 # 29148 5.2.5 完全（未決定のまま残った記述）・INCOSE GtWR の不定な列挙/絶対表現/and-or。
-_TBD = re.compile(r"TBD|TBA|TBC|未定|検討中|調整中|別途(?:定める|決定|協議|検討)|後日|要検討|[？?]{2,}|[Xx]{3,}")
+_TBD = re.compile(r"TBD|TBA|TBC|未定|未確定|検討中|調整中|別途(?:定める|決定|協議|検討)|後日|要検討|今後(?:決める|決定|検討)|協議の上で?決定|[〇○]{2,}|[？?]{2,}|[Xx]{3,}")
+# 「状態が「未定」の場合」のように、状態の値として括弧で引いた語は未決定の記述ではない
+_QUOTED_WORD = re.compile(r"「([^「」]{1,8})」")
 _OPEN_END = re.compile(rf"(?:(?<![{_K}])(?:等|他)|など|ほか)(?:の|を|に|で|は|が|、|。)")
 _UNIVERSAL = re.compile(rf"(?<![{_K}])(?:すべて|全て|常に|必ず|絶対に|決して|いかなる)")
-_AND_OR = re.compile(r"および/または|及び/又は|and/or|又は/及び", re.I)
+_AND_OR = re.compile(r"(?:および|及び|かつ|もしくは|または|又は|\band|\bor)\s*[/／]\s*(?:または|又は|もしくは|および|及び|or\b|and\b)", re.I)
 _MULTI = re.compile(r"(?:し|でき|とし)、.{4,}?(?:する|できる|とする|しない)[。]?$")
 # 「〜し、〜を…する」型の連用形の連結。短い文でも要求が 2 つ以上並ぶ（ja_v1 の FN 9 件はすべてこの型）
-_MULTI_CLAUSE = re.compile(r"(?:し|でき|とし|け)、[^。]{1,}?を[^。]{1,}?(?:する|できる|とする|しない)[。]?$")
+_MULTI_CLAUSE = re.compile(r"(?:し|でき|とし|け)、[^。]{1,}?を[^。]{1,}?(?:する|できる|とする|しない)[。]?$|とともに、?[^。]{2,}?(?:する|できる|とする|しない)[。]?$|でき、[^。]{1,}?も[^。]{1,}?(?:する|できる)[。]?$")
+# 「ボタンを押下し、〜を表示する」は操作（手段）と 1 つの要求であり、要求の並列ではない
+_MEANS = re.compile(r"(?:押下|押|クリック|タップ|選択|入力|指定|ログイン)し、")
 # 数字の有無に関係なく合否を決められない量・時間の言い方（29148 5.2.5 verifiable）
-_VAGUE_QUANT = re.compile(r"十分な|一定(?:期間|時間|回数|の)|当面|高速に|最小限|数(?:か月|ヶ月|カ月|日|時間|分|秒|回|件)|できるだけ|可能な限り|定期的に|しばらく|若干|長い期間|夜間")
+_VAGUE_QUANT = re.compile(r"十分な|一定(?:期間|時間|回数|の)|当面|高速に|最小限|数(?:か月|ヶ月|カ月|日|時間|分|秒|回|件)|できるだけ|可能な限り|定期的に|しばらく|若干|長い期間|夜間|ある程度|多数の|素早く|頻繁に|大量の|長時間|短時間|適当な|適切な間隔")
 
 
 def _finding(rule, severity, item, viewpoint, message, passage, quote, certainty):
@@ -103,7 +107,9 @@ def _check_sentence(p: dict, s: str) -> list[dict]:
         sev = "critical" if crit else "major"
         found.append(_finding(rule, sev, "unambiguous", "曖昧さ",
                               f"「{word}」は解釈が分かれます。具体的な条件や値にしてください。", p, s[:80], "要確認"))
-    tbd = _TBD.search(s)
+    tbd = next((m for m in _TBD.finditer(s)
+                if not any(q.start() < m.start() and m.end() < q.end() and q.group(1) == m.group(0)
+                           for q in _QUOTED_WORD.finditer(s))), None)
     if tbd:
         found.append(_finding("REQ.INCOMPLETE", "critical" if crit else "major", "complete", "完全性",
                               f"「{tbd.group(0)}」が残っています。決めた内容を書くか、決める人と期限を書いてください。",
@@ -132,7 +138,7 @@ def _check_sentence(p: dict, s: str) -> list[dict]:
         found.append(_finding("REQ.MEASURABILITY", "critical" if crit else "major", "verifiable", "検証可能性",
                               f"「{q.group(0)}」に数値がありません。合否を判定できる値を書いてください。",
                               p, s[:80], "推定"))
-    if len(_REQ_CORE.findall(s)) >= 3 or _MULTI.search(s) and len(s) > 60 or _MULTI_CLAUSE.search(s):
+    if len(_REQ_CORE.findall(s)) >= 3 or _MULTI.search(s) and len(s) > 60 or (_MULTI_CLAUSE.search(s) and not (_MEANS.search(s) and len(_REQ_CORE.findall(s)) < 2)):
         found.append(_finding("REQ.MULTIPLE_REQUIREMENTS", "minor", "singular", "単一性",
                               "1 文に複数の要求があります。要求ごとに分けてください。", p, s[:80], "推定"))
     return found

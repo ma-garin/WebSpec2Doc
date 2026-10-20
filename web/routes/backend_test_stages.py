@@ -332,6 +332,9 @@ def _apply_oracle(job: dict, case: dict, body: dict, role, actor: str):
         return oracle.set_alt_sql(case, str(body.get("sql") or ""), role, sql_ja=str(body.get("sql_ja") or ""),
                                   actor=actor, members=members, source_facts=facts), None
     if action == "confirm":
+        ready, why = oracle.method_ready(case.get("oracle") or {})
+        if not ready:  # 設定の不足は権限の問題ではない（403 にしない）
+            raise StoreError(why)
         ok, reason = oracle.can_confirm(case, role, members, facts)
         if not ok:
             return None, reason

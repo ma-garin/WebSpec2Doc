@@ -5,10 +5,12 @@ import math
 import re
 from collections import deque
 
-from .text import expand, norm, tokens
+from .text import expand, is_value, norm, tokens
 
 SEMANTIC_TOP = 30
 SEMANTIC_MIN = 0.25
+KEYWORD_REL = 0.7   # 差分語の無い語の一致は、その変更で最も強い一致のこの割合以上だけ残す
+GUESS_SEEDS = 3
 _CODE = re.compile(r"\b[A-Z]{2,5}-\d{3,4}\b")
 
 
@@ -67,7 +69,9 @@ def make_query(change: dict) -> dict | None:
     if not subject:
         return None
     ex = expand(diff)[:10]
-    return {"subject": subject, "diff": ex, "terms": subject + ex, "must": subject}
+    # 変更前の値・語（「10冊」「月末」など）を書いた項目は、主題の語が無くても同じ規則を書いている
+    old_values = [t for t in before if t in diff and (is_value(t) or len(t) >= 2)]
+    return {"subject": subject, "diff": ex, "terms": subject + ex, "must": subject + old_values}
 
 
 def keyword_hits(change: dict, items: list[dict], texts: list[str]) -> list[tuple[int, list, list, float]]:
@@ -123,11 +127,23 @@ def collect(conn, cr: dict, changes: list[dict], depth: int, embedder) -> list[d
                     kind = "埋め込み" if embedder.mode == "embedding" else "文字"
                     _add(merged, items[idx], code, 1,
                          {"type": "semantic", "detail": f"{kind}の近さ {score:.2f}", "score": score})
-        for idx, matched, diff_hit, score in keyword_hits(ch, items, texts):
+        hits = keyword_hits(ch, items, texts)
+        top = max((h[3] for h in hits), default=0.0)
+        for idx, matched, diff_hit, score in hits:
+            if not seeds and not diff_hit and score < KEYWORD_REL * top and items[idx]["id"] not in merged:
+                continue  # 所在の分からない変更では、差分語の無い弱い一致は最も強い一致に近いものだけ残す
             detail = "一致語: " + "・".join(matched[:4])
             if diff_hit:
                 detail += "（差分語: " + "・".join(diff_hit[:3]) + "）"
             _add(merged, items[idx], code, 1, {"type": "keyword", "detail": detail, "score": score})
+        if not seeds and hits:
+            # 変更の指示に所在（code）が無いときは、最も強く一致した項目を起点と推定し、明示の起点と同じ段数までつながりをたどる
+            guess = [items[h[0]] for h in sorted(hits, key=lambda h: -h[3])[:GUESS_SEEDS] if h[3] >= KEYWORD_REL * top]
+            for g in guess:
+                for iid, (d, _prev) in bfs([g["id"]], adj, max(int(depth or 0), 0)).items():
+                    if d:
+                        _add(merged, by_id[iid], code, d + 1, {"type": "link", "score": round(1 / (d + 2), 2),
+                             "detail": f"{g['code']}（語の一致で推定した起点）から {d} 段目のつながり"})
     out = list(merged.values())
     for c in out:
         c["change_ids"].sort(key=lambda x: int(x[1:]) if x[1:].isdigit() else 0)

@@ -1,0 +1,13 @@
+<!doctype html>
+<html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>転入届の事前申請 | あおぞらポータル</title><link rel="stylesheet" href="css/h.css"></head>
+<body>
+<header class="hdr"><a href="index.html">メニュー</a></header>
+<main>
+<h1>転入届の事前申請</h1>
+<section class="spec"><h2>画面の説明</h2><ul><li>氏名・郵便番号・転入予定日は必須。</li><li>郵便番号はハイフンなしの半角数字 7 桁。電話番号は 0 から始まる 10〜11 桁の半角数字。</li><li>同居人数は 0 人から 10 人まで。</li><li>全角数字や記号を入力した場合は項目の下に「入力形式が正しくありません」と表示する。</li><li>「申請する」で /api/move-in に POST する。失敗時は「申請できませんでした」と表示する。</li><li>「一時保存」を押すと入力内容を保存し、次回の画面表示で続きから入力できる。</li></ul></section>
+<section><h2>画面</h2>
+<form><label for="n">氏名</label><input id="n" name="name" required maxlength="40"><label for="z">郵便番号</label><input id="z" name="zip" required pattern="^[0-9]{7}$" maxlength="7"><label for="t">電話番号</label><input type="tel" id="t" name="tel" pattern="^0[0-9]{9,10}$"><label for="m">同居人数</label><input type="number" id="m" name="members" min="0" max="10"><label for="d">転入予定日</label><input type="date" id="d" name="move" required><button type="button" id="go">申請する</button><button type="button">一時保存</button></form><p id="msg"></p>
+</section>
+<script>(function(){var b=document.getElementById("go");if(!b){return;}b.addEventListener("click",function(){fetch("/api/move-in",{method:"POST"}).then(function(r){if(!r.ok){throw new Error("x");}return r.json();}).catch(function(){document.getElementById("msg").textContent="申請できませんでした";});});})();</script>
+</main>
+</body></html>

@@ -20,7 +20,17 @@ SYN = {"必須": ("未入力", "空欄", "省略", "入力必須"), "任意": ("
        "桁": ("桁数", "文字数", "長さ"), "文字": ("文字数", "桁数", "長さ"), "上限": ("最大", "以内", "超え"),
        "下限": ("最小", "以上", "未満"), "表示": ("非表示", "表記"), "削除": ("論理削除", "物理削除")}
 
-_TOKEN = re.compile(r"[A-Za-z_][A-Za-z0-9_.]{1,}|[ァ-ヶー]{2,}|[一-龥々]{2,}|[0-9]+ ?(?:桁|文字|件|円|日|%)")
+# 数値は単位まで含めて 1 語にする（「10冊」「17:00」「30日前」）。変更前の値を書いた項目は影響を受ける。
+_TOKEN = re.compile(r"[A-Za-z_][A-Za-z0-9_.]{1,}|[ァ-ヶー]{2,}|[一-龥々]{2,}"
+                    r"|[0-9]{1,2}:[0-9]{2}|[0-9]+(?:\.[0-9]+)? ?(?:桁|文字|件|円|日前|日間|日|%|冊|回|分|時間前|時間|時|秒|歳|"
+                    r"か月|ヶ月|カ月|週間|週|年|点|名|人|枠|割|倍)")
+_UNIT_WORD = re.compile(r"[一-龥々]{2,}$")
+_VALUE = re.compile(r"^[0-9]")
+
+
+def is_value(t: str) -> bool:
+    """単位付きの数値の語か。"""
+    return bool(_VALUE.match(t))
 _WS = re.compile(r"\s+")
 
 
@@ -31,7 +41,13 @@ def norm(s: str | None) -> str:
 
 def tokens(s: str | None) -> list[str]:
     seen, out = set(), []
+    raw = []
     for t in _TOKEN.findall(norm(s)):
+        raw.append(t)
+        unit = _UNIT_WORD.search(t) if _VALUE.match(t) else None
+        if unit:  # 「8時間」の「時間」も主題の語として残す
+            raw.append(unit.group(0))
+    for t in raw:
         t = t.strip(".").replace(" ", "")
         if len(t) < 2 or t in STOP or t in seen:
             continue

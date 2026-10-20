@@ -1,7 +1,7 @@
 {
  "schema": 1,
  "measured_on": "2026-10-20",
- "rules_version": "59f6a2bbcb9c",
+ "rules_version": "3b8eab4348fd",
  "scope": "規則ベースの検出のみ（LLM は対象外）",
  "dataset": {
   "name": "ja_v1",
@@ -70,12 +70,12 @@
   "REQ.MEASURABILITY": {
    "n": 99,
    "n_gold": 18,
-   "n_predicted": 14,
-   "tp": 14,
-   "fp": 0,
-   "fn": 4,
-   "precision": 1.0,
-   "recall": 0.778
+   "n_predicted": 16,
+   "tp": 15,
+   "fp": 1,
+   "fn": 3,
+   "precision": 0.938,
+   "recall": 0.833
   },
   "REQ.MULTIPLE_REQUIREMENTS": {
    "n": 99,
@@ -145,12 +145,12 @@
     "REQ.MEASURABILITY": {
      "n": 65,
      "n_gold": 16,
-     "n_predicted": 12,
-     "tp": 12,
+     "n_predicted": 13,
+     "tp": 13,
      "fp": 0,
-     "fn": 4,
+     "fn": 3,
      "precision": 1.0,
-     "recall": 0.75
+     "recall": 0.812
     },
     "REQ.MULTIPLE_REQUIREMENTS": {
      "n": 65,
@@ -220,11 +220,11 @@
     "REQ.MEASURABILITY": {
      "n": 34,
      "n_gold": 2,
-     "n_predicted": 2,
+     "n_predicted": 3,
      "tp": 2,
-     "fp": 0,
+     "fp": 1,
      "fn": 0,
-     "precision": 1.0,
+     "precision": 0.667,
      "recall": 1.0
     },
     "REQ.MULTIPLE_REQUIREMENTS": {
@@ -243,18 +243,18 @@
  },
  "previous": {
   "measured_on": "2026-10-20",
-  "rules_version": "fd0f7016daea",
+  "rules_version": "59f6a2bbcb9c",
   "dataset_sha256": "dd858576b51b",
   "rules": {
    "AMBIGUOUS": {
     "n": 99,
     "n_gold": 37,
-    "n_predicted": 0,
-    "tp": 0,
-    "fp": 0,
-    "fn": 37,
-    "precision": null,
-    "recall": 0.0
+    "n_predicted": 26,
+    "tp": 25,
+    "fp": 1,
+    "fn": 12,
+    "precision": 0.962,
+    "recall": 0.676
    },
    "REQ.INCOMPLETE": {
     "n": 99,
@@ -320,8 +320,8 @@
  },
  "delta": {
   "AMBIGUOUS": {
-   "precision": null,
-   "recall": 0.676
+   "precision": 0.0,
+   "recall": 0.0
   },
   "REQ.INCOMPLETE": {
    "precision": 0.0,
@@ -340,8 +340,8 @@
    "recall": 0.0
   },
   "REQ.MEASURABILITY": {
-   "precision": 0.0,
-   "recall": 0.0
+   "precision": -0.062,
+   "recall": 0.055
   },
   "REQ.MULTIPLE_REQUIREMENTS": {
    "precision": 0.0,

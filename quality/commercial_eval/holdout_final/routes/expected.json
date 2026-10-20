@@ -1,0 +1,434 @@
+{
+  "cases": [
+    {
+      "id": "H01",
+      "kind": "route",
+      "method": null,
+      "path": "/",
+      "should_detect": true,
+      "category": "static_route",
+      "file": "assets/app.js",
+      "note": "Router.add('/', dashboardView)"
+    },
+    {
+      "id": "H02",
+      "kind": "route",
+      "method": null,
+      "path": "/bookings",
+      "should_detect": true,
+      "category": "static_route",
+      "file": "assets/app.js",
+      "note": "Router.add('/bookings', bookingsView)"
+    },
+    {
+      "id": "H03",
+      "kind": "route",
+      "method": null,
+      "path": "/bookings/new",
+      "should_detect": true,
+      "category": "static_route",
+      "file": "assets/app.js",
+      "note": "Router.add('/bookings/new', newBookingView); also goTo('/bookings/new') in a click handler"
+    },
+    {
+      "id": "H04",
+      "kind": "route",
+      "method": null,
+      "path": "/bookings/:id",
+      "should_detect": true,
+      "category": "dynamic_route",
+      "file": "assets/app.js",
+      "note": "Router.add('/bookings/:id', bookingView)"
+    },
+    {
+      "id": "H05",
+      "kind": "route",
+      "method": null,
+      "path": "/bookings/:id/edit",
+      "should_detect": true,
+      "category": "nested_route",
+      "file": "assets/app.js",
+      "note": "Router.add('/bookings/:id/edit', editBookingView); dynamic segment followed by a literal"
+    },
+    {
+      "id": "H06",
+      "kind": "route",
+      "method": null,
+      "path": "/customers/:customerId",
+      "should_detect": true,
+      "category": "dynamic_route",
+      "file": "assets/app.js",
+      "note": "Router.add('/customers/:customerId', customerView); param name differs from :id"
+    },
+    {
+      "id": "H07",
+      "kind": "route",
+      "method": null,
+      "path": "/calendar",
+      "should_detect": true,
+      "category": "static_route",
+      "file": "assets/app.js",
+      "note": "Router.add('/calendar', calendarView)"
+    },
+    {
+      "id": "H08",
+      "kind": "route",
+      "method": null,
+      "path": "/resources/:resourceId/calendar/:date",
+      "should_detect": true,
+      "category": "nested_route",
+      "file": "assets/app.js",
+      "note": "Router.add with two dynamic segments around a literal"
+    },
+    {
+      "id": "H09",
+      "kind": "route",
+      "method": null,
+      "path": "/admin",
+      "should_detect": true,
+      "category": "static_route",
+      "file": "assets/app.js",
+      "note": "Router.add('/admin', adminView)"
+    },
+    {
+      "id": "H10",
+      "kind": "route",
+      "method": null,
+      "path": "/admin/settings/notifications",
+      "should_detect": true,
+      "category": "nested_route",
+      "file": "assets/app.js",
+      "note": "Router.add('/admin/settings/notifications', notificationSettingsView)"
+    },
+    {
+      "id": "H11",
+      "kind": "route",
+      "method": null,
+      "path": "/admin/users/:userId/roles",
+      "should_detect": true,
+      "category": "nested_route",
+      "file": "assets/app.js",
+      "note": "Router.add('/admin/users/:userId/roles', userRolesView)"
+    },
+    {
+      "id": "H12",
+      "kind": "route",
+      "method": null,
+      "path": "/admin/billing",
+      "should_detect": true,
+      "category": "unreachable",
+      "file": "assets/app.js",
+      "note": "Router.add exists but no link, navigate or redirect leads to it; the definition still exists"
+    },
+    {
+      "id": "H13",
+      "kind": "route",
+      "method": null,
+      "path": "/404",
+      "should_detect": true,
+      "category": "static_route",
+      "file": "assets/app.js",
+      "note": "Router.add('/404', notFoundView)"
+    },
+    {
+      "id": "H14",
+      "kind": "route",
+      "method": null,
+      "path": "/reservations",
+      "should_detect": true,
+      "category": "redirect",
+      "file": "assets/app.js",
+      "note": "Router.redirect('/reservations', '/bookings'); source counted"
+    },
+    {
+      "id": "H15",
+      "kind": "route",
+      "method": null,
+      "path": "/reservations/:id",
+      "should_detect": true,
+      "category": "redirect",
+      "file": "assets/app.js",
+      "note": "Router.redirect('/reservations/:id', '/bookings/:id'); dynamic redirect source"
+    },
+    {
+      "id": "H16",
+      "kind": "route",
+      "method": null,
+      "path": "/home",
+      "should_detect": true,
+      "category": "redirect",
+      "file": "assets/app.js",
+      "note": "Router.redirect('/home', '/')"
+    },
+    {
+      "id": "H17",
+      "kind": "route",
+      "method": null,
+      "path": "*",
+      "should_detect": true,
+      "category": "not_found",
+      "file": "assets/app.js",
+      "note": "Router.notFound(notFoundView): fallback handler, treated as catch-all"
+    },
+    {
+      "id": "H18",
+      "kind": "route",
+      "method": null,
+      "path": "/receipts/print",
+      "should_detect": true,
+      "category": "js_navigation",
+      "file": "assets/app.js",
+      "note": "goTo('/receipts/print') after fetch('/healthz'); goTo is an alias of Router.navigate; no Router.add for it"
+    },
+    {
+      "id": "H19",
+      "kind": "route",
+      "method": null,
+      "path": "/support",
+      "should_detect": true,
+      "category": "js_navigation",
+      "file": "assets/app.js",
+      "note": "history.pushState(null, '', '/support') then Router.render(); no Router.add for it"
+    },
+    {
+      "id": "H20",
+      "kind": "route",
+      "method": null,
+      "path": "https://help.example.com/booking-desk/guide",
+      "should_detect": false,
+      "category": "external",
+      "file": "index.html",
+      "note": "<a href> to an external origin in index.html; not an app route"
+    },
+    {
+      "id": "H21",
+      "kind": "route",
+      "method": null,
+      "path": "/beta/calendar",
+      "should_detect": false,
+      "category": "comment",
+      "file": "assets/app.js",
+      "note": "commented-out Router.add('/beta/calendar', ...)"
+    },
+    {
+      "id": "H22",
+      "kind": "api",
+      "method": "GET",
+      "path": "/api/v2/bookings",
+      "should_detect": true,
+      "category": "query_api",
+      "file": "assets/api.js",
+      "note": "http('GET', API_BASE + '/bookings?status=' + ...) ; API_BASE='/api/v2' from config.js; query dropped. Also fetch(API_BASE + '/bookings?status=open') in app.js; counted once"
+    },
+    {
+      "id": "H23",
+      "kind": "api",
+      "method": "GET",
+      "path": "/api/v2/bookings/:id",
+      "should_detect": true,
+      "category": "template_api",
+      "file": "assets/api.js",
+      "note": "http('GET', `${API_BASE}/bookings/${id}`): template string with base constant"
+    },
+    {
+      "id": "H24",
+      "kind": "api",
+      "method": "POST",
+      "path": "/api/v2/bookings",
+      "should_detect": true,
+      "category": "post_api",
+      "file": "assets/api.js",
+      "note": "http('POST', API_BASE + '/bookings', payload); same path as the GET but a different method"
+    },
+    {
+      "id": "H25",
+      "kind": "api",
+      "method": "PUT",
+      "path": "/api/v2/bookings/:id",
+      "should_detect": true,
+      "category": "put_api",
+      "file": "assets/api.js",
+      "note": "http('PUT', `${API_BASE}/bookings/${id}`, payload)"
+    },
+    {
+      "id": "H26",
+      "kind": "api",
+      "method": "PATCH",
+      "path": "/api/v2/bookings/:id/status",
+      "should_detect": true,
+      "category": "patch_api",
+      "file": "assets/api.js",
+      "note": "http('PATCH', API_BASE + '/bookings/' + id + '/status'): base constant plus concatenation"
+    },
+    {
+      "id": "H27",
+      "kind": "api",
+      "method": "DELETE",
+      "path": "/api/v2/bookings/:id",
+      "should_detect": true,
+      "category": "delete_api",
+      "file": "assets/api.js",
+      "note": "http('DELETE', API_BASE + '/bookings/' + id)"
+    },
+    {
+      "id": "H28",
+      "kind": "api",
+      "method": "GET",
+      "path": "/api/v2/resources/:id/slots",
+      "should_detect": true,
+      "category": "template_api",
+      "file": "assets/api.js",
+      "note": "http('GET', `/api/v2/resources/${resourceId}/slots?date=${date}`): literal template with query"
+    },
+    {
+      "id": "H29",
+      "kind": "api",
+      "method": "POST",
+      "path": "/api/v2/customers/:id/notes",
+      "should_detect": true,
+      "category": "template_api",
+      "file": "assets/app.js",
+      "note": "fetch(`/api/v2/customers/${p.customerId}/notes`, {method:'POST'}) with fetch options"
+    },
+    {
+      "id": "H30",
+      "kind": "api",
+      "method": "GET",
+      "path": "/api/v2/customers",
+      "should_detect": true,
+      "category": "query_api",
+      "file": "assets/app.js",
+      "note": "fetch('/api/v2/customers?q=' + encodeURIComponent(q)); query dropped"
+    },
+    {
+      "id": "H31",
+      "kind": "api",
+      "method": "GET",
+      "path": "/healthz",
+      "should_detect": true,
+      "category": "get_api",
+      "file": "assets/app.js",
+      "note": "fetch('/healthz') with no method; path outside /api"
+    },
+    {
+      "id": "H32",
+      "kind": "api",
+      "method": "PUT",
+      "path": "/api/v2/settings/notifications",
+      "should_detect": true,
+      "category": "put_api",
+      "file": "assets/app.js",
+      "note": "fetch(API_BASE + '/settings/notifications', {method:'PUT'})"
+    },
+    {
+      "id": "H33",
+      "kind": "api",
+      "method": "DELETE",
+      "path": "/api/v2/admin/cache",
+      "should_detect": true,
+      "category": "unreachable",
+      "file": "assets/app.js",
+      "note": "purgeCache() defined with fetch but never called; the definition exists"
+    },
+    {
+      "id": "H34",
+      "kind": "api",
+      "method": "POST",
+      "path": "https://payments.example.com/v1/charges",
+      "should_detect": false,
+      "category": "external",
+      "file": "assets/app.js",
+      "note": "external origin; not this app's API"
+    },
+    {
+      "id": "H35",
+      "kind": "api",
+      "method": "GET",
+      "path": "https://legacy.booking-old.example.net/v1/ping",
+      "should_detect": false,
+      "category": "external",
+      "file": "assets/api.js",
+      "note": "LEGACY_BASE (external origin, config.js) + '/ping'; external even though built by concatenation"
+    },
+    {
+      "id": "H36",
+      "kind": "api",
+      "method": null,
+      "path": "/api/v2/reports/export",
+      "should_detect": false,
+      "category": "unused_string",
+      "file": "assets/api.js",
+      "note": "exportEndpoint property is never read anywhere"
+    },
+    {
+      "id": "H37",
+      "kind": "api",
+      "method": "GET",
+      "path": "/api/v2/old-bookings",
+      "should_detect": false,
+      "category": "comment",
+      "file": "assets/api.js",
+      "note": "inside a /* */ block comment"
+    },
+    {
+      "id": "H38",
+      "kind": "api",
+      "method": "GET",
+      "path": "/api/v2/audit-trail",
+      "should_detect": false,
+      "category": "comment",
+      "file": "assets/api.js",
+      "note": "inside a // TODO comment"
+    },
+    {
+      "id": "H39",
+      "kind": "api",
+      "method": "POST",
+      "path": "/api/v2/beta/waitlist",
+      "should_detect": false,
+      "category": "dead_code",
+      "file": "assets/app.js",
+      "note": "inside if (false) { ... }"
+    },
+    {
+      "id": "H40",
+      "kind": "api",
+      "method": "GET",
+      "path": "/api/v2/legacy/sync",
+      "should_detect": false,
+      "category": "dead_code",
+      "file": "assets/app.js",
+      "note": "statement placed after an unconditional return"
+    },
+    {
+      "id": "H41",
+      "kind": "api",
+      "method": "POST",
+      "path": "/api/v2/bookings/retry-queue",
+      "should_detect": false,
+      "category": "console_log",
+      "file": "assets/app.js",
+      "note": "URL only appears inside a console.log message string"
+    },
+    {
+      "id": "H42",
+      "kind": "api",
+      "method": "GET",
+      "path": "/api/v2/__mock__/bookings",
+      "should_detect": false,
+      "category": "test_mock",
+      "file": "assets/api.js",
+      "note": "TEST_MOCKS entry; the array is never read"
+    },
+    {
+      "id": "H43",
+      "kind": "api",
+      "method": "POST",
+      "path": "/api/v2/__mock__/payments",
+      "should_detect": false,
+      "category": "test_mock",
+      "file": "assets/api.js",
+      "note": "TEST_MOCKS entry; the array is never read"
+    }
+  ]
+}

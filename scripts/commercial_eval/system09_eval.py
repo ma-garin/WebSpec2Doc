@@ -3,7 +3,7 @@
 
 ドメインごとの cases_*.json を、作成者側の評価（scripts/impact_eval.py）と同じ手順で分析して合算する。
 作成者側の tests/fixtures/impact_eval/ は混ぜない。
-使い方: venv/bin/python scripts/commercial_eval/system09_eval.py [--mode rule|full]
+使い方: venv/bin/python scripts/commercial_eval/system09_eval.py [--mode rule|full] [--data <dir>]
 """
 from __future__ import annotations
 
@@ -21,16 +21,16 @@ import impact_eval  # noqa: E402
 DATA = ROOT / "quality" / "commercial_eval" / "system09_independent"
 
 
-def main(mode: str) -> dict:
+def main(mode: str, data: Path = DATA) -> dict:
     total = {"tp": 0, "found": 0, "expected": 0, "items": 0, "cases": 0}
     per_domain = {}
-    for cases_file in sorted(DATA.glob("cases_*.json")):
+    for cases_file in sorted(data.glob("cases_*.json")):
         spec = json.loads(cases_file.read_text(encoding="utf-8"))
         with tempfile.TemporaryDirectory() as tmp:
             work = Path(tmp)
             for doc in spec["documents"]:
-                shutil.copy(DATA / doc["file"], work / doc["file"])
-            for extra in DATA.glob("*.sql"):
+                shutil.copy(data / doc["file"], work / doc["file"])
+            for extra in list(data.glob("*.sql")) or list(DATA.glob("*.sql")):  # スキーマは製品の DB 定義（評価データではない）
                 shutil.copy(extra, work / extra.name)
             (work / "cases.json").write_text(json.dumps(spec, ensure_ascii=False), encoding="utf-8")
             impact_eval.FIXTURES = work
@@ -38,7 +38,7 @@ def main(mode: str) -> dict:
         n_exp = sum(len(c["expected_items"]) for c in spec["cases"])
         tp = round(res["recall"] * n_exp)
         found = round(tp / res["precision"]) if res["precision"] else 0
-        per_domain[cases_file.stem] = {k: res[k] for k in ("cases", "items", "recall", "precision", "candidate_rate")}
+        per_domain[cases_file.stem] = {k: res[k] for k in ("cases", "items", "recall", "precision", "candidate_rate", "per_case")}
         total["tp"] += tp
         total["found"] += found
         total["expected"] += n_exp
@@ -54,4 +54,6 @@ def main(mode: str) -> dict:
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("--mode", choices=("rule", "full"), default="rule")
-    print(json.dumps(main(ap.parse_args().mode), ensure_ascii=False, indent=1))
+    ap.add_argument("--data", type=Path, default=DATA)
+    a = ap.parse_args()
+    print(json.dumps(main(a.mode, a.data), ensure_ascii=False, indent=1))

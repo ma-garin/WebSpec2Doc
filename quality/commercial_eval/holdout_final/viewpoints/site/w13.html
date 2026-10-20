@@ -1,0 +1,12 @@
+<!doctype html>
+<html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>カートの数量変更 | あおぞらポータル</title><link rel="stylesheet" href="css/h.css"></head>
+<body>
+<header class="hdr"><a href="index.html">メニュー</a></header>
+<main>
+<h1>カートの数量変更</h1>
+<section class="spec"><h2>画面の説明</h2><ul><li>数量は 1 から 99 までの整数で入力する。必須。</li><li>範囲外のときは入力欄の下に「1〜99で入力してください」と表示し、更新しない。</li></ul></section>
+<section><h2>画面</h2>
+<form><label for="q">数量</label><input type="number" id="q" name="qty" min="1" max="99" required><p class="error" id="msg"></p><button type="button">数量を更新</button></form>
+</section>
+</main>
+</body></html>

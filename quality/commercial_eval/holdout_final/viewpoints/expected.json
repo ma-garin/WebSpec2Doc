@@ -1,0 +1,152 @@
+{
+  "categories": [
+    "normal",
+    "abnormal",
+    "boundary",
+    "required",
+    "format",
+    "state_transition",
+    "permission",
+    "error",
+    "api",
+    "persistence"
+  ],
+  "screens": {
+    "w01.html": {
+      "required_viewpoints": [
+        "normal",
+        "required"
+      ],
+      "notes": "同意チェックが必須(required)で、進めば次の画面へ。入力値の形式・範囲の記述は無い。"
+    },
+    "w02.html": {
+      "required_viewpoints": [
+        "normal"
+      ],
+      "notes": "表示と遷移だけの画面。入力欄が無いので正常のみ。"
+    },
+    "w03.html": {
+      "required_viewpoints": [
+        "normal",
+        "required",
+        "abnormal",
+        "boundary",
+        "error",
+        "api"
+      ],
+      "notes": "年齢の範囲 18〜80(boundary)、必須、数字以外のエラー文言(abnormal)、通信失敗の表示(error)、POST(api)。"
+    },
+    "w04.html": {
+      "required_viewpoints": [
+        "normal",
+        "boundary",
+        "api",
+        "persistence"
+      ],
+      "notes": "200 文字上限(boundary)、PUT 保存(api)、開き直しても表示(persistence)。必須の記述は無い。"
+    },
+    "w05.html": {
+      "required_viewpoints": [
+        "normal",
+        "required",
+        "format",
+        "error",
+        "api"
+      ],
+      "notes": "12 桁数字(format)、必須、通信失敗と再試行(error)、GET(api)。"
+    },
+    "w06.html": {
+      "required_viewpoints": [
+        "normal",
+        "permission"
+      ],
+      "notes": "ロールで削除ボタンの表示が変わる(permission)。入力欄は無い。"
+    },
+    "w07.html": {
+      "required_viewpoints": [
+        "normal",
+        "state_transition",
+        "error"
+      ],
+      "notes": "状態の遷移規則(state_transition)と不可時のメッセージ(error)。"
+    },
+    "w08.html": {
+      "required_viewpoints": [],
+      "notes": "hard negative。説明文だけで、入力・操作・保存・通信のいずれの記述も無い。テスト観点は不要。"
+    },
+    "w09.html": {
+      "required_viewpoints": [],
+      "notes": "hard negative。用語の説明だけ。ページ内リンクはあるが観点を要する仕様は無い。"
+    },
+    "w10.html": {
+      "required_viewpoints": [
+        "normal",
+        "required",
+        "abnormal",
+        "boundary",
+        "format",
+        "error",
+        "api",
+        "persistence"
+      ],
+      "notes": "必須・桁数形式・人数範囲・全角記号・失敗表示・POST・一時保存の全てが明記された複雑な画面。"
+    },
+    "w11.html": {
+      "required_viewpoints": [
+        "normal",
+        "required",
+        "format",
+        "permission",
+        "error",
+        "api"
+      ],
+      "notes": "必須・形式・管理者のみ(permission)・エラー表示・POST。"
+    },
+    "w12.html": {
+      "required_viewpoints": [
+        "normal",
+        "persistence"
+      ],
+      "notes": "選択肢から選ぶだけで必須・形式の記述なし。端末に保存し再表示(persistence)。"
+    },
+    "w13.html": {
+      "required_viewpoints": [
+        "normal",
+        "required",
+        "boundary",
+        "error"
+      ],
+      "notes": "1〜99 の範囲(boundary)・必須・範囲外のメッセージ(error)。API・保存の記述なし。"
+    },
+    "w14.html": {
+      "required_viewpoints": [
+        "normal",
+        "state_transition",
+        "permission",
+        "api",
+        "error"
+      ],
+      "notes": "状態遷移とキャンセル不可、ロール制限、PUT、失敗時の再試行。"
+    },
+    "w15.html": {
+      "required_viewpoints": [
+        "normal",
+        "abnormal",
+        "boundary",
+        "error",
+        "api"
+      ],
+      "notes": "文字数・価格の範囲(boundary)、逆転した範囲の入力(abnormal)とその表示(error)、GET(api)。必須は無い。"
+    },
+    "w16.html": {
+      "required_viewpoints": [
+        "normal",
+        "required",
+        "error",
+        "state_transition",
+        "api"
+      ],
+      "notes": "必須・認証失敗表示・5 回でロック(state_transition)・POST。"
+    }
+  }
+}

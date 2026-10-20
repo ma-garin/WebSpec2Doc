@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>住民票の写しの請求 | あおぞらポータル</title><link rel="stylesheet" href="css/h.css"></head>
+<body>
+<header class="hdr"><a href="index.html">メニュー</a></header>
+<main>
+<h1>住民票の写しの請求</h1>
+<h2>請求内容</h2>
+<h2>請求内容</h2>
+<form id="rq" action="h12.html" method="post">
+<div id="rq-err"></div>
+<fieldset><legend>請求者</legend><div class="row"><input type="radio" id="claimant-1" name="claimant" value="self" required><label for="claimant-1">本人</label></div><div class="row"><input type="radio" id="claimant-2" name="claimant" value="family" required><label for="claimant-2">同一世帯の代理人</label></div><div class="row"><input type="radio" id="claimant-3" name="claimant" value="other" required><label for="claimant-3">その他の代理人</label></div></fieldset>
+<div class="row"><input type="number" id="f4" name="copies" required min="1" max="10" aria-label="請求通数"></div>
+<div class="row"><input type="text" id="f5" name="requester" required maxlength="40" aria-label="請求者の氏名"></div>
+<div class="row"><input type="checkbox" id="f6" name="honseki"><label for="f6">本籍を記載する</label></div>
+<div class="row"><label for="f7">受取方法</label><select id="f7" name="receive" required><option value="">選択してください</option><option value="counter">窓口</option><option value="post">郵送</option></select></div>
+<p>手数料は1通300円です。</p>
+<div class="gone"><label>郵送先住所を入力<input name="post_addr"></label></div>
+<div aria-hidden="true" style="display:none"><p>本人確認書類のアップロード</p></div>
+<input type="submit" value="請求する">
+<button type="button">キャンセル</button>
+<button type="button">キャンセル</button>
+</form>
+<script>(function(){var f=document.getElementById("rq");var box=document.getElementById("rq-err");f.addEventListener("submit",function(ev){ev.preventDefault();var errs=[];if(!f.elements["claimant"].value){errs.push("請求者を選択してください");}if(f.elements["copies"].value===''){errs.push("請求通数を入力してください");}if(f.elements["receive"].value===''){errs.push("受取方法を選択してください");}box.innerHTML="";errs.forEach(function(m){var q=document.createElement("p");q.className="error";q.textContent=m;box.appendChild(q);});if(!errs.length){fetch("/api/certificates",{method:"POST",body:new FormData(f)}).then(function(r){if(!r.ok){throw new Error("x");}return r.json();}).catch(function(){var q=document.createElement("p");q.className="error";q.textContent="請求に失敗しました";box.appendChild(q);});}});})();</script>
+</main>
+</body></html>

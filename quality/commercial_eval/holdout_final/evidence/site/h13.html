@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>請求書一覧 | あおぞらポータル</title><link rel="stylesheet" href="css/h.css"></head>
+<body>
+<header class="hdr"><a href="index.html">メニュー</a></header>
+<main>
+<h1>請求書一覧</h1>
+<h2>絞り込み</h2>
+<form id="flt" action="h13.html" method="get">
+<div class="row"><label for="f1">開始日</label><input type="date" id="f1" name="from"></div>
+<div class="row"><label for="f2">終了日</label><input type="date" id="f2" name="to"></div>
+<div class="row"><label for="f3">状態</label><select id="f3" name="status"><option value="">すべて</option><option value="paid">支払い済み</option><option value="unpaid">未払い</option></select></div>
+<input type="submit" value="絞り込み">
+</form>
+<h2>請求書</h2>
+<table><thead><tr><th>選択</th><th>請求書番号</th><th>金額</th><th>状態</th><th>操作</th></tr></thead><tbody><tr><td><input type="checkbox" id="f4" name="sel" value="INV-2610" aria-label="選択 INV-2610"></td><td>INV-2610</td><td>48,000円</td><td>未払い</td><td><a href="h15.html?inv=INV-2610">詳細</a> <button type="button">再発行</button></td></tr><tr><td><input type="checkbox" id="f5" name="sel" value="INV-2609" aria-label="選択 INV-2609"></td><td>INV-2609</td><td>48,000円</td><td>支払い済み</td><td><a href="h15.html?inv=INV-2609">詳細</a> <button type="button">再発行</button></td></tr><tr><td><input type="checkbox" id="f6" name="sel" value="INV-2608" aria-label="選択 INV-2608"></td><td>INV-2608</td><td>36,000円</td><td>支払い済み</td><td><a href="h15.html?inv=INV-2608">詳細</a> <button type="button">再発行</button></td></tr></tbody></table>
+<button id="send" type="button">選択した請求書をまとめて送付</button>
+<button id="del" type="button">下書きを削除</button>
+<div style="visibility:hidden"><button type="button">督促メールを送信</button><p>督促対象: 1件</p></div>
+<div id="dyn"></div>
+<div id="inv-err"></div>
+<script>(function(){var d=document.getElementById("dyn");var box=document.getElementById("inv-err");function show(m){var q=document.createElement("p");q.className="error";q.textContent=m;box.appendChild(q);}var h=document.createElement("h3");h.textContent="未払いの合計";d.appendChild(h);var b=document.createElement("button");b.type="button";b.textContent="未払いのみ表示";d.appendChild(b);document.getElementById("send").addEventListener("click",function(){box.innerHTML="";if(document.querySelectorAll("input[name=sel]:checked").length===0){show("送付する請求書を選択してください");}});document.getElementById("del").addEventListener("click",function(){box.innerHTML="";fetch("/api/invoices/drafts",{method:"DELETE"}).then(function(r){if(!r.ok){throw new Error("x");}}).catch(function(){show("下書きを削除できませんでした");});});})();</script>
+</main>
+</body></html>

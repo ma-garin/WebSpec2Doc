@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>契約者情報の変更 | あおぞらポータル</title><link rel="stylesheet" href="css/h.css"></head>
+<body>
+<header class="hdr"><a href="index.html">メニュー</a></header>
+<main>
+<h1>契約者情報の変更</h1>
+<h2>現在の登録内容</h2>
+<form id="c" action="h02.html" method="post">
+<input type="hidden" name="contract_id" value="C-20931">
+<div id="c-err"></div>
+<div class="row"><label for="f1">契約者名</label><input type="text" id="f1" name="holder" value="青空 太郎" disabled></div>
+<div class="row"><label for="f2">郵便番号</label><input type="text" id="f2" name="zip" required maxlength="8" pattern="^[0-9]{3}-[0-9]{4}$"></div>
+<div class="row"><label for="f3">住所</label><input type="text" id="f3" name="addr" required maxlength="100"></div>
+<div class="row"><label for="f4">電話番号</label><input type="tel" id="f4" name="tel" maxlength="11" minlength="10" pattern="^0[0-9]{9,10}$"></div>
+<div class="row"><label for="f5">連絡方法</label><select id="f5" name="contact"><option value="mail">メール</option><option value="tel">電話</option><option value="post">郵送</option></select></div>
+<div hidden><h2>変更履歴 (管理者のみ)</h2><table><tr><td>2025-04-01</td><td>住所変更</td></tr></table></div>
+<button type="submit">変更を保存</button>
+<button type="submit">変更を保存</button>
+<button type="button">戻る</button>
+</form>
+<a href="h01.html">見積もりに戻る</a>
+<script>(function(){var f=document.getElementById("c");var box=document.getElementById("c-err");f.addEventListener("submit",function(ev){ev.preventDefault();var errs=[];if(f.elements["zip"].value===''){errs.push("郵便番号を入力してください");}if(f.elements["addr"].value===''){errs.push("住所を入力してください");}box.innerHTML="";errs.forEach(function(m){var q=document.createElement("p");q.className="error";q.textContent=m;box.appendChild(q);});if(!errs.length){fetch("/api/contracts/self",{method:"PUT",body:new FormData(f)}).then(function(r){if(!r.ok){throw new Error("x");}return r.json();}).catch(function(){var q=document.createElement("p");q.className="error";q.textContent="変更を保存できませんでした";box.appendChild(q);});}});})();</script>
+</main>
+</body></html>

@@ -601,6 +601,12 @@
     var f = document.getElementById('bs-tpl-oracle').content.firstElementChild.cloneNode(true), E = function (n) { return f.elements.namedItem(n); };
     f.dataset.case = c.id; E('method').value = o.method || 'db_diff'; E('key').value = (o.key || []).join(', '); E('exclude').value = (o.exclude || []).join(', ');
     E('tolerance').value = typeof o.tolerance === 'string' ? o.tolerance : text(o.tolerance);
+    // 承認済みの期待値は、段階 2 で種類「承認済みの期待値」として取り込んだ資料から選ぶ
+    var gold = ((state.job && state.job.files) || []).filter(function (x) { return x.kind === 'golden'; });
+    var gs = E('golden'), cur = (o.golden || {}).file || '';
+    gs.innerHTML = '';
+    if (!gold.length) gs.appendChild(new Option('（段階 2 で種類「承認済みの期待値」の資料を取り込んでください）', ''));
+    gold.forEach(function (x) { gs.appendChild(new Option(x.name, x.name, false, x.name === cur)); });
     $('[data-f="warn"]', f).textContent = text(o.warnings || []);
     td.colSpan = 7; td.appendChild(f); tr.appendChild(td); return tr;
   }
@@ -626,7 +632,8 @@
       var b = document.createElement('button'); b.type = 'button'; b.className = 'fchip' + (c[0] === f.chip ? ' on' : ''); b.dataset.chip = c[0];
       b.setAttribute('aria-pressed', String(c[0] === f.chip)); b.textContent = c[1] + ' ' + c[2]; box.appendChild(b);
     });
-    $('#bs-stage-4 [data-act="generate"]').hidden = st4.status === 'approved' || (st4.status === 'generated' && cases.length > 0);
+    // 前段が変わったときは作り直しを出す（承認済みなら差分を提案として受け付ける）
+    $('#bs-stage-4 [data-act="generate"]').hidden = !st4.stale && (st4.status === 'approved' || (st4.status === 'generated' && cases.length > 0));
     var q = (f.q || '').trim().toLowerCase();
     var rows = cases.filter(function (c) {
       var o = c.oracle || {}, ok = !f.chip || (f.chip.indexOf('st:') === 0 ? stOf(c) === f.chip.slice(3) : o.method === f.chip.slice(2));
@@ -667,7 +674,11 @@
     var path = jobPath('/cases/' + encodeURIComponent(f.dataset.case) + '/oracle');
     var altSql = E('alt_sql') ? E('alt_sql').value.trim() : '';
     if (method === 'alt_sql' && !altSql) { notify('別の計算の SQL が空です。比べる値を求める SQL を入れてください。', '確定できませんでした'); E('alt_sql').focus(); return; }
-    var steps = method === 'db_diff'
+    var golden = E('golden') ? E('golden').value : '';
+    if (method === 'golden' && !golden) { notify('承認する期待値ファイルがありません。段階 2 で資料の種類を「承認済みの期待値」にして取り込み、ここで選んでください。', '確定できませんでした'); E('golden').focus(); return; }
+    var steps = method === 'golden'
+      ? api('POST', jobPath('/cases/' + encodeURIComponent(f.dataset.case) + '/golden'), { golden_ref: { file: golden } })
+      : method === 'db_diff'
       ? api('PATCH', path, { action: 'configure_db_diff', keys: key, exclude: split(E('exclude').value), tolerance: tol ? Number(tol) : null })
           .then(function () { return api('PATCH', path, { action: 'confirm' }); })
       : method === 'alt_sql'
@@ -753,7 +764,12 @@
     if (t.dataset.level) return patch({ level: t.dataset.level }, 'テストレベルを保存しました');
     if (act === 'generate' && +t.dataset.stage <= 6) return generate(t);
     if (act === 'file-del') return run(t, api('DELETE', jobPath('/files/' + encodeURIComponent(t.dataset.file))), '資料を取り除きました');
-    if (act === 'oracle' || act === 'oracle-cancel') { state.oracleFor = act === 'oracle' ? t.dataset.case : ''; return renderPanel(); }
+    if (act === 'oracle' || act === 'oracle-cancel') {
+      state.oracleFor = act === 'oracle' ? t.dataset.case : ''; renderPanel();
+      var of = state.oracleFor && document.querySelector('.bs-oracle [name="method"]');
+      if (of) of.focus();  // 開いたフォームへフォーカスを移す（閉じたら元の行のボタンは描き直される）
+      return;
+    }
     if (act === 'case-detail') { state.detailFor = state.detailFor === t.dataset.case ? '' : t.dataset.case; return renderPanel(); }
     if (act === 'vp-add-cancel') { state.adding = false; return renderPanel(); }
     if (act === 'flt-clear' || act === 'pg-prev' || act === 'pg-next') return pageAct(t, act);

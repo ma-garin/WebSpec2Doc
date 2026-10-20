@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>利用量レポート | あおぞらポータル</title><link rel="stylesheet" href="css/h.css"></head>
+<body>
+<header class="hdr"><a href="index.html">メニュー</a></header>
+<main>
+<h1>利用量レポート</h1>
+<form id="us" action="h16.html" method="get">
+<div id="us-err"></div>
+<div class="row"><label for="f1">集計開始日</label><input type="date" id="f1" name="from" required></div>
+<div class="row"><label for="f2">集計終了日</label><input type="date" id="f2" name="to" required></div>
+<div class="row"><label for="f3">集計単位</label><select id="f3" name="unit"><option value="d">日</option><option value="w">週</option><option value="m">月</option></select></div>
+<div class="row"><label for="f4">API 呼び出しの上限</label><input type="number" id="f4" name="limit" min="0" max="100000"></div>
+<div class="row"><input type="checkbox" id="f5" name="alert"><label for="f5">超過時に通知する</label></div>
+<input type="submit" value="表示">
+<button type="button">CSV出力</button>
+</form>
+<a href="h16.html?csv=1" class="btn">CSV出力</a>
+<h2>利用量</h2>
+<canvas id="chart" width="600" height="240">グラフを表示できません</canvas>
+<table><thead><tr><th>日付</th><th>API呼び出し</th><th>ストレージ(GB)</th></tr></thead><tbody><tr><td>10/18</td><td>12,400</td><td>31.2</td></tr><tr><td>10/19</td><td>15,010</td><td>31.3</td></tr><tr><td>10/20</td><td>9,870</td><td>31.3</td></tr></tbody></table>
+<div aria-hidden="true" style="display:none"><h2>内部監査用の集計</h2><p>監査ログ 3件</p></div>
+<script>(function(){var f=document.getElementById("us");var box=document.getElementById("us-err");f.addEventListener("submit",function(ev){ev.preventDefault();var errs=[];if(f.elements["from"].value===''||f.elements["to"].value===''){errs.push("集計期間を入力してください");}if(f.elements["from"].value>f.elements["to"].value){errs.push("集計期間が正しくありません");}box.innerHTML="";errs.forEach(function(m){var q=document.createElement("p");q.className="error";q.textContent=m;box.appendChild(q);});if(!errs.length){fetch("/api/usage",{method:"GET",body:null}).then(function(r){if(!r.ok){throw new Error("x");}return r.json();}).catch(function(){var q=document.createElement("p");q.className="error";q.textContent="利用量を取得できませんでした";box.appendChild(q);});}});})();</script>
+</main>
+</body></html>

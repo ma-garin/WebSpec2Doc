@@ -24,6 +24,8 @@ button[disabled] { opacity: .45; cursor: not-allowed; }
 /* 案件画面ヘッダー */
 .s8-title-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
 .s8-chips { display: flex; gap: 6px; flex-wrap: wrap; }
+/* 長い対象パスなどがバッジを 1 行に保ってページ全体を横に押し広げていた */
+.s8-chips .badge { white-space: normal; overflow-wrap: anywhere; max-width: 100%; }
 .s8-head-actions { display: flex; gap: 8px; align-items: center; }
 .s8-head-actions .btn-primary { height: 38px; padding: 0 18px; gap: 6px; }
 .s8-head-actions .btn-outline-sm { height: 38px; gap: 6px; }

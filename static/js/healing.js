@@ -180,10 +180,25 @@
     });
   }
 
+  // 確認は開いたら中の最初のボタンへフォーカスを移し、Esc で閉じて開いた元へ戻す
+  var confirmOpener = null;
   function openConfirm(node) {
     if (!node) { return; }
     closeAllConfirms(node);
+    confirmOpener = document.activeElement;
     setConfirmOpen(node, true);
+    var first = node.querySelector('button:not([disabled]), [href], input, textarea');
+    if (first) { first.focus(); }
+    if (!node.dataset.escBound) {
+      node.dataset.escBound = '1';
+      node.addEventListener('keydown', function (ev) {
+        if (ev.key !== 'Escape' && ev.key !== 'Esc') { return; }
+        ev.preventDefault(); ev.stopPropagation();
+        setConfirmOpen(node, false);
+        var o = confirmOpener; confirmOpener = null;
+        if (o && o.isConnected && o.focus) { o.focus(); }
+      });
+    }
   }
 
   /* メニューは表のはみ出し制御（overflow）を持つラッパの中にある。行が末尾にあると

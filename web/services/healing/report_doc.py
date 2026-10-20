@@ -767,7 +767,7 @@ def _bundle_review(
     どれにも当たらなければ、テスト側だけの修正で検証も通っている——止める理由がない。
     """
     if "repo" in fix_targets:
-        return True, "AI がコードを変えています。"
+        return True, "AI が製品コードの修正を提案しています（適用は承認の後。ドライランでは変更しません）。"
     if unverified_count > 0:
         return True, f"検証が通っていない個票が{unverified_count}件あります。"
     if attention_high > 0:

@@ -305,6 +305,20 @@
           <div class="bs-actions"><span class="bs-mut" id="bs-env-status" role="status"></span><span class="sp"></span>
             <button type="button" class="btn" id="bs-env-check">接続を確かめる</button>
             <button type="button" class="btn pri" id="bs-run">実行する</button></div>
+          <details class="bs-envadd" id="bs-envadd">
+            <summary>接続先を登録する</summary>
+            <form id="bs-envadd-form" class="bs-envadd-form">
+              <label class="bs-field">名前<input name="name" required maxlength="100" placeholder="例: 検証DB"></label>
+              <label class="bs-field">ホスト<input name="host" required maxlength="255" placeholder="例: 127.0.0.1"></label>
+              <label class="bs-field">ポート<input name="port" inputmode="numeric" maxlength="5" value="5432"></label>
+              <label class="bs-field">データベース名<input name="dbname" required maxlength="63"></label>
+              <label class="bs-field">ユーザー<input name="user" required maxlength="63"></label>
+              <label class="bs-field">パスワード（接続確認にだけ使い、保存しません）<input name="password" type="password" autocomplete="off"></label>
+              <label class="bs-check"><input name="declared_production" type="checkbox"> 本番の DB です（読み取り専用で扱います）</label>
+              <div class="bs-actions"><span class="bs-mut" id="bs-envadd-status" role="status" aria-live="polite"></span><span class="sp"></span>
+                <button type="submit" class="btn pri">登録する</button></div>
+            </form>
+          </details>
         </div>
         <div class="bs-card" id="bs-run-card" hidden>
           <div class="bs-card-h"><h3 id="bs-run-title">実行中</h3><span class="pill p-running" id="bs-run-count"></span><span class="sp"></span>

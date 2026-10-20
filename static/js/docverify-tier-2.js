@@ -110,7 +110,7 @@
     vb.innerHTML = '<svg viewBox="0 0 24 24">' + v[1] + '</svg>' + esc(s.level_label || v[0]) + '・指摘 ' + act.length + ' 件';
     var total = fs.length, n = fs.filter(function (f) { return status(s, f, ck) > 0; }).length;
     var all = n >= total;
-    $('[data-count]').textContent = total ? '確認済み ' + n + ' / ' + total : '規則で見つかる指摘はありません（見落としが多い規則もあるため、人の確認は必要です）';
+    $('[data-count]').textContent = total ? '確認済み ' + n + ' / ' + total : '規則で見つかる指摘はありません（見落としもあり得ます）';
     $('[data-bar]').style.width = (total ? n / total * 100 : 100) + '%';
     $('[data-why]').textContent = !total ? '' : all ? 'すべて確認しました。次へ進めます'
       : 'あと ' + (total - n) + ' 件' + (lvl === 'fail' ? '・重大が残っています' : '');
@@ -174,6 +174,7 @@
       '<h3>' + esc(f.reason) + '</h3>' +
       (f.related_quote ? '<p>関連する箇所: 「' + esc(f.related_quote) + '」' + (f.related_doc_id ? '（' + esc(dname(s, f.related_doc_id)) + '）' : '') + '</p>' : '') +
       (f.fix ? '<div class="fix"><b>直し方：</b>' + esc(f.fix) + '</div>' : '') +
+      '<p class="s2sub">確信度：' + (f.confidence != null ? esc(Math.round(f.confidence * 100) + '%') : '未測定（規則による検出。この規則の精度はまだ評価セットで測っていません）') + '</p>' +
       (k === 2 ? '<p class="rpd">通報済み。理由: ' + esc((s.reports[f.id] || {}).reason || '') + '</p>' : '') +
       '<div class="acts"><button type="button" class="s2btn nav" data-a="prev">↑ 前の指摘 <kbd>K</kbd></button><button type="button" class="s2btn nav" data-a="next">次の指摘 ↓ <kbd>J</kbd></button><span class="gap"></span>' +
       '<button type="button" class="s2btn" data-a="see">' + ICO.eye + '該当箇所を見る</button>' +
@@ -226,9 +227,17 @@
     if (!f) return;
     reportFor = f.id; reasonEl.value = ''; clearErr();
     $('[data-dlgt]').textContent = '対象：' + dname(s, f.doc_id) + '「' + (f.reason || '') + '」';
+    dlgOpener = document.activeElement;
     dlg.hidden = false; reasonEl.focus();
   }
-  function closeDlg() { dlg.hidden = true; reportFor = null; }
+  // 閉じたら開いた元（誤検知を通報）へフォーカスを戻す。Esc でも閉じる
+  var dlgOpener = null;
+  function closeDlg() {
+    dlg.hidden = true; reportFor = null;
+    var o = dlgOpener; dlgOpener = null;
+    if (o && o.isConnected && o.focus) o.focus();
+    else { var b = R.querySelector('[data-a="rep"]'); if (b) b.focus(); }
+  }
 
   R.addEventListener('click', function (e) {
     var t = e.target.closest('button'); if (!t || !R.contains(t)) return;
@@ -247,6 +256,7 @@
   });
   reasonEl.addEventListener('input', clearErr);
   dlg.addEventListener('click', function (e) { if (e.target === dlg) closeDlg(); });
+  dlg.addEventListener('keydown', function (e) { if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); closeDlg(); } });
   $('[data-cancel]').addEventListener('click', closeDlg);
   $('[data-send]').addEventListener('click', function () {
     var reason = reasonEl.value.trim();

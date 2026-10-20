@@ -165,6 +165,9 @@
   }
 
   document.addEventListener('DOMContentLoaded', function () {
+    // 再読み込みしても途中の実行に戻る（前回の続きを自動で開く。新しく始めるときは「新しく始める」）
+    var prev = last();
+    if (prev && !DVT.iid && !opening) opening = { id: prev.id, name: prev.name };
     $('dvtRestart').addEventListener('click', function () { opening = null; start(); });
     var rs = $('dvtResume');
     if (rs) rs.addEventListener('click', function () { var l = last(); if (!l) return; opening = { id: l.id, name: l.name }; start(); });

@@ -661,10 +661,15 @@
     var split = function (s) { return s.split(/[,、]/).map(function (x) { return x.trim(); }).filter(Boolean); };
     var method = E('method').value, key = split(E('key').value);
     if (method === 'db_diff' && !key.length) { notify('行を突き合わせる列が空です。例のように列名をカンマで区切って入れてください。', '確定できませんでした'); E('key').focus(); return; }
-    var tol = E('tolerance').value.trim().replace(/[，,]/g, ''), body = { method: method, config: { key: key, exclude: split(E('exclude').value) }, confirm: true };
+    var tol = E('tolerance').value.trim().replace(/[，,]/g, '');
     if (tol && !isFinite(Number(tol))) { notify('許す差は数で入れてください（例: 1）。数を直してもう一度「確定する」を押してください。', '確定できませんでした'); E('tolerance').focus(); return; }
-    if (tol) body.tolerance = Number(tol);
-    run(f.querySelector('[type=submit]'), api('PATCH', jobPath('/cases/' + encodeURIComponent(f.dataset.case) + '/oracle'), body), '期待値を確定しました')
+    // API は「前後比較の設定（configure_db_diff）」と「確定（confirm）」を別の操作として受ける。順に送る
+    var path = jobPath('/cases/' + encodeURIComponent(f.dataset.case) + '/oracle');
+    var steps = method === 'db_diff'
+      ? api('PATCH', path, { action: 'configure_db_diff', keys: key, exclude: split(E('exclude').value), tolerance: tol ? Number(tol) : null })
+          .then(function () { return api('PATCH', path, { action: 'confirm' }); })
+      : api('PATCH', path, { action: 'confirm' });
+    run(f.querySelector('[type=submit]'), steps, '期待値を確定しました')
       .then(function (d) { if (d && d.job) { state.oracleFor = ''; renderPanel(); } });
   }
 

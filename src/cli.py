@@ -4,7 +4,7 @@
 GUI の 3 系統をそのまま端末から使うための入口。
 
     python src/cli.py doc       --url https://example.com    # 01 ドキュメント作成
-    python src/cli.py autorun   --url https://example.com    # 02 AutoRun（全自動）
+    python src/cli.py autorun   --url https://example.com    # 03 AutoRun（全自動）
     python src/cli.py test      --domain example.com         # テストケース実行
     python src/cli.py sites                                   # 解析済みサイト一覧
     python src/cli.py show      --domain example.com         # 成果物の場所と要約
@@ -25,6 +25,7 @@ GUI を起動する必要はない。CLI は Flask のリクエストコンテ�
 from __future__ import annotations
 
 import argparse
+import contextlib
 import json
 import os
 import sys
@@ -71,18 +72,26 @@ def cmd_doc(args: argparse.Namespace, extra: list[str]) -> int:
         argv += ["--url", args.url]
     if args.output:
         argv += ["--output", str(args.output)]
+    as_json = bool(getattr(args, "json", False))
     old = sys.argv
     sys.argv = argv
+    code = 0
+    # --json のときは本体のログを標準エラーへ回し、標準出力は最後の JSON だけにする
+    stream = contextlib.redirect_stdout(sys.stderr) if as_json else contextlib.nullcontext()
     try:
-        runpy.run_path(str(ROOT / "src" / "main.py"), run_name="__main__")
+        with stream:
+            runpy.run_path(str(ROOT / "src" / "main.py"), run_name="__main__")
     except SystemExit as exc:
-        return int(exc.code or 0)
+        code = int(exc.code or 0) if not isinstance(exc.code, str) else 1
     finally:
         sys.argv = old
-    return 0
+    if as_json:
+        _emit({"command": "doc", "url": args.url or "", "exit_code": code,
+               "output": str(args.output or DEFAULT_OUTPUT), "ok": code == 0}, True)
+    return code
 
 
-# ────────────────────────────── 02 AutoRun ──────────────────────────────
+# ────────────────────────────── 03 AutoRun ──────────────────────────────
 
 
 def cmd_autorun(args: argparse.Namespace, _extra: list[str]) -> int:
@@ -738,7 +747,7 @@ def build_parser() -> argparse.ArgumentParser:
     d.set_defaults(func=cmd_doc)
 
     a = sub.add_parser(
-        "autorun", parents=[common], help="02 AutoRun（解析からテスト実行まで全自動）"
+        "autorun", parents=[common], help="03 AutoRun（解析からテスト実行まで全自動）"
     )
     a.add_argument("--url", required=True, help="解析対象 URL")
     a.add_argument("--depth", type=int, default=2, help="リンクを追う深さ（既定 2）")

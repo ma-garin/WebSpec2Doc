@@ -170,6 +170,8 @@
           <li><strong>ログインが必要な画面</strong>は、<code>--login-user</code> / <code>--login-pass</code> を渡さない限りスキップします。
             その場合は成果物に「未ログイン範囲のみ」と記録されます。スキップさせたくないときは <code>--require-login</code> を付けると、資格情報が無いときに中止します。</li>
           <li><strong>段階承認</strong>は CLI では人が判断できないため自動で通します。何を自動で通したかは実行結果に必ず出ます。</li>
+          <li><strong>ローカル・社内の URL</strong>（127.0.0.1・社内 IP・社内ホスト名）は、安全のため既定で解析しません。対象にするときは環境変数 <code>WEBSPEC2DOC_ALLOW_LOCAL=1</code> を付けて実行します。</li>
+          <li><code>doc</code> に <code>--json</code> を付けると、標準出力は最後の結果 JSON（<code>exit_code</code>・<code>output</code>・<code>ok</code>）だけになり、進み具合のログは標準エラーに出ます。</li>
         </ul>
       </section>
 

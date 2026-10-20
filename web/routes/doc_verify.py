@@ -43,7 +43,11 @@ def _load(iid: str):
 
 def _respond(insp: dict, status: int = 200, **extra):
     from web.services.docverify import metrics
-    return jsonify(inspection=insp, summary=metrics.summary(insp), **extra), status
+    # 画面が「押せない操作」を出し分けるための役割判定（サーバの権限表と同じ関数。押して 403 になる導線を作らない）
+    user, is_admin, auth_on = _perm._context()
+    roles = _perm.roles_of(insp, user, is_admin)
+    can = {op: _perm.can(op, roles, auth_on) for op in ("finding_edit", "plan_edit", "mark_fixed", "mark_verified", "approve")}
+    return jsonify(inspection=insp, summary=metrics.summary(insp), can=can, **extra), status
 
 
 def _renumber(existing: list[dict], new: list[dict]) -> list[dict]:

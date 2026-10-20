@@ -130,6 +130,11 @@
     const ap = st.approval;
     $('#dvR4Stale').hidden = !ap.stale;
     $('#dvR4Stale').textContent = ap.message || '';
+    // 判定の記録は承認者だけ（サーバの権限表の approve と同じ判定）。押して 403 になる導線を作らない
+    const canApprove = !DV.state.can || DV.state.can.approve !== false;
+    const vs = $('#dvR4VerdictSave');
+    vs.disabled = !canApprove;
+    vs.title = canApprove ? '' : '判定を記録できるのは承認者です。議長（またはテナント管理者）に承認者として参加者へ追加してもらってください。';
     $('#dvR4Verdict').innerHTML = `<option value="">選んでください</option>${options(meta.verdicts, ap.verdict || '')}`;
     $('#dvR4Unchecked').innerHTML = (st.unchecked || []).map((i) => `<li>${esc(i.text)}</li>`).join('') || '<li>未確認の項目はありません。</li>';
     $('#dvR4Record').innerHTML = `<tbody>${(st.record || []).map((r) => `<tr><th scope="row">${esc(r[0])}</th><td>${esc(r[1])}</td></tr>`).join('')}</tbody>`;

@@ -12,7 +12,7 @@
   var SEV = { critical: '重大', major: '主要', minor: '軽微', warning: '主要', info: '軽微' };
   var SEV_CLS = { critical: 'c-crit', major: 'c-maj', minor: 'c-min' };
   var STATUS = { candidate: '未検討', adopted: '未対応', fixed: '修正済', verified: '確認済', rejected: '却下' };
-  var ROLES = { author: '作成者', moderator: '司会', reviewer: 'レビュアー', approver: '承認者' };
+  var ROLES = { author: '作成者', moderator: '司会', reviewer: 'レビュアー', approver: '承認者', scribe: '記録者' };
   var DEFAULT_TYPES = ['曖昧さ', '完全性', '一貫性', '検証可能性', '実現可能性', '追跡可能性', '誤記'];
 
   var cache = { settings: null, checklists: null };
@@ -22,6 +22,9 @@
   function esc(s) { return E().esc(s == null ? '' : String(s)); }
   function sev(s) { return SEV[s] ? (s === 'warning' ? 'major' : s === 'info' ? 'minor' : s) : 'minor'; }
   function rv() { return E().state.review; }
+  // サーバが返した役割判定。無いとき（旧応答）は押せる扱いにし、押した結果の 403 は従来どおり日本語で出る
+  function can(op) { var c = E().state.can; return !c || c[op] !== false; }
+  var NO_ROLE_HINT = 'この操作には議長・レビュアー・記録者の役割が必要です。議長（またはテナント管理者）に参加者へ追加してもらってください。';
   function base() { return '/api/docverify/inspections/' + encodeURIComponent(rv().id); }
   function sect(view) { return document.querySelector('.dvr-view[data-view="' + view + '"]'); }
   function part(view, name) { return sect(view).querySelector('[data-dvr-' + name + ']'); }
@@ -34,6 +37,8 @@
     var m = part(view, 'msg');
     m.textContent = text || '';
     m.className = 'dvr-msg' + (isErr ? ' err' : '');
+    // 同じ文を画面上部の帯にも出すと 2 重になる。この画面内の表示を正とする
+    if (isErr && text && window.DV && typeof window.DV.banner === 'function') window.DV.banner('');
   }
   function loading(view) { part(view, 'body').innerHTML = '<div class="dvr-empty">読み込み中…</div>'; msg(view, ''); }
   function failed(view, e) {
@@ -69,7 +74,7 @@
   }
   function scoreBand(q) {
     if (!q || q.overall == null) return '<div class="dv-scoreband"><p>' + esc(E().NO_SCORE) + '</p></div>';
-    return '<div class="dv-scoreband"><div class="dv-score-big">' + esc(E().scoreText(q.overall)) + '</div><ul class="dv-mini">' +
+    return '<div class="dv-scoreband"><div class="dv-score-big"><span class="dv-score-cap">自動検出のみ・網羅性は未検証</span> ' + esc(E().scoreText(q.overall)) + '</div><ul class="dv-mini">' +
       qItems(q).map(function (it) { return '<li><span class="dv-ellipsis">' + esc(it.label) + '</span>' + E().scoreBar(it.score, it.label) + '</li>'; }).join('') +
       '</ul>' + helpBtn() + '</div>';
   }
@@ -120,6 +125,7 @@
   function setReview(d) {
     if (d && d.inspection) { E().state.review = d.inspection; }
     if (d && d.summary) { E().state.summary = d.summary; }
+    if (d && d.can) { E().state.can = d.can; }
     return d;
   }
   function reload() { return E().api(base()).then(setReview); }
@@ -139,7 +145,7 @@
     for (var i = 0; i < lists.length; i++) if (lists[i].id === id) return lists[i];
     return null;
   }
-  function me() { return (cache.settings && cache.settings.me) || 'ゲスト'; }
+  function me() { var s = cache.settings || {}; return s.me || (s.settings && s.settings.me) || 'ゲスト'; }  // API は {settings:{me}} で返る
   function myRole() {
     var ps = rv().participants || [];
     for (var i = 0; i < ps.length; i++) if (ps[i].name === me()) return ps[i];
@@ -292,7 +298,9 @@
   function findingCard(f, withActs) {
     var s = sev(f.severity);
     var acts = '';
-    if (withActs && f.status === 'candidate') {
+    if (withActs && f.status === 'candidate' && !can('finding_edit')) {
+      acts = '<div class="act role">指摘にする・却下するには役割が必要です（議長に参加者へ追加してもらってください）。</div>';
+    } else if (withActs && f.status === 'candidate') {
       acts = '<div class="act"><button class="b p" data-fa="adopt" data-fid="' + esc(f.id) + '">指摘にする</button>' +
         '<button class="b" data-fa="reject" data-fid="' + esc(f.id) + '">却下</button>' +
         '<button class="b" data-fa="ask" data-fid="' + esc(f.id) + '">作成者に質問</button></div>';
@@ -312,7 +320,8 @@
       var mine = myRole();
       part(view, 'headright').innerHTML = '<span class="role">あなたの役割: ' + esc(mine ? ROLES[mine.role] || mine.role : '未登録') +
         (r.due ? ' ・ 期限 ' + esc(r.due) : '') + '</span>' +
-        '<button type="button" class="b p" data-act="done"' + (mine && mine.done ? ' disabled' : '') + '>' + (mine && mine.done ? '確認を終えました' : '自分の確認を終える') + '</button>';
+        (can('finding_edit') ? '' : '<span class="role is-warn">' + esc(mine ? 'あなたの役割では指摘の追加はできません。' : '役割がないため指摘の追加や確認完了はできません。') + '議長（またはテナント管理者）に役割を付けてもらってください。</span>') +
+        '<button type="button" class="b p" data-act="done"' + (mine && mine.done ? ' disabled' : (mine ? '' : ' disabled title="参加者に追加されると押せます"')) + '>' + (mine && mine.done ? '確認を終えました' : '自分の確認を終える') + '</button>';
       part(view, 'headright').querySelector('[data-act="done"]').onclick = function () {
         var b = this;
         busy(b, E().api(base() + '/participants/me/done', { method: 'POST' }).then(setReview).then(function () {
@@ -386,6 +395,7 @@
     });
   }
   function openAdd(view, pid, cl) {
+    if (!can('finding_edit')) { msg(view, NO_ROLE_HINT, true); return; }
     var body = part(view, 'body');
     var old = body.querySelector('.dvr-add'); if (old) old.remove();
     var ln = body.querySelector('.ln[data-pid="' + CSS.escape(pid) + '"]'); if (!ln) return;
@@ -428,15 +438,16 @@
       part(view, 'body').innerHTML = empty('検討する指摘はありません。' + (pend ? '未検討の候補が ' + pend + ' 件あります。文書を読む画面で指摘にするか却下してください。' : ''));
       return;
     }
+    var ro = can('finding_edit') ? '' : ' disabled title="指摘の編集には議長・レビュアー・記録者の役割が必要です"';
     var sevOpt = function (v) { return ['critical', 'major', 'minor'].map(function (k) { return '<option value="' + k + '"' + (k === v ? ' selected' : '') + '>' + SEV[k] + '</option>'; }).join(''); };
     var stOpt = function (v) { return ['adopted', 'fixed', 'verified', 'rejected'].map(function (k) { return '<option value="' + k + '"' + (k === v ? ' selected' : '') + '>' + STATUS[k] + '</option>'; }).join(''); };
-    part(view, 'body').innerHTML = (pend ? '<div class="role" style="margin-bottom:8px">未検討の候補が ' + pend + ' 件残っています。</div>' : '') +
+    part(view, 'body').innerHTML = (ro ? '<div class="role is-warn" style="margin-bottom:8px">' + esc(NO_ROLE_HINT) + '</div>' : '') + (pend ? '<div class="role" style="margin-bottom:8px">未検討の候補が ' + pend + ' 件残っています。</div>' : '') +
       '<div style="overflow-x:auto;max-width:100%"><table class="dv-t"><thead><tr><th>番号</th><th>重大度</th><th>指摘</th><th>場所</th><th>起票</th><th>状態</th><th>作成者の対応結果</th><th></th></tr></thead><tbody>' +
       fs.map(function (f) {
-        return '<tr data-fid="' + esc(f.id) + '"><td><b>' + esc(f.id) + '</b></td><td><select data-t="sev">' + sevOpt(sev(f.severity)) + '</select></td>' +
+        return '<tr data-fid="' + esc(f.id) + '"><td><b>' + esc(f.id) + '</b></td><td><select data-t="sev"' + ro + '>' + sevOpt(sev(f.severity)) + '</select></td>' +
           '<td>' + esc(f.message) + evRow(f) + (f.answer ? '<div class="role">回答: ' + esc(f.answer) + '</div>' : '') + '</td><td class="loc">' + esc(f.location) + '</td><td>' + esc(f.raised_by || '') + '</td>' +
-          '<td><select data-t="st">' + stOpt(f.status) + '</select></td><td><input type="text" data-t="disp" value="' + esc(f.disposition || '') + '" style="width:100%"></td>' +
-          '<td><button type="button" class="b" data-t="save">保存</button></td></tr>';
+          '<td><select data-t="st"' + ro + '>' + stOpt(f.status) + '</select></td><td><input type="text" data-t="disp"' + ro + ' value="' + esc(f.disposition || '') + '" style="width:100%"></td>' +
+          '<td><button type="button" class="b" data-t="save"' + ro + '>保存</button></td></tr>';
       }).join('') + '</tbody></table></div>';
     part(view, 'body').onclick = function (ev) {
       var b = ev.target.closest('[data-t="save"]'); if (!b) return;
@@ -538,8 +549,8 @@
       '<div class="dv-panel dvr-gap"><b>承認</b><div class="role">承認者が自分で名前と日付を記入します。</div><div class="dvr-form dvr-gap">' +
       '<label for="dvr-apn">承認者名</label><input type="text" id="dvr-apn" value="' + esc(ap.approver || '') + '">' +
       '<label for="dvr-apd">承認日</label><input type="date" id="dvr-apd" value="' + esc((ap.decided_at || '').slice(0, 10)) + '"></div>' +
-      '<div class="dvr-actions"><button type="button" class="b" data-act="ap">承認欄を保存</button></div></div>' +
-      '<div class="dvr-actions"><button type="button" class="b p" data-act="close"' + (r.status === 'closed' ? ' disabled' : '') + '>' + (r.status === 'closed' ? '終了しています' : 'レビューを終える') + '</button></div>';
+      '<div class="dvr-actions"><button type="button" class="b" data-act="ap"' + (can('approve') ? '' : ' disabled title="承認欄は承認者だけが記入できます"') + '>承認欄を保存</button></div></div>' +
+      '<div class="dvr-actions"><button type="button" class="b p" data-act="close"' + (r.status === 'closed' ? ' disabled' : (can('plan_edit') ? '' : ' disabled title="レビューを終えられるのは議長（またはテナント管理者）です"')) + '>' + (r.status === 'closed' ? '終了しています' : 'レビューを終える') + '</button></div>';
     part(view, 'body').onclick = function (ev) {
       if (scoreHelpClicked(ev)) return;
       var b = ev.target.closest('[data-act]'); if (!b) return;

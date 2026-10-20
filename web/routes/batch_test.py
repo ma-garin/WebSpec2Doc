@@ -19,6 +19,15 @@ _SPEC_SUFFIX = (".txt", ".md", ".docx", ".xlsx", ".pdf")
 _AUDIT_MAX = 50  # 操作履歴（誰がいつ何をしたか）の保持件数
 
 
+def _can_write(job: dict) -> bool:
+    """認証オン時、メンバーを持つ案件はメンバーか管理者だけが書ける。"""
+    members = job.get("members")
+    user = getattr(g, "auth_user", None)
+    if not auth_enabled() or not members:
+        return True
+    return actor() in members or (isinstance(user, dict) and user.get("role") == "admin")
+
+
 @bp.before_request
 def _check_write_permission():
     """書き込みは案件の作成者・メンバーだけ（認証オン時）。操作者は System 08 と同じ actor() で取る。
@@ -28,11 +37,10 @@ def _check_write_permission():
     if not auth_enabled():
         return None
     try:
-        members = store.load(request.view_args["jid"]).get("members")
+        job = store.load(request.view_args["jid"])
     except (KeyError, ValueError, OSError):
         return None  # 存在しない・壊れた案件は各ルートが 404/500 を返す
-    user = getattr(g, "auth_user", None)
-    if members and actor() not in members and not (isinstance(user, dict) and user.get("role") == "admin"):
+    if not _can_write(job):
         return _err("この案件を変更する権限がありません。管理者に権限の付与を依頼してください。", 403)
     return None
 
@@ -102,7 +110,7 @@ def create_job():
 @bp.route("/api/batch-test/jobs/<jid>", methods=["GET"])
 def get_job(jid: str):
     job, err = _load(jid)
-    return err or jsonify(job=job)
+    return err or jsonify(job=job, can_edit=_can_write(job))
 
 
 @bp.route("/api/batch-test/jobs/<jid>", methods=["PATCH"])

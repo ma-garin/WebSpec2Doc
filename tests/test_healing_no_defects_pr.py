@@ -22,4 +22,5 @@ def test_no_defects_run_refuses_pull_request(monkeypatch, tmp_path: Path):
 
 def test_settings_ui_does_not_offer_pr_for_no_defects():
     js = (Path(__file__).resolve().parent.parent / "static/js/healing-run.js").read_text(encoding="utf-8")
-    assert "map['hl-create-pr'] = !hasPr && run.status !== 'no_defects';" in js
+    # 不具合なし、および修正が 1 件も無い失敗の実行には PR を出さない
+    assert "map['hl-create-pr'] = !hasPr && run.status !== 'no_defects' && !(run.status === 'failed' && !(run.fixed_count > 0));" in js

@@ -102,4 +102,37 @@ def test_new_review_from_screen_has_type(client):
     info = process.type_info(insp)
     assert info["legacy"] is False and info["type"] == "informal"
     # 非公式レビューは作成者が必須。作った人を作成者として入れる（議長にすると取り込み後に計画で止まる）
-    assert [p["role"] for p in insp["participants"]] == ["author"]
+    assert [p["role"] for p in insp["participants"]] == ["author", "reviewer", "approver"]  # 非公式は 1 人で完結（指摘の追加と判定の記録）
+
+
+def _verdict(client, iid):
+    rev = client.get(f"/api/docverify/inspections/{iid}", headers=ORIGIN).get_json()["inspection"].get("rev")
+    return client.post(f"/api/docverify/r4/inspections/{iid}/verdict", headers=ORIGIN,
+                       json={"verdict": "approved", "approver": "承認 太郎", "decided_at": "2026-10-21", "rev": rev})
+
+
+def test_verdict_forbidden_without_approve_role(client, monkeypatch):
+    """Given 認証オンで承認者でない利用者 When 判定を記録 Then 403 と頼み先（日本語）。"""
+    iid = _create_r4(client, "informal")
+    monkeypatch.setattr(perm, "_context", lambda: ("他の人", False, True))
+    r = _verdict(client, iid)
+    assert r.status_code == 403
+    assert "承認欄の記入の権限がありません" in r.get_json()["error"] and "承認者" in r.get_json()["error"]
+
+
+def test_verdict_allowed_for_approver(client, monkeypatch):
+    """Given 承認者として参加している利用者 When 判定を記録 Then 200。"""
+    iid = _create_r4(client, "informal")
+    monkeypatch.setattr(perm, "_context", lambda: ("承認者さん", False, False))
+    insp = client.get(f"/api/docverify/inspections/{iid}", headers=ORIGIN).get_json()["inspection"]
+    client.patch(f"/api/docverify/inspections/{iid}", headers=ORIGIN,
+                 json={"participants": insp["participants"] + [{"name": "承認者さん", "role": "approver", "done": False}], "rev": insp.get("rev")})
+    monkeypatch.setattr(perm, "_context", lambda: ("承認者さん", False, True))
+    assert _verdict(client, iid).status_code == 200
+
+
+def test_informal_creator_can_record_verdict(client, monkeypatch):
+    """Given 認証オンで非公式レビューを作った人 When 判定を記録 Then 1 人で完結でき 200。"""
+    monkeypatch.setattr(perm, "_context", lambda: ("作成者", False, True))
+    iid = _create_r4(client, "informal")
+    assert _verdict(client, iid).status_code == 200

@@ -96,3 +96,6 @@ a.btn{text-decoration:none}a.btn[aria-disabled=true]{opacity:.45;pointer-events:
 .bt-state[hidden]{display:none}
 .bt-head .c-btn:disabled{opacity:.5;cursor:not-allowed}
 @media (max-width:900px){.bt-steps{grid-template-columns:repeat(2,minmax(0,1fr))}.bt-addform{grid-template-columns:1fr 1fr}.bt-content{padding:12px}}
+
+.bt-ro .bt-drop{opacity:.5;pointer-events:none}
+.bt-ro .bt-x{display:none}

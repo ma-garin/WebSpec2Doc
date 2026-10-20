@@ -23,7 +23,7 @@ _LINE_H = 18
 _PAD_X = 16
 _PAD_Y = 10
 _MIN_W = 72
-_LAYER_GAP = 64
+_LAYER_GAP = 84
 _NODE_GAP = 26
 _MARGIN = 24
 _GROUP_PAD = 14
@@ -238,17 +238,17 @@ def _edge_svg(src, dst, label, lay, marker) -> tuple[str, tuple[float, float] | 
         x1, y1, x2, y2 = sx + sw / 2, sy, tx - tw / 2, ty
         mid = (x1 + x2) / 2
         d = f"M{x1:.1f},{y1:.1f} C{mid:.1f},{y1:.1f} {mid:.1f},{y2:.1f} {x2:.1f},{y2:.1f}"
-        lp = ((x1 + x2) / 2, (y1 + y2) / 2)
+        lp = (x1 + (x2 - x1) * 0.38, y1 + (y2 - y1) * 0.38)
     elif not horizontal and ty - sy > (sh + th) / 2:
         x1, y1, x2, y2 = sx, sy + sh / 2, tx, ty - th / 2
         mid = (y1 + y2) / 2
         d = f"M{x1:.1f},{y1:.1f} C{x1:.1f},{mid:.1f} {x2:.1f},{mid:.1f} {x2:.1f},{y2:.1f}"
-        lp = ((x1 + x2) / 2, (y1 + y2) / 2)
+        lp = (x1 + (x2 - x1) * 0.38, y1 + (y2 - y1) * 0.38)
     else:
         x1, y1 = _clip(sx, sy, sw, sh, tx, ty)
         x2, y2 = _clip(tx, ty, tw, th, sx, sy)
         d = f"M{x1:.1f},{y1:.1f} L{x2:.1f},{y2:.1f}"
-        lp = ((x1 + x2) / 2, (y1 + y2) / 2)
+        lp = (x1 + (x2 - x1) * 0.38, y1 + (y2 - y1) * 0.38)
     path = f'<path d="{d}" fill="none" stroke="#525252" stroke-width="1.3" marker-end="url(#{marker})"/>'
     return path, lp
 

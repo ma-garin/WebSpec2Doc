@@ -1,0 +1,302 @@
+{
+  "categories": [
+    "normal",
+    "abnormal",
+    "boundary",
+    "required",
+    "format",
+    "state_transition",
+    "permission",
+    "error",
+    "api",
+    "persistence",
+    "retry",
+    "timeout",
+    "empty",
+    "duplicate"
+  ],
+  "screens": {
+    "x01.html": {
+      "required_viewpoints": [
+        "normal",
+        "abnormal",
+        "boundary",
+        "required",
+        "format",
+        "error",
+        "api",
+        "persistence"
+      ],
+      "notes": "氏名required+maxlength40+未入力メッセージ記述、電話はpattern10-11桁で不正値拒否と明記、POST /api/patients/intake、再読み込み後の再表示を明記。生年月日はdate必須なのでformatも成立済み。"
+    },
+    "x02.html": {
+      "required_viewpoints": [
+        "normal",
+        "state_transition",
+        "permission"
+      ],
+      "notes": "業務状態の流れ、交付済で変更不可、薬剤師ロールのみの記述あり。APIや保存の記述は無いのでapi/persistenceは付けない。"
+    },
+    "x03.html": {
+      "required_viewpoints": [
+        "normal",
+        "abnormal",
+        "boundary",
+        "required",
+        "format",
+        "permission",
+        "error",
+        "api"
+      ],
+      "notes": "number min0 max100、学生番号pattern、範囲外メッセージ、POST /api/grades、教員ロール限定の記述。点数への文字拒否でabnormal。"
+    },
+    "x04.html": {
+      "required_viewpoints": [
+        "normal"
+      ],
+      "notes": "表示専用。入力・ボタン・API・保存の記述なし。"
+    },
+    "x05.html": {
+      "required_viewpoints": [
+        "normal",
+        "api",
+        "empty"
+      ],
+      "notes": "追跡番号は任意で属性制約なし。GET /api/shipments記述あり、0件時の文言あり。required/formatの根拠無し。"
+    },
+    "x06.html": {
+      "required_viewpoints": [
+        "normal"
+      ],
+      "notes": "落とし穴: 「状態」という語があるが画面内で状態遷移は起きない（表示のみ、操作不可）。state_transitionは付けない。"
+    },
+    "x07.html": {
+      "required_viewpoints": [
+        "normal",
+        "boundary",
+        "required"
+      ],
+      "notes": "落とし穴: クライアント計算のみ。サーバー送信と保存はしないと明記されているのでapi/persistenceは付けない。数量min0 max9999、理由select required。"
+    },
+    "x08.html": {
+      "required_viewpoints": [
+        "normal",
+        "empty"
+      ],
+      "notes": "落とし穴: ボタンが6つあるが業務状態の変化は無い。state_transitionは付けない。空のとき文言の記述があるのでempty。"
+    },
+    "x09.html": {
+      "required_viewpoints": [
+        "normal",
+        "abnormal",
+        "boundary",
+        "required",
+        "format",
+        "error",
+        "api",
+        "retry",
+        "timeout",
+        "duplicate"
+      ],
+      "notes": "required/email/pattern/min1 max5、不正値拒否と明記、POST /api/applications、重複拒否、30秒超過、再試行ボタンと記述が揃う。"
+    },
+    "x10.html": {
+      "required_viewpoints": [
+        "normal",
+        "state_transition",
+        "permission",
+        "empty"
+      ],
+      "notes": "申請中→承認/却下の状態変化、職員のみ、0件文言の記述あり。API記述無し。"
+    },
+    "x11.html": {
+      "required_viewpoints": [
+        "normal",
+        "api",
+        "persistence"
+      ],
+      "notes": "チェックボックスは任意で制約なし。PUT送信先と再読み込み後の再表示を明記。"
+    },
+    "x12.html": {
+      "required_viewpoints": [
+        "normal",
+        "abnormal",
+        "boundary",
+        "required",
+        "format",
+        "permission",
+        "error",
+        "api",
+        "duplicate"
+      ],
+      "notes": "required/maxlength30/pattern、不正文字拒否、管理者のみ、POST /api/keys、同名拒否、エラー表示の記述あり。"
+    },
+    "x13.html": {
+      "required_viewpoints": [
+        "normal",
+        "abnormal",
+        "required",
+        "format",
+        "permission",
+        "error",
+        "api",
+        "retry",
+        "duplicate"
+      ],
+      "notes": "email required、不正形式拒否、管理者のみ、POST /api/invitations、重複拒否、失敗メッセージと再試行ボタン。"
+    },
+    "x14.html": {
+      "required_viewpoints": [
+        "normal",
+        "boundary"
+      ],
+      "notes": "落とし穴: 保存ボタンはあるが、保存先・再読み込み後の再表示の記述が無い。「保存しました」の表示だけでは再表示を検証できないのでpersistenceは付けない（判断）。送信先API記述も無いのでapiも付けない。maxlength20/100でboundary。"
+    },
+    "x15.html": {
+      "required_viewpoints": [
+        "normal",
+        "abnormal",
+        "boundary",
+        "required",
+        "format",
+        "state_transition",
+        "error",
+        "api",
+        "retry",
+        "timeout",
+        "duplicate"
+      ],
+      "notes": "入力→確認→完了の画面内状態、required/pattern/min1 max1000000、POST /api/transfers、残高不足エラー、30秒タイムアウトと再試行、二重送信の重複拒否。permissionは記述無し。"
+    },
+    "x16.html": {
+      "required_viewpoints": [
+        "normal",
+        "boundary",
+        "required"
+      ],
+      "notes": "落とし穴: クライアント計算のみ（サーバー送信なし・保存なしと明記）。required, min/maxのみ。api/persistenceは付けない。"
+    },
+    "x17.html": {
+      "required_viewpoints": [
+        "normal",
+        "format",
+        "error",
+        "api",
+        "empty"
+      ],
+      "notes": "date入力と日付形式の明記でformat、期間エラー文言、GET /api/transactions、0件文言。任意項目なのでrequired無し。"
+    },
+    "x18.html": {
+      "required_viewpoints": [
+        "normal",
+        "boundary",
+        "required",
+        "format",
+        "error",
+        "api",
+        "persistence",
+        "duplicate"
+      ],
+      "notes": "date/time required、人数1-12、POST /api/reservations、時間帯重複の拒否と赤字メッセージ、再読み込み後の予約一覧表示。"
+    },
+    "x19.html": {
+      "required_viewpoints": [
+        "normal"
+      ],
+      "notes": "表示専用の静的FAQ。"
+    },
+    "x20.html": {
+      "required_viewpoints": [
+        "normal"
+      ],
+      "notes": "落とし穴: ボタンが多いが状態遷移は無い（単なる移動と印刷）。入力は全て任意。"
+    },
+    "x21.html": {
+      "required_viewpoints": [
+        "normal",
+        "abnormal",
+        "boundary",
+        "required",
+        "format",
+        "error",
+        "api"
+      ],
+      "notes": "required, email, tel pattern, PDFのみ/5MB/maxlength500、不正ファイル拒否とエラー文言、POST /api/applicants。"
+    },
+    "x22.html": {
+      "required_viewpoints": [
+        "normal",
+        "abnormal",
+        "boundary",
+        "required",
+        "format",
+        "state_transition",
+        "error",
+        "api"
+      ],
+      "notes": "required, 8-64文字, 英数字混在、不正拒否、不一致エラー、POST /api/account/password、5回失敗でロック状態になり操作不可（状態変化）。permissionは記述無し。"
+    },
+    "x23.html": {
+      "required_viewpoints": [
+        "normal",
+        "boundary",
+        "required",
+        "format",
+        "error",
+        "api",
+        "persistence",
+        "retry"
+      ],
+      "notes": "required, 温度範囲, 日付、POST /api/inspections、失敗メッセージ、再送信ボタン、下書き復元（再読み込み後の再表示）。条件付き必須はrequiredに含める。"
+    },
+    "x24.html": {
+      "required_viewpoints": [
+        "normal",
+        "state_transition",
+        "permission",
+        "error",
+        "api"
+      ],
+      "notes": "状態の流れ、クローズ後不可、担当者のみ、PATCH送信先、失敗時メッセージ。"
+    },
+    "x25.html": {
+      "required_viewpoints": [
+        "normal",
+        "error",
+        "api",
+        "timeout"
+      ],
+      "notes": "落とし穴: 稼働中/停止中という語があるが操作で変わらず状態遷移ではない。GET /api/health、5秒超過、取得できません表示。retryは「やり直す」ボタンがあるが失敗後の再試行とは書かれていない（自動の定期更新）ため付けない判断。"
+    },
+    "x26.html": {
+      "required_viewpoints": [
+        "normal",
+        "boundary"
+      ],
+      "notes": "任意項目のみ。maxlength200でboundary。API送信先は無いと明記されているのでapi無し。"
+    },
+    "x27.html": {
+      "required_viewpoints": [
+        "normal",
+        "abnormal",
+        "boundary",
+        "required",
+        "format",
+        "api",
+        "persistence"
+      ],
+      "notes": "金額required min500 max100000 step500、メール形式と不正拒否、POST /api/donations、寄付履歴への保存と再表示の記述。"
+    },
+    "x28.html": {
+      "required_viewpoints": [
+        "normal",
+        "state_transition",
+        "error",
+        "api",
+        "retry",
+        "timeout"
+      ],
+      "notes": "待機中→出力中→完了/失敗の状態と出力中のボタン無効、POST /api/reports/export、60秒時間切れ、再試行、失敗メッセージ。"
+    }
+  }
+}

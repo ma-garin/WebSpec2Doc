@@ -1,95 +1,89 @@
 {
- "n": 272,
- "excluded": 9,
+ "n": 281,
+ "excluded": 0,
  "rules": {
   "AMBIGUOUS": {
-   "precision": 0.438,
-   "recall": 0.5,
-   "f1": 0.467,
-   "tp": 14,
-   "fp": 18,
-   "fn": 14,
-   "n": 272,
+   "precision": 0.542,
+   "recall": 0.464,
+   "f1": 0.5,
+   "tp": 13,
+   "fp": 11,
+   "fn": 15,
+   "n": 281,
    "n_gold": 28,
-   "n_predicted": 32
+   "n_predicted": 24
   },
   "REQ.INCOMPLETE": {
-   "precision": 0.833,
-   "recall": 0.769,
-   "f1": 0.8,
-   "tp": 10,
-   "fp": 2,
-   "fn": 3,
-   "n": 272,
-   "n_gold": 13,
-   "n_predicted": 12
-  },
-  "REQ.OPEN_ENDED": {
    "precision": 0.929,
-   "recall": 0.52,
-   "f1": 0.667,
+   "recall": 1.0,
+   "f1": 0.963,
    "tp": 13,
    "fp": 1,
-   "fn": 12,
-   "n": 272,
-   "n_gold": 25,
+   "fn": 0,
+   "n": 281,
+   "n_gold": 13,
    "n_predicted": 14
   },
-  "REQ.UNIVERSAL": {
+  "REQ.OPEN_ENDED": {
    "precision": 1.0,
-   "recall": 0.611,
-   "f1": 0.759,
-   "tp": 11,
+   "recall": 0.941,
+   "f1": 0.97,
+   "tp": 32,
    "fp": 0,
-   "fn": 7,
-   "n": 272,
+   "fn": 2,
+   "n": 281,
+   "n_gold": 34,
+   "n_predicted": 32
+  },
+  "REQ.UNIVERSAL": {
+   "precision": 0.941,
+   "recall": 0.889,
+   "f1": 0.914,
+   "tp": 16,
+   "fp": 1,
+   "fn": 2,
+   "n": 281,
    "n_gold": 18,
-   "n_predicted": 11
+   "n_predicted": 17
   },
   "REQ.AND_OR": {
    "precision": 1.0,
-   "recall": 0.6,
-   "f1": 0.75,
-   "tp": 6,
+   "recall": 0.9,
+   "f1": 0.947,
+   "tp": 9,
    "fp": 0,
-   "fn": 4,
-   "n": 272,
+   "fn": 1,
+   "n": 281,
    "n_gold": 10,
-   "n_predicted": 6
+   "n_predicted": 9
   },
   "REQ.MEASURABILITY": {
-   "precision": 0.9,
-   "recall": 0.545,
-   "f1": 0.679,
-   "tp": 18,
-   "fp": 2,
-   "fn": 15,
-   "n": 272,
+   "precision": 0.868,
+   "recall": 1.0,
+   "f1": 0.93,
+   "tp": 33,
+   "fp": 5,
+   "fn": 0,
+   "n": 281,
    "n_gold": 33,
-   "n_predicted": 20
+   "n_predicted": 38
   },
   "REQ.MULTIPLE_REQUIREMENTS": {
-   "precision": 1.0,
-   "recall": 0.657,
-   "f1": 0.793,
-   "tp": 23,
-   "fp": 0,
-   "fn": 12,
-   "n": 272,
+   "precision": 0.919,
+   "recall": 0.971,
+   "f1": 0.944,
+   "tp": 34,
+   "fp": 3,
+   "fn": 1,
+   "n": 281,
    "n_gold": 35,
-   "n_predicted": 23
+   "n_predicted": 37
   }
  },
  "misses": {
   "AMBIGUOUS": [
-   "FP F-010",
-   "FP F-013",
-   "FP F-020",
-   "FP F-021",
-   "FP F-024",
-   "FP F-028",
-   "FP F-029",
    "FP F-032",
+   "FN F-033",
    "FP F-039",
    "FP F-046",
    "FP F-052",
@@ -116,74 +110,32 @@
    "FN F-180"
   ],
   "REQ.INCOMPLETE": [
-   "FN F-227",
-   "FN F-229",
-   "FN F-232",
-   "FP F-235",
    "FP F-238"
   ],
   "REQ.OPEN_ENDED": [
-   "FN F-010",
    "FN F-012",
-   "FN F-013",
-   "FN F-018",
-   "FN F-019",
-   "FN F-020",
-   "FN F-021",
-   "FN F-024",
-   "FN F-028",
-   "FN F-029",
-   "FN F-030",
-   "FN F-033",
-   "FP F-176"
+   "FN F-030"
   ],
   "REQ.UNIVERSAL": [
-   "FN F-186",
+   "FP F-103",
    "FN F-189",
-   "FN F-190",
-   "FN F-193",
-   "FN F-195",
-   "FN F-197",
    "FN F-198"
   ],
   "REQ.AND_OR": [
-   "FN F-207",
-   "FN F-208",
-   "FN F-209",
    "FN F-213"
   ],
   "REQ.MEASURABILITY": [
+   "FP F-009",
    "FP F-022",
-   "FN F-052",
-   "FN F-054",
-   "FN F-058",
-   "FN F-059",
-   "FN F-061",
-   "FN F-064",
-   "FN F-065",
-   "FN F-068",
-   "FN F-069",
-   "FN F-070",
-   "FN F-071",
-   "FN F-073",
-   "FN F-076",
-   "FN F-078",
-   "FN F-081",
-   "FP F-166"
+   "FP F-126",
+   "FP F-166",
+   "FP F-177"
   ],
   "REQ.MULTIPLE_REQUIREMENTS": [
-   "FN F-104",
-   "FN F-107",
-   "FN F-108",
-   "FN F-115",
-   "FN F-116",
-   "FN F-121",
-   "FN F-122",
-   "FN F-124",
-   "FN F-126",
-   "FN F-133",
+   "FP F-019",
    "FN F-134",
-   "FN F-136"
+   "FP F-140",
+   "FP F-258"
   ]
  }
 }

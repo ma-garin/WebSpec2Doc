@@ -1,0 +1,45 @@
+{
+ "route_unavailable": true,
+ "route": {
+  "state": "UNAVAILABLE",
+  "expected_routes": 4
+ },
+ "api": {
+  "precision": 0.955,
+  "recall": 0.808,
+  "f1": 0.875,
+  "tp": 21,
+  "fp": 1,
+  "fn": 5
+ },
+ "all": {
+  "precision": 0.955,
+  "recall": 0.808,
+  "f1": 0.875,
+  "tp": 21,
+  "fp": 1,
+  "fn": 5
+ },
+ "method": {
+  "n": 26,
+  "correct": 26,
+  "unknown": 0
+ },
+ "trap_hits": [],
+ "missed": [
+  "api:/:param",
+  "api:/api/v2/branches",
+  "api:/api/v2/catalog/export.csv",
+  "api:/api/v2/catalog/genres",
+  "api:/api/v2/circulation/holds/:param",
+  "route:/books",
+  "route:/fines",
+  "route:/loans",
+  "route:/members"
+ ],
+ "extra": [
+  "api:/api/v2:param"
+ ],
+ "n_cases": 54,
+ "candidates_without_value": 2
+}

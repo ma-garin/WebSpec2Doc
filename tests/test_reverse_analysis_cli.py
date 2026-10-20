@@ -183,7 +183,8 @@ def test_最終JSONは実測と静的事実と推論を混ぜず絶対rootや生
         assert resolve_json_pointer(snapshot_doc, obs["json_pointer"])["path"] == obs["path"]
 
     api = [c for c in doc["static_candidates"] if c["kind"] == "api"]
-    assert api and all(c["method"] is None for c in api)  # GET と推定しない
+    # method は静的な構文から読めたものだけ（options 省略の fetch は仕様上 GET）。読めた根拠を limitations に残す
+    assert api and all(c["method"] is None or "method_from_static_syntax" in c["limitations"] for c in api)
     assert not [c for c in doc["static_candidates"] if c["kind"] == "route"]  # route 捏造禁止
     assert doc["summary"]["matched_relations"] == 0
     assert all(r["classification"] != "matched" for r in doc["relations"])
@@ -522,7 +523,9 @@ def test_受入_固定snapshotのBeforeAfterを測定記録と照合し正解位
         assert (cand["origin"], cand["path"], cand["resolution"]) == (
             truth["origin"], truth["path"], truth["resolution"],
         ), truth["id"]  # fmt: skip
-        assert cand["epistemic_state"] == "observed" and cand["method"] is None
+        # method は静的な構文から読めたときだけ付き、その根拠を limitations に残す
+        assert cand["epistemic_state"] == "observed"
+        assert cand["method"] is None or "method_from_static_syntax" in cand["limitations"]
         if truth["text"] is not None:  # 位置は 1 始まり行・0 始まり UTF-16 列・終端を含まない
             loc = cand["location"]
             assert loc["unit"] == "line_column_utf16"
@@ -541,8 +544,9 @@ def test_受入_固定snapshotのBeforeAfterを測定記録と照合し正解位
     assert all(t["in_before"] == (t["id"] in in_before) for t in record["ground_truth"])
     useful = [t for t in record["ground_truth"] if t["useful_new"] and not t["in_before"]]
     assert len(useful) == record["after"]["useful_new_evidence"] >= 1
-    # 静的候補を実測仕様へ昇格させない（method 欠損のため現 slice では inferred も出ない）
-    assert doc["summary"]["matched_relations"] == doc["summary"]["inferred_relations"] == 0
+    # 静的候補を実測仕様へ昇格させない。method が構文から読めた候補は inferred まで（matched にはしない）
+    assert doc["summary"]["matched_relations"] == 0
+    assert doc["summary"]["inferred_relations"] == record["after"]["summary"]["inferred_relations"]
     assert all(r["epistemic_state"] != "observed" for r in doc["relations"])
     assert record["provider"]["kind"] == "fake"
 

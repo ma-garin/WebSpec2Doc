@@ -157,7 +157,7 @@
   function drawDetail(s, fs, ck) {
     var f = fs.filter(function (x) { return x.id === curId; })[0];
     if (!fs.length) {
-      dhEl.innerHTML = '<h3>指摘はありません</h3><p>登録した文書から、直すべき点は見つかりませんでした。「つながりとレポートへ」進めます。</p>';
+      dhEl.innerHTML = '<h3>規則で見つかる指摘はありません</h3><p>規則には見落としがあり、指摘が 0 件でも問題が無いとは言えません。人が文書を読んで確かめてください。「つながりとレポートへ」進めます。</p>';
       var h0 = '<div class="fn">登録した文書</div>';
       var tiers = s.tiers || [];
       (s.documents || []).forEach(function (d) {

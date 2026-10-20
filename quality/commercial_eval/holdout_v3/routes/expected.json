@@ -1,0 +1,544 @@
+{
+ "cases": [
+  {
+   "id": "v3-001",
+   "kind": "api",
+   "method": "GET",
+   "path": "/api/v2/catalog/books",
+   "should_detect": true,
+   "category": "const_concat",
+   "file": "site/assets/catalog.js",
+   "note": "CATALOG_BASE(config.js) + literal; fetch without method = GET; query string excluded"
+  },
+  {
+   "id": "v3-002",
+   "kind": "api",
+   "method": "GET",
+   "path": "/api/v2/catalog/books/:param",
+   "should_detect": true,
+   "category": "template_literal",
+   "file": "site/assets/catalog.js",
+   "note": "template literal with ${isbn}"
+  },
+  {
+   "id": "v3-003",
+   "kind": "api",
+   "method": "POST",
+   "path": "/api/v2/catalog/books",
+   "should_detect": true,
+   "category": "fetch_method_option",
+   "file": "site/assets/catalog.js",
+   "note": "fetch options method POST"
+  },
+  {
+   "id": "v3-004",
+   "kind": "api",
+   "method": "PUT",
+   "path": "/api/v2/catalog/books/:param",
+   "should_detect": true,
+   "category": "fetch_method_option",
+   "file": "site/assets/catalog.js",
+   "note": "PUT, template literal with ${book.isbn}"
+  },
+  {
+   "id": "v3-005",
+   "kind": "api",
+   "method": "PATCH",
+   "path": "/api/v2/catalog/books/:param/availability",
+   "should_detect": true,
+   "category": "fetch_method_option",
+   "file": "site/assets/catalog.js",
+   "note": "PATCH, concatenation with variable in the middle"
+  },
+  {
+   "id": "v3-006",
+   "kind": "api",
+   "method": "DELETE",
+   "path": "/api/v2/catalog/books/:param",
+   "should_detect": true,
+   "category": "helper_chain",
+   "file": "site/assets/catalog.js",
+   "note": "sendDelete -> http -> fetch(method DELETE)"
+  },
+  {
+   "id": "v3-007",
+   "kind": "api",
+   "method": "GET",
+   "path": "/api/v2/catalog/search",
+   "should_detect": true,
+   "category": "helper",
+   "file": "site/assets/catalog.js",
+   "note": "getJson helper; query string excluded"
+  },
+  {
+   "id": "v3-008",
+   "kind": "api",
+   "method": "GET",
+   "path": "/api/v2/catalog/genres",
+   "should_detect": true,
+   "category": "helper_chain",
+   "file": "site/assets/catalog.js",
+   "note": "api() -> getJson -> http -> fetch; API + path"
+  },
+  {
+   "id": "v3-009",
+   "kind": "api",
+   "method": "GET",
+   "path": "/api/v2/catalog/books/:param/reviews",
+   "should_detect": true,
+   "category": "helper",
+   "file": "site/assets/catalog.js",
+   "note": "getJson with template literal"
+  },
+  {
+   "id": "v3-010",
+   "kind": "api",
+   "method": "GET",
+   "path": "/api/v2/catalog/export.csv",
+   "should_detect": true,
+   "category": "xhr_open",
+   "file": "site/assets/catalog.js",
+   "note": "XMLHttpRequest open GET"
+  },
+  {
+   "id": "v3-011",
+   "kind": "api",
+   "method": "GET",
+   "path": "/api/v2/members",
+   "should_detect": true,
+   "category": "multilevel_const",
+   "file": "site/assets/members.js",
+   "note": "fetch(MEMBERS); MEMBERS = API + '/members' (two-level constant in config.js)"
+  },
+  {
+   "id": "v3-012",
+   "kind": "api",
+   "method": "POST",
+   "path": "/api/v2/members",
+   "should_detect": true,
+   "category": "helper",
+   "file": "site/assets/members.js",
+   "note": "http('POST', MEMBERS, data)"
+  },
+  {
+   "id": "v3-013",
+   "kind": "api",
+   "method": "GET",
+   "path": "/api/v2/members/:param",
+   "should_detect": true,
+   "category": "multilevel_const",
+   "file": "site/assets/members.js",
+   "note": "MEMBERS + '/' + id"
+  },
+  {
+   "id": "v3-014",
+   "kind": "api",
+   "method": "PUT",
+   "path": "/api/v2/members/:param/card",
+   "should_detect": true,
+   "category": "helper",
+   "file": "site/assets/members.js",
+   "note": "http('PUT', template literal)"
+  },
+  {
+   "id": "v3-015",
+   "kind": "api",
+   "method": "POST",
+   "path": "/api/v2/members/:param/suspend",
+   "should_detect": true,
+   "category": "helper",
+   "file": "site/assets/members.js",
+   "note": "postJson -> http -> fetch"
+  },
+  {
+   "id": "v3-016",
+   "kind": "api",
+   "method": "GET",
+   "path": "/api/v2/members/:param/loans",
+   "should_detect": true,
+   "category": "xhr_helper",
+   "file": "site/assets/members.js",
+   "note": "legacyRequest(verb,url) helper which calls xhr.open(verb,url); method given at call site"
+  },
+  {
+   "id": "v3-017",
+   "kind": "api",
+   "method": "DELETE",
+   "path": "/api/v2/members/:param",
+   "should_detect": true,
+   "category": "fetch_method_option",
+   "file": "site/assets/members.js",
+   "note": "fetch options method DELETE"
+  },
+  {
+   "id": "v3-018",
+   "kind": "api",
+   "method": "POST",
+   "path": "/api/v1/auth/login",
+   "should_detect": true,
+   "category": "literal",
+   "file": "site/assets/members.js",
+   "note": "plain string literal, v1 prefix"
+  },
+  {
+   "id": "v3-019",
+   "kind": "api",
+   "method": "POST",
+   "path": "/api/v1/auth/logout",
+   "should_detect": true,
+   "category": "const_concat",
+   "file": "site/assets/members.js",
+   "note": "AUTH_URL(config.js) + '/logout'"
+  },
+  {
+   "id": "v3-020",
+   "kind": "api",
+   "method": "POST",
+   "path": "/api/v2/circulation/checkout",
+   "should_detect": true,
+   "category": "fetch_method_option",
+   "file": "site/assets/circulation.js",
+   "note": "CIRC_BASE is a template literal constant in config.js"
+  },
+  {
+   "id": "v3-021",
+   "kind": "api",
+   "method": "POST",
+   "path": "/api/v2/circulation/return",
+   "should_detect": true,
+   "category": "helper",
+   "file": "site/assets/circulation.js",
+   "note": "http('POST', CIRC_BASE + '/return')"
+  },
+  {
+   "id": "v3-022",
+   "kind": "api",
+   "method": "POST",
+   "path": "/api/v2/circulation/loans/:param/renew",
+   "should_detect": true,
+   "category": "template_literal",
+   "file": "site/assets/circulation.js",
+   "note": "postJson with template literal"
+  },
+  {
+   "id": "v3-023",
+   "kind": "api",
+   "method": "GET",
+   "path": "/api/v2/circulation/overdue",
+   "should_detect": true,
+   "category": "template_literal",
+   "file": "site/assets/circulation.js",
+   "note": "fetch without method; query string excluded"
+  },
+  {
+   "id": "v3-024",
+   "kind": "api",
+   "method": "GET",
+   "path": "/api/v2/fines",
+   "should_detect": true,
+   "category": "multilevel_const",
+   "file": "site/assets/circulation.js",
+   "note": "fetch(FINES_URL)"
+  },
+  {
+   "id": "v3-025",
+   "kind": "api",
+   "method": "POST",
+   "path": "/api/v2/fines/:param/pay",
+   "should_detect": true,
+   "category": "helper",
+   "file": "site/assets/circulation.js",
+   "note": "postJson(FINES_URL + '/' + id + '/pay')"
+  },
+  {
+   "id": "v3-026",
+   "kind": "api",
+   "method": "POST",
+   "path": "/api/v2/circulation/holds",
+   "should_detect": true,
+   "category": "fetch_method_option",
+   "file": "site/assets/circulation.js",
+   "note": "fetch options method POST"
+  },
+  {
+   "id": "v3-027",
+   "kind": "api",
+   "method": "DELETE",
+   "path": "/api/v2/circulation/holds/:param",
+   "should_detect": true,
+   "category": "xhr_open",
+   "file": "site/assets/circulation.js",
+   "note": "xhr.open('DELETE', ...)"
+  },
+  {
+   "id": "v3-028",
+   "kind": "api",
+   "method": "GET",
+   "path": "/api/v2/branches",
+   "should_detect": true,
+   "category": "helper_chain",
+   "file": "site/assets/circulation.js",
+   "note": "api('/branches')"
+  },
+  {
+   "id": "v3-029",
+   "kind": "api",
+   "method": "GET",
+   "path": "/api/v2/reports/monthly",
+   "should_detect": true,
+   "category": "multilevel_const",
+   "file": "site/assets/circulation.js",
+   "note": "getJson(REPORT_URL + '/monthly?month=' + m); query string excluded"
+  },
+  {
+   "id": "v3-030",
+   "kind": "api",
+   "method": "GET",
+   "path": "/api/v2/:param/count",
+   "should_detect": true,
+   "category": "dynamic_partial",
+   "file": "site/assets/circulation.js",
+   "note": "resource name typed by operator; static part is /api/v2 and /count. Count as detected if the path has a variable segment between them"
+  },
+  {
+   "id": "v3-031",
+   "kind": "api",
+   "method": "GET",
+   "path": "/:param",
+   "should_detect": true,
+   "category": "dynamic_unresolvable",
+   "file": "site/assets/circulation.js",
+   "note": "fetch(<user typed URL>); path cannot be known statically. Do not count toward precision/recall; only check that it is reported as dynamic/unresolved or ignored without crashing"
+  },
+  {
+   "id": "v3-032",
+   "kind": "api",
+   "method": null,
+   "path": "/api/v1/catalog/legacy-search",
+   "should_detect": false,
+   "category": "unused_string",
+   "file": "site/assets/catalog.js",
+   "note": "string in LEGACY_ENDPOINTS object, never referenced"
+  },
+  {
+   "id": "v3-033",
+   "kind": "api",
+   "method": null,
+   "path": "/api/v1/catalog/legacy-covers",
+   "should_detect": false,
+   "category": "unused_string",
+   "file": "site/assets/catalog.js",
+   "note": "same object, never referenced"
+  },
+  {
+   "id": "v3-034",
+   "kind": "api",
+   "method": "POST",
+   "path": "/api/v2/catalog/books/bulk-import",
+   "should_detect": false,
+   "category": "comment_line",
+   "file": "site/assets/catalog.js",
+   "note": "inside a // comment"
+  },
+  {
+   "id": "v3-035",
+   "kind": "api",
+   "method": "POST",
+   "path": "/api/v2/catalog/debug/dump",
+   "should_detect": false,
+   "category": "dead_if_false",
+   "file": "site/assets/catalog.js",
+   "note": "inside if (false) {}"
+  },
+  {
+   "id": "v3-036",
+   "kind": "api",
+   "method": null,
+   "path": "/api/v2/mock/covers/9784.png",
+   "should_detect": false,
+   "category": "mock_data",
+   "file": "site/assets/catalog.js",
+   "note": "cover field in MOCK_BOOKS test data; never fetched or used as src"
+  },
+  {
+   "id": "v3-037",
+   "kind": "api",
+   "method": "GET",
+   "path": "/covers/:param",
+   "should_detect": false,
+   "category": "external_origin",
+   "file": "site/assets/catalog.js",
+   "note": "external origin https://covers.coverhost.example.org (another company); really called, but not this site's API"
+  },
+  {
+   "id": "v3-038",
+   "kind": "api",
+   "method": "POST",
+   "path": "/api/v2/members/import",
+   "should_detect": false,
+   "category": "comment_block",
+   "file": "site/assets/members.js",
+   "note": "inside a /* */ comment"
+  },
+  {
+   "id": "v3-039",
+   "kind": "api",
+   "method": "GET",
+   "path": "/api/v2/members/export",
+   "should_detect": false,
+   "category": "comment_line",
+   "file": "site/assets/members.js",
+   "note": "inside a // TODO comment"
+  },
+  {
+   "id": "v3-040",
+   "kind": "api",
+   "method": "POST",
+   "path": "/pixel",
+   "should_detect": false,
+   "category": "external_origin",
+   "file": "site/assets/members.js",
+   "note": "ANALYTICS_ORIGIN (config.js) = https://metrics.bookstat-analytics.example.com; external"
+  },
+  {
+   "id": "v3-041",
+   "kind": "api",
+   "method": null,
+   "path": "/api/v2/members/directory",
+   "should_detect": false,
+   "category": "non_url_text",
+   "file": "site/assets/config.js",
+   "note": "inside Japanese help sentence (HELP_TIP)"
+  },
+  {
+   "id": "v3-042",
+   "kind": "api",
+   "method": null,
+   "path": "/api",
+   "should_detect": false,
+   "category": "non_url_text",
+   "file": "site/assets/config.js",
+   "note": "inside English explanation sentence (NGINX_NOTE)"
+  },
+  {
+   "id": "v3-043",
+   "kind": "api",
+   "method": null,
+   "path": "/api/v2/circulation/ledger",
+   "should_detect": false,
+   "category": "non_url_text",
+   "file": "site/assets/circulation.js",
+   "note": "inside error message sentence (MSG_LEDGER_FAIL)"
+  },
+  {
+   "id": "v3-044",
+   "kind": "api",
+   "method": null,
+   "path": "/api/v2/mock/loans/1",
+   "should_detect": false,
+   "category": "mock_data",
+   "file": "site/assets/circulation.js",
+   "note": "self field of MOCK_LOANS test data; never fetched"
+  },
+  {
+   "id": "v3-045",
+   "kind": "api",
+   "method": "GET",
+   "path": "/api/v2/fixtures/members",
+   "should_detect": false,
+   "category": "mock_data",
+   "file": "site/assets/circulation.js",
+   "note": "FIXTURE_REQUESTS descriptor array; only its .method is printed, never fetched"
+  },
+  {
+   "id": "v3-046",
+   "kind": "api",
+   "method": "POST",
+   "path": "/api/v2/fixtures/checkout",
+   "should_detect": false,
+   "category": "mock_data",
+   "file": "site/assets/circulation.js",
+   "note": "same array; never fetched"
+  },
+  {
+   "id": "v3-047",
+   "kind": "api",
+   "method": "POST",
+   "path": "/api/v2/circulation/legacy-checkout",
+   "should_detect": false,
+   "category": "dead_after_return",
+   "file": "site/assets/circulation.js",
+   "note": "statement after return"
+  },
+  {
+   "id": "v3-048",
+   "kind": "api",
+   "method": "GET",
+   "path": "/api/v2/fines/ledger",
+   "should_detect": false,
+   "category": "dead_after_return",
+   "file": "site/assets/circulation.js",
+   "note": "statement after return"
+  },
+  {
+   "id": "v3-049",
+   "kind": "api",
+   "method": "GET",
+   "path": "/api/v2/internal/healthz-verbose",
+   "should_detect": false,
+   "category": "dead_if_false",
+   "file": "site/assets/circulation.js",
+   "note": "inside if (0) {}"
+  },
+  {
+   "id": "v3-050",
+   "kind": "api",
+   "method": "POST",
+   "path": "/v1/collect",
+   "should_detect": false,
+   "category": "external_origin",
+   "file": "site/assets/circulation.js",
+   "note": "https://stats.bookmetrics-partner.example.net; external"
+  },
+  {
+   "id": "v3-051",
+   "kind": "route",
+   "method": null,
+   "path": "/books",
+   "should_detect": true,
+   "category": "route",
+   "file": "site/assets/circulation.js",
+   "note": "hash route in ROUTES table -> showBooks; outside API scoring"
+  },
+  {
+   "id": "v3-052",
+   "kind": "route",
+   "method": null,
+   "path": "/members",
+   "should_detect": true,
+   "category": "route",
+   "file": "site/assets/circulation.js",
+   "note": "hash route in ROUTES table -> showMembers; outside API scoring"
+  },
+  {
+   "id": "v3-053",
+   "kind": "route",
+   "method": null,
+   "path": "/loans",
+   "should_detect": true,
+   "category": "route",
+   "file": "site/assets/circulation.js",
+   "note": "hash route in ROUTES table -> showLoans; outside API scoring"
+  },
+  {
+   "id": "v3-054",
+   "kind": "route",
+   "method": null,
+   "path": "/fines",
+   "should_detect": true,
+   "category": "route",
+   "file": "site/assets/circulation.js",
+   "note": "hash route in ROUTES table -> showFines; outside API scoring"
+  }
+ ]
+}

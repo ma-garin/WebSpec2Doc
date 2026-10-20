@@ -177,6 +177,26 @@ def extract_headings(page: Page) -> list[str]:
     return values
 
 
+def extract_texts(page: Page) -> list[str]:
+    """描画されている説明文（段落・箇条書き・注記）。テスト観点の根拠に使う。長さと件数に上限を設ける。"""
+    try:
+        values = cast(
+            list[str],
+            page.eval_on_selector_all("p, li, dd, small, blockquote, [role=note], figcaption", _TEXT_SCRIPT),
+        )
+    except Exception as exc:
+        logger.warning("説明文の抽出に失敗しました: %s", exc)
+        return []
+    out: list[str] = []
+    for v in values:
+        t = " ".join(str(v).split())[:200]
+        if t and t not in out:
+            out.append(t)
+        if len(out) >= 40:
+            break
+    return out
+
+
 def extract_page_title(page: Page) -> str:
     try:
         return page.title().strip()
@@ -553,6 +573,9 @@ _BUTTON_SELECTOR = "button, input[type=button], input[type=submit], input[type=r
 # innerText は描画されていない要素でも textContent を返すため、そのままだと非表示の文言が混ざる
 _SHOWN_JS = "(el) => el.getClientRects().length > 0 && getComputedStyle(el).visibility !== 'hidden'"
 _HEADING_SCRIPT = f"(els) => els.filter({_SHOWN_JS}).map((el) => (el.innerText || '').trim()).filter(Boolean)"
+# ナビゲーションのリンク一覧（nav 内の li）は説明文ではないので除く
+_TEXT_SCRIPT = (f"(els) => els.filter({_SHOWN_JS}).filter((el) => !el.closest('nav, header, footer'))"
+                ".map((el) => (el.innerText || '').trim()).filter(Boolean)")
 _BUTTON_SCRIPT = f"""
 (els) => els.filter({_SHOWN_JS}).map((el) => (
   el.innerText || el.getAttribute('value') || el.getAttribute('aria-label') || ''

@@ -1,7 +1,7 @@
 {
  "schema": 1,
  "measured_on": "2026-10-20",
- "rules_version": "3b8eab4348fd",
+ "rules_version": "7d90e1cf8f34",
  "scope": "規則ベースの検出のみ（LLM は対象外）",
  "dataset": {
   "name": "ja_v1",
@@ -20,11 +20,11 @@
   "AMBIGUOUS": {
    "n": 99,
    "n_gold": 37,
-   "n_predicted": 26,
+   "n_predicted": 25,
    "tp": 25,
-   "fp": 1,
+   "fp": 0,
    "fn": 12,
-   "precision": 0.962,
+   "precision": 1.0,
    "recall": 0.676
   },
   "REQ.INCOMPLETE": {
@@ -40,12 +40,12 @@
   "REQ.OPEN_ENDED": {
    "n": 99,
    "n_gold": 7,
-   "n_predicted": 6,
-   "tp": 6,
+   "n_predicted": 7,
+   "tp": 7,
    "fp": 0,
-   "fn": 1,
+   "fn": 0,
    "precision": 1.0,
-   "recall": 0.857
+   "recall": 1.0
   },
   "REQ.UNIVERSAL": {
    "n": 99,
@@ -70,12 +70,12 @@
   "REQ.MEASURABILITY": {
    "n": 99,
    "n_gold": 18,
-   "n_predicted": 16,
-   "tp": 15,
-   "fp": 1,
-   "fn": 3,
-   "precision": 0.938,
-   "recall": 0.833
+   "n_predicted": 22,
+   "tp": 18,
+   "fp": 4,
+   "fn": 0,
+   "precision": 0.818,
+   "recall": 1.0
   },
   "REQ.MULTIPLE_REQUIREMENTS": {
    "n": 99,
@@ -95,11 +95,11 @@
     "AMBIGUOUS": {
      "n": 65,
      "n_gold": 27,
-     "n_predicted": 18,
+     "n_predicted": 17,
      "tp": 17,
-     "fp": 1,
+     "fp": 0,
      "fn": 10,
-     "precision": 0.944,
+     "precision": 1.0,
      "recall": 0.63
     },
     "REQ.INCOMPLETE": {
@@ -115,12 +115,12 @@
     "REQ.OPEN_ENDED": {
      "n": 65,
      "n_gold": 5,
-     "n_predicted": 4,
-     "tp": 4,
+     "n_predicted": 5,
+     "tp": 5,
      "fp": 0,
-     "fn": 1,
+     "fn": 0,
      "precision": 1.0,
-     "recall": 0.8
+     "recall": 1.0
     },
     "REQ.UNIVERSAL": {
      "n": 65,
@@ -145,12 +145,12 @@
     "REQ.MEASURABILITY": {
      "n": 65,
      "n_gold": 16,
-     "n_predicted": 13,
-     "tp": 13,
-     "fp": 0,
-     "fn": 3,
-     "precision": 1.0,
-     "recall": 0.812
+     "n_predicted": 19,
+     "tp": 16,
+     "fp": 3,
+     "fn": 0,
+     "precision": 0.842,
+     "recall": 1.0
     },
     "REQ.MULTIPLE_REQUIREMENTS": {
      "n": 65,
@@ -243,7 +243,7 @@
  },
  "previous": {
   "measured_on": "2026-10-20",
-  "rules_version": "59f6a2bbcb9c",
+  "rules_version": "3b8eab4348fd",
   "dataset_sha256": "dd858576b51b",
   "rules": {
    "AMBIGUOUS": {
@@ -299,12 +299,12 @@
    "REQ.MEASURABILITY": {
     "n": 99,
     "n_gold": 18,
-    "n_predicted": 14,
-    "tp": 14,
-    "fp": 0,
-    "fn": 4,
-    "precision": 1.0,
-    "recall": 0.778
+    "n_predicted": 16,
+    "tp": 15,
+    "fp": 1,
+    "fn": 3,
+    "precision": 0.938,
+    "recall": 0.833
    },
    "REQ.MULTIPLE_REQUIREMENTS": {
     "n": 99,
@@ -320,7 +320,7 @@
  },
  "delta": {
   "AMBIGUOUS": {
-   "precision": 0.0,
+   "precision": 0.038,
    "recall": 0.0
   },
   "REQ.INCOMPLETE": {
@@ -329,7 +329,7 @@
   },
   "REQ.OPEN_ENDED": {
    "precision": 0.0,
-   "recall": 0.0
+   "recall": 0.143
   },
   "REQ.UNIVERSAL": {
    "precision": 0.0,
@@ -340,8 +340,8 @@
    "recall": 0.0
   },
   "REQ.MEASURABILITY": {
-   "precision": -0.062,
-   "recall": 0.055
+   "precision": -0.12,
+   "recall": 0.167
   },
   "REQ.MULTIPLE_REQUIREMENTS": {
    "precision": 0.0,

@@ -98,6 +98,7 @@ def _screen_dict(
         "url": pd.url,
         "title": pd.title,
         "headings": list(pd.headings),
+        "texts": list(getattr(pd, "texts", ())),
         "buttons": list(pd.buttons),
         "forms": [_form_dict(f, observations, pid, rule_conditions) for f in pd.forms],
         "transitions": {

@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>粗大ごみ収集 申込</title>
+</head>
+<body>
+  <header>
+    <h1>粗大ごみ収集 申込ポータル</h1>
+    <p><a id="guide-link" href="#">出し方ガイド (PDF)</a></p>
+  </header>
+
+  <main>
+    <form id="apply-form">
+      <label>郵便番号 <input name="zip" type="text"></label>
+      <label>品目 <select name="category"></select></label>
+      <label>希望日 <input name="date" type="date"></label>
+      <label>写真 <input name="photo" type="file" accept="image/jpeg"></label>
+      <button type="submit">申し込む</button>
+    </form>
+    <section id="operator-root"></section>
+  </main>
+
+  <script src="/assets/config.js"></script>
+  <script src="/assets/http.js"></script>
+  <script src="/assets/apply.js"></script>
+  <script src="/assets/operator.js"></script>
+  <script src="/assets/legacy.js"></script>
+  <script src="/assets/mocks.js"></script>
+</body>
+</html>

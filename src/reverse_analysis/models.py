@@ -133,6 +133,9 @@ class StaticCandidate:
     expression: str | None = None
     query_dependent: bool = False
     limitations: tuple[str, ...] = ()
+    # path が確定しない（引数などが入る）候補の、静的な定数を解決した表示用パターン（例: /api/v2/items/:param）。
+    # 推論した値で、path（確定値）とは混ぜない
+    path_pattern: str | None = None
 
     def __post_init__(self) -> None:
         _require(self.kind, CANDIDATE_KINDS, "StaticCandidate.kind")

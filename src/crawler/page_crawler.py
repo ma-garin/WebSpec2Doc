@@ -257,6 +257,7 @@ class PageData:
     performance: Any | None = None  # PerformanceSample（欠測時 None）
     element_boxes: tuple[dict[str, Any], ...] = ()  # レイアウト観測用（既定は空）
     horizontal_overflow: bool = False
+    texts: tuple[str, ...] = ()  # 描画されている説明文（テスト観点の根拠）
 
 
 @contextmanager
@@ -856,6 +857,7 @@ def crawl_page(
         extract_headings_all_scopes,
         extract_links_all_scopes,
         extract_page_title,
+        extract_texts,
         has_password_field,
     )
     from crawler.network_interceptor import MutationBlocker, NetworkCapture
@@ -916,6 +918,7 @@ def crawl_page(
         stack = detect_stack(page, response_headers)
         title = extract_page_title(page)
         headings = tuple(extract_headings_all_scopes(page, normalized_url))
+        texts = tuple(extract_texts(page))
         links = tuple(extract_links_all_scopes(page, normalized_url))
         forms = _attach_screenshot_evidence(
             tuple(extract_forms_including_frames(page, normalized_url)), screenshot_path
@@ -971,6 +974,7 @@ def crawl_page(
         performance=performance_sample,
         element_boxes=element_boxes,
         horizontal_overflow=horizontal_overflow,
+        texts=texts,
     )
 
 

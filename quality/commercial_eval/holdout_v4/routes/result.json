@@ -1,0 +1,42 @@
+{
+ "route_unavailable": true,
+ "route": {
+  "state": "UNAVAILABLE",
+  "expected_routes": 0
+ },
+ "api": {
+  "precision": 1.0,
+  "recall": 0.704,
+  "f1": 0.826,
+  "tp": 19,
+  "fp": 0,
+  "fn": 8
+ },
+ "all": {
+  "precision": 1.0,
+  "recall": 0.704,
+  "f1": 0.826,
+  "tp": 19,
+  "fp": 0,
+  "fn": 8
+ },
+ "method": {
+  "n": 21,
+  "correct": 21,
+  "unknown": 0
+ },
+ "trap_hits": [],
+ "missed": [
+  "api:/api/v2/billing/copay/recalc",
+  "api:/api/v2/doctors",
+  "api:/api/v2/patients/:param/visits",
+  "api:/api/v2/reception/check-in",
+  "api:/api/v2/reception/queue",
+  "api:/api/v2/reception/queue/:param",
+  "api:/api/v2/reception/queue/:param/priority",
+  "api:/api/v2/reception/queue/next"
+ ],
+ "extra": [],
+ "n_cases": 44,
+ "candidates_without_value": 5
+}

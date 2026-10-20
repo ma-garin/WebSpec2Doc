@@ -1,0 +1,36 @@
+{
+ "route_unavailable": true,
+ "route": {
+  "state": "UNAVAILABLE",
+  "expected_routes": 0
+ },
+ "api": {
+  "precision": 1.0,
+  "recall": 0.926,
+  "f1": 0.962,
+  "tp": 25,
+  "fp": 0,
+  "fn": 2
+ },
+ "all": {
+  "precision": 1.0,
+  "recall": 0.926,
+  "f1": 0.962,
+  "tp": 25,
+  "fp": 0,
+  "fn": 2
+ },
+ "method": {
+  "n": 27,
+  "correct": 27,
+  "unknown": 0
+ },
+ "trap_hits": [],
+ "missed": [
+  "api:/admin-api/v1/reports/daily",
+  "api:/api/v2/item-categories"
+ ],
+ "extra": [],
+ "n_cases": 49,
+ "candidates_without_value": 6
+}

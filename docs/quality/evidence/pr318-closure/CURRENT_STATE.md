@@ -35,3 +35,5 @@
 詳細: 各JSON・review・test logを同ディレクトリに保存。
 
 追加修正: SVGのglobal counter IDをcontent hashへ変更し、同一入力のHTML再現性と異なる図IDの分離を検証。旧vendor/TS/a11y引数テストは新製品契約へ追従し検査内容を維持。局所7/5/14 PASS。
+
+最終全体回帰: 4351 passed, 14 skipped in 104.56s (0:01:44)。通常commit hookの全ゲートPASS。

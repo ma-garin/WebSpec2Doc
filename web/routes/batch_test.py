@@ -304,4 +304,19 @@ def download(jid: str, kind: str):
             return _err("書き出せない種類です。", 404)
     except ValueError as exc:
         return _err(str(exc), 400)
+    _record_export(job, kind)
     return Response(data, mimetype=mime, headers={"Content-Disposition": f"attachment; filename={fname}"})
+
+
+def _record_export(job: dict, kind: str) -> None:
+    """書き出し（サーバからの送出）を案件に残す。リロード後も「書き出し済み（未実行）」と分かるようにする。
+
+    受け取ったか・実行したか・確かめたかは記録しない。中身の指紋（basis）を持ち、後でケースやコードが
+    変わったら store.with_export_state が stale を付ける。記録に失敗しても書き出し自体は止めない。
+    """
+    rec = {"at": store.now(), "actor": actor(), "basis": store.export_basis(job, kind),
+           "cases": len(job.get("cases") or []), "sources": len(job.get("sources") or [])}
+    try:
+        store.save({**job, "exports": {**(job.get("exports") or {}), kind: rec}})
+    except (ValueError, OSError):
+        log.exception("書き出しの記録に失敗 %s %s", job.get("id"), kind)

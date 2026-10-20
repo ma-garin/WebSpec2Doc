@@ -59,6 +59,11 @@
 <div class="hl-toast" id="hl-toast" hidden role="status"></div>
 
 <script src="{{ url_for('static', filename='js/c-hybrid.js') }}?v={{ _ver }}"></script>
+{# 報告書の JS は責務ごとに分割してある。共有は window.HealingReports だけ。この順に読み、healing-reports.js が最後に初期化する。 #}
+<script src="{{ url_for('static', filename='js/healing-reports-core.js') }}?v={{ _ver }}"></script>
+<script src="{{ url_for('static', filename='js/healing-reports-list.js') }}?v={{ _ver }}"></script>
+<script src="{{ url_for('static', filename='js/healing-reports-doc.js') }}?v={{ _ver }}"></script>
+<script src="{{ url_for('static', filename='js/healing-reports-bundle.js') }}?v={{ _ver }}"></script>
 <script src="{{ url_for('static', filename='js/healing-reports.js') }}?v={{ _ver }}"></script>
 </body>
 </html>

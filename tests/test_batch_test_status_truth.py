@@ -37,12 +37,15 @@ def test_four_stages_are_separate_and_result_gated():
     assert "gen ? 'preparing'" in JS and "ex.length ? 'preparing'" in JS
 
 
-def test_export_is_recorded_only_after_success_and_reload_is_unverified():
-    assert "state.exported[j.id]" in JS
-    assert "リロード後は未確認" in JS
-    # 失敗時は notice(error) を出し、記録は成功側でだけ書く
-    ok_part = JS.split(".then(function (x) {", 1)[1].split(".catch(", 1)[0]
-    assert "state.exported" in ok_part
+def test_export_record_comes_from_server_and_only_after_success():
+    # 書き出しの記録はサーバ（job.exports）が持ち、成功した時だけ読み直す。画面だけの記録は持たない
+    assert "state.exported" not in JS
+    assert "j.exports" in JS
+    ok_part = JS.split(".then(function (x) {", 1)[1].split(".catch(function (e) { fail(", 1)[0]
+    assert "api('GET', API + '/' + j.id)" in ok_part
+    # 書き出した後で中身が変わったら「書き出し済み」に数えない
+    assert "!r[k].stale" in JS and "'書き出し後に変更あり'" in JS
+    assert "サーバの送出記録" in JS
 
 
 def test_states_and_confirm_use_ws2d():

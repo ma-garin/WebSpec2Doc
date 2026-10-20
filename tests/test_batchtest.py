@@ -119,3 +119,22 @@ def test_api_errors_are_user_readable(client):
     assert r.status_code == 400 and "空" in r.get_json()["error"]
     r = client.get(f"/api/batch-test/jobs/{jid}/export/code.zip")
     assert r.status_code == 400
+
+
+def test_export_is_recorded_on_server_and_goes_stale_after_change(client):
+    """書き出しはサーバに記録され（リロード後も残る）、その後ケースが変わると stale になる。
+    失敗した書き出しは記録しない。記録は送出の事実だけで、実行・確認を意味しない。"""
+    jid = client.post("/api/batch-test/jobs", json={"name": "月次"}).get_json()["job"]["id"]
+    assert client.get(f"/api/batch-test/jobs/{jid}/export/cases.xlsx").status_code == 400
+    assert not client.get(f"/api/batch-test/jobs/{jid}").get_json()["job"].get("exports")
+    data = {"files": [(io.BytesIO(BAT.encode()), "monthly_close.bat")]}
+    client.post(f"/api/batch-test/jobs/{jid}/files", data=data, content_type="multipart/form-data")
+    client.post(f"/api/batch-test/jobs/{jid}/analyze")
+    cases = client.post(f"/api/batch-test/jobs/{jid}/cases").get_json()["job"]["cases"]
+    assert client.get(f"/api/batch-test/jobs/{jid}/export/cases.xlsx").status_code == 200
+    job = client.get(f"/api/batch-test/jobs/{jid}").get_json()["job"]
+    rec = job["exports"]["cases.xlsx"]
+    assert rec["at"] and rec["cases"] == len(cases) and rec["stale"] is False
+    assert not job.get("results") and not job.get("verified_at")
+    client.patch(f"/api/batch-test/jobs/{jid}/cases/{cases[0]['id']}", json={"exp": "変えた期待結果"})
+    assert client.get(f"/api/batch-test/jobs/{jid}").get_json()["job"]["exports"]["cases.xlsx"]["stale"] is True

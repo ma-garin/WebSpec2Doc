@@ -592,6 +592,9 @@ def create_pull_request_for_run(out_dir: Path, run_id: str, *, draft: bool = Fal
         raise HealingError(f"実行 {run_id} が見つかりません")
     if run.pull_request is not None:
         return run  # 既に PR がある run は作り直さず既存を返す
+    if run.status == "no_defects":
+        # 直す対象が無かった実行には PR にする変更が無い。空のブランチを外部へ push しない。
+        raise HealingError("不具合なしの実行には PR にする変更がありません")
 
     project = project_store.get_project(out_dir, run.project_id)
     if project is None:

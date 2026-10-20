@@ -343,3 +343,23 @@ a.dash-hero-sample { text-decoration: none; display: inline-flex; align-items: c
   .s8-title-row { gap: 6px; }
   .bs-banner { flex-wrap: wrap; }
 }
+
+/* ── G4（2026-10-20）: C Hybrid の共通シェルに合わせる最小限の修正 ──
+   1) 上部: c-shell の .app-topbar-lead は「パンくず | 題名（全幅の 2 行目）」の格子。この画面は題名を
+      .s8-title-row で包むため 2 列目に入り、「ホーム バッチ・バックエンドのテスト」と区切り無しで続いていた。 */
+.app-topbar-lead > .s8-title-row { grid-column: 1 / -1; }
+/* 2) システム切替: ラベル・切替が 1 文字ずつ折れていた。他の System と同じく 1 行・名前は省略。 */
+.app-sidebar .sys-switcher-label, .app-sidebar .sys-switcher-swap { flex: none; white-space: nowrap; }
+.app-sidebar .sys-switcher-cur { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* 3) 補助文の文字色: --text-subtle は白地で 2.68:1（AA 未満）。二次色（約 6:1）に上げる。 */
+.stat-card-sub, .s8-none, .bs-hint, .bs-mut, .s8-step-n { color: var(--color-text-secondary, #616161); }
+.s8-step.is-done .s8-step-n, .s8-step.is-back .s8-step-n { color: var(--surface); }
+.s8-step.is-current .s8-step-n { color: var(--primary); }
+.s8-approve-lock { color: var(--color-warning-tx, #B54708); }
+/* この画面の補助文はすべて --text-subtle（2.68:1）を使うため、画面の範囲で二次色へ置き換える */
+body { --text-subtle: var(--color-text-secondary, #616161); }
+.bs-tag.judge { color: var(--color-warning-tx, #B54708); }
+.bs-uv h3 { color: var(--color-warning-tx, #B54708); }
+/* 状態バッジの文字は意味色の「濃い文字」側にする（--warning / --ok は塗り用で白地 2.5〜3.7:1） */
+.badge-high { color: var(--color-warning-tx, #B54708); }
+.badge-low { color: var(--color-success-tx, #067647); }

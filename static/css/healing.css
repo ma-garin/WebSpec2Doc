@@ -957,3 +957,55 @@ table.hl-projects-table td { padding-top: 6px; padding-bottom: 6px; }
   .hl-projects-table td, .hl-runs-table td { overflow: visible; white-space: normal; width: auto !important; }
   .hl-projects-table th, .hl-runs-table th { width: auto !important; }
 }
+
+/* ── G4（2026-10-20）: 実ブラウザで見つけた崩れの修正 ──────────────────
+   1) 承認前の阻害理由: healing-reports.css（後から読む）の .hl-blockers{flex-direction:column} が
+      この画面にも効き、.hl-blockers-note の flex-basis 220px が「高さ」になって 350px の空白が出ていた。
+      id で上書きし、1 行に並べる。 */
+#hl-blockers.hl-blockers { flex-direction: row; align-items: center; }
+#hl-blockers .hl-blockers-note { flex: 1 1 220px; }
+/* 2) 接続先一覧の操作列: td に display:flex が当たり表のセルでなくなっていた（背景が途切れ、
+      「対象にする」が見張り列の時刻欄に重なる）。セルのまま右寄せにし、中身は行内に並べる。
+      見張り列（チェック・時刻・今すぐ）と操作列は中身の実測幅（231px / 155px）で固定する。 */
+@media (min-width: 817px) {
+.hl-projects-table td.hl-row-actions { display: table-cell; text-align: right; white-space: nowrap; }
+.hl-projects-table td.hl-row-actions > * { vertical-align: middle; }
+.hl-projects-table td.hl-row-actions > * + * { margin-left: 6px; }
+.hl-projects-table td.hl-row-actions > .hl-row-confirm {
+  margin: 6px 0 0; padding: 6px 8px; gap: 6px; white-space: normal; text-align: left; justify-content: flex-end;
+}
+.hl-projects-table td.hl-row-actions > .hl-row-confirm[hidden] { display: none; }
+.hl-projects-table th:nth-child(1), .hl-projects-table td:nth-child(1),
+.hl-projects-table th:nth-child(2), .hl-projects-table td:nth-child(2),
+.hl-projects-table th:nth-child(4), .hl-projects-table td:nth-child(4) { width: auto; }
+.hl-projects-table th:nth-child(3), .hl-projects-table td:nth-child(3) { width: 72px; }
+.hl-projects-table th:nth-child(5), .hl-projects-table td:nth-child(5) { width: 96px; }
+.hl-projects-table th:nth-child(6), .hl-projects-table td:nth-child(6) { width: 250px; }
+.hl-projects-table th:last-child, .hl-projects-table td:last-child { width: 188px; }
+}
+@media (min-width: 817px) and (max-width: 1180px) {
+  /* 幅が足りないときは見張りの時刻と「今すぐ」を 2 段に折る（重ねない） */
+  .hl-projects-table th:nth-child(6), .hl-projects-table td:nth-child(6) { width: 170px; }
+  .hl-projects-table td:nth-child(6) .hl-monitor-row { flex-wrap: wrap; }
+  .hl-projects-table th:nth-child(3), .hl-projects-table td:nth-child(3) { width: 60px; }
+  .hl-projects-table th:nth-child(5), .hl-projects-table td:nth-child(5) { width: 80px; }
+}
+/* 3) 補助文の文字色: 既定の --text-subtle は白地で 2.68:1（WCAG AA 未満）。この画面では二次色に上げる。 */
+#hl-view-run .stat-card-sub { color: var(--color-text-secondary, #616161); }
+/* 4) 実行履歴の表: 列は 8（状態・開始・所要時間・対象・周回・直した件数・PR・操作）なのに幅の指定が 7 列分で
+      合計 100% だったため、操作列が幅 0 になり「開く」が表の外（見えない位置）に押し出されていた。 */
+@media (min-width: 817px) {
+  .hl-runs-table th:nth-child(1), .hl-runs-table td:nth-child(1) { width: 14%; }
+  .hl-runs-table th:nth-child(2), .hl-runs-table td:nth-child(2) { width: 15%; }
+  .hl-runs-table th:nth-child(3), .hl-runs-table td:nth-child(3) { width: 10%; }
+  .hl-runs-table th:nth-child(4), .hl-runs-table td:nth-child(4) { width: auto; }
+  .hl-runs-table th:nth-child(5), .hl-runs-table td:nth-child(5) { width: 8%; }
+  .hl-runs-table th:nth-child(6), .hl-runs-table td:nth-child(6) { width: 10%; }
+  .hl-runs-table th:nth-child(7), .hl-runs-table td:nth-child(7) { width: 9%; }
+  .hl-runs-table th:nth-child(8), .hl-runs-table td:nth-child(8) { width: 76px; overflow: visible; text-align: right; }
+}
+/* 5) 表の最小幅 980px は、1280px 幅（器 976px）でも 4px の横スクロールを生み、1024px では操作列が
+      器の外に出ていた。列幅を上で決めたので最小幅は外し、長い値はセル内で省略する（title で全文）。 */
+@media (min-width: 817px) {
+  .hl-table-wrap > table.hl-projects-table, .hl-table-wrap > table.hl-runs-table { min-width: 0; }
+}

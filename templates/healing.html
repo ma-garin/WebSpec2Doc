@@ -334,6 +334,13 @@
 
 <script src="{{ url_for('static', filename='js/c-hybrid.js') }}?v={{ _ver }}"></script>
 <script src="{{ url_for('static', filename='js/user-menu.js') }}?v={{ _ver }}"></script>
+{# healing.js は責務ごとに分割してある。共有は window.HealingApp だけ。この順に読み、healing.js が最後に初期化する。 #}
+<script src="{{ url_for('static', filename='js/healing-core.js') }}?v={{ _ver }}"></script>
+<script src="{{ url_for('static', filename='js/healing-projects.js') }}?v={{ _ver }}"></script>
+<script src="{{ url_for('static', filename='js/healing-report.js') }}?v={{ _ver }}"></script>
+<script src="{{ url_for('static', filename='js/healing-run.js') }}?v={{ _ver }}"></script>
+<script src="{{ url_for('static', filename='js/healing-actions.js') }}?v={{ _ver }}"></script>
+<script src="{{ url_for('static', filename='js/healing-history.js') }}?v={{ _ver }}"></script>
 <script src="{{ url_for('static', filename='js/healing.js') }}?v={{ _ver }}"></script>
 </body>
 </html>

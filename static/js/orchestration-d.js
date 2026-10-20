@@ -130,7 +130,7 @@
         button: {
           label: "報告書を見る",
           kind: "link",
-          href: awaiting.length === 1 ? "/healing/reports/" + awaiting[0].id : "/healing"
+          href: awaiting.length === 1 ? "/healing/reports/" + awaiting[0].id : "/healing" + (s.site ? "?site=" + encodeURIComponent(s.site) : "")
         }
       };
     }
@@ -141,7 +141,7 @@
         button: {
           label: "承認画面へ",
           kind: "link",
-          href: s.healingStep ? "/healing" : "/autorun/report/" + encodeURIComponent(s.site || "")
+          href: s.healingStep ? "/healing" + (s.site ? "?site=" + encodeURIComponent(s.site) : "") : "/autorun/report/" + encodeURIComponent(s.site || "")
         }
       };
     }

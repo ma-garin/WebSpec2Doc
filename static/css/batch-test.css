@@ -84,7 +84,9 @@ a.btn{text-decoration:none}a.btn[aria-disabled=true]{opacity:.45;pointer-events:
 .bt-head{padding:0 0 8px}
 .bt-head .c-page-head__desc{max-width:62ch}
 .bt-reason{margin-bottom:12px}
-.bt-stages{list-style:none;margin:0 0 12px;padding:0;display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:8px}
+.bt-stages{list-style:none;margin:0 0 12px;padding:0;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+/* 4 段は 1 本の流れ。3＋1 に割らず、狭い幅では 2×2 にする */
+@media (max-width:1100px){.bt-stages{grid-template-columns:repeat(2,minmax(0,1fr))}}
 .bt-stages[hidden]{display:none}
 .bt-stage{display:flex;flex-direction:column;align-items:flex-start;gap:4px;min-width:0;padding:8px 12px;border:1px solid var(--line);border-radius:8px;background:var(--sf)}
 .bt-stage small{font-size:10.5px;letter-spacing:.06em;color:var(--tx3)}

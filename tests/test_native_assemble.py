@@ -1,17 +1,25 @@
-"""native/evidence.py: 小さな JS 入力群から StaticNormalization が組み上がること。
-
-パーサは差し替え、facts は手で用意する（解析器の正しさは別のテスト。ここは組立だけを見る）。
-"""
-
 import hashlib
 import threading
 from pathlib import Path
 
 import pytest
 
+from reverse_analysis.models import SourceLocation, StaticCandidate, static_candidate_id
 from reverse_analysis.native import evidence
-from reverse_analysis.native.facts import CallFact, ImportFact, ParsedFile, RouteFact
-from reverse_analysis.normalize import SourceMapFinding
+from reverse_analysis.native.facts import (
+    CallFact, ImportFact, Limitation, ParsedFile, PropertyFact, RouteCandidateFact, SourceMapRef, ValueFact,
+)
+from reverse_analysis.native.sourcemap import SourceMap, SourceMapFinding, SourceMapResult
+
+_POS = dict(line=1, col=1, end_line=1, end_col=9)
+
+
+def _value(text):
+    return ValueFact(file="x", expression=text, node_type="string", resolution="static", string_value=text, **_POS)
+
+
+def _prop(key, text=None):
+    return PropertyFact(file="x", key=key, value=_value(text) if text is not None else None, **_POS)
 
 
 class FakeParser:
@@ -23,22 +31,38 @@ class FakeParser:
         sha = hashlib.sha256(source).hexdigest()
         if path == "api.js":
             return ParsedFile(
-                path, sha, imports=(ImportFact(path, 1, 0, 1, 24, "import x from './m'", "exact", "./m"),),
-                calls=(CallFact(path, 2, 0, 2, 26, "fetch('/api/users')", "exact", "fetch", ("/api/users",)),),
-                source_map_ref="api.js.map",
+                path=path, sha256=sha,
+                imports=(ImportFact(file=path, specifier="./m", kind="import", **_POS),),
+                calls=(CallFact(file=path, callee="fetch", args=(_value("/api/users"),), **_POS),),
+                source_map_ref=SourceMapRef(file=path, url="api.js.map", **_POS),
             )
         if path == "router.js":
-            return ParsedFile(path, sha, routes=(
-                RouteFact(path, 4, 2, 4, 30, "<Route path='/users'/>", "exact", "jsx", "Route", (("path", "/users"),)),
-                RouteFact(path, 9, 2, 9, 30, "{path:'/a'}", "exact", "object", None,
-                          (("path", "/a"), ("component", None)), "routes"),
+            return ParsedFile(path=path, sha256=sha, routes=(
+                RouteCandidateFact(file=path, kind="jsx", tag="Route", properties=(_prop("path", "/users"),), **_POS),
+                RouteCandidateFact(file=path, kind="object", container="createRouter",
+                                   properties=(_prop("path", "/a"), _prop("component")), **_POS),
             ))
-        return ParsedFile(path, sha)
+        if path == "partial.js":
+            return ParsedFile(path=path, sha256=sha, complete=False,
+                              limitations=(Limitation(code="syntax_error", message="x", file=path),))
+        return ParsedFile(path=path, sha256=sha)
 
 
-class FakeMapResult:
-    def __init__(self, findings=(), map_path=None, map_sha256=None, sources=()):
-        self.findings, self.map_path, self.map_sha256, self.sources = findings, map_path, map_sha256, sources
+def fake_extract(parsed_files, js_input=None, root_label=""):
+    out = []
+    for parsed in parsed_files:
+        for call in parsed.calls:
+            loc = SourceLocation(parsed.path, "line_column_utf8", call.line, call.col, call.end_line, call.end_col)
+            out.append(StaticCandidate(
+                id=static_candidate_id(parsed.sha256, loc, "api"), kind="api", artifact_path=parsed.path,
+                artifact_sha256=parsed.sha256, location=loc, resolution="exact", epistemic_state="inferred",
+                authority="t", method="GET", path=call.args[0].string_value, expression=call.callee,
+            ))
+    return tuple(out), ()
+
+
+def map_result(findings=(), maps=None):
+    return SourceMapResult(maps or {}, tuple(findings), (), ())
 
 
 def _write(root: Path, files: dict[str, str]) -> None:
@@ -49,6 +73,8 @@ def _write(root: Path, files: dict[str, str]) -> None:
 
 
 def _run(root: Path, **kwargs):
+    kwargs.setdefault("extract_fn", fake_extract)
+    kwargs.setdefault("sourcemap_fn", lambda files, root: map_result())
     return evidence.analyze(root, parser=FakeParser(), **kwargs)
 
 
@@ -104,19 +130,28 @@ def test_route_limitations_surface_when_no_router_found(tmp_path):
 
 
 def test_source_map_findings_make_result_partial(site):
-    finding = SourceMapFinding("n1", "source-map", "api.js.map", "map_parse_failed", "unknown", "failed", ())
-    result = _run(site, sourcemap_fn=lambda parsed, root: FakeMapResult(findings=(finding,)))
+    finding = SourceMapFinding("api.js", "map_parse_failed", "壊れています", "api.js.map")
+    result = _run(site, sourcemap_fn=lambda files, root: map_result(findings=(finding,)))
     norm = result.normalization
-    assert norm.status == "partial" and norm.source_map_findings == (finding,)
-    assert any(d.code == "source_map_map_parse_failed" for d in norm.diagnostics)
+    assert norm.status == "partial" and [f.finding for f in norm.source_map_findings] == ["map_parse_failed"]
+    assert norm.source_map_findings[0].path == "api.js.map"
 
 
 def test_resolved_source_map_adds_source_candidate(site):
     (site / "api.js.map").write_text("{}")
-    mapped = FakeMapResult(map_path="api.js.map", map_sha256="b" * 64, sources=("src/app.ts",))
-    result = _run(site, sourcemap_fn=lambda parsed, root: mapped)
+    smap = SourceMap(sources=("app.ts",), names=(), lines=(), source_root="src")
+    result = _run(site, sourcemap_fn=lambda files, root: map_result(maps={"api.js": smap}))
     (source,) = [c for c in result.normalization.candidates if c.kind == "source"]
     assert source.path == "src/app.ts" and source.resolution == "partial"
+    assert source.artifact_path == "api.js.map"
+    assert "api.js.map" in {f.path for f in result.files}
+
+
+def test_incomplete_parse_is_partial_with_limitation(site):
+    _write(site, {"partial.js": "x"})
+    result = _run(site)
+    assert result.status == "partial"
+    assert "parser_syntax_error:partial.js" in result.normalization.coverage.limitations
 
 
 def test_parse_failure_in_one_file_is_partial_not_fatal(site):
@@ -147,3 +182,42 @@ def test_node_modules_is_not_read(tmp_path):
     _write(tmp_path, {"a.js": "x", "node_modules/dep/index.js": "x"})
     result = _run(tmp_path)
     assert {f.path for f in result.files} == {"a.js"}
+
+
+def test_integration_with_real_parser(tmp_path):
+    """tree-sitter パーサ・抽出・module graph・source map を通した小さな入力群の通し確認。"""
+    _write(tmp_path, {
+        "src/app.js": (
+            "import { helper } from './util';\n"
+            "import('./lazy');\n"
+            "fetch('/api/users', { method: 'POST' });\n"
+            "const routes = [{ path: '/home', component: Home }];\n"
+            "//# sourceMappingURL=app.js.map\n"
+        ),
+        "src/util.js": "export function helper() { return 1; }\n",
+        "src/lazy.js": "export default 1;\n",
+        "src/router.jsx": "const r = <Routes><Route path='/users/:id' element={<U/>} /></Routes>;\n",
+        "src/app.js.map": '{"version":3,"sources":["../orig/app.ts"],"names":[],"mappings":"AAAA"}',
+        "pages/about.js": "export default function About() { return null; }\n",
+    })
+    result = evidence.run_static_analysis(tmp_path)
+    norm = result.normalization
+    assert result.engine_version == f"webspec2doc-native/{evidence.NATIVE_VERSION}"
+    assert result.status in ("complete", "partial")
+    kinds = {}
+    for cand in norm.candidates:
+        kinds.setdefault(cand.kind, []).append(cand)
+    assert any(c.path == "/api/users" and c.method == "POST" for c in kinds["api"])
+    assert {"/home", "/users/:id"} <= {c.path for c in kinds["route"]}
+    assert {c.artifact_path for c in kinds["module"]} >= {"src/app.js", "src/util.js", "src/lazy.js"}
+    assert any(c.kind == "source" for c in norm.candidates)
+    targets = {(e.source_node_id, e.target_node_id) for e in norm.dependency_edges}
+    assert ("src/app.js", "src/util.js") in targets and ("src/app.js", "src/lazy.js") in targets
+    digests = {f.path: f.sha256 for f in result.files}
+    assert all(digests[c.artifact_path] == c.artifact_sha256 for c in norm.candidates if c.artifact_path in digests)
+    # 規約外（router も無い入力）は「0 件」でなく未対応の limitation になる
+    empty = tmp_path / "plain"
+    _write(empty, {"a.js": "console.log(1);\n"})
+    plain = evidence.run_static_analysis(empty).normalization
+    assert not [c for c in plain.candidates if c.kind == "route"]
+    assert any(lim.startswith("route_declarations_not_recognized") for lim in plain.coverage.limitations)

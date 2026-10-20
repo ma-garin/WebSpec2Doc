@@ -13,21 +13,24 @@ from __future__ import annotations
 import dataclasses
 import hashlib
 import os
+import posixpath
 import threading
 from collections import Counter
 from collections.abc import Callable, Iterable
 from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any
+from urllib.parse import unquote
 
 from reverse_analysis.canonical import canonical_digest
-from reverse_analysis.files import VerifiedFile, validate_input_directory
+from reverse_analysis.files import VerifiedFile, validate_input_directory, verify_file
 from reverse_analysis.models import (
     Artifact,
     Coverage,
     Diagnostic,
     SourceLocation,
     StaticCandidate,
+    make_id,
     static_candidate_id,
     to_json_value,
 )
@@ -40,6 +43,8 @@ from reverse_analysis.normalize import (
     LIMIT_MODULE_IDENTITY_ONLY,
     LIMIT_ROUTE_CANDIDATE,
     CandidateProvenance,
+    DependencyEdge,
+    SourceMapFinding,
     StaticNormalization,
     _collision_diagnostics,
     _mark_shared_endpoints,
@@ -89,9 +94,9 @@ def analyze(
     cancel_event: threading.Event | None = None,
     *,
     parser: Any = None,
-    extract_fn: Callable[[Any], Iterable[StaticCandidate]] | None = None,
+    extract_fn: Callable[..., tuple[Iterable[StaticCandidate], Iterable[Diagnostic]]] | None = None,
     graph_fn: Callable[[list[Any]], Any] | None = None,
-    sourcemap_fn: Callable[[Any, Path], Any] | None = None,
+    sourcemap_fn: Callable[[list[Any], Path], Any] | None = None,
 ) -> NativeResult:
     """js_input（実在ディレクトリ）の JS を解析する。引数の *_fn は結合部を差し替える試験用の口。"""
     root, rejected = validate_input_directory(str(js_input))
@@ -102,7 +107,7 @@ def analyze(
         return _analyze(
             root, cancel_event or threading.Event(),
             parser or _parser.get_parser(), extract_fn or _extract.extract_api_candidates,
-            graph_fn or _module_graph.build_module_graph, sourcemap_fn or _sourcemap.resolve_source_map,
+            graph_fn or _module_graph.build_module_graph, sourcemap_fn or _sourcemap.analyze_source_maps,
         )
     except _Cancelled:
         diag = Diagnostic(
@@ -150,8 +155,9 @@ def _analyze(root: Path, cancel: threading.Event, parser: Any, extract_fn: Any, 
             limits.append(f"{LIMIT_PARSE_ERRORS}:{relative}")
             diagnostics.append(_parse_diagnostic(relative, type(error).__name__))
             continue
-        if getattr(parsed, "has_error", False):
+        if not parsed.complete:
             limits.append(f"{LIMIT_PARSE_ERRORS}:{relative}")
+        limits.extend(f"parser_{lim.code}:{relative}" for lim in parsed.limitations)
         parsed_files.append(parsed)
     if not verified:
         diag = Diagnostic(
@@ -161,7 +167,10 @@ def _analyze(root: Path, cancel: threading.Event, parser: Any, extract_fn: Any, 
         )
         return _empty("unavailable", (*diagnostics, diag), "no_javascript_files")
 
-    candidates, provenance, edges, findings, map_files = _collect(parsed_files, root, cancel, extract_fn, graph_fn, map_fn)
+    candidates, provenance, edges, findings, map_files, extra_diags = _collect(
+        parsed_files, root, cancel, extract_fn, graph_fn, map_fn
+    )
+    diagnostics += extra_diags
     verified = {**{v.path: v for v in verified}, **{v.path: v for v in map_files}}
     route_result = _routes.extract_routes(parsed_files)
     route_cands = [_route_candidate(r, parsed_files) for r in route_result.candidates]
@@ -177,7 +186,6 @@ def _analyze(root: Path, cancel: threading.Event, parser: Any, extract_fn: Any, 
     provenance_final = tuple(p for p in provenance if p.candidate_id in ids)
 
     diagnostics += _collision_diagnostics(ordered)
-    diagnostics += [_finding_diagnostic(f) for f in findings]
     coverage = _coverage(limits, findings, route_result.limitations)
     status = "partial" if coverage.status == "partial" else "complete"
     files = tuple(sorted(verified.values(), key=lambda f: f.path))
@@ -238,26 +246,75 @@ def _read_inputs(root: Path, cancel: threading.Event) -> tuple[list[tuple[str, b
 
 def _collect(
     parsed_files: list[Any], root: Path, cancel: threading.Event, extract_fn: Any, graph_fn: Any, map_fn: Any
-) -> tuple[list[StaticCandidate], list[CandidateProvenance], tuple[Any, ...], tuple[Any, ...], list[VerifiedFile]]:
+) -> tuple[list[StaticCandidate], list[CandidateProvenance], tuple[DependencyEdge, ...],
+           tuple[SourceMapFinding, ...], list[VerifiedFile], list[Diagnostic]]:
     candidates: list[StaticCandidate] = []
     provenance: list[CandidateProvenance] = []
-    findings: list[Any] = []
+    diagnostics: list[Diagnostic] = []
+    _check(cancel)
+    apis, api_diags = extract_fn(parsed_files, root, "")
+    for cand in apis:
+        candidates.append(cand)
+        provenance.append(_provenance(cand, "api", cand.expression, "native.extract"))
+    diagnostics.extend(api_diags)
+    _check(cancel)
+    mapped = map_fn([_with_ref_url(p) for p in parsed_files], root)
+    diagnostics.extend(mapped.diagnostics)
+    findings = tuple(sorted(
+        (_finding(f) for f in mapped.findings), key=lambda f: (f.path or "", f.finding, f.node_id)
+    ))
     map_files: list[VerifiedFile] = []
     for parsed in parsed_files:
-        _check(cancel)
-        for cand in extract_fn(parsed):
-            candidates.append(cand)
-            provenance.append(_provenance(cand, "api", cand.expression, "native.extract"))
-        if getattr(parsed, "source_map_ref", None):
-            result = map_fn(parsed, root)
-            findings.extend(result.findings)
-            if result.map_path and result.map_sha256:
-                map_files.append(VerifiedFile(result.map_path, "verified", result.map_sha256, None))
-            candidates.extend(_source_candidates(result))
+        source_map = mapped.maps.get(parsed.path)
+        if source_map is None:
+            continue
+        found, map_file = _source_candidates(parsed, source_map, root)
+        candidates.extend(found)
+        if map_file is not None:
+            map_files.append(map_file)
     _check(cancel)
     graph = graph_fn(parsed_files)
-    edges = tuple(sorted(graph.edges, key=lambda e: e.edge_id))
-    return candidates, provenance, edges, tuple(sorted(findings, key=lambda f: (f.path or "", f.finding, f.node_id))), map_files
+    edges = tuple(sorted(
+        (_edge(e) for e in (*graph.edges, *graph.dynamic_candidates)), key=lambda e: e.edge_id
+    ))
+    return candidates, provenance, edges, findings, map_files, diagnostics
+
+
+class _RefUrl(str):
+    """sourceMappingURL の文字列。宣言位置の情報は .fact に残す（str として読む側にも url 属性として読む側にも合う）。"""
+
+    @property
+    def url(self) -> str:
+        return str(self)
+
+
+def _with_ref_url(parsed: Any) -> Any:
+    ref = parsed.source_map_ref
+    return parsed if ref is None else replace(parsed, source_map_ref=_RefUrl(ref.url))
+
+
+def _finding(raw: Any) -> SourceMapFinding:
+    return SourceMapFinding(
+        make_id("smf", raw.path, raw.finding, raw.declared or ""), "source-map", raw.declared or raw.path,
+        raw.finding, "unknown", "failed", (raw.detail,),
+    )
+
+
+def _edge(raw: Any) -> DependencyEdge:
+    dynamic = raw.target is None and raw.specifier is None
+    target = raw.target or raw.specifier or f"<dynamic:{raw.line}:{raw.col}>"
+    kind = "external-module" if raw.external else ("javascript-module" if raw.target else None)
+    limits = ("dynamic_import_argument_not_static",) if dynamic else (
+        () if raw.target or raw.external else ("relative_import_not_resolved_in_input",)
+    )
+    return DependencyEdge(
+        make_id("de", raw.source, target, raw.kind, str(raw.line), str(raw.col)), "imports", raw.source,
+        "javascript-module", target, kind,
+        {"specifier": raw.specifier, "kind": raw.kind, "expression": raw.expression[:256] or None},
+        "unknown" if dynamic else "observed", AUTHORITY, f"{raw.confidence:g}",
+        {"line": raw.line, "col": raw.col}, "native.module_graph", "partial" if limits else "complete", limits, (),
+        None,
+    )
 
 
 # ---------------------------------------------------------------- 候補の生成
@@ -265,7 +322,7 @@ def _collect(
 
 def _route_candidate(route: _routes.RouteCandidate, parsed_files: list[Any]) -> StaticCandidate:
     sha = next((p.sha256 for p in parsed_files if p.path == route.file), "")
-    location = SourceLocation(route.file, "line_column_utf16", route.line, route.col, route.end_line, route.end_col)
+    location = SourceLocation(route.file, "line_column_utf8", route.line, route.col, route.end_line, route.end_col)
     limits = (
         LIMIT_ROUTE_CANDIDATE, f"route_confidence:{route.confidence}", f"route_basis:{route.basis}", *route.limitations,
     )
@@ -277,7 +334,7 @@ def _route_candidate(route: _routes.RouteCandidate, parsed_files: list[Any]) -> 
 
 
 def _module_candidate(parsed: Any) -> StaticCandidate:
-    location = SourceLocation(parsed.path, "line_column_utf16", 1, 0, 1, 0)
+    location = SourceLocation(parsed.path, "line_column_utf8", 1, 1, 1, 1)
     return StaticCandidate(
         id=static_candidate_id(parsed.sha256, location, "module"), kind="module", artifact_path=parsed.path,
         artifact_sha256=parsed.sha256, location=location, resolution="exact", epistemic_state="observed",
@@ -285,19 +342,30 @@ def _module_candidate(parsed: Any) -> StaticCandidate:
     )
 
 
-def _source_candidates(result: Any) -> list[StaticCandidate]:
-    if not result.map_path or not result.map_sha256:
-        return []
-    location = SourceLocation(result.map_path, "unknown", unavailable_reason="generated_to_original_range_not_provided")
-    return [
+def _source_candidates(parsed: Any, source_map: Any, root: Path) -> tuple[list[StaticCandidate], VerifiedFile | None]:
+    """map の sources を source 候補にする。map ファイルが入力内にあればその digest を、無ければ JS を出典にする。"""
+    map_file = _map_file(parsed, root)
+    path, sha = (map_file.path, map_file.sha256 or "") if map_file else (parsed.path, parsed.sha256)
+    location = SourceLocation(path, "unknown", unavailable_reason="generated_to_original_range_not_provided")
+    found = [
         StaticCandidate(
-            id=static_candidate_id(result.map_sha256 + name, location, "source"),
-            kind="source", artifact_path=result.map_path, artifact_sha256=result.map_sha256, location=location,
-            resolution="partial", epistemic_state="observed", authority=AUTHORITY, path=name[:256],
+            id=static_candidate_id(sha + str(index), location, "source"), kind="source", artifact_path=path,
+            artifact_sha256=sha, location=location, resolution="partial", epistemic_state="observed",
+            authority=AUTHORITY, path=source_map.original_source(index)[:256],
             limitations=("source_map_freshness_not_verified", "generated_to_original_range_not_provided"),
         )
-        for name in result.sources
+        for index in range(len(source_map.sources))
     ]
+    return found, map_file
+
+
+def _map_file(parsed: Any, root: Path) -> VerifiedFile | None:
+    url = parsed.source_map_ref.url if parsed.source_map_ref else ""
+    if not url or url.startswith("data:"):
+        return None
+    relative = posixpath.normpath(posixpath.join(posixpath.dirname(parsed.path), unquote(url.split("#")[0].split("?")[0])))
+    found = verify_file(root, relative)
+    return found if found.status == "verified" else None
 
 
 def _provenance(cand: StaticCandidate, kind: str, value: str | None, operation: str) -> CandidateProvenance:
@@ -326,14 +394,6 @@ def _parse_diagnostic(relative: str, error_name: str) -> Diagnostic:
         "static_parse_failed", "warning", "static_analysis",
         f"{relative} を構文解析できませんでした（{error_name}）。このファイルの候補は含まれません。",
         "ファイルが壊れていないか、JavaScript として読めるか確認してください。",
-    )
-
-
-def _finding_diagnostic(finding: Any) -> Diagnostic:
-    return Diagnostic(
-        f"source_map_{finding.finding.replace('-', '_')}", "warning", "static_analysis",
-        f"source map を解決できませんでした（{finding.path or '不明'}・{finding.finding}）。元ソースは不明として扱います。",
-        "source map を JS と同じ版で入力ディレクトリに置き、再実行してください。",
     )
 
 

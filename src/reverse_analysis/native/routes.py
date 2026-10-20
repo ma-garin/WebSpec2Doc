@@ -75,30 +75,56 @@ def extract_declared_routes(parsed: Any) -> tuple[tuple[RouteCandidate, ...], in
     """1 ファイルの route 宣言を解釈する。戻り値は (候補, 認識しなかった route 風オブジェクト数)。"""
     found: list[RouteCandidate] = []
     ignored = 0
-    for fact in parsed.routes:
-        props = dict(fact.props)
-        if fact.form == "jsx":
+    routes = list(parsed.routes)
+    for fact in routes:
+        props = _props(fact)
+        ancestors = _ancestors(routes, fact)
+        if fact.kind == "jsx":
             if fact.tag != "Route":
                 continue
-            made = _build(fact, props, "react-router:jsx-route", CONF_HIGH, ())
+            made = _build(fact, props, ancestors, "react-router:jsx-route", CONF_HIGH, ())
         else:
             framework, guessed = _object_framework(fact, props)
             if framework is None:
                 if "path" in props:
                     ignored += 1
                 continue
-            basis = f"{framework}:object-route"
-            made = _build(fact, props, basis, CONF_MEDIUM if guessed else CONF_HIGH,
+            made = _build(fact, props, ancestors, f"{framework}:object-route", CONF_MEDIUM if guessed else CONF_HIGH,
                           (LIMIT_FRAMEWORK_GUESSED,) if guessed else ())
         if made is not None:
             found.append(made)
     return tuple(found), ignored
 
 
+def _props(fact: Any) -> dict[str, str | None]:
+    """属性名 -> 静的な文字列値（静的に決まらない・値なしは None）。"""
+    out: dict[str, str | None] = {}
+    for prop in fact.properties:
+        value = prop.value
+        static = value is not None and value.resolution == "static" and value.string_value is not None
+        out[prop.key] = value.string_value if static else None
+    return out
+
+
+def _ancestors(routes: list[Any], fact: Any) -> tuple[str | None, ...]:
+    """parent（routes 内 index）を辿り、外側から path を並べる。path の無い親（layout route）は飛ばす。"""
+    chain: list[str | None] = []
+    seen: set[int] = set()
+    parent = fact.parent
+    while parent is not None and 0 <= parent < len(routes) and parent not in seen:
+        seen.add(parent)
+        props = _props(routes[parent])
+        if "path" in props:
+            chain.append(props["path"])
+        parent = routes[parent].parent
+    return tuple(reversed(chain))
+
+
 def _object_framework(fact: Any, props: dict[str, str | None]) -> tuple[str | None, bool]:
-    if fact.context in _REACT_CONTEXTS:
+    container = (fact.container or "").removeprefix("new ").strip()
+    if container in _REACT_CONTEXTS:
         return "react-router", False
-    if fact.context in _VUE_CONTEXTS:
+    if container in _VUE_CONTEXTS:
         return "vue-router", False
     if "path" not in props:
         return None, False
@@ -111,7 +137,8 @@ def _object_framework(fact: Any, props: dict[str, str | None]) -> tuple[str | No
 
 
 def _build(
-    fact: Any, props: dict[str, str | None], basis: str, confidence: str, limits: tuple[str, ...]
+    fact: Any, props: dict[str, str | None], ancestors: tuple[str | None, ...], basis: str, confidence: str,
+    limits: tuple[str, ...],
 ) -> RouteCandidate | None:
     if "path" in props:
         own = props["path"]
@@ -119,15 +146,21 @@ def _build(
         own = ""  # index route: 親の path そのもの
     else:
         return None  # path も index も無い（layout route 等）は path 候補にしない
-    path, extra, resolution = _join(fact.ancestors, own)
+    path, extra, resolution = _join(ancestors, own)
     if extra and confidence == CONF_HIGH:
         confidence = CONF_MEDIUM
     if resolution == "partial":
         confidence = CONF_LOW
     return RouteCandidate(
         path, fact.file, fact.line, fact.col, fact.end_line, fact.end_col, confidence, basis, resolution,
-        (fact.expression or "")[:EXPRESSION_MAX_CHARS], tuple(dict.fromkeys((*limits, *extra))),
+        _expression(fact), tuple(dict.fromkeys((*limits, *extra))),
     )
+
+
+def _expression(fact: Any) -> str:
+    if fact.kind == "jsx":
+        return f"<{fact.tag} " + " ".join(p.key for p in fact.properties) + ">"
+    return "{" + ", ".join(p.key for p in fact.properties) + "}"
 
 
 def _join(ancestors: Sequence[str | None], own: str | None) -> tuple[str | None, tuple[str, ...], str]:
@@ -219,7 +252,7 @@ def extract_routes(parsed_files: Iterable[Any]) -> RouteResult:
         ignored += skipped
     limitations: list[str] = []
     next_project = any(
-        imp.specifier == "next" or imp.specifier.startswith("next/") for p in files for imp in p.imports
+        imp.specifier == "next" or (imp.specifier or "").startswith("next/") for p in files for imp in p.imports
     )
     convention: list[RouteCandidate] = []
     for parsed in files:
@@ -230,7 +263,7 @@ def extract_routes(parsed_files: Iterable[Any]) -> RouteResult:
             continue
         marker = (LIMIT_NEXT_MARKER_ABSENT,) if not next_project else ()
         convention.append(RouteCandidate(
-            path, parsed.path, 1, 0, 1, 0, CONF_HIGH if next_project else CONF_LOW, "nextjs:file-convention",
+            path, parsed.path, 1, 1, 1, 1, CONF_HIGH if next_project else CONF_LOW, "nextjs:file-convention",
             "exact", parsed.path[:EXPRESSION_MAX_CHARS], marker,
         ))
     if convention and declared and not next_project:

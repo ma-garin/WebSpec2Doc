@@ -120,6 +120,11 @@ _LOGIN_FORM_SCRIPT = """
   const COMPANION_TYPES = ['text', 'email', 'tel', ''];
   return passwords.some((password) => {
     const scope = password.closest('form') || document.body;
+    // 同じフォームにパスワード欄が 2 つ以上ある（新しいパスワードと確認）か、新規作成用の
+    // autocomplete なら、会員登録・パスワード変更の画面であってログインの壁ではない
+    const inScope = passwords.filter((p) => (p.closest('form') || document.body) === scope);
+    if (inScope.length >= 2) return false;
+    if ((password.autocomplete || '').toLowerCase() === 'new-password') return false;
     return Array.from(scope.querySelectorAll('input')).some((input) => {
       if (input === password) return false;
       if (!COMPANION_TYPES.includes((input.type || '').toLowerCase())) return false;
@@ -148,6 +153,9 @@ def has_password_field(page: Page) -> bool:
 def extract_forms(page: Page) -> list[FormData]:
     try:
         raw_forms = cast(list[dict[str, Any]], page.eval_on_selector_all("form", _FORM_SCRIPT))
+        # フォームの外にある入力欄も 1 つの「フォーム外の入力」として拾う（無ければ足さない）
+        loose = cast(list[dict[str, Any]], page.eval_on_selector_all("body", _FORM_SCRIPT))
+        raw_forms += [f for f in loose if f.get("fields")]
     except Exception as exc:
         logger.warning("フォーム抽出に失敗しました: %s", exc)
         return []
@@ -468,10 +476,17 @@ _FORM_SCRIPT = """
     });
     return fields;
   };
+  // <body> を渡されたときは「フォームの外にある入力欄」だけを集める（表の中の数量欄など、SPA でよくある形）
+  // 利用者が入力しない input（hidden・送信ボタン類）は入力項目にしない（ボタンはボタン一覧で拾う）
+  const NOT_INPUT = ['hidden', 'submit', 'button', 'reset', 'image'];
+  const isInput = (f) => f.tagName.toLowerCase() !== 'input' || !NOT_INPUT.includes((f.getAttribute('type') || 'text').toLowerCase());
+  const fieldsOf = (form) => (form.tagName === 'BODY'
+    ? collectFields(form).filter((f) => !f.closest('form'))
+    : collectFields(form)).filter(isInput);
   return forms.map((form) => ({
-  action: form.getAttribute('action') || '',
-  method: (form.getAttribute('method') || 'get').toLowerCase(),
-  fields: collectFields(form).map((field) => {
+  action: form.tagName === 'BODY' ? '' : (form.getAttribute('action') || ''),
+  method: form.tagName === 'BODY' ? 'get' : (form.getAttribute('method') || 'get').toLowerCase(),
+  fields: fieldsOf(form).map((field) => {
     const tag = field.tagName.toLowerCase();
     const type = tag === 'input'
       ? (field.getAttribute('type') || 'text').toLowerCase()

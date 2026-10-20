@@ -1,0 +1,96 @@
+{
+ "n_screens": 16,
+ "all": {
+  "precision": 0.6,
+  "recall": 0.724,
+  "f1": 0.656,
+  "tp": 42,
+  "fp": 28,
+  "fn": 16
+ },
+ "by_category": {
+  "abnormal": {
+   "precision": 0.5,
+   "recall": 1.0,
+   "f1": 0.667,
+   "tp": 3,
+   "fp": 3,
+   "fn": 0
+  },
+  "api": {
+   "precision": 0.4,
+   "recall": 0.25,
+   "f1": 0.308,
+   "tp": 2,
+   "fp": 3,
+   "fn": 6
+  },
+  "boundary": {
+   "precision": 0.833,
+   "recall": 1.0,
+   "f1": 0.909,
+   "tp": 5,
+   "fp": 1,
+   "fn": 0
+  },
+  "error": {
+   "precision": 0.75,
+   "recall": 0.667,
+   "f1": 0.706,
+   "tp": 6,
+   "fp": 2,
+   "fn": 3
+  },
+  "format": {
+   "precision": 0.5,
+   "recall": 1.0,
+   "f1": 0.667,
+   "tp": 3,
+   "fp": 3,
+   "fn": 0
+  },
+  "normal": {
+   "precision": 0.867,
+   "recall": 0.929,
+   "f1": 0.897,
+   "tp": 13,
+   "fp": 2,
+   "fn": 1
+  },
+  "permission": {
+   "precision": null,
+   "recall": 0.0,
+   "f1": null,
+   "tp": 0,
+   "fp": 0,
+   "fn": 3
+  },
+  "persistence": {
+   "precision": 0.667,
+   "recall": 0.667,
+   "f1": 0.667,
+   "tp": 2,
+   "fp": 1,
+   "fn": 1
+  },
+  "required": {
+   "precision": 1.0,
+   "recall": 0.857,
+   "f1": 0.923,
+   "tp": 6,
+   "fp": 0,
+   "fn": 1
+  },
+  "state_transition": {
+   "precision": 0.133,
+   "recall": 0.667,
+   "f1": 0.222,
+   "tp": 2,
+   "fp": 13,
+   "fn": 1
+  }
+ },
+ "missing_screens": [
+  "w16.html"
+ ]
+}

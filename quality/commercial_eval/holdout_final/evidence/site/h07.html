@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>荷物追跡 | あおぞらポータル</title><link rel="stylesheet" href="css/h.css"></head>
+<body>
+<header class="hdr"><a href="index.html">メニュー</a></header>
+<main>
+<h1>荷物追跡</h1>
+<form id="trk" action="h07.html" method="get">
+<input type="hidden" name="carrier" value="jp">
+<div id="trk-err"></div>
+<div class="row"><label for="f1">追跡番号</label><input type="text" id="f1" name="no" required maxlength="12" minlength="10" pattern="^[0-9]{10,12}$"></div>
+<div class="row"><input type="checkbox" id="f2" name="notify"><label for="f2">配達完了を通知する</label></div>
+<input type="submit" value="追跡する">
+</form>
+<h2>追跡の見本</h2>
+<table><thead><tr><th>日時</th><th>状況</th><th>拠点</th></tr></thead><tbody><tr><td>10/18 09:12</td><td>集荷</td><td>東京</td></tr><tr><td>10/18 21:40</td><td>輸送中</td><td>名古屋</td></tr></tbody></table>
+<div id="timeline"></div>
+<a href="h09.html">配送ルートを見る</a>
+<script>(function(){var f=document.getElementById("trk");var box=document.getElementById("trk-err");var tl=document.getElementById("timeline");function show(m){var q=document.createElement("p");q.className="error";q.textContent=m;box.appendChild(q);}var h=document.createElement("h2");h.textContent="最近の追跡履歴";tl.appendChild(h);var b=document.createElement("button");b.type="button";b.textContent="履歴を再読み込み";tl.appendChild(b);var a=document.createElement("a");a.href="h08.html?from=tracking";a.textContent="集荷を依頼する";tl.appendChild(a);f.addEventListener("submit",function(ev){ev.preventDefault();box.innerHTML="";var v=f.elements["no"].value;if(v===""){show("追跡番号を入力してください");return;}if(!/^[0-9]{10,12}$/.test(v)){show("追跡番号は10〜12桁の数字で入力してください");return;}fetch("/api/tracking?no="+encodeURIComponent(v)).then(function(r){if(!r.ok){throw new Error("x");}return r.json();}).catch(function(){show("追跡情報を取得できませんでした");});});})();</script>
+</main>
+</body></html>

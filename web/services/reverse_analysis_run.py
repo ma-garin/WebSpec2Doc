@@ -202,12 +202,16 @@ def capture_scripts(pages: list[str], domain: str, dest: Path) -> tuple[int, int
 # ------------------------------------------------------------------ 実行
 
 
-def _metrics(doc: dict[str, Any] | None, runtime_calls: int) -> dict[str, int]:
+def _metrics(doc: dict[str, Any] | None, runtime_calls: int) -> dict[str, int | None]:
     static = (doc or {}).get("static_candidates", [])
     edges = ((doc or {}).get("provider_evidence") or {}).get("dependency_edges", [])
+    routes = sum(1 for c in static if c.get("kind") == "route")
+    # provider が route を出さない版では、0 件ではなく「取得できない」（None）として扱う
+    route_unavailable = not routes and any(
+        d.get("code") == "provider_route_not_provided" for d in (doc or {}).get("diagnostics", []))
     return {
         "static_candidates": len(static),
-        "route_candidates": sum(1 for c in static if c.get("kind") == "route"),
+        "route_candidates": None if route_unavailable else routes,
         "api_candidates": sum(1 for c in static if c.get("kind") == "api"),
         "module_dependency_edges": len(edges),
         "source_mapped_evidence": sum(1 for c in static if c.get("kind") == "source"),

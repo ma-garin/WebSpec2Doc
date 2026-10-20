@@ -1,0 +1,1951 @@
+{
+ "pages": {
+  "h01.html": {
+   "title": "自動車保険 お見積もり | あおぞらポータル",
+   "headings": [
+    "自動車保険 お見積もり",
+    "ご契約者の情報",
+    "免許証の色",
+    "特約"
+   ],
+   "dynamic_headings": [],
+   "buttons": [
+    "見積もる",
+    "見積もる",
+    "入力をクリア"
+   ],
+   "dynamic_buttons": [],
+   "fields": [
+    {
+     "name": "birth",
+     "type": "date",
+     "required": true,
+     "maxlength": null,
+     "minlength": null,
+     "min": "1940-01-01",
+     "max": "2008-12-31",
+     "pattern": null,
+     "label": "生年月日"
+    },
+    {
+     "name": "years",
+     "type": "number",
+     "required": true,
+     "maxlength": null,
+     "minlength": null,
+     "min": 0,
+     "max": 60,
+     "pattern": null,
+     "label": "運転歴(年)"
+    },
+    {
+     "name": "car",
+     "type": "select",
+     "required": true,
+     "maxlength": null,
+     "minlength": null,
+     "min": null,
+     "max": null,
+     "pattern": null,
+     "label": "車種"
+    },
+    {
+     "name": "license",
+     "type": "radio",
+     "required": false,
+     "maxlength": null,
+     "minlength": null,
+     "min": null,
+     "max": null,
+     "pattern": null,
+     "label": "ゴールド"
+    },
+    {
+     "name": "license",
+     "type": "radio",
+     "required": false,
+     "maxlength": null,
+     "minlength": null,
+     "min": null,
+     "max": null,
+     "pattern": null,
+     "label": "ブルー"
+    },
+    {
+     "name": "license",
+     "type": "radio",
+     "required": false,
+     "maxlength": null,
+     "minlength": null,
+     "min": null,
+     "max": null,
+     "pattern": null,
+     "label": "グリーン"
+    },
+    {
+     "name": "rider",
+     "type": "checkbox",
+     "required": false,
+     "maxlength": null,
+     "minlength": null,
+     "min": null,
+     "max": null,
+     "pattern": null,
+     "label": "弁護士費用特約"
+    },
+    {
+     "name": "rider",
+     "type": "checkbox",
+     "required": false,
+     "maxlength": null,
+     "minlength": null,
+     "min": null,
+     "max": null,
+     "pattern": null,
+     "label": "ロードサービス"
+    },
+    {
+     "name": "rider",
+     "type": "checkbox",
+     "required": false,
+     "maxlength": null,
+     "minlength": null,
+     "min": null,
+     "max": null,
+     "pattern": null,
+     "label": "車両新価特約"
+    },
+    {
+     "name": "email",
+     "type": "email",
+     "required": true,
+     "maxlength": 80,
+     "minlength": null,
+     "min": null,
+     "max": null,
+     "pattern": null,
+     "label": "メールアドレス"
+    },
+    {
+     "name": "remarks",
+     "type": "textarea",
+     "required": false,
+     "maxlength": 300,
+     "minlength": null,
+     "min": null,
+     "max": null,
+     "pattern": null,
+     "label": "備考"
+    }
+   ],
+   "links": [
+    "index.html",
+    "h02.html"
+   ],
+   "dynamic_links": [],
+   "tables": [],
+   "error_messages": [],
+   "deferred_error_messages": [
+    "生年月日を入力してください",
+    "運転歴を入力してください",
+    "車種を選択してください",
+    "メールアドレスの形式が正しくありません",
+    "見積もりに失敗しました。時間をおいて再度お試しください"
+   ],
+   "api_endpoints": [
+    {
+     "method": "POST",
+     "path": "/api/quotes"
+    }
+   ],
+   "must_not_appear": [
+    "法人契約のお客様",
+    "法人番号",
+    "法人割引を適用",
+    "運転歴は60年以内で入力してください"
+   ],
+   "unavailable": [],
+   "external_links": [
+    "https://example.com/terms"
+   ],
+   "anchor_links": [],
+   "hidden_fields": [
+    "quote_token"
+   ]
+  },
+  "h02.html": {
+   "title": "契約者情報の変更 | あおぞらポータル",
+   "headings": [
+    "契約者情報の変更",
+    "現在の登録内容"
+   ],
+   "dynamic_headings": [],
+   "buttons": [
+    "変更を保存",
+    "変更を保存",
+    "戻る"
+   ],
+   "dynamic_buttons": [],
+   "fields": [
+    {
+     "name": "holder",
+     "type": "text",
+     "required": false,
+     "maxlength": null,
+     "minlength": null,
+     "min": null,
+     "max": null,
+     "pattern": null,
+     "label": "契約者名"
+    },
+    {
+     "name": "zip",
+     "type": "text",
+     "required": true,
+     "maxlength": 8,
+     "minlength": null,
+     "min": null,
+     "max": null,
+     "pattern": "^[0-9]{3}-[0-9]{4}$",
+     "label": "郵便番号"
+    },
+    {
+     "name": "addr",
+     "type": "text",
+     "required": true,
+     "maxlength": 100,
+     "minlength": null,
+     "min": null,
+     "max": null,
+     "pattern": null,
+     "label": "住所"
+    },
+    {
+     "name": "tel",
+     "type": "tel",
+     "required": false,
+     "maxlength": 11,
+     "minlength": 10,
+     "min": null,
+     "max": null,
+     "pattern": "^0[0-9]{9,10}$",
+     "label": "電話番号"
+    },
+    {
+     "name": "contact",
+     "type": "select",
+     "required": false,
+     "maxlength": null,
+     "minlength": null,
+     "min": null,
+     "max": null,
+     "pattern": null,
+     "label": "連絡方法"
+    }
+   ],
+   "links": [
+    "index.html",
+    "h01.html"
+   ],
+   "dynamic_links": [],
+   "tables": [],
+   "error_messages": [],
+   "deferred_error_messages": [
+    "郵便番号を入力してください",
+    "住所を入力してください",
+    "変更を保存できませんでした"
+   ],
+   "api_endpoints": [
+    {
+     "method": "PUT",
+     "path": "/api/contracts/self"
+    }
+   ],
+   "must_not_appear": [
+    "変更履歴 (管理者のみ)",
+    "住所変更"
+   ],
+   "unavailable": [],
+   "external_links": [],
+   "anchor_links": [],
+   "hidden_fields": [
+    "contract_id"
+   ]
+  },
+  "h03.html": {
+   "title": "コース検索 | あおぞらポータル",
+   "headings": [
+    "学習コース検索",
+    "検索条件",
+    "検索結果",
+    "お問い合わせ"
+   ],
+   "dynamic_headings": [],
+   "buttons": [
+    "検索",
+    "条件をクリア"
+   ],
+   "dynamic_buttons": [],
+   "fields": [
+    {
+     "name": "keyword",
+     "type": "text",
+     "required": false,
+     "maxlength": 50,
+     "minlength": null,
+     "min": null,
+     "max": null,
+     "pattern": null,
+     "label": null
+    },
+    {
+     "name": "level",
+     "type": "select",
+     "required": false,
+     "maxlength": null,
+     "minlength": null,
+     "min": null,
+     "max": null,
+     "pattern": null,
+     "label": "レベル"
+    },
+    {
+     "name": "free",
+     "type": "checkbox",
+     "required": false,
+     "maxlength": null,
+     "minlength": null,
+     "min": null,
+     "max": null,
+     "pattern": null,
+     "label": "無料コースのみ"
+    }
+   ],
+   "links": [
+    "index.html",
+    "h04.html?course=101",
+    "h04.html?course=102",
+    "h04.html?course=103"
+   ],
+   "dynamic_links": [],
+   "tables": [
+    {
+     "headers": [
+      "コース名",
+      "受講料",
+      "期間"
+     ],
+     "rows": 3
+    }
+   ],
+   "error_messages": [],
+   "deferred_error_messages": [
+    "コース情報を取得できませんでした"
+   ],
+   "api_endpoints": [
+    {
+     "method": "GET",
+     "path": "/api/courses"
+    }
+   ],
+   "must_not_appear": [
+    "該当するコースがありません",
+    "条件を緩める"
+   ],
+   "unavailable": [
+    "追加コースは /api/courses から読み込む想定でサーバが無いため取得できない"
+   ],
+   "external_links": [],
+   "anchor_links": [],
+   "hidden_fields": []
+  },
+  "h04.html": {
+   "title": "学習の進捗 | あおぞらポータル",
+   "headings": [
+    "受講者の学習進捗",
+    "学習の進捗",
+    "学習の進捗"
+   ],
+   "dynamic_headings": [],
+   "buttons": [
+    "進捗を更新"
+   ],
+   "dynamic_buttons": [],
+   "fields": [],
+   "links": [
+    "index.html",
+    "h05.html?unit=3",
+    "h04.html?export=csv",
+    "h03.html",
+    "h06.html"
+   ],
+   "dynamic_links": [],
+   "tables": [
+    {
+     "headers": [
+      "単元",
+      "進捗",
+      "状態"
+     ],
+     "rows": 4
+    }
+   ],
+   "error_messages": [],
+   "deferred_error_messages": [],
+   "api_endpoints": [
+    {
+     "method": "GET",
+     "path": "/api/progress"
+    }
+   ],
+   "must_not_appear": [
+    "2024年度の履歴",
+    "修了証 発行済み"
+   ],
+   "unavailable": [
+    "進捗率のグラフは /api/progress の応答で描画される想定で、サーバが無いため取得できない"
+   ],
+   "external_links": [],
+   "anchor_links": [],
+   "hidden_fields": []
+  },
+  "h05.html": {
+   "title": "課題の提出 | あおぞらポータル",
+   "headings": [
+    "課題の提出"
+   ],
+   "dynamic_headings": [],
+   "buttons": [
+    "提出する",
+    "下書き保存"
+   ],
+   "dynamic_buttons": [],
+   "fields": [
+    {
+     "name": "task",
+     "type": "select",
+     "required": true,
+     "maxlength": null,
+     "minlength": null,
+     "min": null,
+     "max": null,
+     "pattern": null,
+     "label": "課題番号"
+    },
+    {
+     "name": "attachment",
+     "type": "file",
+     "required": true,
+     "maxlength": null,
+     "minlength": null,
+     "min": null,
+     "max": null,
+     "pattern": null,
+     "label": "提出ファイル"
+    },
+    {
+     "name": "format",
+     "type": "radio",
+     "required": false,
+     "maxlength": null,
+     "minlength": null,
+     "min": null,
+     "max": null,
+     "pattern": null,
+     "label": "PDF"
+    },
+    {
+     "name": "format",
+     "type": "radio",
+     "required": false,
+     "maxlength": null,
+     "minlength": null,
+     "min": null,
+     "max": null,
+     "pattern": null,
+     "label": "Word"
+    },
+    {
+     "name": "format",
+     "type": "radio",
+     "required": false,
+     "maxlength": null,
+     "minlength": null,
+     "min": null,
+     "max": null,
+     "pattern": null,
+     "label": "その他"
+    },
+    {
+     "name": "comment",
+     "type": "textarea",
+     "required": false,
+     "maxlength": 500,
+     "minlength": null,
+     "min": null,
+     "max": null,
+     "pattern": null,
+     "label": "コメント"
+    },
+    {
+     "name": "selfcheck",
+     "type": "checkbox",
+     "required": true,
+     "maxlength": null,
+     "minlength": null,
+     "min": null,
+     "max": null,
+     "pattern": null,
+     "label": "自己点検を済ませた"
+    }
+   ],
+   "links": [
+    "index.html"
+   ],
+   "dynamic_links": [],
+   "tables": [],
+   "error_messages": [
+    "前回の提出は期限を過ぎていたため受理されませんでした"
+   ],
+   "deferred_error_messages": [
+    "課題を選択してください",
+    "ファイルを選択してください",
+    "自己点検にチェックしてください",
+    "提出に失敗しました"
+   ],
+   "api_endpoints": [
+    {
+     "method": "POST",
+     "path": "/api/submissions"
+    }
+   ],
+   "must_not_appear": [
+    "採点者向けの設定",
+    "採点者向けメモ",
+    "採点を確定"
+   ],
+   "unavailable": [],
+   "external_links": [],
+   "anchor_links": [],
+   "hidden_fields": [
+    "course_id"
+   ]
+  },
+  "h06.html": {
+   "title": "成績一括入力 | あおぞらポータル",
+   "headings": [
+    "成績一括入力",
+    "採点対象",
+    "成績表"
+   ],
+   "dynamic_headings": [],
+   "buttons": [
+    "一括保存",
+    "全員に満点を入力"
+   ],
+   "dynamic_buttons": [],
+   "fields": [
+    {
+     "name": "score_1",
+     "type": "number",
+     "required": true,
+     "maxlength": null,
+     "minlength": null,
+     "min": 0,
+     "max": 100,
+     "pattern": null,
+     "label": "山田さんの得点"
+    },
+    {
+     "name": "grade_1",
+     "type": "select",
+     "required": false,
+     "maxlength": null,
+     "minlength": null,
+     "min": null,
+     "max": null,
+     "pattern": null,
+     "label": "山田さんの評価"
+    },
+    {
+     "name": "memo_1",
+     "type": "text",
+     "required": false,
+     "maxlength": 60,
+     "minlength": null,
+     "min": null,
+     "max": null,
+     "pattern": null,
+     "label": null
+    },
+    {
+     "name": "score_2",
+     "type": "number",
+     "required": true,
+     "maxlength": null,
+     "minlength": null,
+     "min": 0,
+     "max": 100,
+     "pattern": null,
+     "label": "佐藤さんの得点"
+    },
+    {
+     "name": "grade_2",
+     "type": "select",
+     "required": false,
+     "maxlength": null,
+     "minlength": null,
+     "min": null,
+     "max": null,
+     "pattern": null,
+     "label": "佐藤さんの評価"
+    },
+    {
+     "name": "memo_2",
+     "type": "text",
+     "required": false,
+     "maxlength": 60,
+     "minlength": null,
+     "min": null,
+     "max": null,
+     "pattern": null,
+     "label": null
+    },
+    {
+     "name": "score_3",
+     "type": "number",
+     "required": true,
+     "maxlength": null,
+     "minlength": null,
+     "min": 0,
+     "max": 100,
+     "pattern": null,
+     "label": "鈴木さんの得点"
+    },
+    {
+     "name": "grade_3",
+     "type": "select",
+     "required": false,
+     "maxlength": null,
+     "minlength": null,
+     "min": null,
+     "max": null,
+     "pattern": null,
+     "label": "鈴木さんの評価"
+    },
+    {
+     "name": "memo_3",
+     "type": "text",
+     "required": false,
+     "maxlength": 60,
+     "minlength": null,
+     "min": null,
+     "max": null,
+     "pattern": null,
+     "label": null
+    }
+   ],
+   "links": [
+    "index.html",
+    "h04.html"
+   ],
+   "dynamic_links": [],
+   "tables": [
+    {
+     "headers": [
+      "受講者",
+      "得点",
+      "評価",
+      "備考"
+     ],
+     "rows": 3
+    }
+   ],
+   "error_messages": [],
+   "deferred_error_messages": [
+    "すべての得点を入力してください",
+    "成績の保存に失敗しました"
+   ],
+   "api_endpoints": [
+    {
+     "method": "PUT",
+     "path": "/api/grades"
+    }
+   ],
+   "must_not_appear": [
+    "採点履歴",
+    "採点を取り消す"
+   ],
+   "unavailable": [],
+   "external_links": [],
+   "anchor_links": [],
+   "hidden_fields": []
+  },
+  "h07.html": {
+   "title": "荷物追跡 | あおぞらポータル",
+   "headings": [
+    "荷物追跡",
+    "追跡の見本"
+   ],
+   "dynamic_headings": [
+    "最近の追跡履歴"
+   ],
+   "buttons": [
+    "追跡する"
+   ],
+   "dynamic_buttons": [
+    "履歴を再読み込み"
+   ],
+   "fields": [
+    {
+     "name": "no",
+     "type": "text",
+     "required": true,
+     "maxlength": 12,
+     "minlength": 10,
+     "min": null,
+     "max": null,
+     "pattern": "^[0-9]{10,12}$",
+     "label": "追跡番号"
+    },
+    {
+     "name": "notify",
+     "type": "checkbox",
+     "required": false,
+     "maxlength": null,
+     "minlength": null,
+     "min": null,
+     "max": null,
+     "pattern": null,
+     "label": "配達完了を通知する"
+    }
+   ],
+   "links": [
+    "index.html",
+    "h09.html"
+   ],
+   "dynamic_links": [
+    "h08.html?from=tracking"
+   ],
+   "tables": [
+    {
+     "headers": [
+      "日時",
+      "状況",
+      "拠点"
+     ],
+     "rows": 2
+    }
+   ],
+   "error_messages": [],
+   "deferred_error_messages": [
+    "追跡番号を入力してください",
+    "追跡番号は10〜12桁の数字で入力してください",
+    "追跡情報を取得できませんでした"
+   ],
+   "api_endpoints": [
+    {
+     "method": "GET",
+     "path": "/api/tracking"
+    }
+   ],
+   "must_not_appear": [],
+   "unavailable": [],
+   "external_links": [],
+   "anchor_links": [],
+   "hidden_fields": [
+    "carrier"
+   ]
+  },
+  "h08.html": {
+   "title": "集荷依頼 | あおぞらポータル",
+   "headings": [
+    "集荷の依頼",
+    "依頼者",
+    "届け先"
+   ],
+   "dynamic_headings": [],
+   "buttons": [
+    "入力内容を確認",
+    "依頼する"
+   ],
+   "dynamic_buttons": [],
+   "fields": [
+    {
+     "name": "requester",
+     "type": "text",
+     "required": true,
+     "maxlength": 30,
+     "minlength": null,
+     "min": null,
+     "max": null,
+     "pattern": null,
+     "label": "お名前"
+    },
+    {
+     "name": "req_tel",
+     "type": "tel",
+     "required": true,
+     "maxlength": 11,
+     "minlength": null,
+     "min": null,
+     "max": null,
+     "pattern": "^0[0-9]{9,10}$",
+     "label": "電話番号"
+    },
+    {
+     "name": "dest_tel",
+     "type": "tel",
+     "required": false,
+     "maxlength": 11,
+     "minlength": null,
+     "min": null,
+     "max": null,
+     "pattern": "^0[0-9]{9,10}$",
+     "label": "電話番号"
+    },
+    {
+     "name": "pickup_date",
+     "type": "date",
+     "required": true,
+     "maxlength": null,
+     "minlength": null,
+     "min": "2026-10-21",
+     "max": "2026-12-31",
+     "pattern": null,
+     "label": "集荷日"
+    },
+    {
+     "name": "slot",
+     "type": "radio",
+     "required": true,
+     "maxlength": null,
+     "minlength": null,
+     "min": null,
+     "max": null,
+     "pattern": null,
+     "label": "午前"
+    },
+    {
+     "name": "slot",
+     "type": "radio",
+     "required": true,
+     "maxlength": null,
+     "minlength": null,
+     "min": null,
+     "max": null,
+     "pattern": null,
+     "label": "午後"
+    },
+    {
+     "name": "slot",
+     "type": "radio",
+     "required": true,
+     "maxlength": null,
+     "minlength": null,
+     "min": null,
+     "max": null,
+     "pattern": null,
+     "label": "夜間"
+    },
+    {
+     "name": "kind",
+     "type": "checkbox",
+     "required": false,
+     "maxlength": null,
+     "minlength": null,
+     "min": null,
+     "max": null,
+     "pattern": null,
+     "label": "割れ物"
+    },
+    {
+     "name": "kind",
+     "type": "checkbox",
+     "required": false,
+     "maxlength": null,
+     "minlength": null,
+     "min": null,
+     "max": null,
+     "pattern": null,
+     "label": "冷凍"
+    },
+    {
+     "name": "kind",
+     "type": "checkbox",
+     "required": false,
+     "maxlength": null,
+     "minlength": null,
+     "min": null,
+     "max": null,
+     "pattern": null,
+     "label": "貴重品"
+    },
+    {
+     "name": "count",
+     "type": "number",
+     "required": true,
+     "maxlength": null,
+     "minlength": null,
+     "min": 1,
+     "max": 20,
+     "pattern": null,
+     "label": "個数"
+    },
+    {
+     "name": "size",
+     "type": "select",
+     "required": true,
+     "maxlength": null,
+     "minlength": null,
+     "min": null,
+     "max": null,
+     "pattern": null,
+     "label": "サイズ"
+    }
+   ],
+   "links": [
+    "index.html"
+   ],
+   "dynamic_links": [],
+   "tables": [],
+   "error_messages": [],
+   "deferred_error_messages": [
+    "お名前を入力してください",
+    "時間帯を選択してください",
+    "個数を入力してください",
+    "集荷の依頼に失敗しました"
+   ],
+   "api_endpoints": [
+    {
+     "method": "POST",
+     "path": "/api/pickups"
+    }
+   ],
+   "must_not_appear": [
+    "法人契約の集荷",
+    "法人コードを入力してください"
+   ],
+   "unavailable": [],
+   "external_links": [],
+   "anchor_links": [],
+   "hidden_fields": []
+  },
+  "h09.html": {
+   "title": "配送ルート確認 | あおぞらポータル",
+   "headings": [
+    "配送ルート確認",
+    "配送先一覧"
+   ],
+   "dynamic_headings": [],
+   "buttons": [
+    "地図を更新"
+   ],
+   "dynamic_buttons": [],
+   "fields": [
+    {
+     "name": "day",
+     "type": "select",
+     "required": false,
+     "maxlength": null,
+     "minlength": null,
+     "min": null,
+     "max": null,
+     "pattern": null,
+     "label": "表示する日"
+    }
+   ],
+   "links": [
+    "index.html",
+    "h07.html?no=1234567890"
+   ],
+   "dynamic_links": [],
+   "tables": [
+    {
+     "headers": [
+      "順番",
+      "配送先",
+      "到着予定"
+     ],
+     "rows": 3
+    }
+   ],
+   "error_messages": [],
+   "deferred_error_messages": [
+    "経路を取得できませんでした"
+   ],
+   "api_endpoints": [
+    {
+     "method": "GET",
+     "path": "/api/routes"
+    }
+   ],
+   "must_not_appear": [],
+   "unavailable": [
+    "iframe 内の地図 (外部ドメイン maps.example.com) の内容は取得できない"
+   ],
+   "external_links": [],
+   "anchor_links": [],
+   "hidden_fields": []
+  },
+  "h10.html": {
+   "title": "転入届の事前申請 | あおぞらポータル",
+   "headings": [
+    "転入届の事前申請",
+    "申請者",
+    "住所"
+   ],
+   "dynamic_headings": [],
+   "buttons": [
+    "申請する",
+    "一時保存",
+    "申請する"
+   ],
+   "dynamic_buttons": [],
+   "fields": [
+    {
+     "name": "full_name",
+     "type": "text",
+     "required": true,
+     "maxlength": 40,
+     "minlength": 2,
+     "min": null,
+     "max": null,
+     "pattern": null,
+     "label": "氏名"
+    },
+    {
+     "name": "kana",
+     "type": "text",
+     "required": true,
+     "maxlength": 60,
+     "minlength": null,
+     "min": null,
+     "max": null,
+     "pattern": "^[ぁ-んー　]+$",
+     "label": "フリガナ"
+    },
+    {
+     "name": "birth",
+     "type": "date",
+     "required": true,
+     "maxlength": null,
+     "minlength": null,
+     "min": null,
+     "max": "2026-10-20",
+     "pattern": null,
+     "label": "生年月日"
+    },
+    {
+     "name": "zip",
+     "type": "text",
+     "required": true,
+     "maxlength": 7,
+     "minlength": 7,
+     "min": null,
+     "max": null,
+     "pattern": "^[0-9]{7}$",
+     "label": "新住所の郵便番号"
+    },
+    {
+     "name": "new_addr",
+     "type": "text",
+     "required": true,
+     "maxlength": 100,
+     "minlength": null,
+     "min": null,
+     "max": null,
+     "pattern": null,
+     "label": "新住所"
+    },
+    {
+     "name": "old_addr",
+     "type": "text",
+     "required": true,
+     "maxlength": 100,
+     "minlength": null,
+     "min": null,
+     "max": null,
+     "pattern": null,
+     "label": "旧住所"
+    },
+    {
+     "name": "move_date",
+     "type": "date",
+     "required": true,
+     "maxlength": null,
+     "minlength": null,
+     "min": "2026-10-21",
+     "max": null,
+     "pattern": null,
+     "label": "転入予定日"
+    },
+    {
+     "name": "members",
+     "type": "number",
+     "required": false,
+     "maxlength": null,
+     "minlength": null,
+     "min": 0,
+     "max": 10,
+     "pattern": null,
+     "label": "同居人数"
+    },
+    {
+     "name": "mynumber",
+     "type": "select",
+     "required": true,
+     "maxlength": null,
+     "minlength": null,
+     "min": null,
+     "max": null,
+     "pattern": null,
+     "label": "マイナンバーカード"
+    },
+    {
+     "name": "confirm",
+     "type": "checkbox",
+     "required": true,
+     "maxlength": null,
+     "minlength": null,
+     "min": null,
+     "max": null,
+     "pattern": null,
+     "label": "内容に相違ありません"
+    }
+   ],
+   "links": [
+    "index.html",
+    "h11.html"
+   ],
+   "dynamic_links": [],
+   "tables": [],
+   "error_messages": [],
+   "deferred_error_messages": [
+    "氏名を入力してください",
+    "郵便番号は7桁の数字で入力してください",
+    "新住所を入力してください",
+    "転入予定日を入力してください",
+    "内容の確認にチェックしてください",
+    "申請できませんでした"
+   ],
+   "api_endpoints": [
+    {
+     "method": "POST",
+     "path": "/api/applications/move-in"
+    }
+   ],
+   "must_not_appear": [
+    "窓口職員用: 受付印"
+   ],
+   "unavailable": [],
+   "external_links": [],
+   "anchor_links": [],
+   "hidden_fields": [
+    "application_type",
+    "csrf"
+   ]
+  },
+  "h11.html": {
+   "title": "申請状況の確認 | あおぞらポータル",
+   "headings": [
+    "申請状況の確認",
+    "受付番号で探す",
+    "直近の申請",
+    "申請履歴"
+   ],
+   "dynamic_headings": [],
+   "buttons": [
+    "照会"
+   ],
+   "dynamic_buttons": [
+    "状況を更新"
+   ],
+   "fields": [
+    {
+     "name": "receipt",
+     "type": "text",
+     "required": true,
+     "maxlength": 9,
+     "minlength": null,
+     "min": null,
+     "max": null,
+     "pattern": "^MV-[0-9]{6}$",
+     "label": "受付番号"
+    },
+    {
+     "name": "last_no",
+     "type": "text",
+     "required": false,
+     "maxlength": null,
+     "minlength": null,
+     "min": null,
+     "max": null,
+     "pattern": null,
+     "label": "直近の受付番号"
+    },
+    {
+     "name": "last_type",
+     "type": "select",
+     "required": false,
+     "maxlength": null,
+     "minlength": null,
+     "min": null,
+     "max": null,
+     "pattern": null,
+     "label": "申請種別"
+    },
+    {
+     "name": "last_name",
+     "type": "text",
+     "required": false,
+     "maxlength": null,
+     "minlength": null,
+     "min": null,
+     "max": null,
+     "pattern": null,
+     "label": "申請者名"
+    }
+   ],
+   "links": [
+    "index.html",
+    "h12.html?id=MV-004512"
+   ],
+   "dynamic_links": [
+    "h10.html?resubmit=1"
+   ],
+   "tables": [
+    {
+     "headers": [
+      "受付番号",
+      "種別",
+      "状態"
+     ],
+     "rows": 2
+    }
+   ],
+   "error_messages": [
+    "一部の申請の状況を表示できません"
+   ],
+   "deferred_error_messages": [
+    "受付番号の形式が正しくありません"
+   ],
+   "api_endpoints": [
+    {
+     "method": "GET",
+     "path": "/api/applications"
+    }
+   ],
+   "must_not_appear": [],
+   "unavailable": [
+    "申請履歴の続きは /api/applications から読み込む想定でサーバが無いため取得できない"
+   ],
+   "external_links": [],
+   "anchor_links": [],
+   "hidden_fields": []
+  },
+  "h12.html": {
+   "title": "住民票の写しの請求 | あおぞらポータル",
+   "headings": [
+    "住民票の写しの請求",
+    "請求内容",
+    "請求内容"
+   ],
+   "dynamic_headings": [],
+   "buttons": [
+    "請求する",
+    "キャンセル",
+    "キャンセル"
+   ],
+   "dynamic_buttons": [],
+   "fields": [
+    {
+     "name": "claimant",
+     "type": "radio",
+     "required": true,
+     "maxlength": null,
+     "minlength": null,
+     "min": null,
+     "max": null,
+     "pattern": null,
+     "label": "本人"
+    },
+    {
+     "name": "claimant",
+     "type": "radio",
+     "required": true,
+     "maxlength": null,
+     "minlength": null,
+     "min": null,
+     "max": null,
+     "pattern": null,
+     "label": "同一世帯の代理人"
+    },
+    {
+     "name": "claimant",
+     "type": "radio",
+     "required": true,
+     "maxlength": null,
+     "minlength": null,
+     "min": null,
+     "max": null,
+     "pattern": null,
+     "label": "その他の代理人"
+    },
+    {
+     "name": "copies",
+     "type": "number",
+     "required": true,
+     "maxlength": null,
+     "minlength": null,
+     "min": 1,
+     "max": 10,
+     "pattern": null,
+     "label": "請求通数"
+    },
+    {
+     "name": "requester",
+     "type": "text",
+     "required": true,
+     "maxlength": 40,
+     "minlength": null,
+     "min": null,
+     "max": null,
+     "pattern": null,
+     "label": "請求者の氏名"
+    },
+    {
+     "name": "honseki",
+     "type": "checkbox",
+     "required": false,
+     "maxlength": null,
+     "minlength": null,
+     "min": null,
+     "max": null,
+     "pattern": null,
+     "label": "本籍を記載する"
+    },
+    {
+     "name": "receive",
+     "type": "select",
+     "required": true,
+     "maxlength": null,
+     "minlength": null,
+     "min": null,
+     "max": null,
+     "pattern": null,
+     "label": "受取方法"
+    }
+   ],
+   "links": [
+    "index.html"
+   ],
+   "dynamic_links": [],
+   "tables": [],
+   "error_messages": [],
+   "deferred_error_messages": [
+    "請求者を選択してください",
+    "請求通数を入力してください",
+    "受取方法を選択してください",
+    "請求に失敗しました"
+   ],
+   "api_endpoints": [
+    {
+     "method": "POST",
+     "path": "/api/certificates"
+    }
+   ],
+   "must_not_appear": [
+    "郵送先住所を入力",
+    "本人確認書類のアップロード"
+   ],
+   "unavailable": [],
+   "external_links": [],
+   "anchor_links": [],
+   "hidden_fields": []
+  },
+  "h13.html": {
+   "title": "請求書一覧 | あおぞらポータル",
+   "headings": [
+    "請求書一覧",
+    "絞り込み",
+    "請求書"
+   ],
+   "dynamic_headings": [
+    "未払いの合計"
+   ],
+   "buttons": [
+    "絞り込み",
+    "再発行",
+    "再発行",
+    "再発行",
+    "選択した請求書をまとめて送付",
+    "下書きを削除"
+   ],
+   "dynamic_buttons": [
+    "未払いのみ表示"
+   ],
+   "fields": [
+    {
+     "name": "from",
+     "type": "date",
+     "required": false,
+     "maxlength": null,
+     "minlength": null,
+     "min": null,
+     "max": null,
+     "pattern": null,
+     "label": "開始日"
+    },
+    {
+     "name": "to",
+     "type": "date",
+     "required": false,
+     "maxlength": null,
+     "minlength": null,
+     "min": null,
+     "max": null,
+     "pattern": null,
+     "label": "終了日"
+    },
+    {
+     "name": "status",
+     "type": "select",
+     "required": false,
+     "maxlength": null,
+     "minlength": null,
+     "min": null,
+     "max": null,
+     "pattern": null,
+     "label": "状態"
+    },
+    {
+     "name": "sel",
+     "type": "checkbox",
+     "required": false,
+     "maxlength": null,
+     "minlength": null,
+     "min": null,
+     "max": null,
+     "pattern": null,
+     "label": "選択 INV-2610"
+    },
+    {
+     "name": "sel",
+     "type": "checkbox",
+     "required": false,
+     "maxlength": null,
+     "minlength": null,
+     "min": null,
+     "max": null,
+     "pattern": null,
+     "label": "選択 INV-2609"
+    },
+    {
+     "name": "sel",
+     "type": "checkbox",
+     "required": false,
+     "maxlength": null,
+     "minlength": null,
+     "min": null,
+     "max": null,
+     "pattern": null,
+     "label": "選択 INV-2608"
+    }
+   ],
+   "links": [
+    "index.html",
+    "h15.html?inv=INV-2610",
+    "h15.html?inv=INV-2609",
+    "h15.html?inv=INV-2608"
+   ],
+   "dynamic_links": [],
+   "tables": [
+    {
+     "headers": [
+      "選択",
+      "請求書番号",
+      "金額",
+      "状態",
+      "操作"
+     ],
+     "rows": 3
+    }
+   ],
+   "error_messages": [],
+   "deferred_error_messages": [
+    "送付する請求書を選択してください",
+    "下書きを削除できませんでした"
+   ],
+   "api_endpoints": [
+    {
+     "method": "DELETE",
+     "path": "/api/invoices/drafts"
+    }
+   ],
+   "must_not_appear": [
+    "督促メールを送信",
+    "督促対象: 1件"
+   ],
+   "unavailable": [],
+   "external_links": [],
+   "anchor_links": [],
+   "hidden_fields": []
+  },
+  "h14.html": {
+   "title": "プラン変更 | あおぞらポータル",
+   "headings": [
+    "プラン変更",
+    "プランを選択",
+    "プランを選択"
+   ],
+   "dynamic_headings": [
+    "変更後の月額の目安"
+   ],
+   "buttons": [
+    "プランを変更する"
+   ],
+   "dynamic_buttons": [
+    "料金を再計算"
+   ],
+   "fields": [
+    {
+     "name": "plan",
+     "type": "radio",
+     "required": true,
+     "maxlength": null,
+     "minlength": null,
+     "min": null,
+     "max": null,
+     "pattern": null,
+     "label": "フリー (0円)"
+    },
+    {
+     "name": "plan",
+     "type": "radio",
+     "required": true,
+     "maxlength": null,
+     "minlength": null,
+     "min": null,
+     "max": null,
+     "pattern": null,
+     "label": "スタンダード (3,000円)"
+    },
+    {
+     "name": "plan",
+     "type": "radio",
+     "required": true,
+     "maxlength": null,
+     "minlength": null,
+     "min": null,
+     "max": null,
+     "pattern": null,
+     "label": "プレミアム (9,000円)"
+    },
+    {
+     "name": "cycle",
+     "type": "select",
+     "required": false,
+     "maxlength": null,
+     "minlength": null,
+     "min": null,
+     "max": null,
+     "pattern": null,
+     "label": "請求サイクル"
+    },
+    {
+     "name": "coupon",
+     "type": "text",
+     "required": false,
+     "maxlength": 8,
+     "minlength": null,
+     "min": null,
+     "max": null,
+     "pattern": "^[A-Z0-9]{8}$",
+     "label": null
+    },
+    {
+     "name": "agree",
+     "type": "checkbox",
+     "required": true,
+     "maxlength": null,
+     "minlength": null,
+     "min": null,
+     "max": null,
+     "pattern": null,
+     "label": "データ保持の注意事項を確認した"
+    }
+   ],
+   "links": [
+    "index.html",
+    "h15.html"
+   ],
+   "dynamic_links": [],
+   "tables": [],
+   "error_messages": [],
+   "deferred_error_messages": [
+    "プランを選択してください",
+    "確認事項に同意してください",
+    "クーポンコードの形式が正しくありません",
+    "プランの変更に失敗しました"
+   ],
+   "api_endpoints": [
+    {
+     "method": "PUT",
+     "path": "/api/subscription"
+    }
+   ],
+   "must_not_appear": [
+    "解約手続き",
+    "解約する"
+   ],
+   "unavailable": [],
+   "external_links": [],
+   "anchor_links": [],
+   "hidden_fields": [
+    "current_plan"
+   ]
+  },
+  "h15.html": {
+   "title": "支払い方法の登録 | あおぞらポータル",
+   "headings": [
+    "支払い方法の登録"
+   ],
+   "dynamic_headings": [],
+   "buttons": [
+    "登録する"
+   ],
+   "dynamic_buttons": [],
+   "fields": [
+    {
+     "name": "card_no",
+     "type": "text",
+     "required": true,
+     "maxlength": 16,
+     "minlength": 16,
+     "min": null,
+     "max": null,
+     "pattern": "^[0-9]{16}$",
+     "label": "カード番号"
+    },
+    {
+     "name": "card_name",
+     "type": "text",
+     "required": true,
+     "maxlength": 40,
+     "minlength": null,
+     "min": null,
+     "max": null,
+     "pattern": null,
+     "label": "カード名義"
+    },
+    {
+     "name": "expiry",
+     "type": "month",
+     "required": true,
+     "maxlength": null,
+     "minlength": null,
+     "min": "2026-10",
+     "max": "2036-12",
+     "pattern": null,
+     "label": "有効期限"
+    },
+    {
+     "name": "cvc",
+     "type": "password",
+     "required": true,
+     "maxlength": 4,
+     "minlength": 3,
+     "min": null,
+     "max": null,
+     "pattern": "^[0-9]{3,4}$",
+     "label": "セキュリティコード"
+    },
+    {
+     "name": "bill_to",
+     "type": "radio",
+     "required": false,
+     "maxlength": null,
+     "minlength": null,
+     "min": null,
+     "max": null,
+     "pattern": null,
+     "label": "登録メール"
+    },
+    {
+     "name": "bill_to",
+     "type": "radio",
+     "required": false,
+     "maxlength": null,
+     "minlength": null,
+     "min": null,
+     "max": null,
+     "pattern": null,
+     "label": "別のメール"
+    },
+    {
+     "name": "alt_mail",
+     "type": "email",
+     "required": false,
+     "maxlength": 80,
+     "minlength": null,
+     "min": null,
+     "max": null,
+     "pattern": null,
+     "label": "別の送付先メール"
+    },
+    {
+     "name": "default",
+     "type": "checkbox",
+     "required": false,
+     "maxlength": null,
+     "minlength": null,
+     "min": null,
+     "max": null,
+     "pattern": null,
+     "label": "この支払い方法を既定にする"
+    }
+   ],
+   "links": [
+    "index.html",
+    "h14.html"
+   ],
+   "dynamic_links": [],
+   "tables": [],
+   "error_messages": [],
+   "deferred_error_messages": [
+    "カード番号は16桁の数字で入力してください",
+    "カード名義を入力してください",
+    "セキュリティコードが正しくありません",
+    "カードを登録できませんでした"
+   ],
+   "api_endpoints": [
+    {
+     "method": "POST",
+     "path": "/api/payment-methods"
+    }
+   ],
+   "must_not_appear": [
+    "テスト決済モード"
+   ],
+   "unavailable": [],
+   "external_links": [
+    "https://example.com/security"
+   ],
+   "anchor_links": [],
+   "hidden_fields": [
+    "pay_token"
+   ]
+  },
+  "h16.html": {
+   "title": "利用量レポート | あおぞらポータル",
+   "headings": [
+    "利用量レポート",
+    "利用量"
+   ],
+   "dynamic_headings": [],
+   "buttons": [
+    "表示",
+    "CSV出力"
+   ],
+   "dynamic_buttons": [],
+   "fields": [
+    {
+     "name": "from",
+     "type": "date",
+     "required": true,
+     "maxlength": null,
+     "minlength": null,
+     "min": null,
+     "max": null,
+     "pattern": null,
+     "label": "集計開始日"
+    },
+    {
+     "name": "to",
+     "type": "date",
+     "required": true,
+     "maxlength": null,
+     "minlength": null,
+     "min": null,
+     "max": null,
+     "pattern": null,
+     "label": "集計終了日"
+    },
+    {
+     "name": "unit",
+     "type": "select",
+     "required": false,
+     "maxlength": null,
+     "minlength": null,
+     "min": null,
+     "max": null,
+     "pattern": null,
+     "label": "集計単位"
+    },
+    {
+     "name": "limit",
+     "type": "number",
+     "required": false,
+     "maxlength": null,
+     "minlength": null,
+     "min": 0,
+     "max": 100000,
+     "pattern": null,
+     "label": "API 呼び出しの上限"
+    },
+    {
+     "name": "alert",
+     "type": "checkbox",
+     "required": false,
+     "maxlength": null,
+     "minlength": null,
+     "min": null,
+     "max": null,
+     "pattern": null,
+     "label": "超過時に通知する"
+    }
+   ],
+   "links": [
+    "index.html",
+    "h16.html?csv=1"
+   ],
+   "dynamic_links": [],
+   "tables": [
+    {
+     "headers": [
+      "日付",
+      "API呼び出し",
+      "ストレージ(GB)"
+     ],
+     "rows": 3
+    }
+   ],
+   "error_messages": [],
+   "deferred_error_messages": [
+    "集計期間を入力してください",
+    "集計期間が正しくありません",
+    "利用量を取得できませんでした"
+   ],
+   "api_endpoints": [
+    {
+     "method": "GET",
+     "path": "/api/usage"
+    }
+   ],
+   "must_not_appear": [
+    "内部監査用の集計",
+    "監査ログ 3件"
+   ],
+   "unavailable": [
+    "グラフは canvas 描画で、データは /api/usage の応答に依存するため取得できない"
+   ],
+   "external_links": [],
+   "anchor_links": [],
+   "hidden_fields": []
+  },
+  "h17.html": {
+   "title": "管理コンソール | あおぞらポータル",
+   "headings": [
+    "管理コンソール"
+   ],
+   "dynamic_headings": [],
+   "buttons": [
+    "ログイン"
+   ],
+   "dynamic_buttons": [],
+   "fields": [
+    {
+     "name": "admin_id",
+     "type": "text",
+     "required": true,
+     "maxlength": 20,
+     "minlength": null,
+     "min": null,
+     "max": null,
+     "pattern": null,
+     "label": "管理者ID"
+    },
+    {
+     "name": "admin_pw",
+     "type": "password",
+     "required": true,
+     "maxlength": null,
+     "minlength": 8,
+     "min": null,
+     "max": null,
+     "pattern": null,
+     "label": "パスワード"
+    }
+   ],
+   "links": [
+    "index.html",
+    "h13.html"
+   ],
+   "dynamic_links": [],
+   "tables": [],
+   "error_messages": [],
+   "deferred_error_messages": [
+    "管理者IDを入力してください",
+    "パスワードは8文字以上で入力してください",
+    "ログインに失敗しました"
+   ],
+   "api_endpoints": [
+    {
+     "method": "POST",
+     "path": "/api/admin/login"
+    }
+   ],
+   "must_not_appear": [
+    "ようこそ、管理者さん",
+    "契約数 1,204件"
+   ],
+   "unavailable": [
+    "ログイン後の管理領域 (契約数・設定) の内容はログインが必要なため取得できない"
+   ],
+   "external_links": [],
+   "anchor_links": [],
+   "hidden_fields": []
+  },
+  "index.html": {
+   "title": "メニュー | あおぞらポータル",
+   "headings": [
+    "ホールドアウト画面一覧",
+    "画面一覧"
+   ],
+   "dynamic_headings": [],
+   "buttons": [],
+   "dynamic_buttons": [],
+   "fields": [],
+   "links": [
+    "h01.html",
+    "h02.html",
+    "h03.html",
+    "h04.html",
+    "h05.html",
+    "h06.html",
+    "h07.html",
+    "h08.html",
+    "h09.html",
+    "h10.html",
+    "h11.html",
+    "h12.html",
+    "h13.html",
+    "h14.html",
+    "h15.html",
+    "h16.html",
+    "h17.html"
+   ],
+   "dynamic_links": [],
+   "tables": [],
+   "error_messages": [],
+   "deferred_error_messages": [],
+   "api_endpoints": [],
+   "must_not_appear": [],
+   "unavailable": [],
+   "external_links": [],
+   "anchor_links": [],
+   "hidden_fields": []
+  }
+ }
+}

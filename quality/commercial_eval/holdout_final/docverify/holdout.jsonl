@@ -1,0 +1,281 @@
+{"id": "F-001", "text": "検索結果にはタイトル、著者、出版年等を表示する。", "labels": ["REQ.OPEN_ENDED"], "note": "列挙末尾の「等」"}
+{"id": "F-002", "text": "通知はメール、SMS、プッシュ通知などで送信する。", "labels": ["REQ.OPEN_ENDED"], "note": "列挙末尾の「など」"}
+{"id": "F-003", "text": "患者情報として氏名、生年月日、住所ほかを登録できる。", "labels": ["REQ.OPEN_ENDED"], "note": "列挙末尾の「ほか」"}
+{"id": "F-004", "text": "対応ファイル形式はPDF、DOCX、XLSXその他とする。", "labels": ["REQ.OPEN_ENDED"], "note": "「その他」で列挙が開く"}
+{"id": "F-005", "text": "帳票には伝票番号、出荷日、数量をはじめとする項目を印字する。", "labels": ["REQ.OPEN_ENDED"], "note": "「をはじめ」"}
+{"id": "F-006", "text": "クレジットカード、デビットカード等の決済手段に対応する。", "labels": ["REQ.OPEN_ENDED"], "note": "「等」"}
+{"id": "F-007", "text": "管理者はユーザーの追加、削除、権限変更などを行える。", "labels": ["REQ.OPEN_ENDED"], "note": "「など」"}
+{"id": "F-008", "text": "出力項目には売上金額を含む各種の集計値が含まれる。", "labels": ["REQ.OPEN_ENDED"], "note": "「を含む」で一部のみ例示"}
+{"id": "F-009", "text": "システムはログイン失敗、権限エラー、タイムアウト等のエラーを記録する。", "labels": ["REQ.OPEN_ENDED"], "note": "「等」"}
+{"id": "F-010", "text": "学習履歴には受講日、得点、修了状況等を保存する。", "labels": ["REQ.OPEN_ENDED"], "note": "「等」"}
+{"id": "F-011", "text": "本人確認書類として運転免許証、マイナンバーカードなどを受け付ける。", "labels": ["REQ.OPEN_ENDED"], "note": "「など」"}
+{"id": "F-012", "text": "輸送手段はトラック、鉄道、船舶、航空機その他から選択できる。", "labels": ["REQ.OPEN_ENDED"], "note": "「その他」"}
+{"id": "F-013", "text": "製造ラインの温度、圧力、振動等のセンサー値を収集する。", "labels": ["REQ.OPEN_ENDED"], "note": "「等」"}
+{"id": "F-014", "text": "会計システム、人事システムなどの外部システムと連携する。", "labels": ["REQ.OPEN_ENDED"], "note": "「など」"}
+{"id": "F-015", "text": "画面にはエラーメッセージ、警告、ヘルプ等を表示する。", "labels": ["REQ.OPEN_ENDED"], "note": "「等」"}
+{"id": "F-016", "text": "管理画面から商品名、価格、在庫数ほかの商品情報を編集できる。", "labels": ["REQ.OPEN_ENDED"], "note": "「ほか」"}
+{"id": "F-017", "text": "受信データはCSV、JSON、XMLなどの形式を許容する。", "labels": ["REQ.OPEN_ENDED"], "note": "「など」"}
+{"id": "F-018", "text": "監査ログには操作者、操作日時を含む情報を記録する。", "labels": ["REQ.OPEN_ENDED"], "note": "「を含む」で項目が閉じない"}
+{"id": "F-019", "text": "アラートは温度上昇、湿度異常、扉の開放といった事象をはじめ、各種異常について通知する。", "labels": ["REQ.OPEN_ENDED"], "note": "「といった」「をはじめ」"}
+{"id": "F-020", "text": "利用者は英語、中国語、韓国語等の言語を選択できる。", "labels": ["REQ.OPEN_ENDED"], "note": "「等」"}
+{"id": "F-021", "text": "成績表には科目名、評点、出欠状況等を記載する。", "labels": ["REQ.OPEN_ENDED"], "note": "「等」"}
+{"id": "F-022", "text": "レポートは日次、週次、月次その他の周期で出力できる。", "labels": ["REQ.OPEN_ENDED"], "note": "「その他」"}
+{"id": "F-023", "text": "請求書には振込先、支払期限、備考などを表示する。", "labels": ["REQ.OPEN_ENDED"], "note": "「など」"}
+{"id": "F-024", "text": "配送状況として集荷済み、輸送中、配達完了等のステータスを管理する。", "labels": ["REQ.OPEN_ENDED"], "note": "「等」"}
+{"id": "F-025", "text": "健診結果は血圧、血糖値、コレステロール値などを一覧表示する。", "labels": ["REQ.OPEN_ENDED"], "note": "「など」"}
+{"id": "F-026", "text": "モバイルアプリはiOS、Android等のOSで動作する。", "labels": ["REQ.OPEN_ENDED"], "note": "「等」"}
+{"id": "F-027", "text": "ダッシュボードにはグラフ、表、地図などのウィジェットを配置できる。", "labels": ["REQ.OPEN_ENDED"], "note": "「など」"}
+{"id": "F-028", "text": "エクスポート機能は顧客情報、注文履歴等を対象とする。", "labels": ["REQ.OPEN_ENDED"], "note": "「等」"}
+{"id": "F-029", "text": "住民票の写しには氏名、住所、世帯主との続柄等を記載する。", "labels": ["REQ.OPEN_ENDED"], "note": "「等」"}
+{"id": "F-030", "text": "対象経費には交通費、宿泊費を含む。", "labels": ["REQ.OPEN_ENDED"], "note": "列挙+「を含む」で部分集合"}
+{"id": "F-031", "text": "APIキーの失効、再発行、停止などの操作を提供する。", "labels": ["REQ.OPEN_ENDED"], "note": "「など」(1機能内の操作列挙)"}
+{"id": "F-032", "text": "通知はメール、SMSなどで速やかに送信する。", "labels": ["REQ.OPEN_ENDED", "REQ.MEASURABILITY"], "note": "「など」+「速やかに」"}
+{"id": "F-033", "text": "すべてのファイル（PDF、画像等）を適宜保存する。", "labels": ["REQ.UNIVERSAL", "REQ.OPEN_ENDED", "AMBIGUOUS"], "note": "「すべて」「等」「適宜」"}
+{"id": "F-034", "text": "氏名、生年月日、住所の3項目を登録できる。", "labels": [], "note": "[紛O] 列挙が閉じている"}
+{"id": "F-035", "text": "対応ファイル形式はPDFおよびCSVの2種類のみとする。", "labels": [], "note": "[紛O] 「のみ」で閉じる"}
+{"id": "F-036", "text": "支払方法はクレジットカード、銀行振込、コンビニ払いの3種類とする。", "labels": [], "note": "[紛O] 3種類と明示"}
+{"id": "F-037", "text": "等々力渓谷の見学ルートを地図上に表示する。", "labels": [], "note": "[紛O] 「等々力」は地名で「等」ではない"}
+{"id": "F-038", "text": "対象は世田谷区ほか2区（計3区）の住民とする。", "labels": [], "note": "[紛O] 「ほか2区」は数で閉じる"}
+{"id": "F-039", "text": "区分の選択肢は「正社員」「契約社員」「その他」の3つとする。", "labels": [], "note": "[紛O] 「その他」は定義済みの選択肢名"}
+{"id": "F-040", "text": "表示金額は消費税を含む。", "labels": [], "note": "[紛O] 単一項目の包含で列挙ではない"}
+{"id": "F-041", "text": "見積書の合計欄には送料を含む総額を表示する。", "labels": [], "note": "[紛O] 単一項目の包含"}
+{"id": "F-042", "text": "ステータスは「未着手」「進行中」「完了」のいずれかとする。", "labels": [], "note": "[紛O] 閉じた列挙"}
+{"id": "F-043", "text": "通知方法はメールまたはSMSのいずれか一方とする。", "labels": [], "note": "[紛O] 閉じた選択"}
+{"id": "F-044", "text": "ファイルサイズが10MB以下のJPEGおよびPNGのみ受け付ける。", "labels": [], "note": "[紛O] 「のみ」で閉じる"}
+{"id": "F-045", "text": "パスワードは英字、数字、記号をそれぞれ1文字以上含む。", "labels": [], "note": "[紛O] 要求する3種を全列挙(閉じた必須条件)"}
+{"id": "F-046", "text": "「その他」を選択した場合は、自由記述欄を必須入力にする。", "labels": [], "note": "[紛O] 選択肢名への言及"}
+{"id": "F-047", "text": "報告対象は東京都、大阪府、愛知県の3都府県とする。", "labels": [], "note": "[紛O] 3と明示"}
+{"id": "F-048", "text": "参加者名簿には、田中ほか3名の氏名を記載する。", "labels": [], "note": "[紛O] 「ほか3名」で人数が閉じる"}
+{"id": "F-049", "text": "エラー等級は「致命」「警告」「情報」のうち「致命」のみをメール送信する。", "labels": [], "note": "[紛O] 閉じた列挙"}
+{"id": "F-050", "text": "『ほかほか弁当』の注文を受け付ける。", "labels": [], "note": "[紛O] 店名の一部の「ほか」"}
+{"id": "F-051", "text": "宛先に「等々力商事」を選択できる。", "labels": [], "note": "[紛O] 固有名詞の「等」"}
+{"id": "F-052", "text": "検索結果は迅速に表示する。", "labels": ["REQ.MEASURABILITY"], "note": "「迅速」に基準値なし"}
+{"id": "F-053", "text": "システムは大量のデータを処理できること。", "labels": ["REQ.MEASURABILITY"], "note": "「大量」"}
+{"id": "F-054", "text": "画面の応答時間は十分に短くする。", "labels": ["REQ.MEASURABILITY"], "note": "「十分に短く」"}
+{"id": "F-055", "text": "バックアップは定期的に取得する。", "labels": ["REQ.MEASURABILITY"], "note": "「定期的」に周期なし"}
+{"id": "F-056", "text": "多数のユーザーが同時に接続できること。", "labels": ["REQ.MEASURABILITY"], "note": "「多数」"}
+{"id": "F-057", "text": "入庫処理は高速に完了すること。", "labels": ["REQ.MEASURABILITY"], "note": "「高速」"}
+{"id": "F-058", "text": "ログは長期間保管する。", "labels": ["REQ.MEASURABILITY"], "note": "「長期間」"}
+{"id": "F-059", "text": "CPU使用率は低く抑える。", "labels": ["REQ.MEASURABILITY"], "note": "「低く」"}
+{"id": "F-060", "text": "検査結果は速やかに患者へ通知する。", "labels": ["REQ.MEASURABILITY"], "note": "「速やかに」"}
+{"id": "F-061", "text": "レポートの生成は秒単位で完了すること。", "labels": ["REQ.MEASURABILITY"], "note": "単位のみで数値なし"}
+{"id": "F-062", "text": "ページの読み込みは数秒以内に完了する。", "labels": ["REQ.MEASURABILITY"], "note": "「数秒」"}
+{"id": "F-063", "text": "障害発生時は短時間で復旧する。", "labels": ["REQ.MEASURABILITY"], "note": "「短時間」"}
+{"id": "F-064", "text": "データ転送は高い信頼性で行う。", "labels": ["REQ.MEASURABILITY"], "note": "「高い」に基準なし"}
+{"id": "F-065", "text": "在庫数が少なくなったら発注を行う。", "labels": ["REQ.MEASURABILITY"], "note": "閾値なし"}
+{"id": "F-066", "text": "一定期間ログインがない場合はアカウントをロックする。", "labels": ["REQ.MEASURABILITY"], "note": "「一定期間」の値なし"}
+{"id": "F-067", "text": "運転手の連続勤務は長時間にならないようにする。", "labels": ["REQ.MEASURABILITY"], "note": "「長時間」"}
+{"id": "F-068", "text": "授業動画は高画質で配信する。", "labels": ["REQ.MEASURABILITY"], "note": "「高画質」"}
+{"id": "F-069", "text": "サーバーのメモリは余裕を持たせて確保する。", "labels": ["REQ.MEASURABILITY"], "note": "「余裕」"}
+{"id": "F-070", "text": "アクセス集中時にも安定して稼働する。", "labels": ["REQ.MEASURABILITY"], "note": "「安定」に指標なし"}
+{"id": "F-071", "text": "画像のアップロードは一定サイズまで許容する。", "labels": ["REQ.MEASURABILITY"], "note": "「一定サイズ」"}
+{"id": "F-072", "text": "重大な不具合は頻繁に発生しないこと。", "labels": ["REQ.MEASURABILITY"], "note": "「頻繁に」"}
+{"id": "F-073", "text": "パスワードは長めの文字列とする。", "labels": ["REQ.MEASURABILITY"], "note": "「長め」"}
+{"id": "F-074", "text": "注文確認メールは注文後すぐに送信する。", "labels": ["REQ.MEASURABILITY"], "note": "「すぐ」"}
+{"id": "F-075", "text": "一括登録では大量の行を取り込めること。", "labels": ["REQ.MEASURABILITY"], "note": "「大量」"}
+{"id": "F-076", "text": "コールセンターの待ち時間を短縮する。", "labels": ["REQ.MEASURABILITY"], "note": "短縮の目標値なし"}
+{"id": "F-077", "text": "応答時間は秒以内とする。", "labels": ["REQ.MEASURABILITY"], "note": "数値欠落(単位のみ)"}
+{"id": "F-078", "text": "応答時間は3とする。", "labels": ["REQ.MEASURABILITY"], "note": "単位なし数値"}
+{"id": "F-079", "text": "製造ラインの停止時間は最小限とする。", "labels": ["REQ.MEASURABILITY"], "note": "「最小限」"}
+{"id": "F-080", "text": "アップロード容量はMB以内とする。", "labels": ["REQ.MEASURABILITY"], "note": "数値欠落(単位のみ)"}
+{"id": "F-081", "text": "月次集計はなるべく早く完了させる。", "labels": ["REQ.MEASURABILITY", "AMBIGUOUS"], "note": "「なるべく」「早く」"}
+{"id": "F-082", "text": "システムは常に高速に応答する。", "labels": ["REQ.MEASURABILITY", "REQ.UNIVERSAL"], "note": "「常に」+「高速」"}
+{"id": "F-083", "text": "システムは高速に検索結果を表示し、データを定期的にバックアップする。", "labels": ["REQ.MEASURABILITY", "REQ.MULTIPLE_REQUIREMENTS"], "note": "2要求+「高速」「定期的」"}
+{"id": "F-084", "text": "検索結果は3秒以内に表示する。", "labels": [], "note": "[紛M] 数値+単位"}
+{"id": "F-085", "text": "応答時間は95パーセンタイルで2秒以内とする。", "labels": [], "note": "[紛M] 基準値あり"}
+{"id": "F-086", "text": "バックアップは毎日午前2時に取得する。", "labels": [], "note": "[紛M] 頻度と時刻が確定"}
+{"id": "F-087", "text": "同時接続数は500ユーザーまで対応する。", "labels": [], "note": "[紛M] 数値あり"}
+{"id": "F-088", "text": "ログは7年間保管する。", "labels": [], "note": "[紛M] 期間が確定"}
+{"id": "F-089", "text": "障害発生から30分以内に復旧する。", "labels": [], "note": "[紛M] 数値あり"}
+{"id": "F-090", "text": "データの保持期間は法人税法に定める期間とする。", "labels": [], "note": "[紛M] 基準文書の参照で判定可能"}
+{"id": "F-091", "text": "パスワードは12文字以上とする。", "labels": [], "note": "[紛M] 数値あり"}
+{"id": "F-092", "text": "アップロードできる画像は1枚あたり5MB以下とする。", "labels": [], "note": "[紛M] 数値あり"}
+{"id": "F-093", "text": "在庫数が10個を下回った場合に自動発注する。", "labels": [], "note": "[紛M] 閾値あり"}
+{"id": "F-094", "text": "30分間操作がない場合はセッションを切断する。", "labels": [], "note": "[紛M] 値あり"}
+{"id": "F-095", "text": "1日あたり最大10万件の注文を処理できること。", "labels": [], "note": "[紛M] 値あり"}
+{"id": "F-096", "text": "動画は720p以上の解像度で配信する。", "labels": [], "note": "[紛M] 値あり"}
+{"id": "F-097", "text": "CPU使用率は平均60%以下に保つ。", "labels": [], "note": "[紛M] 値あり"}
+{"id": "F-098", "text": "稼働率は月間99.9%以上とする。", "labels": [], "note": "[紛M] 値あり"}
+{"id": "F-099", "text": "平常時の読み込みは1秒以上3秒以内とする。", "labels": [], "note": "[紛M] 範囲指定"}
+{"id": "F-100", "text": "利用者は1ページあたり20件の結果を閲覧できる。", "labels": [], "note": "[紛M] 値あり"}
+{"id": "F-101", "text": "連続勤務は最大4時間とする。", "labels": [], "note": "[紛M] 値あり"}
+{"id": "F-102", "text": "温度は2〜8℃に保つ。", "labels": [], "note": "[紛M] 範囲指定"}
+{"id": "F-103", "text": "24時間365日稼働する。", "labels": [], "note": "[紛M] 数値による稼働条件"}
+{"id": "F-104", "text": "システムは注文を受け付け、在庫を引き当てる。", "labels": ["REQ.MULTIPLE_REQUIREMENTS"], "note": "独立した2挙動"}
+{"id": "F-105", "text": "管理者はユーザーを追加でき、また権限を変更できる。", "labels": ["REQ.MULTIPLE_REQUIREMENTS"], "note": "2操作"}
+{"id": "F-106", "text": "システムは請求書をPDFで出力するとともに、経理担当者へメールで通知する。", "labels": ["REQ.MULTIPLE_REQUIREMENTS"], "note": "出力と通知"}
+{"id": "F-107", "text": "利用者は予約を登録でき、キャンセルもできる。", "labels": ["REQ.MULTIPLE_REQUIREMENTS"], "note": "2機能"}
+{"id": "F-108", "text": "システムは入力値を検証し、エラーがあれば画面に表示し、ログにも記録する。", "labels": ["REQ.MULTIPLE_REQUIREMENTS"], "note": "表示とログの別要求"}
+{"id": "F-109", "text": "受注データをCSV出力し、出荷指示を倉庫システムへ送信する。", "labels": ["REQ.MULTIPLE_REQUIREMENTS"], "note": "2出力"}
+{"id": "F-110", "text": "教師は課題を作成し、生徒は提出状況を確認できる。", "labels": ["REQ.MULTIPLE_REQUIREMENTS"], "note": "2主体2機能"}
+{"id": "F-111", "text": "患者の来院を受け付け、診察順を自動で決定する。", "labels": ["REQ.MULTIPLE_REQUIREMENTS"], "note": "受付と順序決定"}
+{"id": "F-112", "text": "センサー値を1秒ごとに収集し、異常を検知したら管理者に通知する。", "labels": ["REQ.MULTIPLE_REQUIREMENTS"], "note": "収集と通知"}
+{"id": "F-113", "text": "利用者はパスワードを変更でき、二要素認証を設定できる。", "labels": ["REQ.MULTIPLE_REQUIREMENTS"], "note": "2機能"}
+{"id": "F-114", "text": "在庫が不足したら担当者へ通知し、発注書を自動作成する。", "labels": ["REQ.MULTIPLE_REQUIREMENTS"], "note": "通知と文書生成"}
+{"id": "F-115", "text": "申請を受理したら、申請者に受付番号を通知し、審査担当者に審査タスクを割り当てる。", "labels": ["REQ.MULTIPLE_REQUIREMENTS"], "note": "2動作"}
+{"id": "F-116", "text": "配達完了を登録でき、システムは受取人へ完了通知を送る。", "labels": ["REQ.MULTIPLE_REQUIREMENTS"], "note": "登録と通知"}
+{"id": "F-117", "text": "システムは学習履歴を保存し、保護者向けの月次レポートを生成する。", "labels": ["REQ.MULTIPLE_REQUIREMENTS"], "note": "保存と生成"}
+{"id": "F-118", "text": "ログ画面で絞り込み検索ができ、結果をCSVで出力できる。", "labels": ["REQ.MULTIPLE_REQUIREMENTS"], "note": "検索と出力"}
+{"id": "F-119", "text": "決済に成功したらレシートを発行し、ポイントを付与する。", "labels": ["REQ.MULTIPLE_REQUIREMENTS"], "note": "発行と付与"}
+{"id": "F-120", "text": "顧客データを暗号化して保存し、アクセスログを1年間保管する。", "labels": ["REQ.MULTIPLE_REQUIREMENTS"], "note": "保存要求とログ保管要求"}
+{"id": "F-121", "text": "製品の検査結果を記録し、不良品を自動で隔離ラインへ振り分ける。", "labels": ["REQ.MULTIPLE_REQUIREMENTS"], "note": "記録と振分"}
+{"id": "F-122", "text": "画面は日本語と英語に対応し、スマートフォンでも表示できる。", "labels": ["REQ.MULTIPLE_REQUIREMENTS"], "note": "言語とデバイス"}
+{"id": "F-123", "text": "取引明細を取り込み、仕訳を自動生成するとともに、不整合を一覧表示する。", "labels": ["REQ.MULTIPLE_REQUIREMENTS"], "note": "3動作"}
+{"id": "F-124", "text": "住民は転入届をオンラインで提出でき、窓口予約も行える。", "labels": ["REQ.MULTIPLE_REQUIREMENTS"], "note": "2機能"}
+{"id": "F-125", "text": "管理者は商品を登録し、セール価格を設定し、公開日を指定できる。", "labels": ["REQ.MULTIPLE_REQUIREMENTS"], "note": "3機能"}
+{"id": "F-126", "text": "システムは夜間にデータをバックアップし、失敗時には管理者へメールを送る。", "labels": ["REQ.MULTIPLE_REQUIREMENTS"], "note": "バックアップと失敗通知"}
+{"id": "F-127", "text": "受講者が修了したら修了証を発行し、人事システムに結果を連携する。", "labels": ["REQ.MULTIPLE_REQUIREMENTS"], "note": "発行と連携"}
+{"id": "F-128", "text": "倉庫担当者は入庫予定を確認でき、システムはロケーションを自動提案する。", "labels": ["REQ.MULTIPLE_REQUIREMENTS"], "note": "2主体"}
+{"id": "F-129", "text": "医師は処方を入力でき、薬剤師は調剤結果を登録できる。", "labels": ["REQ.MULTIPLE_REQUIREMENTS"], "note": "2主体"}
+{"id": "F-130", "text": "ユーザー登録時に確認メールを送信し、24時間以内に確認されない場合は仮登録を削除する。", "labels": ["REQ.MULTIPLE_REQUIREMENTS"], "note": "送信と削除"}
+{"id": "F-131", "text": "アプリは位置情報を取得して配送員に表示し、顧客にも到着予定を通知する。", "labels": ["REQ.MULTIPLE_REQUIREMENTS"], "note": "表示と通知"}
+{"id": "F-132", "text": "融資申請を審査し、承認結果をメールで通知し、契約書を電子署名で締結する。", "labels": ["REQ.MULTIPLE_REQUIREMENTS"], "note": "3動作"}
+{"id": "F-133", "text": "データを検証したうえで取り込み、取込結果をメールで通知する。", "labels": ["REQ.MULTIPLE_REQUIREMENTS"], "note": "取込と通知の別要求"}
+{"id": "F-134", "text": "教員は成績を入力し、保護者は閲覧する。", "labels": ["REQ.MULTIPLE_REQUIREMENTS"], "note": "2主体"}
+{"id": "F-135", "text": "ログを記録するとともに、管理者へ通知する。", "labels": ["REQ.MULTIPLE_REQUIREMENTS"], "note": "主語省略・2動作"}
+{"id": "F-136", "text": "必要に応じてログを出力し、管理者へ通知する。", "labels": ["AMBIGUOUS", "REQ.MULTIPLE_REQUIREMENTS"], "note": "「必要に応じて」+2動作"}
+{"id": "F-137", "text": "保管期間は未定とし、メール、チャット等の履歴を保存する。", "labels": ["REQ.INCOMPLETE", "REQ.OPEN_ENDED", "REQ.MULTIPLE_REQUIREMENTS"], "note": "未定+「等」+2要求"}
+{"id": "F-138", "text": "システムは検索結果の氏名、住所、電話番号を一覧表示する。", "labels": [], "note": "[紛X] 1要求の複数対象"}
+{"id": "F-139", "text": "CSVファイルを読み込んで、取込結果を画面に表示する。", "labels": [], "note": "[紛X] 手段+1要求"}
+{"id": "F-140", "text": "管理者が承認することにより、申請のステータスを「承認済み」に更新する。", "labels": [], "note": "[紛X] 手段+1要求"}
+{"id": "F-141", "text": "利用者は、確認ダイアログで同意したうえで、アカウントを削除できる。", "labels": [], "note": "[紛X] 前提条件+1要求"}
+{"id": "F-142", "text": "在庫が不足した場合は、担当者にメールで通知する。", "labels": [], "note": "[紛X] 条件+1要求"}
+{"id": "F-143", "text": "システムは売上を集計し、グラフで表示する。", "labels": [], "note": "[紛X] 1つの集計表示"}
+{"id": "F-144", "text": "システムはAPIを経由して、気象データを取得する。", "labels": [], "note": "[紛X] 手段+1要求"}
+{"id": "F-145", "text": "操作者はユーザーIDとパスワードを入力して、ログインできる。", "labels": [], "note": "[紛X] 入力は手段"}
+{"id": "F-146", "text": "配送日時を指定して注文を確定できる。", "labels": [], "note": "[紛X] 入力+1要求"}
+{"id": "F-147", "text": "システムは受信したメールの添付ファイルをウイルススキャンしたうえで保存する。", "labels": [], "note": "[紛X] 前処理+保存"}
+{"id": "F-148", "text": "利用者はキーワードまたはカテゴリで商品を検索できる。", "labels": [], "note": "[紛X] 選択肢のある1要求"}
+{"id": "F-149", "text": "システムは読み取ったバーコードを商品マスタと照合して、商品名を表示する。", "labels": [], "note": "[紛X] 手段+1要求"}
+{"id": "F-150", "text": "検査合格品のみを出荷ラインへ搬送する。", "labels": [], "note": "[紛X] 1要求"}
+{"id": "F-151", "text": "システムはデータを暗号化して、データベースに保存する。", "labels": [], "note": "[紛X] 暗号化は保存の手段"}
+{"id": "F-152", "text": "システムは、ログインに5回失敗したアカウントをロックする。", "labels": [], "note": "[紛X] 1要求"}
+{"id": "F-153", "text": "システムは入力内容を検証して、エラー項目を赤字で表示する。", "labels": [], "note": "[紛X] 検証結果の表示で1機能"}
+{"id": "F-154", "text": "上長が承認したうえで、経理が支払処理を実行する。", "labels": [], "note": "[紛X] 承認は支払の前提条件"}
+{"id": "F-155", "text": "システムはデータを取得して一覧に表示する。", "labels": [], "note": "[紛X] 手段+1要求"}
+{"id": "F-156", "text": "システムは適切にエラーを処理する。", "labels": ["AMBIGUOUS"], "note": "「適切」"}
+{"id": "F-157", "text": "必要に応じて管理者へ通知する。", "labels": ["AMBIGUOUS"], "note": "「必要に応じて」"}
+{"id": "F-158", "text": "操作は誰でも簡単に行えること。", "labels": ["AMBIGUOUS"], "note": "「簡単」"}
+{"id": "F-159", "text": "画面は使いやすいデザインとする。", "labels": ["AMBIGUOUS"], "note": "「使いやすい」"}
+{"id": "F-160", "text": "データは適宜バックアップする。", "labels": ["AMBIGUOUS"], "note": "「適宜」"}
+{"id": "F-161", "text": "柔軟にレポートの形式を変更できる。", "labels": ["AMBIGUOUS"], "note": "「柔軟」"}
+{"id": "F-162", "text": "重要なお知らせは目立つように表示する。", "labels": ["AMBIGUOUS"], "note": "「目立つ」"}
+{"id": "F-163", "text": "ユーザーの状況に応じた最適な商品を推薦する。", "labels": ["AMBIGUOUS"], "note": "「最適」"}
+{"id": "F-164", "text": "不要なデータは削除する。", "labels": ["AMBIGUOUS"], "note": "「不要」の基準なし"}
+{"id": "F-165", "text": "問題が生じた場合は、適切な担当者に連絡する。", "labels": ["AMBIGUOUS"], "note": "「適切な」"}
+{"id": "F-166", "text": "システムは可能な限り自動化する。", "labels": ["AMBIGUOUS"], "note": "「可能な限り」"}
+{"id": "F-167", "text": "必要な権限を持つユーザーのみ編集できる。", "labels": ["AMBIGUOUS"], "note": "「必要な権限」"}
+{"id": "F-168", "text": "関連する書類を添付すること。", "labels": ["AMBIGUOUS"], "note": "「関連する」"}
+{"id": "F-169", "text": "異常値が検出された場合は、しかるべき対応を行う。", "labels": ["AMBIGUOUS"], "note": "「しかるべき」"}
+{"id": "F-170", "text": "ユーザーフレンドリーなインターフェースを提供する。", "labels": ["AMBIGUOUS"], "note": "「ユーザーフレンドリー」"}
+{"id": "F-171", "text": "通常の運用では、特別なトレーニングは不要とする。", "labels": ["AMBIGUOUS"], "note": "「通常」「特別」"}
+{"id": "F-172", "text": "既存のシステムと円滑に連携する。", "labels": ["AMBIGUOUS"], "note": "「円滑」"}
+{"id": "F-173", "text": "一般的なブラウザで動作すること。", "labels": ["AMBIGUOUS"], "note": "「一般的」"}
+{"id": "F-174", "text": "古いデータは整理する。", "labels": ["AMBIGUOUS"], "note": "「古い」「整理」"}
+{"id": "F-175", "text": "担当者は妥当な理由がある場合に申請を差し戻せる。", "labels": ["AMBIGUOUS"], "note": "「妥当」"}
+{"id": "F-176", "text": "他の機関と必要な情報を共有する。", "labels": ["AMBIGUOUS"], "note": "「必要な情報」"}
+{"id": "F-177", "text": "セキュリティを十分に考慮した設計とする。", "labels": ["AMBIGUOUS"], "note": "「十分に考慮」"}
+{"id": "F-178", "text": "効率的に在庫を管理する。", "labels": ["AMBIGUOUS"], "note": "「効率的」"}
+{"id": "F-179", "text": "利用者に配慮した文言でメッセージを表示する。", "labels": ["AMBIGUOUS"], "note": "「配慮」"}
+{"id": "F-180", "text": "システムは高度な分析機能を備える。", "labels": ["AMBIGUOUS"], "note": "「高度」"}
+{"id": "F-181", "text": "管理者ロールを持つユーザーのみユーザー一覧を編集できる。", "labels": [], "note": "[紛A] ロールで定義済み"}
+{"id": "F-182", "text": "エラー時は、画面上部に赤色のメッセージを表示する。", "labels": [], "note": "[紛A] 具体的"}
+{"id": "F-183", "text": "システムは常に最新のデータを表示する。", "labels": ["REQ.UNIVERSAL"], "note": "「常に」"}
+{"id": "F-184", "text": "すべてのユーザーはどの画面にもアクセスできる。", "labels": ["REQ.UNIVERSAL"], "note": "「すべて」"}
+{"id": "F-185", "text": "全てのエラーをログに記録する。", "labels": ["REQ.UNIVERSAL"], "note": "「全て」"}
+{"id": "F-186", "text": "システムは必ず正確な結果を返す。", "labels": ["REQ.UNIVERSAL"], "note": "「必ず」"}
+{"id": "F-187", "text": "いかなる場合も個人情報を外部に送信しない。", "labels": ["REQ.UNIVERSAL"], "note": "「いかなる場合も」"}
+{"id": "F-188", "text": "管理者は全ての操作履歴を削除できる。", "labels": ["REQ.UNIVERSAL"], "note": "「全ての」"}
+{"id": "F-189", "text": "システムは24時間いつでも利用できる。", "labels": ["REQ.UNIVERSAL"], "note": "「いつでも」"}
+{"id": "F-190", "text": "データは一切消失しないこと。", "labels": ["REQ.UNIVERSAL"], "note": "「一切」"}
+{"id": "F-191", "text": "すべての入力項目に対して妥当性検証を行う。", "labels": ["REQ.UNIVERSAL"], "note": "「すべての」"}
+{"id": "F-192", "text": "患者のカルテは決して改ざんされてはならない。", "labels": ["REQ.UNIVERSAL"], "note": "「決して」"}
+{"id": "F-193", "text": "全職員が全患者の記録を閲覧できる。", "labels": ["REQ.UNIVERSAL"], "note": "「全」"}
+{"id": "F-194", "text": "絶対に在庫数がマイナスにならないこと。", "labels": ["REQ.UNIVERSAL"], "note": "「絶対に」"}
+{"id": "F-195", "text": "システムは常時監視を行う。", "labels": ["REQ.UNIVERSAL"], "note": "「常時」"}
+{"id": "F-196", "text": "配送中の荷物は全て追跡できる。", "labels": ["REQ.UNIVERSAL"], "note": "「全て」"}
+{"id": "F-197", "text": "システムはあらゆる攻撃を防御する。", "labels": ["REQ.UNIVERSAL"], "note": "「あらゆる」"}
+{"id": "F-198", "text": "管理者を除くすべてのユーザーは他人のデータを編集できない。", "labels": ["REQ.UNIVERSAL"], "note": "「すべて」(除外ありでも絶対表現)"}
+{"id": "F-199", "text": "氏名欄には全角文字で入力する。", "labels": [], "note": "[紛U] 「全角」は語の一部"}
+{"id": "F-200", "text": "常用漢字表に含まれる漢字を使用する。", "labels": [], "note": "[紛U] 「常用」は語の一部"}
+{"id": "F-201", "text": "毎日午前0時に集計処理を実行する。", "labels": [], "note": "[紛U] 頻度が確定"}
+{"id": "F-202", "text": "常務取締役の承認を必要とする。", "labels": [], "note": "[紛U] 「常務」は役職名"}
+{"id": "F-203", "text": "画面をフルスクリーン表示に切り替えられる。", "labels": [], "note": "[紛U] 絶対表現なし"}
+{"id": "F-204", "text": "通知はメールおよび/またはSMSで送信する。", "labels": ["REQ.AND_OR"], "note": "「および/または」"}
+{"id": "F-205", "text": "利用者はPDF and/or CSVで出力できる。", "labels": ["REQ.AND_OR"], "note": "「and/or」"}
+{"id": "F-206", "text": "管理者および/または担当者が承認する。", "labels": ["REQ.AND_OR"], "note": "「および/または」"}
+{"id": "F-207", "text": "注文者と/または受取人に確認メールを送信する。", "labels": ["REQ.AND_OR"], "note": "「と/または」"}
+{"id": "F-208", "text": "氏名/住所を必須入力とする。", "labels": ["REQ.AND_OR"], "note": "スラッシュで及び/又はが不明"}
+{"id": "F-209", "text": "保護者／教員に通知する。", "labels": ["REQ.AND_OR"], "note": "スラッシュ"}
+{"id": "F-210", "text": "承認者及び/又は代理承認者が決裁できる。", "labels": ["REQ.AND_OR"], "note": "「及び/又は」"}
+{"id": "F-211", "text": "システムは入荷および/または出荷時に在庫を更新する。", "labels": ["REQ.AND_OR"], "note": "「および/または」"}
+{"id": "F-212", "text": "医師および/または看護師が記録を編集できる。", "labels": ["REQ.AND_OR"], "note": "「および/または」"}
+{"id": "F-213", "text": "電話and/またはメールで問い合わせを受け付ける。", "labels": ["REQ.AND_OR"], "note": "and/またはの混在"}
+{"id": "F-214", "text": "利用者はPDFまたはCSVのいずれか一方を選択して出力できる。", "labels": [], "note": "[紛R] 排他が明示"}
+{"id": "F-215", "text": "パスワードが8文字以上かつ英数字を含む場合のみ登録を許可する。", "labels": [], "note": "[紛R] 「かつ」は曖昧でない"}
+{"id": "F-216", "text": "管理者または担当者が承認できる。", "labels": [], "note": "[紛R] 単純な「または」は陰性"}
+{"id": "F-217", "text": "会員かつ未成年の場合は保護者の同意を必須とする。", "labels": [], "note": "[紛R] AかつB"}
+{"id": "F-218", "text": "在庫が0または未登録の場合は「在庫なし」と表示する。", "labels": [], "note": "[紛R] AまたはB"}
+{"id": "F-219", "text": "注文者および受取人の氏名を表示する。", "labels": [], "note": "[紛R] 「および」のみ"}
+{"id": "F-220", "text": "年齢が18歳以上かつ65歳未満であること。", "labels": [], "note": "[紛R] 範囲条件"}
+{"id": "F-221", "text": "メールまたは電話で連絡する。", "labels": [], "note": "[紛R] 単純な「または」"}
+{"id": "F-222", "text": "応答時間はTBDとする。", "labels": ["REQ.INCOMPLETE"], "note": "TBD"}
+{"id": "F-223", "text": "保管期間は未定である。", "labels": ["REQ.INCOMPLETE"], "note": "未定"}
+{"id": "F-224", "text": "パスワードの有効期限はXXX日とする。", "labels": ["REQ.INCOMPLETE"], "note": "XXX"}
+{"id": "F-225", "text": "承認フローの詳細は別途決定する。", "labels": ["REQ.INCOMPLETE"], "note": "未決定"}
+{"id": "F-226", "text": "対応ブラウザは要検討。", "labels": ["REQ.INCOMPLETE"], "note": "要検討"}
+{"id": "F-227", "text": "料金体系は今後確定する。", "labels": ["REQ.INCOMPLETE"], "note": "未確定"}
+{"id": "F-228", "text": "レポートの出力形式は○○とする。", "labels": ["REQ.INCOMPLETE"], "note": "プレースホルダ"}
+{"id": "F-229", "text": "対象拠点は未決定。", "labels": ["REQ.INCOMPLETE"], "note": "未決定"}
+{"id": "F-230", "text": "エラーコード一覧はTBD。", "labels": ["REQ.INCOMPLETE"], "note": "TBD"}
+{"id": "F-231", "text": "認証方式は後日協議のうえ決定する。", "labels": ["REQ.INCOMPLETE"], "note": "未決定"}
+{"id": "F-232", "text": "契約期間は□□ヶ月とする。", "labels": ["REQ.INCOMPLETE"], "note": "プレースホルダ"}
+{"id": "F-233", "text": "バックアップ頻度は別途定める。", "labels": ["REQ.INCOMPLETE"], "note": "別途定める=未決定"}
+{"id": "F-234", "text": "ステータスが「未定」の案件は集計から除外する。", "labels": [], "note": "[紛I] 状態値としての「未定」"}
+{"id": "F-235", "text": "未定義のコードが入力された場合はエラーとする。", "labels": [], "note": "[紛I] 「未定義」は入力状態"}
+{"id": "F-236", "text": "備考欄には「TBD」という文字列を入力できる。", "labels": [], "note": "[紛I] 文字列としてのTBD"}
+{"id": "F-237", "text": "詳細設計は別紙2に定める。", "labels": [], "note": "[紛I] 参照先あり"}
+{"id": "F-238", "text": "配送日が未定の場合、注文ステータスを「日程調整中」とする。", "labels": [], "note": "[紛I] 状態としての未定"}
+{"id": "F-239", "text": "等々力駅付近の店舗を検索できる。", "labels": [], "note": "地名「等々力」"}
+{"id": "F-240", "text": "住所欄に「川崎市中原区等々力」を登録できる。", "labels": [], "note": "地名"}
+{"id": "F-241", "text": "退会済みの会員にはメールを送信しない。", "labels": [], "note": "否定・問題なし"}
+{"id": "F-242", "text": "未成年者を除く会員に限り購入できる。", "labels": [], "note": "除外・問題なし"}
+{"id": "F-243", "text": "決済情報をログに記録しない。", "labels": [], "note": "否定・問題なし"}
+{"id": "F-244", "text": "ゲストユーザーを除き、ログインを必須とする。", "labels": [], "note": "除外・問題なし"}
+{"id": "F-245", "text": "パスワードを平文で保存しない。", "labels": [], "note": "否定・問題なし"}
+{"id": "F-246", "text": "土日祝日を除く営業日に配送する。", "labels": [], "note": "除外・問題なし"}
+{"id": "F-247", "text": "キャンセル済みの注文は集計に含めない。", "labels": [], "note": "否定・問題なし"}
+{"id": "F-248", "text": "個人情報を第三者に提供しない。", "labels": [], "note": "否定・問題なし"}
+{"id": "F-249", "text": "本システムは医療行為の判断を行わない。", "labels": [], "note": "否定・問題なし"}
+{"id": "F-250", "text": "日次で売上を集計する。", "labels": [], "note": "主語省略・問題なし"}
+{"id": "F-251", "text": "異常を検知したら通知する。", "labels": [], "note": "主語省略・問題なし"}
+{"id": "F-252", "text": "ログを出力する。", "labels": [], "note": "主語省略・問題なし"}
+{"id": "F-253", "text": "氏名を必須入力とする。", "labels": [], "note": "箇条書き由来・問題なし"}
+{"id": "F-254", "text": "検索結果をCSVで出力する。", "labels": [], "note": "箇条書き由来・問題なし"}
+{"id": "F-255", "text": "在庫数を表示する。", "labels": [], "note": "箇条書き由来・問題なし"}
+{"id": "F-256", "text": "ログイン履歴を保存する。", "labels": [], "note": "箇条書き由来・問題なし"}
+{"id": "F-257", "text": "会員かつ購入履歴が1件以上ある場合に、クーポンを表示する。", "labels": [], "note": "複合条件・問題なし"}
+{"id": "F-258", "text": "入院中または外来中の患者に限り、検査オーダーを入力できる。", "labels": [], "note": "複合条件・問題なし"}
+{"id": "F-259", "text": "1回の注文は1個以上99個以下とする。", "labels": [], "note": "範囲・問題なし"}
+{"id": "F-260", "text": "ファイルサイズはMB単位で表示する。", "labels": [], "note": "単位表記の指定で問題なし"}
+{"id": "F-261", "text": "医師は診察記録を15分以内に確定できる。", "labels": [], "note": "数値あり"}
+{"id": "F-262", "text": "薬剤師は処方箋の内容を確認できる。", "labels": [], "note": "問題なし"}
+{"id": "F-263", "text": "児童の出席状況を日ごとに記録する。", "labels": [], "note": "問題なし"}
+{"id": "F-264", "text": "教員は成績を修正できる。", "labels": [], "note": "問題なし"}
+{"id": "F-265", "text": "住民は住民票の写しの交付を窓口で申請できる。", "labels": [], "note": "問題なし"}
+{"id": "F-266", "text": "製造番号が重複する登録はエラーとする。", "labels": [], "note": "問題なし"}
+{"id": "F-267", "text": "決済が失敗した場合、エラーコードを画面に表示する。", "labels": [], "note": "問題なし"}
+{"id": "F-268", "text": "ユーザーは自分のプロフィール画像を変更できる。", "labels": [], "note": "問題なし"}
+{"id": "F-269", "text": "出荷指示は倉庫管理システムへAPIで送信する。", "labels": [], "note": "問題なし"}
+{"id": "F-270", "text": "ローンの申込者は年収を入力する。", "labels": [], "note": "問題なし"}
+{"id": "F-271", "text": "残高照会は取引口座ごとに行える。", "labels": [], "note": "問題なし"}
+{"id": "F-272", "text": "管理者は監査ログを閲覧できる。", "labels": [], "note": "問題なし"}
+{"id": "F-273", "text": "ジョブが失敗した場合、3回まで再実行する。", "labels": [], "note": "数値あり"}
+{"id": "F-274", "text": "保育園の入園申請は保護者のみが行える。", "labels": [], "note": "問題なし"}
+{"id": "F-275", "text": "受講生は動画を2倍速まで再生できる。", "labels": [], "note": "数値あり"}
+{"id": "F-276", "text": "納品書はA4サイズで印刷する。", "labels": [], "note": "問題なし"}
+{"id": "F-277", "text": "入力エラーのある項目の背景色を赤にする。", "labels": [], "note": "問題なし"}
+{"id": "F-278", "text": "セッションIDはログインごとに再発行する。", "labels": [], "note": "問題なし"}
+{"id": "F-279", "text": "通知メールの件名には案件番号を付ける。", "labels": [], "note": "問題なし"}
+{"id": "F-280", "text": "返品は商品到着から14日以内に受け付ける。", "labels": [], "note": "数値あり"}
+{"id": "F-281", "text": "工程ごとの不良数を記録する。", "labels": [], "note": "問題なし"}

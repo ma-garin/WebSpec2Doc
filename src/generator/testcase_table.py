@@ -94,6 +94,7 @@ def build_testcase_table(report: Mapping[str, Any], design: TestDesign) -> tuple
             rows.extend(_dt_rows(ctx, sd))
             rows.extend(_pairwise_rows(ctx, sd))
             rows.extend(_state_rows(ctx, sd, screens))
+        rows.extend(_evidence_viewpoint_rows(ctx, has_required_rows=any(r.case_id.startswith(f"TC-{page_id}-DT") for r in rows)))
         rows.extend(_transition_rows(ctx, screens))
     return tuple(rows)
 
@@ -840,3 +841,54 @@ def _transition_rows(
             )
         )
     return rows
+
+
+# =========================================================================
+# 画面の Evidence から根拠を取れる観点（要目視の観点行）
+# 入力項目の制約・送信の有無・操作の名前・見出しだけを見る。根拠の無い観点は作らない。
+# =========================================================================
+_TYPED_INPUTS = {"email", "tel", "url", "date", "datetime-local", "time", "month", "week", "number"}
+_SAVE_WORDS = ("保存", "登録", "更新", "変更", "編集")
+_SUBMIT_WORDS = _SAVE_WORDS + ("送信", "申請", "確定", "注文", "購入", "予約", "申し込", "削除")
+_PERMISSION_WORDS = ("管理者", "管理画面", "権限", "ロール", "承認者")
+
+
+def _evidence_viewpoint_rows(ctx: _ScreenContext, *, has_required_rows: bool) -> list[TestCaseRow]:
+    fields = ctx.fields
+    labels = lambda fs: "・".join(_field_label(f, _field_key(f)) for f in fs[:3])  # noqa: E731
+    required = [f for f in fields if f.get("required")]
+    typed = [f for f in fields if str(f.get("field_type") or "") in _TYPED_INPUTS or f.get("pattern")]
+    constrained = required or typed or [
+        f for f in fields if any(f.get(k) not in (None, "") for k in ("maxlength", "minlength", "min_value", "max_value"))]
+    words = " ".join([*ctx.buttons, ctx.title, *[str(h) for h in (ctx.raw.get("headings") or [])]])
+    submits = [b for b in ctx.buttons if any(w in b for w in _SUBMIT_WORDS)]
+    posts = [f for f in ctx.forms if str(f.get("method") or "").lower() == "post" or str(f.get("action") or "").startswith("/api")]
+    rows: list[tuple[str, str, str, tuple[str, ...]]] = []
+    if required and not has_required_rows:
+        rows.append(("REQ", f"必須項目（{labels(required)}）が空のまま確定すると受け付けられない", "必須チェック",
+                     ("空の必須項目があると先へ進めず、どの項目が必要かが画面に示される",)))
+    if typed:
+        rows.append(("FMT", f"{labels(typed)}: 形式に合わない値は受け付けられない", "形式チェック",
+                     ("形式に合わない値を入れると、正しい形式の例が示されて先へ進めない",)))
+    if constrained and (submits or ctx.forms):
+        rows.append(("ERR", "入力に誤りがあるとエラーメッセージが表示され、直すと先へ進める", "エラー表示と回復",
+                     ("誤りのある項目の近くにエラーメッセージが表示される", "直したあとは同じ操作で先へ進める")))
+    if submits or posts:
+        rows.append(("API", f"「{(submits or [ctx.submit_label])[0]}」の内容がサーバ（API）に届き、応答が画面に反映される",
+                     "API 連携", ("サーバの応答（成功・失敗）が画面に反映される", "通信に失敗したときは失敗が分かる表示になる")))
+    if any(w in " ".join(ctx.buttons) for w in _SAVE_WORDS):
+        rows.append(("PST", "保存した内容が、再読み込みしても保持されて再表示される", "保存と再表示",
+                     ("再読み込みや再訪問のあとも、保存した値が表示される",)))
+    if any(w in words for w in _PERMISSION_WORDS):
+        rows.append(("PRM", "権限のない利用者では、この画面や操作が使えない", "権限",
+                     ("権限のない利用者には表示されないか、操作できない理由が示される",)))
+    out: list[TestCaseRow] = []
+    for code, name, viewpoint, expected in rows:
+        texts, actions = _split_steps([ctx.open_step()])
+        out.append(TestCaseRow(
+            case_id=f"TC-{ctx.page_id}-{code}-001", name=name, screen=ctx.label, function=ctx.function,
+            viewpoint=f"{viewpoint}（Evidence から作った観点）", preconditions=ctx.preconditions(),
+            steps=texts, expected=expected, automation=AUTOMATION_MANUAL,
+            automation_reason="画面の根拠から作った観点。手順と期待値は人が具体化する",
+            trace_id=ctx.page_id, actions=actions))
+    return out

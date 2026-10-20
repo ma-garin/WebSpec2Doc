@@ -1,0 +1,63 @@
+{
+ "n_pages": 18,
+ "all": {
+  "precision": 0.975,
+  "recall": 0.903,
+  "f1": 0.937,
+  "tp": 463,
+  "fp": 12,
+  "fn": 50
+ },
+ "by_kind": {
+  "button": {
+   "precision": 1.0,
+   "recall": 0.821,
+   "f1": 0.901,
+   "tp": 32,
+   "fp": 0,
+   "fn": 7
+  },
+  "field": {
+   "precision": 0.964,
+   "recall": 0.903,
+   "f1": 0.933,
+   "tp": 318,
+   "fp": 12,
+   "fn": 34
+  },
+  "heading": {
+   "precision": 1.0,
+   "recall": 0.98,
+   "f1": 0.99,
+   "tp": 48,
+   "fp": 0,
+   "fn": 1
+  },
+  "link": {
+   "precision": 1.0,
+   "recall": 0.873,
+   "f1": 0.932,
+   "tp": 48,
+   "fp": 0,
+   "fn": 7
+  },
+  "title": {
+   "precision": 1.0,
+   "recall": 0.944,
+   "f1": 0.971,
+   "tp": 17,
+   "fp": 0,
+   "fn": 1
+  }
+ },
+ "hidden_or_forbidden_extracted": [
+  "h01.html: 法人番号",
+  "h12.html: 郵送先住所を入力"
+ ],
+ "not_extracted_categories": {
+  "tables": 8,
+  "error_messages": 52,
+  "api_endpoints": 17,
+  "missing_page": 1
+ }
+}

@@ -1,0 +1,13 @@
+<!doctype html>
+<html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>商品検索 | あおぞらポータル</title><link rel="stylesheet" href="css/h.css"></head>
+<body>
+<header class="hdr"><a href="index.html">メニュー</a></header>
+<main>
+<h1>商品検索</h1>
+<section class="spec"><h2>画面の説明</h2><ul><li>キーワードは 50 文字まで。価格は 0 円から 1,000,000 円まで。</li><li>下限が上限より大きいときは「価格の範囲が正しくありません」と表示する。</li><li>検索は /api/products に GET で問い合わせ、結果を表に表示する。</li></ul></section>
+<section><h2>画面</h2>
+<form><label for="k">キーワード</label><input id="k" name="keyword" maxlength="50"><label for="a">下限</label><input type="number" id="a" name="min" min="0" max="1000000"><label for="b">上限</label><input type="number" id="b" name="max" min="0" max="1000000"><button type="button" id="go">検索</button></form><p id="msg"></p><table><thead><tr><th>商品名</th><th>価格</th></tr></thead><tbody><tr><td>ケーブル</td><td>980円</td></tr></tbody></table>
+</section>
+<script>(function(){var b=document.getElementById("go");if(!b){return;}b.addEventListener("click",function(){fetch("/api/products",{method:"GET"}).then(function(r){if(!r.ok){throw new Error("x");}return r.json();}).catch(function(){document.getElementById("msg").textContent="検索できませんでした";});});})();</script>
+</main>
+</body></html>

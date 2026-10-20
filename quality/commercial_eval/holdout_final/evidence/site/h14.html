@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>プラン変更 | あおぞらポータル</title><link rel="stylesheet" href="css/h.css"></head>
+<body>
+<header class="hdr"><a href="index.html">メニュー</a></header>
+<main>
+<h1>プラン変更</h1>
+<h2>プランを選択</h2>
+<h2>プランを選択</h2>
+<form id="pl" action="h14.html" method="post">
+<input type="hidden" name="current_plan" value="standard">
+<div id="pl-err"></div>
+<fieldset><legend>プラン</legend><div class="row"><input type="radio" id="plan-1" name="plan" value="free" required><label for="plan-1">フリー (0円)</label></div><div class="row"><input type="radio" id="plan-2" name="plan" value="std" required><label for="plan-2">スタンダード (3,000円)</label></div><div class="row"><input type="radio" id="plan-3" name="plan" value="pre" required><label for="plan-3">プレミアム (9,000円)</label></div></fieldset>
+<div class="row"><label for="f4">請求サイクル</label><select id="f4" name="cycle"><option value="m">月払い</option><option value="y">年払い</option></select></div>
+<div class="row"><input type="text" id="f5" name="coupon" maxlength="8" pattern="^[A-Z0-9]{8}$" placeholder="クーポンコード"></div>
+<div class="row"><input type="checkbox" id="f6" name="agree" required><label for="f6">データ保持の注意事項を確認した</label></div>
+<div id="calc"></div>
+<div style="display:none"><h2>解約手続き</h2><button type="button">解約する</button></div>
+<input type="submit" value="プランを変更する">
+</form>
+<a href="h15.html">支払い方法を登録する</a>
+<script>(function(){var f=document.getElementById("pl");var box=document.getElementById("pl-err");f.addEventListener("submit",function(ev){ev.preventDefault();var errs=[];if(!f.elements["plan"].value){errs.push("プランを選択してください");}if(!f.elements["agree"].checked){errs.push("確認事項に同意してください");}if(f.elements["coupon"].value!==""&&!/^[A-Z0-9]{8}$/.test(f.elements["coupon"].value)){errs.push("クーポンコードの形式が正しくありません");}box.innerHTML="";errs.forEach(function(m){var q=document.createElement("p");q.className="error";q.textContent=m;box.appendChild(q);});if(!errs.length){fetch("/api/subscription",{method:"PUT",body:new FormData(f)}).then(function(r){if(!r.ok){throw new Error("x");}return r.json();}).catch(function(){var q=document.createElement("p");q.className="error";q.textContent="プランの変更に失敗しました";box.appendChild(q);});}});})();</script>
+<script>(function(){var c=document.getElementById("calc");var h=document.createElement("h3");h.textContent="変更後の月額の目安";c.appendChild(h);var b=document.createElement("button");b.type="button";b.textContent="料金を再計算";c.appendChild(b);})();</script>
+</main>
+</body></html>

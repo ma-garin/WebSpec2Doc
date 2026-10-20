@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>支払い方法の登録 | あおぞらポータル</title><link rel="stylesheet" href="css/h.css"></head>
+<body>
+<header class="hdr"><a href="index.html">メニュー</a></header>
+<main>
+<h1>支払い方法の登録</h1>
+<form id="pm" action="h15.html" method="post">
+<input type="hidden" name="pay_token" value="pt-55">
+<div id="pm-err"></div>
+<div class="row"><label for="f1">カード番号</label><input type="text" id="f1" name="card_no" required maxlength="16" minlength="16" pattern="^[0-9]{16}$"></div>
+<div class="row"><label for="f2">カード名義</label><input type="text" id="f2" name="card_name" required maxlength="40"></div>
+<div class="row"><label for="f3">有効期限</label><input type="month" id="f3" name="expiry" required min="2026-10" max="2036-12"></div>
+<div class="row"><label for="f4">セキュリティコード</label><input type="password" id="f4" name="cvc" required maxlength="4" minlength="3" pattern="^[0-9]{3,4}$"></div>
+<fieldset><legend>請求書の送付先</legend><div class="row"><input type="radio" id="bill_to-1" name="bill_to" value="reg"><label for="bill_to-1">登録メール</label></div><div class="row"><input type="radio" id="bill_to-2" name="bill_to" value="alt"><label for="bill_to-2">別のメール</label></div></fieldset>
+<div class="row"><label for="f7">別の送付先メール</label><input type="email" id="f7" name="alt_mail" maxlength="80" disabled></div>
+<div class="row"><input type="checkbox" id="f8" name="default"><label for="f8">この支払い方法を既定にする</label></div>
+<div hidden><p>テスト決済モード</p></div>
+<input type="submit" value="登録する">
+</form>
+<p><a href="https://example.com/security">セキュリティについて</a> / <a href="h14.html">プラン変更へ</a></p>
+<script>(function(){var f=document.getElementById("pm");var box=document.getElementById("pm-err");f.addEventListener("submit",function(ev){ev.preventDefault();var errs=[];if(!/^[0-9]{16}$/.test(f.elements["card_no"].value)){errs.push("カード番号は16桁の数字で入力してください");}if(f.elements["card_name"].value===''){errs.push("カード名義を入力してください");}if(!/^[0-9]{3,4}$/.test(f.elements["cvc"].value)){errs.push("セキュリティコードが正しくありません");}box.innerHTML="";errs.forEach(function(m){var q=document.createElement("p");q.className="error";q.textContent=m;box.appendChild(q);});if(!errs.length){fetch("/api/payment-methods",{method:"POST",body:new FormData(f)}).then(function(r){if(!r.ok){throw new Error("x");}return r.json();}).catch(function(){var q=document.createElement("p");q.className="error";q.textContent="カードを登録できませんでした";box.appendChild(q);});}});})();</script>
+</main>
+</body></html>

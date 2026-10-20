@@ -1,32 +1,537 @@
 {
  "mode": "rule",
  "cases": 37,
- "precision": 0.206,
- "recall": 0.73,
- "f1": 0.321,
- "found": 656,
+ "precision": 0.538,
+ "recall": 0.832,
+ "f1": 0.654,
+ "found": 286,
  "expected": 185,
  "per_domain": {
   "cases_hospital": {
    "cases": 14,
    "items": 67,
-   "recall": 0.741,
-   "precision": 0.12,
-   "candidate_rate": 0.383
+   "recall": 0.931,
+   "precision": 0.47,
+   "candidate_rate": 0.123,
+   "per_case": [
+    {
+     "title": "予約受付開始の前倒し",
+     "recall": 1.0,
+     "precision": 0.8,
+     "found": 5,
+     "missed": [],
+     "extra": [
+      "TC-205"
+     ]
+    },
+    {
+     "title": "変更取消の締切の延長",
+     "recall": 1.0,
+     "precision": 0.333,
+     "found": 12,
+     "missed": [],
+     "extra": [
+      "DSN-203",
+      "DSN-210",
+      "REQ-202",
+      "REQ-203",
+      "REQ-208",
+      "SCR-410",
+      "TC-205",
+      "TC-212"
+     ]
+    },
+    {
+     "title": "予約受付締切の変更",
+     "recall": 1.0,
+     "precision": 0.308,
+     "found": 13,
+     "missed": [],
+     "extra": [
+      "DSN-207",
+      "DSN-210",
+      "REQ-202",
+      "REQ-206",
+      "REQ-208",
+      "SCR-408",
+      "TC-204",
+      "TC-209",
+      "TC-212"
+     ]
+    },
+    {
+     "title": "症状入力欄の追加",
+     "recall": 1.0,
+     "precision": 0.25,
+     "found": 16,
+     "missed": [],
+     "extra": [
+      "DSN-202",
+      "DSN-211",
+      "DSN-212",
+      "DSN-214",
+      "REQ-209",
+      "REQ-213",
+      "SCR-451",
+      "SCR-452",
+      "SCR-454",
+      "SCR-456",
+      "TC-213",
+      "TC-216"
+     ]
+    },
+    {
+     "title": "無断キャンセル停止の厳格化",
+     "recall": 1.0,
+     "precision": 0.8,
+     "found": 5,
+     "missed": [],
+     "extra": [
+      "SCR-455"
+     ]
+    },
+    {
+     "title": "受付職員へのマスタ権限付与",
+     "recall": 1.0,
+     "precision": 0.444,
+     "found": 9,
+     "missed": [],
+     "extra": [
+      "DSN-202",
+      "DSN-204",
+      "DSN-212",
+      "SCR-453",
+      "SCR-454"
+     ]
+    },
+    {
+     "title": "会計連携の一括送信化",
+     "recall": 1.0,
+     "precision": 1.0,
+     "found": 4,
+     "missed": [],
+     "extra": []
+    },
+    {
+     "title": "選定療養費の改定",
+     "recall": 1.0,
+     "precision": 1.0,
+     "found": 4,
+     "missed": [],
+     "extra": []
+    },
+    {
+     "title": "SMS通知の廃止",
+     "recall": 1.0,
+     "precision": 0.6,
+     "found": 5,
+     "missed": [],
+     "extra": [
+      "DSN-204",
+      "SCR-407"
+     ]
+    },
+    {
+     "title": "小児科案内文言の変更",
+     "recall": 1.0,
+     "precision": 0.25,
+     "found": 4,
+     "missed": [],
+     "extra": [
+      "DSN-209",
+      "REQ-211",
+      "TC-211"
+     ]
+    },
+    {
+     "title": "昼休みの時間変更",
+     "recall": 1.0,
+     "precision": 0.333,
+     "found": 9,
+     "missed": [],
+     "extra": [
+      "DSN-212",
+      "DSN-213",
+      "DSN-214",
+      "SCR-402",
+      "SCR-454",
+      "TC-203"
+     ]
+    },
+    {
+     "title": "予約枠の細分化",
+     "recall": 0.6,
+     "precision": 0.667,
+     "found": 9,
+     "missed": [
+      "DSN-212",
+      "REQ-210",
+      "SCR-410",
+      "TC-214"
+     ],
+     "extra": [
+      "DSN-211",
+      "REQ-209",
+      "TC-213"
+     ]
+    },
+    {
+     "title": "小児科の年齢範囲の拡大",
+     "recall": 1.0,
+     "precision": 1.0,
+     "found": 4,
+     "missed": [],
+     "extra": []
+    },
+    {
+     "title": "初診枠の縮小",
+     "recall": 1.0,
+     "precision": 0.312,
+     "found": 16,
+     "missed": [],
+     "extra": [
+      "DSN-202",
+      "DSN-212",
+      "DSN-214",
+      "REQ-201",
+      "REQ-210",
+      "REQ-213",
+      "SCR-410",
+      "SCR-454",
+      "SCR-456",
+      "TC-204",
+      "TC-214"
+     ]
+    }
+   ]
   },
   "cases_kintai": {
    "cases": 13,
    "items": 67,
-   "recall": 0.789,
-   "precision": 0.333,
-   "candidate_rate": 0.207
+   "recall": 0.737,
+   "precision": 0.519,
+   "candidate_rate": 0.124,
+   "per_case": [
+    {
+     "title": "残業の月上限の引き下げ",
+     "recall": 1.0,
+     "precision": 0.556,
+     "found": 9,
+     "missed": [],
+     "extra": [
+      "DSN-103",
+      "SCR-303",
+      "SCR-352",
+      "TC-105"
+     ]
+    },
+    {
+     "title": "長時間残業の割増率の変更",
+     "recall": 1.0,
+     "precision": 0.308,
+     "found": 13,
+     "missed": [],
+     "extra": [
+      "DSN-104",
+      "DSN-107",
+      "REQ-102",
+      "REQ-103",
+      "REQ-106",
+      "SCR-304",
+      "SCR-353",
+      "TC-108",
+      "TC-110"
+     ]
+    },
+    {
+     "title": "休日出勤の割増率の変更",
+     "recall": 1.0,
+     "precision": 0.5,
+     "found": 8,
+     "missed": [],
+     "extra": [
+      "DSN-107",
+      "REQ-105",
+      "TC-108",
+      "TC-109"
+     ]
+    },
+    {
+     "title": "深夜時間帯の開始前倒し",
+     "recall": 0.667,
+     "precision": 0.667,
+     "found": 6,
+     "missed": [
+      "DSN-106",
+      "DSN-114"
+     ],
+     "extra": [
+      "DSN-103",
+      "DSN-112"
+     ]
+    },
+    {
+     "title": "休憩時間の延長",
+     "recall": 1.0,
+     "precision": 0.545,
+     "found": 11,
+     "missed": [],
+     "extra": [
+      "DSN-104",
+      "REQ-103",
+      "SCR-304",
+      "SCR-353",
+      "TC-103"
+     ]
+    },
+    {
+     "title": "一覧への深夜時間列の追加",
+     "recall": 0.5,
+     "precision": 0.167,
+     "found": 6,
+     "missed": [
+      "DSN-105"
+     ],
+     "extra": [
+      "DSN-102",
+      "DSN-103",
+      "REQ-102",
+      "REQ-103",
+      "SCR-352"
+     ]
+    },
+    {
+     "title": "半日有給の廃止",
+     "recall": 1.0,
+     "precision": 0.455,
+     "found": 11,
+     "missed": [],
+     "extra": [
+      "DSN-108",
+      "DSN-111",
+      "DSN-113",
+      "SCR-351",
+      "SCR-354",
+      "TC-113"
+     ]
+    },
+    {
+     "title": "部長による代理承認",
+     "recall": 0.714,
+     "precision": 0.714,
+     "found": 7,
+     "missed": [
+      "REQ-112",
+      "TC-117"
+     ],
+     "extra": [
+      "DSN-109",
+      "SCR-307"
+     ]
+    },
+    {
+     "title": "給与連携方式の変更",
+     "recall": 1.0,
+     "precision": 1.0,
+     "found": 4,
+     "missed": [],
+     "extra": []
+    },
+    {
+     "title": "所定労働時間の短縮",
+     "recall": 0.467,
+     "precision": 0.5,
+     "found": 14,
+     "missed": [
+      "DSN-106",
+      "REQ-105",
+      "SCR-352",
+      "SCR-353",
+      "SCR-357",
+      "TC-105",
+      "TC-106",
+      "TC-108"
+     ],
+     "extra": [
+      "DSN-102",
+      "DSN-109",
+      "REQ-108",
+      "SCR-306",
+      "TC-103",
+      "TC-104",
+      "TC-110"
+     ]
+    },
+    {
+     "title": "警告文言の変更",
+     "recall": 1.0,
+     "precision": 0.143,
+     "found": 7,
+     "missed": [],
+     "extra": [
+      "DSN-104",
+      "REQ-102",
+      "REQ-103",
+      "SCR-353",
+      "TC-106",
+      "TC-109"
+     ]
+    },
+    {
+     "title": "初回有給付与日数の変更",
+     "recall": 1.0,
+     "precision": 0.8,
+     "found": 5,
+     "missed": [],
+     "extra": [
+      "DSN-109"
+     ]
+    },
+    {
+     "title": "締め日の変更",
+     "recall": 0.462,
+     "precision": 0.857,
+     "found": 7,
+     "missed": [
+      "DSN-114",
+      "DSN-115",
+      "REQ-113",
+      "REQ-114",
+      "SCR-356",
+      "TC-118",
+      "TC-119"
+     ],
+     "extra": [
+      "SCR-355"
+     ]
+    }
+   ]
   },
   "cases_library": {
    "cases": 10,
    "items": 71,
-   "recall": 0.627,
-   "precision": 0.271,
-   "candidate_rate": 0.166
+   "recall": 0.863,
+   "precision": 0.698,
+   "candidate_rate": 0.089,
+   "per_case": [
+    {
+     "title": "貸出上限の引き下げ（一般）",
+     "recall": 0.667,
+     "precision": 1.0,
+     "found": 4,
+     "missed": [
+      "SCR-002",
+      "TC-020"
+     ],
+     "extra": []
+    },
+    {
+     "title": "貸出期間の延長",
+     "recall": 1.0,
+     "precision": 0.571,
+     "found": 7,
+     "missed": [],
+     "extra": [
+      "DSN-003",
+      "REQ-003",
+      "TC-005"
+     ]
+    },
+    {
+     "title": "休館日の追加",
+     "recall": 0.75,
+     "precision": 0.75,
+     "found": 8,
+     "missed": [
+      "DSN-003",
+      "DSN-007"
+     ],
+     "extra": [
+      "REQ-002",
+      "SCR-013"
+     ]
+    },
+    {
+     "title": "延長回数の緩和",
+     "recall": 0.8,
+     "precision": 0.571,
+     "found": 7,
+     "missed": [
+      "SCR-102"
+     ],
+     "extra": [
+      "SCR-008",
+      "TC-005",
+      "TC-007"
+     ]
+    },
+    {
+     "title": "予約上限の引き下げ",
+     "recall": 1.0,
+     "precision": 1.0,
+     "found": 4,
+     "missed": [],
+     "extra": []
+    },
+    {
+     "title": "取り置き期間の短縮",
+     "recall": 1.0,
+     "precision": 0.429,
+     "found": 14,
+     "missed": [],
+     "extra": [
+      "DSN-004",
+      "DSN-013",
+      "REQ-002",
+      "REQ-003",
+      "REQ-008",
+      "REQ-010",
+      "TC-009",
+      "TC-010"
+     ]
+    },
+    {
+     "title": "延滞ペナルティの強化",
+     "recall": 1.0,
+     "precision": 0.8,
+     "found": 5,
+     "missed": [],
+     "extra": [
+      "DSN-013"
+     ]
+    },
+    {
+     "title": "停止中の予約を許可",
+     "recall": 0.8,
+     "precision": 0.667,
+     "found": 6,
+     "missed": [
+      "DSN-006"
+     ],
+     "extra": [
+      "SCR-004",
+      "TC-011"
+     ]
+    },
+    {
+     "title": "児童の年齢条件変更",
+     "recall": 0.8,
+     "precision": 1.0,
+     "found": 4,
+     "missed": [
+      "SCR-001"
+     ],
+     "extra": []
+    },
+    {
+     "title": "事前通知日の変更",
+     "recall": 1.0,
+     "precision": 1.0,
+     "found": 4,
+     "missed": [],
+     "extra": []
+    }
+   ]
   }
  }
 }

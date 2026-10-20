@@ -123,7 +123,8 @@ def evaluate(mode: str) -> dict:
             tp, found_n, exp_n = tp + len(hit), found_n + len(found), exp_n + len(expected)
             per_case.append({"title": case["title"], "recall": round(len(hit) / len(expected), 3),
                              "precision": round(len(hit) / len(found), 3) if found else 0.0,
-                             "found": len(found), "missed": sorted(expected - found)})
+                             "found": len(found), "missed": sorted(expected - found),
+                             "extra": sorted(found - expected)})
         conn.close()
     return {"mode": mode, "engine_mode": engine["mode"] if engine else None, "cases": len(per_case), "items": total_items,
             "recall": round(tp / exp_n, 3) if exp_n else 0.0, "precision": round(tp / found_n, 3) if found_n else 0.0,

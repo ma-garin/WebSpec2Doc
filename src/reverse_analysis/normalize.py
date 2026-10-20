@@ -275,7 +275,7 @@ def _mark_shared_endpoints(candidates: list[StaticCandidate]) -> tuple[StaticCan
     marked = [
         replace(c, limitations=(*c.limitations, f"{LIMIT_SHARED_ENDPOINT}:{counts[key]}"))
         if key is not None and counts[key] > 1 else c
-        for c, key in zip(candidates, keys)
+        for c, key in zip(candidates, keys, strict=False)
     ]  # fmt: skip
     return tuple(sorted(marked, key=lambda c: c.id))
 
@@ -571,3 +571,32 @@ def _source_map_diagnostics(findings: tuple[SourceMapFinding, ...]) -> list[Diag
             "source map を JS と同じ版で入力ディレクトリに置き、再実行してください。",
         ))  # fmt: skip
     return diagnostics
+
+
+def expression_path_pattern(expression: str | None) -> str | None:
+    """REA が path を解決できなかった呼び出し先の式から、表示用の path パターンを作る。
+
+    テンプレート文字列（`/a/${x}`）と文字列連結（'/a/' + x + '/b'）を扱い、変数部分を :param にする。
+    先頭が変数（ベース URL の定数など）のときは、その後ろの path だけを使う。path が作れなければ None。
+    推論した値なので、呼び出し側は「候補」としてだけ扱うこと。
+    """
+    text = (expression or "").strip()
+    if not text:
+        return None
+    if text[0] == "`" and text[-1] == "`":
+        body = re.sub(r"\$\{[^}]*\}", ":param", text[1:-1])
+        return body if body.startswith("/") else None
+    parts = [p.strip() for p in re.split(r"\s*\+\s*", text)]
+    out: list[str] = []
+    for i, part in enumerate(parts):
+        lit = re.fullmatch(r"""(['"`])(.*)\1""", part, re.S)
+        if lit:
+            out.append(re.sub(r"\$\{[^}]*\}", ":param", lit.group(2)))
+        elif out:
+            out.append(":param")
+        elif i == 0:
+            continue  # 先頭のベース URL 定数
+        else:
+            return None
+    path = "".join(out)
+    return path if path.startswith("/") else None

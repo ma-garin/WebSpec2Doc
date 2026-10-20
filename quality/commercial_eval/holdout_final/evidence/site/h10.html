@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>転入届の事前申請 | あおぞらポータル</title><link rel="stylesheet" href="css/h.css"></head>
+<body>
+<header class="hdr"><a href="index.html">メニュー</a></header>
+<main>
+<h1>転入届の事前申請</h1>
+<p>申請は窓口の受付時間内に処理されます。</p>
+<form id="mv" action="h11.html" method="post">
+<input type="hidden" name="application_type" value="move_in">
+<input type="hidden" name="csrf" value="x91">
+<div id="mv-err"></div>
+<h2>申請者</h2>
+<div class="row"><label for="f1">氏名</label><input type="text" id="f1" name="full_name" required maxlength="40" minlength="2"></div>
+<div class="row"><label for="f2">フリガナ</label><input type="text" id="f2" name="kana" required maxlength="60" pattern="^[ぁ-んー　]+$"></div>
+<div class="row"><label for="f3">生年月日</label><input type="date" id="f3" name="birth" required max="2026-10-20"></div>
+<h2>住所</h2>
+<div class="row"><label for="f4">新住所の郵便番号</label><input type="text" id="f4" name="zip" required maxlength="7" minlength="7" pattern="^[0-9]{7}$"></div>
+<div class="row"><label for="f5">新住所</label><input type="text" id="f5" name="new_addr" required maxlength="100"></div>
+<div class="row"><label for="f6">旧住所</label><input type="text" id="f6" name="old_addr" required maxlength="100"></div>
+<div class="row"><label for="f7">転入予定日</label><input type="date" id="f7" name="move_date" required min="2026-10-21"></div>
+<div class="row"><label for="f8">同居人数</label><input type="number" id="f8" name="members" min="0" max="10"></div>
+<div class="row"><label for="f9">マイナンバーカード</label><select id="f9" name="mynumber" required><option value="">選択してください</option><option value="y">持っている</option><option value="n">持っていない</option></select></div>
+<div class="row"><input type="checkbox" id="f10" name="confirm" required><label for="f10">内容に相違ありません</label></div>
+<div aria-hidden="true" style="display:none"><p>窓口職員用: 受付印</p></div>
+<input type="submit" value="申請する">
+<button type="button">一時保存</button>
+<input type="submit" value="申請する">
+</form>
+<a href="h11.html">申請状況を確認する</a>
+<script>(function(){var f=document.getElementById("mv");var box=document.getElementById("mv-err");f.addEventListener("submit",function(ev){ev.preventDefault();var errs=[];if(f.elements["full_name"].value===''){errs.push("氏名を入力してください");}if(!/^[0-9]{7}$/.test(f.elements["zip"].value)){errs.push("郵便番号は7桁の数字で入力してください");}if(f.elements["new_addr"].value===''){errs.push("新住所を入力してください");}if(f.elements["move_date"].value===''){errs.push("転入予定日を入力してください");}if(!f.elements["confirm"].checked){errs.push("内容の確認にチェックしてください");}box.innerHTML="";errs.forEach(function(m){var q=document.createElement("p");q.className="error";q.textContent=m;box.appendChild(q);});if(!errs.length){fetch("/api/applications/move-in",{method:"POST",body:new FormData(f)}).then(function(r){if(!r.ok){throw new Error("x");}return r.json();}).catch(function(){var q=document.createElement("p");q.className="error";q.textContent="申請できませんでした";box.appendChild(q);});}});})();</script>
+</main>
+</body></html>

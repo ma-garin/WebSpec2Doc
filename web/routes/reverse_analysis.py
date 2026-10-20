@@ -17,6 +17,7 @@ from typing import Any
 
 from flask import Blueprint, current_app, request
 
+from reverse_analysis.normalize import expression_path_pattern
 from web.config import OUTPUT_DIR
 from web.services import reverse_analysis_run as runner
 from web.tenancy import scoped_output_dir
@@ -100,7 +101,8 @@ def _static_evidence(doc: dict, version: str | None) -> list[dict]:
     for c in doc.get("static_candidates", []):
         kind = c.get("kind", "")
         loc = c.get("location") or {}
-        value = c.get("path") or c.get("expression")
+        # path を解決できなかった呼び出しは、式から path パターンを作って見せる（推論。候補としてだけ扱う）
+        value = c.get("path") or expression_path_pattern(c.get("expression")) or c.get("expression")
         if not value:  # route / API の値が無いときにファイル名を値として見せない
             value = c.get("artifact_path") if kind in ("module", "source") else None
         value = value or "（値を特定できない）"
@@ -229,7 +231,9 @@ def _summary(run: dict) -> list[dict]:
 
     return [
         row("static", "静的候補", "static_candidates", "ソースに構文がある候補。実行の証明ではない"),
-        row("route", "Route", "route_candidates", "静的な宣言。到達は未確認"),
+        row("route", "Route", "route_candidates",
+            "利用不可: REA が route 宣言を出さなかった（0 件ではない）" if a.get("route_candidates") is None and a
+            else "静的な宣言。到達は未確認"),
         row("api_static", "API 候補（静的）", "api_candidates", "HTTP method は不明のまま"),
         row("api_runtime", "API（実測）", "runtime_observations", "実行時の観測。リバース解析では増えない"),
         row("module_dep", "Module 依存", "module_dependency_edges", "import の関係"),

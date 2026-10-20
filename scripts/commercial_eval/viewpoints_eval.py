@@ -4,7 +4,7 @@
 製品が生成したテスト（output/<domain>/ta2/tests.json）を画面ごとに 10 個の標準カテゴリへ寄せ、
 quality/commercial_eval/viewpoints/expected.json の required_viewpoints と照合する。
 カテゴリへの寄せ方（下の CATEGORY_RULES）は評価側で定義したもので、正解データからも製品の生成規則からも作っていない。
-使い方: venv/bin/python scripts/commercial_eval/viewpoints_eval.py output/<domain>
+使い方: venv/bin/python scripts/commercial_eval/viewpoints_eval.py output/<domain> [<expected.json>]
 """
 from __future__ import annotations
 
@@ -72,5 +72,6 @@ def evaluate(out_dir: Path, expected: dict) -> dict:
 
 
 if __name__ == "__main__":
-    print(json.dumps(evaluate(Path(sys.argv[1]), json.loads(EXPECTED.read_text(encoding="utf-8"))),
+    expected = Path(sys.argv[2]) if len(sys.argv) > 2 else EXPECTED
+    print(json.dumps(evaluate(Path(sys.argv[1]), json.loads(expected.read_text(encoding="utf-8"))),
                      ensure_ascii=False, indent=1))

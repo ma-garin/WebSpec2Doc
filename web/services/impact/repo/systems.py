@@ -26,10 +26,10 @@ def _clean_name(name) -> str:
     return text
 
 
-# 縮退時（規則のみ）の精度。作成者と独立した評価データ（tests/fixtures/impact_eval_indep、変更 10 件）の実測値
-# （docs/lifecycle/system09-impact/work/V1-eval.md）。作成者の評価データの値（0.974）は甘く出るので使わない。
-DEGRADED_RECALL = 0.627
-DEGRADED_PRECISION = 0.271
+# 縮退時（規則のみ）の精度。改善に使っていない最終評価用データ（quality/commercial_eval/holdout_final/system09、
+# 2 ドメイン・変更 25 件）の実測値（2026-10-20）。調整に使った評価データの値は甘く出るので使わない。
+DEGRADED_RECALL = 0.819
+DEGRADED_PRECISION = 0.391
 
 
 def create(conn, name, description, actor) -> dict:

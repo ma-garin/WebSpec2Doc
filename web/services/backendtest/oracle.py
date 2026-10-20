@@ -111,6 +111,9 @@ def _method_ready(oracle: Mapping) -> tuple[bool, str]:
     return True, ""
 
 
+method_ready = _method_ready
+
+
 def can_confirm(case: Mapping, role: Any, members: Any = (), facts: Sequence[Mapping] | None = None
                 ) -> tuple[bool, str]:
     """期待値を確定できるか（確定可否, 理由）。

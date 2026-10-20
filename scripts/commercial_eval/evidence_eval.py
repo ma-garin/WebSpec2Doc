@@ -4,7 +4,7 @@
 製品が出力した report.json（解析済みサイト）を quality/commercial_eval/evidence/expected.json と照合する。
 照合は「事実」単位（title・見出し・ボタン・入力項目の属性・内部リンク）。正解の定義に従い、重複は数だけ数える
 （多重集合）。表・エラーメッセージ・API 通信は製品が Evidence として出していないため、別枠で未抽出として数える。
-使い方: venv/bin/python scripts/commercial_eval/evidence_eval.py output/<domain>/report.json
+使い方: venv/bin/python scripts/commercial_eval/evidence_eval.py output/<domain>/report.json [<expected.json>]
 """
 from __future__ import annotations
 
@@ -118,4 +118,5 @@ def evaluate(report: dict, expected: dict) -> dict:
 
 if __name__ == "__main__":
     rep = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
-    print(json.dumps(evaluate(rep, json.loads(EXPECTED.read_text(encoding="utf-8"))), ensure_ascii=False, indent=1))
+    expected = Path(sys.argv[2]) if len(sys.argv) > 2 else EXPECTED
+    print(json.dumps(evaluate(rep, json.loads(expected.read_text(encoding="utf-8"))), ensure_ascii=False, indent=1))

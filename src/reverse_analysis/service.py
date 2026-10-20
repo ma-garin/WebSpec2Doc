@@ -51,7 +51,7 @@ _KNOWN_LIMIT_DIAGNOSTICS = (
     ),
     Diagnostic(
         _ROUTE_ABSENT_CODE, "info", STAGE_RECONCILE,
-        "REA の出力に route 宣言（endpoint_kind=route）が無かったため、route 候補はありません。",
+        "REA の出力に route 宣言（endpoint_kind=route）がありません。REA が route として出すのは対応するルーターの宣言だけで、独自の遷移処理からは取得できません（利用不可。0 件見つかったという意味ではありません）。",
         "画面ルートは既存クロールの画面一覧で確認してください。",
     ),
     Diagnostic(

@@ -1,0 +1,15 @@
+<!doctype html>
+<html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>配送ルート確認 | あおぞらポータル</title><link rel="stylesheet" href="css/h.css"></head>
+<body>
+<header class="hdr"><a href="index.html">メニュー</a></header>
+<main>
+<h1>配送ルート確認</h1>
+<div class="row"><label for="f1">表示する日</label><select id="f1" name="day"><option value="t">今日</option><option value="y">昨日</option></select></div>
+<button type="button">地図を更新</button>
+<div id="rt-err"></div>
+<iframe src="https://maps.example.com/embed/route?id=88" title="配送ルート地図" width="600" height="300"></iframe>
+<h2>配送先一覧</h2>
+<table><thead><tr><th>順番</th><th>配送先</th><th>到着予定</th></tr></thead><tbody><tr><td>1</td><td><a href="h07.html?no=1234567890">渋谷営業所</a></td><td>10:30</td></tr><tr><td>2</td><td>新宿センター</td><td>11:45</td></tr><tr><td>3</td><td>池袋支店</td><td>13:10</td></tr></tbody></table>
+<script>(function(){var box=document.getElementById("rt-err");fetch("/api/routes").then(function(r){if(!r.ok){throw new Error("x");}return r.json();}).catch(function(){var q=document.createElement("p");q.className="error";q.textContent="経路を取得できませんでした";box.appendChild(q);});})();</script>
+</main>
+</body></html>

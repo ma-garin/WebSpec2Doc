@@ -13,7 +13,6 @@ from __future__ import annotations
 import json
 import logging
 import os
-import subprocess
 import time
 import uuid
 from collections import deque
@@ -302,7 +301,7 @@ def _check_git(repo_path: Path | None) -> ConnectionCheck:
             )
         return ConnectionCheck(key="git", label=label, ok=is_repo, detail=detail, severity="required")
     except Exception as exc:  # noqa: BLE001
-        detail = _with_action(str(exc), "git コマンドが使えるかを確認してください。")
+        detail = _with_action(str(exc), "リポジトリのパスを確認してください。")
         return ConnectionCheck(key="git", label=label, ok=False, detail=detail, severity="required")
 
 
@@ -427,20 +426,6 @@ def _display_path(path: Path | str) -> str:
     return masked.replace(user, "~") if len(user) >= 3 else masked
 
 
-def _git_output(repo: Path, args: list[str]) -> str:
-    """git を 1 回だけ叩いて標準出力を返す。失敗しても空文字にして落とさない。"""
-    try:
-        proc = subprocess.run(  # noqa: S603 - shell=False・引数は固定・cwd は検証済み
-            ["git", *args],
-            cwd=str(repo), capture_output=True, text=True,
-            timeout=3, shell=False, check=False,
-        )
-    except (OSError, subprocess.SubprocessError) as exc:
-        logger.info("healing: git %s に失敗しました (%s): %s", " ".join(args), repo, exc)
-        return ""
-    return proc.stdout.strip() if proc.returncode == 0 else ""
-
-
 def _read_text(path: Path) -> str:
     """テキストを読む。読めなければ空文字（理由はログに残す）。"""
     try:
@@ -505,8 +490,12 @@ def _describe_repo(
     repo: Path, root: Path, connected: frozenset[str], with_git: bool
 ) -> DiscoveredRepo:
     """候補 1 件をメタ情報つきで組み立てる。git 情報は取れなければ空のまま。"""
-    branch = _git_output(repo, ["rev-parse", "--abbrev-ref", "HEAD"]) if with_git else ""
-    remote = _git_output(repo, ["config", "--get", "remote.origin.url"]) if with_git else ""
+    branch, remote = "", ""
+    if with_git:
+        from web.services.healing import git_ops
+
+        branch = git_ops.current_branch(repo)
+        remote = git_ops.remote_url(repo)
     github_repo = ""
     if remote:
         try:

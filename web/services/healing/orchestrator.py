@@ -720,7 +720,7 @@ def _run_loop_inner(
     # 正しい扱いは「入らない事実を証跡に残して進む」。不在を証明しない方針と同じ。
     #
     # 未追跡ファイル（生成物・新規ファイル）は検証結果に影響しないので数えない。
-    status_result = git_ops.run_git(repo, ["status", "--porcelain", "--untracked-files=no"])
+    status_result = git_ops.status_porcelain(repo, include_untracked=False)
     if not status_result.ok:
         run.error = f"git status の取得に失敗しました: {status_result.stderr}"
         _update(out_dir, run, status="failed", step_label="失敗")
@@ -1062,7 +1062,8 @@ def _fix_defects(
     each 単位で例外を握りつぶして FixProposal(status=failed/timeout) に変換する。
     """
     repo = Path(project.repo_path)
-    agent = healing_agents.get_agent(project.agent)
+    agent_name = "openai" if project.agent in ("claude", "codex") else project.agent  # 旧名は openai として記録
+    agent = healing_agents.get_agent(agent_name)
 
     plan: dict[str, tuple[Defect, Path, str]] = {}
     for defect in defects:
@@ -1087,7 +1088,7 @@ def _fix_defects(
             if not wt_result.ok:
                 results[defect_id] = FixProposal(
                     defect_id=defect_id,
-                    agent=project.agent,
+                    agent=agent_name,
                     status="failed",
                     error=f"worktree の作成に失敗しました: {wt_result.stderr}",
                 )
@@ -1107,17 +1108,17 @@ def _fix_defects(
                 results[defect_id] = future.result(timeout=timeout_sec)
             except FuturesTimeoutError:
                 results[defect_id] = FixProposal(
-                    defect_id=defect_id, agent=project.agent, status="timeout", error="エージェントの応答が時間内に終わりませんでした"
+                    defect_id=defect_id, agent=agent_name, status="timeout", error="エージェントの応答が時間内に終わりませんでした"
                 )
             except Exception as exc:  # noqa: BLE001 - 1 本の失敗で全体を落とさない
                 results[defect_id] = FixProposal(
-                    defect_id=defect_id, agent=project.agent, status="failed", error=f"エージェント実行中に例外が発生しました: {exc}"
+                    defect_id=defect_id, agent=agent_name, status="failed", error=f"エージェント実行中に例外が発生しました: {exc}"
                 )
 
     ordered: list[FixProposal] = []
     for defect_id, (defect, workdir, branch) in plan.items():
         proposal = results.get(defect_id) or FixProposal(
-            defect_id=defect_id, agent=project.agent, status="failed", error="修正結果を取得できませんでした"
+            defect_id=defect_id, agent=agent_name, status="failed", error="修正結果を取得できませんでした"
         )
 
         if proposal.status == "applied":

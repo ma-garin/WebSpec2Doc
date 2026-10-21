@@ -7,8 +7,10 @@ newer version / majority / authority は hints としてのみ付与する。
 from __future__ import annotations
 
 import hashlib
+import logging
+import math
 import re
-from itertools import combinations
+from collections import Counter
 
 from .units import nfkc, normalize_quantity
 
@@ -29,7 +31,7 @@ SCOPE_WORDS = ("初回", "再試行", "夜間", "日中", "本番", "検証環�
 ACTIONS = {"閲覧": "view", "参照": "view", "表示": "view", "編集": "edit", "更新": "edit", "変更": "edit",
            "削除": "delete", "作成": "create", "登録": "create", "承認": "approve", "実行": "execute",
            "ダウンロード": "download", "出力": "download", "投稿": "create", "書き込": "edit",
-           "修正": "edit", "設定": "edit"}
+           "修正": "edit", "設定": "edit", "入力": "edit"}
 _NEG = re.compile(r"不可|できない|できません|行えない|行えません|禁止|不許可|不可能|してはならない")
 _POS = re.compile(r"可能|可|できる|できます|行える|行えます|許可|とする|に限る|に限り|に限られる")
 _EXCL = re.compile(r"のみ|だけ|に限る|に限り|限定")
@@ -41,6 +43,43 @@ _AUTH_RANK = (("requirement", 3), ("要件", 3), ("spec", 2), ("基本設計", 2
               ("test", 1), ("テスト", 1))
 QUESTION = "どちらが正しいですか？根拠となる決定事項・承認者を確認し、文書を揃えてください。"
 _MIN_DICE = 0.5
+MAX_BUCKET = 200  # 転置索引の 1 バケット（同じ gram を持つ項目の並び）の比較窓。超えたら件数だけログに出す
+_log = logging.getLogger(__name__)
+STATS: dict[str, int] = {}  # detect() ごとのカウンタ（項目数・候補ペア数・実比較回数）。計測用
+
+
+def _bump(key: str, n: int = 1) -> None:
+    STATS[key] = STATS.get(key, 0) + n
+
+
+def _prefix_len(size: int, t: float) -> int:
+    """dice>=t を満たしうる相手との最小重なりから決まる prefix 長（prefix filtering。取りこぼし無し）。"""
+    partner = max(1, math.ceil(size * t / (2 - t) - 1e-9))
+    need = min(size, max(1, math.ceil(t * (size + partner) / 2 - 1e-9)))
+    return size - need + 1
+
+
+def _similar_candidates(grams: list[set], t: float, label: str) -> list[tuple[int, int]]:
+    """dice>=t になりうる (i<j) だけを転置索引で返す。全ペアは作らない。希少 gram を prefix にして索引する。"""
+    freq = Counter(g for s in grams for g in s)
+    post: dict[str, list[int]] = {}
+    for i, s in enumerate(grams):
+        if s:
+            for g in sorted(s, key=lambda x: (freq[x], x))[:_prefix_len(len(s), t)]:
+                post.setdefault(g, []).append(i)
+    pairs: set[tuple[int, int]] = set()
+    for lst in post.values():
+        n = len(lst)
+        if n < 2:
+            continue
+        if n > MAX_BUCKET:
+            _log.info("docassure conflict: bucket 上限超過 kind=%s size=%d limit=%d", label, n, MAX_BUCKET)
+            _bump("oversize_buckets")
+        for a in range(n):
+            for b in range(a + 1, min(n, a + 1 + MAX_BUCKET)):
+                pairs.add((lst[a], lst[b]))
+    _bump(f"{label}_candidates", len(pairs))
+    return sorted(pairs)
 
 
 # --- 共通ヘルパ ---
@@ -164,7 +203,9 @@ def _numeric(units: list[dict]) -> list[dict]:
             for q in qtys:
                 s, e = q["span"]
                 head = sent[prev_end:s]
-                head = head[max(head.rfind("、"), head.rfind(","), head.rfind("，")) + 1:]
+                seg = head[max(head.rfind("、"), head.rfind(","), head.rfind("，")) + 1:]
+                # 「…検査数は、50個」のように読点の直後が数値だと節が空になる。語が足りないときは直前の節まで遡る
+                head = seg if len(_clean(seg)) >= 2 else head
                 tail = sent[e:e + 12]
                 tail = re.split(r"[、,，]", tail)[0]
                 _, head = _conditions(head)
@@ -177,24 +218,35 @@ def _numeric(units: list[dict]) -> list[dict]:
                 items.append(_Item(u, sent, sid, q, g, scope, bound, qual))
                 prev_end = e
             del offset
+    _bump("numeric_items", len(items))
     link: dict[tuple[int, int], float] = {}
     nbr: dict[int, set[int]] = {i: {i} for i in range(len(items))}
-    for i, j in combinations(range(len(items)), 2):
-        a, b = items[i], items[j]
-        if a.qty["unit_kind"] == "count" and _label(a) != _label(b):
-            continue  # 文字数と回数のように、同じ count でも単位語が違えば別物
-        if a.sid == b.sid or a.qty["unit_kind"] != b.qty["unit_kind"] or a.bound != b.bound or a.scope != b.scope:
+    # 単位種別・境界・スコープ（count は単位語も）が同じ項目だけを同じバケットに入れ、その中だけ gram の転置索引で絞る
+    buckets: dict[tuple, list[int]] = {}
+    for i, it in enumerate(items):
+        key = (it.qty["unit_kind"], it.bound, it.scope, _label(it) if it.qty["unit_kind"] == "count" else "")
+        buckets.setdefault(key, []).append(i)
+    for members in buckets.values():
+        if len(members) < 2:
             continue
-        if _qualifier_differs(a.qual, b.qual):
-            continue
-        d = _dice(a.grams, b.grams)
-        if d >= _MIN_DICE:
-            link[(i, j)] = d
-            nbr[i].add(j)
-            nbr[j].add(i)
+        for x, y in _similar_candidates([items[i].grams for i in members], _MIN_DICE, "numeric"):
+            i, j = members[x], members[y]
+            a, b = items[i], items[j]
+            if a.sid == b.sid or _qualifier_differs(a.qual, b.qual):
+                continue
+            _bump("numeric_comparisons")
+            d = _dice(a.grams, b.grams)
+            if d >= _MIN_DICE:
+                link[(i, j)] = d
+                nbr[i].add(j)
+                nbr[j].add(i)
     # 推移的に連結せず、各項目に直接つながる集合（星形）だけを候補にする（総称語での連鎖を防ぐ）
     groups = {frozenset(v) for v in nbr.values() if len(v) > 1}
-    groups = [g for g in groups if not any(g < h for h in groups)]
+    by_elem: dict[int, list[frozenset]] = {}
+    for g in groups:
+        for e in g:
+            by_elem.setdefault(e, []).append(g)
+    groups = [g for g in groups if not any(g < h for h in by_elem[min(g)])]
     out = []
     for idx in (sorted(g) for g in sorted(groups, key=sorted)):
         vals = {round(items[i].qty["canonical_value"], 6) for i in idx}
@@ -207,7 +259,8 @@ def _numeric(units: list[dict]) -> list[dict]:
             if k not in seen:
                 seen.add(k)
                 ev.append(_evidence(it.unit, it.sentence, it.qty["canonical_value"]))
-        ds = [d for (i, j), d in link.items() if i in idx and j in idx]
+        iset = set(idx)
+        ds = [link[(i, j)] for i in idx for j in nbr[i] if j > i and j in iset]
         topic = _clean(re.sub(r"\d.*", "", items[idx[0]].sentence)) or items[idx[0]].sentence[:20]
         basis = [f"同種の単位({items[idx[0]].qty['unit_kind']})", f"トピック重なり dice={min(ds):.2f}以上" if ds else "トピック重なり",
                  "ロール・条件・スコープ一致", f"異なる値 {sorted(vals)}"]
@@ -273,10 +326,37 @@ def _perm_clash(a: dict, b: dict) -> bool:
 
 def _permission(units: list[dict]) -> list[dict]:
     st = _perm_statements(units)
+    _bump("permission_items", len(st))
     out = []
-    for a, b in combinations(st, 2):
-        if a["action"] != b["action"] or a["conds"] != b["conds"] or a["sent"] == b["sent"]:
+    # 同じ (action, 条件) のバケットだけ。対象語が空の文どうしは種別の組で絞り、他は gram 転置索引で絞る
+    buckets: dict[tuple, list[int]] = {}
+    for i, s in enumerate(st):
+        buckets.setdefault((s["action"], s["conds"]), []).append(i)
+    cands: set[tuple[int, int]] = set()
+    for members in buckets.values():
+        if len(members) < 2:
             continue
+        full = [i for i in members if st[i]["grams"]]
+        cands.update((full[x], full[y]) for x, y in _similar_candidates([st[i]["grams"] for i in full], _MIN_DICE, "permission"))
+        empty: dict[str, list[int]] = {}
+        for i in members:
+            if not st[i]["grams"]:
+                empty.setdefault(st[i]["kind"], []).append(i)
+        for ka, kb in (("allow", "deny"), ("exclusive", "allow"), ("exclusive", "deny"), ("exclusive", "exclusive")):
+            la, lb = empty.get(ka, []), empty.get(kb, [])
+            if len(la) * len(lb) > MAX_BUCKET * MAX_BUCKET:
+                _log.info("docassure conflict: bucket 上限超過 kind=permission_empty size=%d limit=%d", len(la) * len(lb), MAX_BUCKET)
+                _bump("oversize_buckets")
+                la, lb = la[:MAX_BUCKET], lb[:MAX_BUCKET]
+            for i in la:
+                for j in lb:
+                    if i != j:
+                        cands.add((min(i, j), max(i, j)))
+    for i, j in sorted(cands):
+        a, b = st[i], st[j]
+        if a["sent"] == b["sent"]:
+            continue
+        _bump("permission_comparisons")
         d = 1.0 if not a["grams"] and not b["grams"] else _dice(a["grams"], b["grams"])  # 対象語が動作だけの文どうし
         if d < _MIN_DICE or not _perm_clash(a, b):
             continue
@@ -360,11 +440,39 @@ def _phase_match(ma: tuple, mb: tuple) -> bool:
     return bool(ma[0] and ma[0] == mb[0] and ma[1] is not None and mb[1] is not None and ma[1] != mb[1])
 
 
+def _temporal_candidates(seqs: list[dict]) -> list[tuple[int, int]]:
+    """共通手順が 2 つ以上ありうる手順列のペアだけ返す。手順の gram 転置索引（dice 0.6 以上＝同一・包含・dice0.7 を覆う）と対象語の索引で絞る。"""
+    flat = [(si, k) for si, q in enumerate(seqs) for k in range(len(q["steps"]))]
+    steps = [seqs[si]["steps"][k] for si, k in flat]
+    touched: dict[tuple[int, int], set[int]] = {}
+    pairs = [(p, q) for p, q in _similar_candidates([_grams(s) for s in steps], 0.6, "temporal")]
+    subj: dict[str, list[int]] = {}
+    for p, (si, k) in enumerate(flat):
+        m = seqs[si]["metas"][k]
+        if m[0] and m[1] is not None:
+            subj.setdefault(m[0], []).append(p)
+    for lst in subj.values():
+        n = len(lst)
+        if n > MAX_BUCKET:
+            _log.info("docassure conflict: bucket 上限超過 kind=temporal_subject size=%d limit=%d", n, MAX_BUCKET)
+            _bump("oversize_buckets")
+        pairs += [(lst[x], lst[y]) for x in range(n) for y in range(x + 1, min(n, x + 1 + MAX_BUCKET))]
+    for p, q in pairs:
+        (sp, kp), (sq, _) = flat[p], flat[q]
+        if sp != sq:
+            touched.setdefault((min(sp, sq), max(sp, sq)), set()).add(kp if sp < sq else flat[q][1])
+    return sorted(k for k, v in touched.items() if len(v) >= 2)
+
+
 def _temporal(units: list[dict]) -> list[dict]:
     out = []
-    for a, b in combinations(_sequences(units), 2):
+    seqs = _sequences(units)
+    _bump("temporal_items", len(seqs))
+    for si, sj in _temporal_candidates(seqs):
+        a, b = seqs[si], seqs[sj]
         if a["sent"] == b["sent"]:
             continue
+        _bump("temporal_comparisons")
         common, phased = [], {}
         for i, x in enumerate(a["steps"]):
             for j, y in enumerate(b["steps"]):
@@ -427,9 +535,20 @@ def _semantic(units: list[dict]) -> list[dict]:
                 tagged.append((u, sent, tags, _grams(_clean(rest))))
     pairs = (("immediate_delete", "retention"), ("immediate_delete", "delete_no"), ("enc_no", "enc_yes"), ("free", "charge_always"))
     out = []
-    for (ua, sa, ta, ga), (ub, sb, tb, gb) in combinations(tagged, 2):
+    _bump("semantic_items", len(tagged))
+    cands: set[tuple[int, int]] = set()
+    for x, y in pairs:  # タグ別の転置索引: 対応するタグ対を持つ項目だけ集めて gram で絞る
+        members = [i for i, t in enumerate(tagged) if x in t[2] or y in t[2]]
+        for p, q in _similar_candidates([tagged[i][3] for i in members], 0.3, "semantic"):
+            i, j = members[p], members[q]
+            ta, tb = tagged[i][2], tagged[j][2]
+            if (x in ta and y in tb) or (y in ta and x in tb):
+                cands.add((i, j))
+    for i, j in sorted(cands):
+        (ua, sa, ta, ga), (ub, sb, tb, gb) = tagged[i], tagged[j]
         if sa == sb:
             continue
+        _bump("semantic_comparisons")
         hit = next(((x, y) for x, y in pairs if (x in ta and y in tb) or (y in ta and x in tb)), None)
         d = _dice(ga, gb)
         if not hit or d < 0.3:
@@ -442,6 +561,7 @@ def _semantic(units: list[dict]) -> list[dict]:
 
 def detect(docs: dict[str, list]) -> list[dict]:
     """docs = {document_id: [RequirementUnit | to_dict 形]}。矛盾候補のリストを返す。"""
+    STATS.clear()
     units: list[dict] = []
     for doc_id, lst in docs.items():
         for u in lst:

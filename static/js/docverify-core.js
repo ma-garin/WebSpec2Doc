@@ -70,11 +70,11 @@
     set('adopted', f.filter((x) => x.status === 'adopted').length);
   }
 
-  // サイドは固定の 7 項目（レビュー／トレーサビリティ／指摘／根拠／履歴／観点／設定）。
+  // サイドの管理群は レビュー一覧・観点・履歴 の 3 つ＋設定。根拠（screen）は履歴の中のタブ。
   // 指摘=「指摘の検討」、根拠=「実画面との照合」の既存画面に対応付ける（新画面は作らない）。
   const SECTIONS = {
     doc: ['home', 'mine', 'reviews', 'findings', 'plan', 'read', 'questions', 'followup', 'gate'],
-    qa: ['assure'], trace: ['trace'], find: ['triage'], evid: ['screen'], hist: ['metrics'], vp: ['checklists', 'accuracy'], set: ['settings'],
+    qa: ['assure'], trace: ['trace'], find: ['triage'], hist: ['metrics', 'screen'], vp: ['checklists', 'accuracy'], set: ['settings'],
   };
   // ドキュメント検証はレビュー一覧 1 画面。ホーム・自分の担当・指摘一覧は廃止（タブ不要・2026-10-18）。
   const DOC_GONE = ['home', 'mine', 'findings'];
@@ -93,7 +93,10 @@
     if (!nav) return;
     const r = DV.state.review;
     let html = '';
-    if (STEPS.includes(view) && r) {
+    if (sectionOf(view) === 'hist') {
+      // 根拠は「履歴」画面の中のタブ（ナビには出さない）
+      html = [['metrics', '履歴'], ['screen', '根拠']].map(([v, l]) => `<a href="#${v}" data-nav="${v}" class="${v === view ? 'active' : ''}"${v === view ? ' aria-current="page"' : ''}>${l}</a>`).join('');
+    } else if (STEPS.includes(view) && r) {
       html = `<a href="#reviews" data-nav="reviews" class="dv-back">← レビュー一覧</a><span class="dv-subtabs-name">${esc(r.name)}</span>`
         + STEPS.map((v) => tab(v, view)).join('');
     } else if (sectionOf(view) === 'doc') {

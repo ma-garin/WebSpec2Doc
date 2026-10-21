@@ -57,3 +57,9 @@
 /* 第 1 ゲート: 行 40px で統一・管理群は弱い小見出し＋区切り */
 .dv-sb .dv-sb__group--admin .dv-sb__item,.dv-sb .dv-sb__foot .dv-sb__item{height:40px}
 .dv-sb .dv-sb__heading{padding:4px 12px 6px;font-size:12px;font-weight:500;letter-spacing:.02em;color:var(--color-text-tertiary)}
+/* 第 1 ゲート第 2 版: 根拠は履歴の補助（主ナビより弱く）・ユーザーメニューは枠なし */
+.dv-sb .dv-sb__group--admin .dv-sb__item.dv-sb__item--sub{height:30px;padding-left:44px;font-size:12px;font-weight:400;color:var(--color-text-tertiary)}
+.dv-page .app-topbar .usermenu-trigger{border-color:transparent;background:transparent;box-shadow:none;padding:2px 6px 2px 2px}
+.dv-page .app-topbar .usermenu-trigger:hover{background:var(--color-surface-2)}
+.dv-page .app-topbar .usermenu-trigger:focus-visible{border-color:var(--color-primary);box-shadow:0 0 0 3px var(--color-primary-light)}
+.dv-page .app-topbar .usermenu-avatar{width:28px;height:28px;border:0;box-shadow:none}

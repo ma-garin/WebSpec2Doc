@@ -176,3 +176,23 @@ def analyze(documents: list[dict], profile: str = "default", pack_extra: dict | 
         "counts": {"documents": len(docs), "requirements": len(all_units), "findings": len(findings),
                    "conflicts": len(conflicts)},
     }
+
+
+def rejudge(result: dict, decisions: list[dict], policy: dict | None = None) -> dict:
+    """保存済みの分析結果へ人の判断だけを適用し直す（再分析しない）。
+
+    組織ポリシー・System02 の結果など分析時の入力はそのまま残る。判断の対象以外の指摘は変えない。
+    """
+    from web.services.docassure import readiness
+    fs, cs = decisions_mod.apply(list(result.get("findings") or []), list(result.get("conflicts") or []), decisions)
+    scores = dict(result.get("scores") or {})
+    cons = scores.get("Consistency")
+    if cons and cons.get("value") is not None and len(result.get("documents") or []) >= 2:
+        open_cf = decisions_mod.unresolved(cs)
+        scores["Consistency"] = {**cons, "value": max(0.0, 100.0 - 20.0 * len(open_cf)),
+                                 "explanation": [f"未解決の矛盾候補 {len(open_cf)} 件（1 件ごとに 20 点減点）"]}
+    trace = result.get("trace") or {}
+    gate = readiness.gate(scores, fs, cs, {"trace_coverage": trace.get("linked_ratio"), **(policy or {})})
+    if result.get("errors"):
+        gate = {**gate, "state": gate["state"] if gate["state"] in (M.DRAFT, "BLOCKED") else M.DRAFT}
+    return {**result, "findings": fs, "conflicts": cs, "scores": scores, "readiness": gate}

@@ -89,7 +89,7 @@ def run_rules(document_id: str, markdown: str, units: list, pack: dict | None = 
             h = replace(h, line=ln.no)
             req = _req_at(units, h.line)
             findings.append(Finding(
-                finding_id=f"{rid}:{req or 'L' + str(h.line)}:{n}", rule_id=rid, rule_version=ver, result=FAIL,
+                finding_id=f"{rid}:{req or 'L' + str(h.line)}:{n}@{document_id}", rule_id=rid, rule_version=ver, result=FAIL,
                 severity=rule["severity"], title=rule["name"], why_matters=rule["why"], reason=h.reason,
                 how_to_fix=rule["how_to_fix"], location=_location(document_id, ln, h.line),
                 requirement_id=req, source=DETERMINISTIC, status=CANDIDATE, confidence=h.confidence,

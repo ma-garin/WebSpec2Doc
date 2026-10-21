@@ -93,3 +93,35 @@ def test_confidence_not_self_reported():
     assert confidence.calibrate({"confidence": 0}, {"direct_evidence": True, "contradictions": 2}) < \
         confidence.calibrate({"confidence": 0}, {"direct_evidence": True})
     assert confidence.calibrate_detail({}, {})["basis"]
+
+
+def _many(n):
+    return [{"requirement_id": f"R{i}", "document_id": "D1", "raw_text": f"要件{i}は処理できる。",
+             "location": {"document_id": "D1", "line_start": 1, "line_end": 1}} for i in range(n)]
+
+
+def test_send_cap_and_not_reviewed():
+    c = Stub("openai", "m", lambda p: {"findings": []})
+    r = rb.run(_many(200), DOCS, c)
+    assert r["sends"] <= rb.MAX_SENDS and len(c.prompts) == rb.MAX_SENDS
+    nr = r["not_reviewed"]
+    assert nr["reason"] == "送信上限のため未レビュー"
+    # 60 送信 = 5 要件 × 12 観点。途中で切れた要件も未レビューに数える（レビュー済みは満了した要件のみ）
+    assert nr["count"] == 195 and len(nr["requirement_ids"]) == 195
+
+
+def test_priority_order_and_cache_not_counted():
+    units = _many(4)
+    units[3]["findings"] = [{"x": 1}]
+    c = Stub("openai", "m", lambda p: {"findings": []})
+    rb.run(units, DOCS, c, reviewers=["UX"], max_sends=1)
+    assert "要件3" in c.prompts[0]
+    c2 = Stub("openai", "m", lambda p: {"findings": []})
+    r = rb.run(units, DOCS, c2, reviewers=["UX"], max_sends=1)  # 要件3 はキャッシュ命中＝送信に数えない
+    assert r["cache_hits"] == 1 and r["sends"] == 1 and r["not_reviewed"]["count"] == 2
+
+
+def test_time_cap():
+    c = Stub("openai", "m", lambda p: {"findings": []})
+    r = rb.run(_many(3), DOCS, c, reviewers=["UX"], max_seconds=-1)
+    assert not c.prompts and r["not_reviewed"]["count"] == 3 and "時間上限" in r["not_reviewed"]["reason"]

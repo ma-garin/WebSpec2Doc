@@ -6,6 +6,7 @@ LLM へは該当チャンク（伏せ字済み）だけを渡す。他 Reviewer 
 from __future__ import annotations
 
 import hashlib
+import time
 from types import SimpleNamespace
 from typing import Any
 
@@ -39,6 +40,10 @@ SCHEMA = {"type": "object", "properties": {"findings": {"type": "array", "items"
         "line_end": {"type": "integer"}, "quote": {"type": "string"}}}}}}}}}
 SEV = ("info", "low", "medium", "high", "critical")
 _CACHE: dict[str, list] = {}
+MAX_SENDS = 60  # 1 回の実行で LLM へ送る上限（キャッシュ命中は数えない）
+MAX_SECONDS = 120.0  # 1 回の実行の全体時間上限
+REASON_SENDS = "送信上限のため未レビュー"
+REASON_TIME = "時間上限のため未レビュー"
 
 
 def clear_cache() -> None:
@@ -65,8 +70,28 @@ def _prompt(role: str, focus: str, ch: dict) -> str:
             f"document_id={ch['document_id']} lines={ch['line_start']}-{ch['line_end']}\n---\n{body}")
 
 
+def _key(client, role: str, ch: dict) -> str:
+    return hashlib.sha256(f"{getattr(client, 'name', '')}|{getattr(client, 'model', '')}|{role}|{ch['text']}".encode()).hexdigest()
+
+
+def _priority(u) -> int:
+    """決定論の優先度（大きいほど先）。指摘・矛盾・テスト不可のある要件を先に送る。"""
+    score = 0
+    for k in ("findings", "issues", "conflicts", "contradictions", "quality_findings"):
+        v = _get(u, k, None)
+        if v:
+            score += 2
+    try:
+        from .testability import NOT_TESTABLE, PARTIAL, assess
+        verdict = assess(u)["verdict"]
+        score += 3 if verdict == NOT_TESTABLE else 1 if verdict == PARTIAL else 0
+    except Exception:  # 判定不能は優先しない（送信対象からは外さない）
+        pass
+    return score
+
+
 def _ask(client, role: str, ch: dict, timeout: float, stats: dict) -> list:
-    key = hashlib.sha256(f"{getattr(client, 'name', '')}|{getattr(client, 'model', '')}|{role}|{ch['text']}".encode()).hexdigest()
+    key = _key(client, role, ch)
     if key in _CACHE:
         stats["cache_hits"] += 1
         return _CACHE[key]
@@ -86,15 +111,26 @@ def _target(f: dict) -> tuple:
     return (e.get("document_id"), e.get("line_start"), e.get("line_end"))
 
 
-def run(units, documents, client, reviewers=None, timeout: float = 30.0) -> dict[str, Any]:
+def run(units, documents, client, reviewers=None, timeout: float = 30.0, max_sends: int = MAX_SENDS,
+        max_seconds: float = MAX_SECONDS) -> dict[str, Any]:
     if client is None:
         return {"mode": "DEGRADED", "reason": "semantic review unavailable", "findings": []}
     roles = [r for r in (reviewers or REVIEWERS) if r in REVIEWERS]
     stats = {"cache_hits": 0, "sends": 0, "failures": 0}
     raw: list[dict] = []
-    for role in roles:
-        for u in units:
-            ch = _chunk(u)
+    started = time.monotonic()
+    ordered = sorted(enumerate(units), key=lambda p: (-_priority(p[1]), p[0]))  # 同点は元の順（決定論）
+    skipped: dict[Any, str] = {}
+    for _, u in ordered:
+        ch = _chunk(u)
+        for role in roles:
+            if _key(client, role, ch) not in _CACHE:
+                if time.monotonic() - started >= max_seconds:
+                    skipped.setdefault(ch["id"], REASON_TIME)
+                    continue
+                if stats["sends"] >= max_sends:
+                    skipped.setdefault(ch["id"], REASON_SENDS)
+                    continue
             try:
                 items = _ask(client, role, ch, timeout, stats)
             except AssistError:
@@ -102,8 +138,11 @@ def run(units, documents, client, reviewers=None, timeout: float = 30.0) -> dict
                 continue
             for it in items:
                 raw.append({**it, "reviewer": role, "requirement_id": ch["id"]})
+    reasons = sorted(set(skipped.values()))
+    not_reviewed = {"count": len(skipped), "requirement_ids": list(skipped),
+                    "reason": "・".join(reasons) if reasons else ""}
     if stats["failures"] and not (stats["sends"] - stats["failures"] + stats["cache_hits"]):
-        return {"mode": "DEGRADED", "reason": "semantic review unavailable", "findings": [], **stats}
+        return {"mode": "DEGRADED", "reason": "semantic review unavailable", "findings": [], "not_reviewed": not_reviewed, **stats}
     provider = {"name": getattr(client, "name", ""), "model": getattr(client, "model", "")}
     ok, unsupported, dismissed = [], [], []
     for f in raw:
@@ -129,7 +168,7 @@ def run(units, documents, client, reviewers=None, timeout: float = 30.0) -> dict
             {**g, "dismissed_candidate": True} if g["counter_evidence"] else g)
     final = debate.adjudicate(final)
     return {"mode": "AI", "findings": final, "unsupported": unsupported, "dismissed": dismissed,
-            "provider": provider, **stats}
+            "provider": provider, "not_reviewed": not_reviewed, **stats}
 
 
 def _adjudicate(findings: list[dict]) -> list[dict]:

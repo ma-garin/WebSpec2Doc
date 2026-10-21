@@ -120,3 +120,24 @@ def test_source_texts_not_exposed(client):
                     json={"documents": [{"id": "D1", "text": "- REQ-001 秘密の本文 すること。\n"}]})
     assert "source_texts" not in r.get_json()
     assert "source_texts" not in client.get(f"/api/docassure/inspections/{iid}/report.json").get_data(as_text=True)
+
+
+def test_decision_keeps_policy_findings_and_does_not_reanalyze(client, monkeypatch):
+    """B-1: 判断を 1 件記録しても、組織ポリシーで出た指摘など判断対象以外の指摘は変わらない。M-5: 再分析しない。"""
+    iid = _iid(client)
+    client.put(f"/api/docassure/inspections/{iid}/policy", headers=ORIGIN, json={"ambiguous_terms": ["ウルトラ迅速"]})
+    r = client.post(f"/api/docassure/inspections/{iid}/analyze", headers=ORIGIN,
+                    json={"documents": [{"id": "D1", "text": "- REQ-001 ウルトラ迅速に処理すること。\n- REQ-002 結果は適切に表示すること。\n"},
+                                        {"id": "D2", "text": "- REQ-001 処理画面で処理する。\n"}]}).get_json()
+    before = {f["finding_id"] for f in r["findings"]}
+    assert len(before) >= 2
+    from web.services.docassure import pipeline
+    monkeypatch.setattr(pipeline, "analyze", lambda *a, **k: (_ for _ in ()).throw(AssertionError("再分析した")))
+    target = sorted(before)[0]
+    ok = client.post(f"/api/docassure/inspections/{iid}/decisions", headers=ORIGIN,
+                     json={"decision": "rejected", "target": target, "reason": "誤検出"})
+    assert ok.status_code == 201
+    after = client.get(f"/api/docassure/inspections/{iid}/issues").get_json()["findings"]
+    assert {f["finding_id"] for f in after} == before
+    st = {f["finding_id"]: f["status"] for f in after}
+    assert st[target] == "REJECTED" and all(v == "CANDIDATE" for k, v in st.items() if k != target)

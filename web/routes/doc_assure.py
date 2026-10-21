@@ -17,6 +17,16 @@ _IID = re.compile(r"^[0-9a-f]{12}$")
 _MAX_DOCS, _MAX_CHARS = 20, 2_000_000
 
 
+def _dv_dir(iid: str):
+    from web.services.docverify import store as _dvs
+    return _dvs.doc_dir(iid)
+
+
+def _now() -> str:
+    from datetime import datetime, timezone
+    return datetime.now(timezone.utc).isoformat()
+
+
 def _err(message: str, status: int, code: str = "error"):
     return jsonify(error=message, code=code), status
 
@@ -139,19 +149,14 @@ def decide(iid: str):
     from web.services.docverify.settings import current_user
     entry = {"target": str(b["target"]), "decision": b["decision"], "reason": str(b.get("reason") or ""),
              "expiry": b.get("expiry"), "by": current_user(), "source": "human"}
-    store.add_decision(iid, entry)
-    _perm.record("docassure_decision", f"{iid}:{entry['target']}", {"decision": entry["decision"]})
-    # 人の判断を準備状態・スコアへ反映する（保存済みの原文から決定論で再判定する）
     from web.services.docassure import pipeline
-    r = store.load(iid) or {}
-    texts = r.get("source_texts") or {}
-    if texts:
-        meta = {d["id"]: d for d in r.get("documents") or []}
-        docs = [{"id": k, "name": (meta.get(k) or {}).get("name", ""), "type": (meta.get(k) or {}).get("type", "other"),
-                 "text": v} for k, v in texts.items()]
-        res = pipeline.analyze(docs, decisions=r.get("decisions") or [])
-        store.save(iid, {**res, "decisions": r.get("decisions") or [], "source_texts": texts,
-                         "previous_requirements": r.get("previous_requirements"), "review": r.get("review")})
+    from web.services.docverify import perm as _p
+    with _p.locked(_dv_dir(iid)):   # 判断の追記と再判定を 1 つの排他区間にする（M-3）
+        r = store.load(iid) or {}
+        decs = [*(r.get("decisions") or []), {**entry, "at": _now()}]
+        # 再分析せず、保存済みの結果へ判断だけを適用し直す（ポリシー・System02 の結果を保つ。B-1・M-5）
+        store.save(iid, {**pipeline.rejudge(r, decs), "decisions": decs})
+    _perm.record("docassure_decision", f"{iid}:{entry['target']}", {"decision": entry["decision"]})
     return jsonify(ok=True, decision=entry), 201
 
 

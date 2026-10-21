@@ -120,3 +120,15 @@ def test_load_pack_rejects_bad_name():
     for r in d["rules"]:
         for k in ("rule_id", "name", "description", "severity", "scope", "detector", "enabled", "profile", "version", "why", "how_to_fix"):
             assert k in r
+
+
+def test_finding_id_unique_across_documents_and_stable():
+    from web.services.docassure import decisions
+    md = "# a\n適宜対応する。\n"
+    a = [f for f in run_rules("DOC-A", md, [])["findings"] if f.rule_id == "AMB-001"][0]
+    b = [f for f in run_rules("DOC-B", md, [])["findings"] if f.rule_id == "AMB-001"][0]
+    a2 = [f for f in run_rules("DOC-A", md, [])["findings"] if f.rule_id == "AMB-001"][0]
+    assert a.finding_id != b.finding_id and a.finding_id == a2.finding_id
+    dec = [{"source": "human", "target": a.finding_id, "decision": "waived", "by": "x", "expiry": "2999-01-01"}]
+    fs, _ = decisions.apply([{"finding_id": a.finding_id}, {"finding_id": b.finding_id}], [], dec)
+    assert fs[0]["status"] == "WAIVED" and "status" not in fs[1]

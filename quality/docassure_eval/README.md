@@ -6,8 +6,8 @@
 
 ## 全体
 
-- precision 1.0 / recall 0.979 / F1 0.989 / critical recall 1.0（対象 28 件）
-- TP 46 / FP 0 / FN 1、FP を含むケース率 0.0、検出密度 18.47 件/100行
+- precision 1.0 / recall 1.0 / F1 1.0 / critical recall 1.0（対象 28 件）
+- TP 47 / FP 0 / FN 0、FP を含むケース率 0.0、検出密度 18.88 件/100行
 - 目標（参考値）precision >= 0.98、critical recall >= 0.95: 達成 {'precision': True, 'critical_recall': True}
 
 ## カテゴリ別
@@ -22,7 +22,7 @@
 | missing_condition | 5 | 1.0 | 1.0 | 1.0 | 1.0 | 0 |
 | numeric_conflict | 5 | 1.0 | 1.0 | 1.0 | 1.0 | 0 |
 | permission_inconsistency | 4 | 1.0 | 1.0 | 1.0 | 1.0 | 0 |
-| state_gap | 4 | 1.0 | 0.75 | 0.857 | None | 0 |
+| state_gap | 4 | 1.0 | 1.0 | 1.0 | None | 0 |
 | trace_orphan | 4 | 1.0 | 1.0 | 1.0 | 1.0 | 0 |
 | undefined_term | 4 | 1.0 | 1.0 | 1.0 | None | 0 |
 | untestable | 4 | 1.0 | 1.0 | 1.0 | 1.0 | 0 |
@@ -41,7 +41,6 @@
 
 ## 未検出（FN）
 
-- sg-02: REQ-ITEMS@A:5
 
 ## 誤検出（FP、トラップ以外）
 

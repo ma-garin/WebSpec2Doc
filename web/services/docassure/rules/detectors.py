@@ -89,6 +89,24 @@ def _window_has_number(ctx: Ctx, text: str, s: int, e: int) -> bool:
     return bool(re.search(r"\d[\d,\.]*\s*" + ctx.unit_re, seg))
 
 
+_BRACKETS = (("「", "」"), ("『", "』"), ("【", "】"), ("《", "》"), ("〈", "〉"), ("[", "]"))
+
+
+def _in_name_brackets(text: str, s: int, e: int) -> bool:
+    """語が名称を示す括弧（「」『』【】など）の内側にある。括弧内は画面名・製品名・見出し語として使われる。"""
+    for o, c in _BRACKETS:
+        i = text.rfind(o, 0, s)
+        if i >= 0 and text.find(c, i) >= e and c not in text[i + 1:s]:
+            return True
+    return False
+
+
+def _is_defining(text: str, e: int, markers: list) -> bool:
+    """語の直後が「とは」「をいう」等、またはコロン区切りの用語表の見出し語＝語を定義している文。"""
+    tail = text[e:e + 12]
+    return any(tail.lstrip("」』】 ").startswith(m) for m in markers) or bool(re.match(r"[」』】\s]*[:：|｜]", tail))
+
+
 def detect_ambiguity(ctx: Ctx) -> Outcome:
     if not ctx.lines:
         return Outcome(skip="本文が空")
@@ -101,6 +119,8 @@ def detect_ambiguity(ctx: Ctx) -> Outcome:
                 s, e = m.span()
                 if ln.text[max(0, s - 1):s] == "「" and ln.text[e:e + 1] == "」":
                     continue  # 語そのものを引用しているだけ
+                if _in_name_brackets(ln.text, s, e) or _is_defining(ln.text, e, ctx.params.get("term_define_markers", [])):
+                    continue  # 画面名・固有名（括弧内）、または語そのものの定義文
                 if t.get("numeric_exempt") and _window_has_number(ctx, ln.text, s, e):
                     continue  # 近傍に数値と単位があり定義済み
                 if any(ln.text.startswith(f, e) for f in t.get("follow_exempt", [])):
@@ -522,7 +542,8 @@ def detect_number_range(ctx: Ctx) -> Outcome:
 _QUOTED_RUN = re.compile(r"(?:[「『][^」』]{1,12}[」』][、,・と及びや]*){1,}")
 _STATE_WORD = re.compile(r"(?:状態|ステータス)")
 _STATE_REF = re.compile(r"[「『]([^」』]{1,12})[」』](?=\s*(?:状態|から|へ|に遷移|になっ))")
-_STATE_OMIT = re.compile(r"状態(?:の扱い)?は(?:未記載|記載しない|定めない|未定義|規定しない)")
+_OMIT_PHRASE = r"(?:未記載|記載しない|記載せず|記述しない|定めない|未定義|規定しない)"
+_STATE_OMIT = re.compile(r"(?:状態|ステータス)(?:の扱い)?は" + _OMIT_PHRASE + r"|(?:状態|ステータス)(?:になった(?:とき|場合)|のとき|の場合)?の(?:扱い|処理|動作|挙動)は" + _OMIT_PHRASE)
 
 
 def _state_list(ln_text: str) -> set:

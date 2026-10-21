@@ -65,7 +65,7 @@
     },
     "unit_required_context": ["応答時間", "タイムアウト", "待機時間", "処理時間", "有効期限", "保持期間", "間隔", "容量", "サイズ", "遅延"],
     "unit_missing_follow": "(?:以内|以下|以上|未満|を超|超|まで|程度|とする|である|です|\\s*\\||\\s*$|\\s*[。、,])",
-    "known_acronyms": ["Mbps", "Kbps", "Gbps", "Tbps", "Hz", "API", "URL", "ID", "UI", "UX", "HTTP", "HTTPS", "CSV", "PDF", "JSON", "XML", "SQL", "OK", "NG", "PC", "OS", "DB", "CPU", "RAM", "HTML", "CSS", "TLS", "SSL", "ISO", "JIS", "IEEE", "UTF", "AM", "PM", "MFA", "SMS", "QR", "AI"],
+    "known_acronyms": ["FAQ", "Mbps", "Kbps", "Gbps", "Tbps", "Hz", "API", "URL", "ID", "UI", "UX", "HTTP", "HTTPS", "CSV", "PDF", "JSON", "XML", "SQL", "OK", "NG", "PC", "OS", "DB", "CPU", "RAM", "HTML", "CSS", "TLS", "SSL", "ISO", "JIS", "IEEE", "UTF", "AM", "PM", "MFA", "SMS", "QR", "AI"],
     "required_items": [],
     "required_items_by_type": [
       {"type": "認証", "min_triggers": 4, "triggers": ["認証", "ログイン", "サインイン", "パスワード", "ログアウト", "セッション", "多要素"],

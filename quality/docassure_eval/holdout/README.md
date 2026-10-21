@@ -6,8 +6,8 @@
 
 ## 全体
 
-- precision 0.878 / recall 0.977 / F1 0.925 / critical recall 1.0（対象 27 件）
-- TP 43 / FP 6 / FN 1、FP を含むケース率 0.1
+- precision 0.935 / recall 0.977 / F1 0.956 / critical recall 1.0（対象 27 件）
+- TP 43 / FP 3 / FN 1、FP を含むケース率 0.05
 
 ## カテゴリ別
 
@@ -17,11 +17,11 @@
 | boundary_gap | 4 | 1.0 | 1.0 | 1.0 | 0 |
 | broken_reference | 4 | 0.8 | 1.0 | 0.889 | 1 |
 | contradiction | 4 | 1.0 | 1.0 | 1.0 | 0 |
-| false_positive_trap | 16 | 0.0 | None | None | 1 |
+| false_positive_trap | 16 | None | None | None | 0 |
 | missing_condition | 4 | 1.0 | 1.0 | 1.0 | 0 |
 | numeric_conflict | 4 | 1.0 | 1.0 | 1.0 | 0 |
 | permission_inconsistency | 4 | 1.0 | 1.0 | 1.0 | 0 |
-| state_gap | 4 | 0.667 | 1.0 | 0.8 | 2 |
+| state_gap | 4 | 1.0 | 1.0 | 1.0 | 0 |
 | trace_orphan | 4 | 1.0 | 1.0 | 1.0 | 0 |
 | undefined_term | 4 | 1.0 | 0.75 | 0.857 | 0 |
 | untestable | 4 | 1.0 | 1.0 | 1.0 | 0 |
@@ -35,6 +35,3 @@
 - h-amb-01: testability:NOT_TESTABLE
 - h-amb-03: testability:NOT_TESTABLE
 - h-ref-01: testability:NOT_TESTABLE
-- h-fpt-10: testability:NOT_TESTABLE
-- h-stg-01: testability:NOT_TESTABLE
-- h-stg-04: testability:NOT_TESTABLE

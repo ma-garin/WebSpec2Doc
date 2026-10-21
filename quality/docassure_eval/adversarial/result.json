@@ -1,0 +1,172 @@
+{
+ "cases": 76,
+ "cases_clean": 53,
+ "cases_with_fp": 23,
+ "fp_total": 33,
+ "specificity": 0.697,
+ "fp_by_rule": [
+  [
+   "testability:NOT_TESTABLE",
+   23
+  ],
+  [
+   "finding:AMB-001",
+   9
+  ],
+  [
+   "finding:REF-001",
+   1
+  ]
+ ],
+ "false_positives": [
+  {
+   "id": "adv-016",
+   "fp": [
+    "finding:AMB-001"
+   ]
+  },
+  {
+   "id": "adv-017",
+   "fp": [
+    "finding:AMB-001",
+    "finding:AMB-001",
+    "finding:REF-001",
+    "testability:NOT_TESTABLE",
+    "testability:NOT_TESTABLE"
+   ]
+  },
+  {
+   "id": "adv-019",
+   "fp": [
+    "testability:NOT_TESTABLE"
+   ]
+  },
+  {
+   "id": "adv-020",
+   "fp": [
+    "finding:AMB-001",
+    "testability:NOT_TESTABLE"
+   ]
+  },
+  {
+   "id": "adv-022",
+   "fp": [
+    "testability:NOT_TESTABLE"
+   ]
+  },
+  {
+   "id": "adv-023",
+   "fp": [
+    "testability:NOT_TESTABLE"
+   ]
+  },
+  {
+   "id": "adv-027",
+   "fp": [
+    "testability:NOT_TESTABLE"
+   ]
+  },
+  {
+   "id": "adv-034",
+   "fp": [
+    "testability:NOT_TESTABLE"
+   ]
+  },
+  {
+   "id": "adv-036",
+   "fp": [
+    "testability:NOT_TESTABLE"
+   ]
+  },
+  {
+   "id": "adv-073",
+   "fp": [
+    "testability:NOT_TESTABLE",
+    "testability:NOT_TESTABLE"
+   ]
+  },
+  {
+   "id": "adv-075",
+   "fp": [
+    "testability:NOT_TESTABLE"
+   ]
+  },
+  {
+   "id": "adv-070",
+   "fp": [
+    "testability:NOT_TESTABLE"
+   ]
+  },
+  {
+   "id": "adv-071",
+   "fp": [
+    "testability:NOT_TESTABLE"
+   ]
+  },
+  {
+   "id": "adv-072",
+   "fp": [
+    "finding:AMB-001"
+   ]
+  },
+  {
+   "id": "adv-044",
+   "fp": [
+    "finding:AMB-001",
+    "finding:AMB-001"
+   ]
+  },
+  {
+   "id": "adv-046",
+   "fp": [
+    "finding:AMB-001",
+    "finding:AMB-001",
+    "testability:NOT_TESTABLE"
+   ]
+  },
+  {
+   "id": "adv-049",
+   "fp": [
+    "testability:NOT_TESTABLE"
+   ]
+  },
+  {
+   "id": "adv-050",
+   "fp": [
+    "testability:NOT_TESTABLE"
+   ]
+  },
+  {
+   "id": "adv-051",
+   "fp": [
+    "testability:NOT_TESTABLE"
+   ]
+  },
+  {
+   "id": "adv-004",
+   "fp": [
+    "testability:NOT_TESTABLE"
+   ]
+  },
+  {
+   "id": "adv-028",
+   "fp": [
+    "testability:NOT_TESTABLE",
+    "testability:NOT_TESTABLE"
+   ]
+  },
+  {
+   "id": "adv-030",
+   "fp": [
+    "testability:NOT_TESTABLE"
+   ]
+  },
+  {
+   "id": "adv-032",
+   "fp": [
+    "testability:NOT_TESTABLE"
+   ]
+  }
+ ],
+ "caveat": "自作・件数が少ない。誤検出耐性（特異度）の確認用で、再現率は測らない。"
+}

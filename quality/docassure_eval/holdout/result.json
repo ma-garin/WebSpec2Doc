@@ -18,17 +18,17 @@
   }
  },
  "overall": {
-  "precision": 0.878,
+  "precision": 0.935,
   "recall": 0.977,
-  "f1": 0.925,
+  "f1": 0.956,
   "tp": 43,
-  "fp": 6,
+  "fp": 3,
   "fn": 1,
   "cases": 60,
   "critical_recall": 1.0,
   "critical_expected": 27,
-  "false_positive_case_rate": 0.1,
-  "issue_density_per_100_lines": 18.56,
+  "false_positive_case_rate": 0.05,
+  "issue_density_per_100_lines": 17.42,
   "must_not_hits": 0
  },
  "by_category": {
@@ -89,17 +89,17 @@
    "must_not_hits": 0
   },
   "false_positive_trap": {
-   "precision": 0.0,
+   "precision": null,
    "recall": null,
    "f1": null,
    "tp": 0,
-   "fp": 1,
+   "fp": 0,
    "fn": 0,
    "cases": 16,
    "critical_recall": null,
    "critical_expected": 0,
-   "false_positive_case_rate": 0.062,
-   "issue_density_per_100_lines": 1.32,
+   "false_positive_case_rate": 0.0,
+   "issue_density_per_100_lines": 0.0,
    "must_not_hits": 0
   },
   "missing_condition": {
@@ -145,17 +145,17 @@
    "must_not_hits": 0
   },
   "state_gap": {
-   "precision": 0.667,
+   "precision": 1.0,
    "recall": 1.0,
-   "f1": 0.8,
+   "f1": 1.0,
    "tp": 4,
-   "fp": 2,
+   "fp": 0,
    "fn": 0,
    "cases": 4,
    "critical_recall": null,
    "critical_expected": 0,
-   "false_positive_case_rate": 0.5,
-   "issue_density_per_100_lines": 37.5,
+   "false_positive_case_rate": 0.0,
+   "issue_density_per_100_lines": 25.0,
    "must_not_hits": 0
   },
   "trace_orphan": {
@@ -224,24 +224,6 @@
   },
   {
    "case": "h-ref-01",
-   "fp": [
-    "testability:NOT_TESTABLE"
-   ]
-  },
-  {
-   "case": "h-fpt-10",
-   "fp": [
-    "testability:NOT_TESTABLE"
-   ]
-  },
-  {
-   "case": "h-stg-01",
-   "fp": [
-    "testability:NOT_TESTABLE"
-   ]
-  },
-  {
-   "case": "h-stg-04",
    "fp": [
     "testability:NOT_TESTABLE"
    ]

@@ -20,16 +20,16 @@
  },
  "overall": {
   "precision": 1.0,
-  "recall": 0.979,
-  "f1": 0.989,
-  "tp": 46,
+  "recall": 1.0,
+  "f1": 1.0,
+  "tp": 47,
   "fp": 0,
-  "fn": 1,
+  "fn": 0,
   "cases": 63,
   "critical_recall": 1.0,
   "critical_expected": 28,
   "false_positive_case_rate": 0.0,
-  "issue_density_per_100_lines": 18.47,
+  "issue_density_per_100_lines": 18.88,
   "must_not_hits": 0
  },
  "by_category": {
@@ -147,16 +147,16 @@
   },
   "state_gap": {
    "precision": 1.0,
-   "recall": 0.75,
-   "f1": 0.857,
-   "tp": 3,
+   "recall": 1.0,
+   "f1": 1.0,
+   "tp": 4,
    "fp": 0,
-   "fn": 1,
+   "fn": 0,
    "cases": 4,
    "critical_recall": null,
    "critical_expected": 0,
    "false_positive_case_rate": 0.0,
-   "issue_density_per_100_lines": 25.0,
+   "issue_density_per_100_lines": 33.33,
    "must_not_hits": 0
   },
   "trace_orphan": {
@@ -342,14 +342,7 @@
    "critical_recall": true
   }
  },
- "misses": [
-  {
-   "case": "sg-02",
-   "missed": [
-    "REQ-ITEMS@A:5"
-   ]
-  }
- ],
+ "misses": [],
  "false_positives": [],
  "caveat": "自作 fixture での測定値。fixture 件数が少なく、実文書への一般化や他製品との優劣を示すものではない。"
 }

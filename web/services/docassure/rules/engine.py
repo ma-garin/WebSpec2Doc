@@ -4,6 +4,7 @@ from __future__ import annotations
 import copy
 import hashlib
 import json
+from dataclasses import replace
 from pathlib import Path
 
 from ..model import (CANDIDATE, DETERMINISTIC, FAIL, NOT_APPLICABLE, NOT_EVALUATED, PASS,
@@ -82,11 +83,15 @@ def run_rules(document_id: str, markdown: str, units: list, pack: dict | None = 
             results.append({**base, "result": NOT_EVALUATED, "checked": out.checked, "reason": out.skip})
             continue
         for n, h in enumerate(out.hits, 1):
+            ln = by_no.get(h.line) or (ctx.lines[0] if ctx.lines and h.line <= 1 else None)
+            if ln is None or not ln.text.strip() or not document_id:
+                continue  # 根拠位置（文書・行・抜粋）を示せない指摘は生成しない（Evidence 必須）
+            h = replace(h, line=ln.no)
             req = _req_at(units, h.line)
             findings.append(Finding(
                 finding_id=f"{rid}:{req or 'L' + str(h.line)}:{n}", rule_id=rid, rule_version=ver, result=FAIL,
                 severity=rule["severity"], title=rule["name"], why_matters=rule["why"], reason=h.reason,
-                how_to_fix=rule["how_to_fix"], location=_location(document_id, by_no.get(h.line), h.line),
+                how_to_fix=rule["how_to_fix"], location=_location(document_id, ln, h.line),
                 requirement_id=req, source=DETERMINISTIC, status=CANDIDATE, confidence=h.confidence,
                 confidence_basis=tuple(h.basis), counter_evidence=tuple(h.counter)))
         if out.hits:

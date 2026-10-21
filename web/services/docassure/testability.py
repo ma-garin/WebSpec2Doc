@@ -18,6 +18,7 @@ VAGUE_WORDS = ("高速", "迅速", "適切", "柔軟", "使いやすい", "な�
 _UNITS = r"(?:ms|msec|秒|分|時間|日|歳|才|件|行|レコード|MB|KB|GB|TB|byte|バイト|%|％|回|文字|桁|人|ユーザー|ユーザ|個|ページ)"
 RE_THRESHOLD = re.compile(r"\d+(?:\.\d+)?\s*" + _UNITS, re.I)
 # 単位語は列挙せず、数量表現の正規化（units.py）と時刻・暦の数値でも閾値とみなす
+RE_CATEGORY_COUNT = re.compile(r"\d+\s*(?:段階|種類|区分|等級|レベル|分類)")  # 値の個数を決めた定義文
 RE_CLOCK = re.compile(r"\d+\s*(?:時|月|週|曜)")
 RE_VOLUME = re.compile(r"\d+(?:\.\d+)?\s*(?:件|行|レコード|MB|GB|TB|人|ユーザー|ユーザ|個|ページ)|データ量|同時")
 RE_CONDITION = re.compile(r"環境|負荷|ブラウザ|ネットワーク|回線|計測|測定|平均|パーセンタイル|95|のとき|時に|場合|において|以内に"
@@ -38,6 +39,7 @@ RE_FAILURE = re.compile(r"失敗|エラー|異常|拒否|不正|無効|タイム
 
 RE_DEFINITION = re.compile(r"^(?:[A-Za-z]+-?\d+\s+)?[^。]{1,40}?[:：]\s*[^。]*(?:をいう|を指す|のこと)|(?:をいう|を指す|とは)[。]?\s*$")
 RE_TRANSITION = re.compile(r"[^\s、。]+から[^\s、。]+へ")
+RE_MOVE = re.compile(r"へ(?:遷移|移行|変わ|変更|進)")  # 「（状態名）へ遷移する」。引用された状態名は除かれて「へ」だけ残る
 # 観測できる動作語（記録・廃棄・送信など）。曖昧語がなく主語・目的語が文中にある文は、条件が弱くても検証手順を書ける
 RE_ACTION = re.compile(r"(?:記録|廃棄|送信|通知|算出|計算|保管|保留|並べ|ソート|再検査|検査|処理|削除|登録|更新|用意|提出|承認|確認|表示|参照|取得|集計|採番|付与|変換|受け付け|受付|転送|差し戻|返却|出力|保存)(?:する|し|と|を|は|る)")
 RE_BARE_SYSTEM = re.compile(r"^\s*(?:[A-Za-z]+-?\d+\s+)?(?:本)?システムは")
@@ -45,12 +47,15 @@ RE_BARE_SYSTEM = re.compile(r"^\s*(?:[A-Za-z]+-?\d+\s+)?(?:本)?システムは"
 RE_QUALIFIER = re.compile(r"(?:後|時|際|とき)[、はに]|従って|に基づ|過ぎた|順に|(?:降|昇)順|ごとに|以外|[A-Za-z]・[A-Za-z]")
 
 
-def _is_concrete(bare: str) -> bool:
+def _is_concrete(bare: str, text: str) -> bool:
     """曖昧語を含まず観測できる動作語を持つ文。主語が素の「システム」で修飾も無い文は、何を確かめるか決まらない。
     状態遷移の羅列は動作ではない（網羅性は別の検査が見る）。"""
-    n_tr = len(RE_TRANSITION.findall(bare))
-    if n_tr:
-        return n_tr >= 3 or "または" in bare
+    n_tr = len(RE_TRANSITION.findall(RE_QUOTED.sub("状態", text)))
+    if n_tr:  # 「AからBへ」の羅列。分岐を持つ遷移表だけを動作とみなし、断片は検証対象が決まらない
+        return ("または" in bare or "もしくは" in bare) and not RE_INCOMPLETE.search(bare)
+    m = RE_MOVE.search(bare)
+    if m:  # 「（主語）は（状態）へ遷移する」。主語を持ち、自ら未定義と述べない文は検証できる
+        return bool(re.search(r"[はが]", bare[:m.start()])) and not RE_INCOMPLETE.search(bare)
     if RE_DEFINITION.search(bare):
         return True
     if not RE_ACTION.search(bare):
@@ -97,7 +102,11 @@ def assess(unit: Any) -> dict:
     if not text.strip():
         return {"verdict": UNKNOWN, "reasons": ["原文が空のため判定できない"], "missing": [], "rewrite_proposal": None}
     vague = [w for w in VAGUE_WORDS if w in text]
-    has_threshold = bool(RE_THRESHOLD.search(text) or RE_CLOCK.search(text) or normalize_quantity(text))
+    novague = text
+    for w in vague:  # 「十分」を 10 分と読むような、曖昧語そのものが数量に化ける誤読を避ける
+        novague = novague.replace(w, " ")
+    has_threshold = bool(RE_THRESHOLD.search(novague) or RE_CLOCK.search(novague) or RE_CATEGORY_COUNT.search(novague)
+                         or normalize_quantity(novague))
     bare = RE_QUOTED.sub("", text)  # 「完了」のような状態名は結果ではない
     has_failure = bool(fields.get("exception") or RE_FAILURE.search(text))
     quoted = RE_QUOTED.findall(text)
@@ -129,7 +138,10 @@ def assess(unit: Any) -> dict:
         reasons.append("閾値・単位がない")
     if vague and not has_threshold:
         verdict = NOT_TESTABLE
-    elif not has_success and not has_threshold and not has_condition and not _is_concrete(bare):
+    elif RE_TRANSITION.search(bare) and RE_INCOMPLETE.search(bare):
+        verdict = NOT_TESTABLE
+        reasons.append("状態遷移の一部が未定義と書かれている")
+    elif not has_success and not has_threshold and not has_condition and not _is_concrete(bare, unicodedata.normalize("NFKC", v["raw_text"])):
         verdict = NOT_TESTABLE
         reasons.append("成功条件も閾値もない")
     elif has_success and has_threshold and not vague and (has_failure or has_condition):

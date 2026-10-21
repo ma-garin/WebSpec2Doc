@@ -37,3 +37,12 @@ Document Assurance 再設計 クラス契約（A=JS/HTML、B=CSS が共有。追
 必須対応: ol.dax-actions > li.dax-action > button > .dax-action__title（人が読む題）+ .dax-action__meta（ID・重大度）
 文字: .dax-h1 20px / .dax-h2 16px / 本文 14px / .dax-meta 12px（主要情報に 12px 以下を使わない）
 余白トークン: 4/8/12/16/24/32（--space-*）。ナビ行 40px、ナビ左右 12px
+
+== 改訂 3（第 1 ゲート: Shell・概要・指摘。旧 .dax-hero/.dax-metrics/.dax-actions/.dax-quality/.dax-funnel は概要で不使用） ==
+概要: section.dax-ready.dax-ready--<state>（__main / __title / __why / __note / __act に状態駆動の主操作 1 つ）> .dax-kpis > button.dax-kpi（__label / __value / __sub。分母つき）
+ 節: .dax-sec > .dax-sec__head（h2.dax-sec__title + .dax-sec__meta）/ .dax-sec__foot / .dax-sec__empty。2 列は .dax-cols
+ 必須対応: table.dax-todo（tr[tabindex=0][data-pgo] 行全体クリック。.dax-todo__title / __why / __id / __go）
+ 品質スコア: .dax-qs > button.dax-q[data-level=ok|mid|low|na]（__name / __bar / __value / __sub）。被覆: .dax-cov > .dax-cov__row
+ヘッダ: 主操作は状態駆動。概要で未解決>0 → 本文の「n 件を確認」が主、ヘッダ「再解析」は secondary。未解決 0 → 本文の「再解析」が主。比較・エクスポートは「⋯」
+指摘: .dax-item（__title 人が読む題 / __meta）; 詳細 .dax-dh（__tags / __meta / __title）; 判断 section.dax-dec > .dax-seg（label.dax-seg__opt > input.dax-seg__in[type=radio] + span）/ .dax-field（__label / __hint / __err）/ .dax-input / .dax-dec__foot（送信 1 つ。未選択は disabled）
+注意: [class*="dax-status--"] は状態タグ用。新しいブロックに dax-status-- 接頭辞を使わない

@@ -645,3 +645,159 @@ button.dax-metric:hover { background: var(--color-surface-2); }
 .dax-page .dax-hero > :is(.dax-meta, .dax-hero__lead) { order: 3; }
 .dax-page .dax-hero > .dax-btn { order: 4; }
 .dax-page .dax-hero > .dax-metrics { order: 5; }
+
+/* ===== 第 1 ゲート（Shell・概要・指摘）。新クラスのみ。4 階層: 題 20/600・節 16/600・本文 14/1.6・メタ 12。余白 4/8/12/16/24/32/48 ===== */
+.dax .dax-h1 { font-size: 20px; font-weight: 600; line-height: 1.3; }
+.dax .dax-header { display: block; padding: 0; border-bottom: 1px solid var(--color-border); }
+.dax .dax-header__row { width: 100%; max-width: 1200px; margin: 0 auto; padding: 16px 24px; min-height: 0; display: flex; align-items: center; justify-content: space-between; gap: 16px; min-width: 0; }
+.dax-page > * { flex-shrink: 0; }
+.dax-ready .dax-pill::before { content: none; }
+.dax-ready .dax-pill { gap: 6px; }
+.dax-header__meta { font-size: 12px; margin-top: 4px; }
+.dax-btn--icon { width: 32px; padding: 0; justify-content: center; }
+.dax-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.dax-page { max-width: 1200px; padding: 24px 24px 48px; gap: 32px; }
+
+/* 状態 */
+.dax-ready { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 16px 24px; padding: 20px 24px; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: 8px; border-left: 3px solid var(--color-border-strong); }
+.dax-ready--conditional { border-left-color: var(--color-warning); }
+.dax-ready--blocked { border-left-color: var(--color-error); }
+.dax-ready--ready { border-left-color: var(--color-success); }
+.dax-ready__main { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; min-width: 0; }
+.dax-ready__title { margin: 0; font-size: 20px; font-weight: 600; line-height: 1.35; color: var(--color-text); }
+.dax-ready__why { font-size: 14px; line-height: 1.6; color: var(--color-text-secondary); }
+.dax-ready__note { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--color-text-secondary); }
+.dax-ready__act { align-self: start; }
+.dax-ready__act .dax-btn { height: 36px; padding: 0 16px; font-weight: 600; }
+.dax-kpis { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border-top: 1px solid var(--color-divider); margin: 0 -24px -20px; }
+.dax-kpi { display: grid; gap: 2px; text-align: left; padding: 12px 24px 16px; background: none; border: 0; border-right: 1px solid var(--color-divider); cursor: pointer; font: inherit; color: inherit; min-width: 0; }
+.dax-kpi:last-child { border-right: 0; }
+.dax-kpi:hover { background: var(--color-surface-2); }
+.dax-kpi:focus-visible { outline: 2px solid var(--color-primary); outline-offset: -2px; }
+.dax-kpi__label { font-size: 12px; color: var(--color-text-secondary); }
+.dax-kpi__value { font-size: 20px; font-weight: 600; line-height: 1.3; font-variant-numeric: tabular-nums; color: var(--color-text); }
+.dax-kpi__sub { font-size: 12px; color: var(--color-text-tertiary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* 節 */
+.dax-sec { min-width: 0; }
+.dax-sec__head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+.dax-sec__title { margin: 0; font-size: 16px; font-weight: 600; line-height: 1.4; color: var(--color-text); }
+.dax-sec__meta, .dax-sec__foot { font-size: 12px; color: var(--color-text-secondary); }
+.dax-sec__foot { margin-top: 12px; }
+.dax-sec__empty { padding: 16px; border: 1px dashed var(--color-border-strong); border-radius: 8px; color: var(--color-text-secondary); }
+.dax-link { margin-top: 8px; padding: 4px 0; background: none; border: 0; font: inherit; font-size: 14px; color: var(--color-primary-dark); cursor: pointer; }
+.dax-link:hover { text-decoration: underline; }
+.dax-link:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; border-radius: 4px; }
+
+/* 必須対応（表） */
+.dax-todo { width: 100%; border-collapse: separate; border-spacing: 0; table-layout: fixed; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: 8px; overflow: hidden; }
+.dax-todo th { padding: 8px 16px; font-size: 12px; font-weight: 500; text-align: left; color: var(--color-text-secondary); background: var(--color-surface-2); border-bottom: 1px solid var(--color-border); }
+.dax-todo th:nth-child(2) { width: 140px; } .dax-todo th:nth-child(3) { width: 96px; } .dax-todo th:nth-child(4) { width: 40px; }
+.dax-todo td { padding: 12px 16px; vertical-align: middle; border-bottom: 1px solid var(--color-divider); min-width: 0; }
+.dax-todo tbody tr:last-child td { border-bottom: 0; }
+.dax-todo tbody tr { cursor: pointer; }
+.dax-todo tbody tr:hover td { background: var(--color-surface-2); }
+.dax-todo tbody tr:focus-visible { outline: 2px solid var(--color-primary); outline-offset: -2px; }
+.dax-todo__title { display: block; font-size: 14px; font-weight: 600; line-height: 1.5; color: var(--color-text); overflow-wrap: anywhere; }
+.dax-todo__why { display: block; margin-top: 2px; font-size: 13px; line-height: 1.5; color: var(--color-text-secondary); }
+.dax-todo__id { font-size: 13px; color: var(--color-text-secondary); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.dax-todo__na { color: var(--color-text-tertiary); }
+.dax-todo__go { text-align: right; color: var(--color-text-tertiary); font-size: 16px; }
+
+/* 品質スコア・被覆（2 列） */
+.dax-cols { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 32px; }
+.dax-qs, .dax-cov { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: 8px; }
+.dax-q { display: grid; grid-template-columns: 112px minmax(0, 1fr) 72px; grid-template-rows: auto auto; align-items: center; gap: 2px 12px; width: 100%; padding: 10px 16px; background: none; border: 0; border-bottom: 1px solid var(--color-divider); font: inherit; text-align: left; color: inherit; cursor: pointer; }
+.dax-q:last-child { border-bottom: 0; }
+.dax-q:hover { background: var(--color-surface-2); }
+.dax-q:focus-visible { outline: 2px solid var(--color-primary); outline-offset: -2px; }
+.dax-q__name { font-size: 14px; color: var(--color-text); }
+.dax-q__value { font-size: 14px; font-weight: 600; text-align: right; font-variant-numeric: tabular-nums; color: var(--color-text); white-space: nowrap; }
+.dax-q__sub { grid-column: 2 / -1; font-size: 12px; color: var(--color-text-tertiary); }
+.dax-q__bar { position: relative; display: block; height: 6px; border-radius: 3px; background: var(--color-surface-2); overflow: hidden; }
+.dax-q__bar > span { position: absolute; inset: 0 auto 0 0; background: var(--color-primary); border-radius: 3px; }
+.dax-q[data-level="low"] .dax-q__bar > span { background: var(--color-error); }
+.dax-q[data-level="mid"] .dax-q__bar > span { background: var(--color-warning); }
+.dax-q[data-level="ok"] .dax-q__bar > span { background: var(--color-success); }
+.dax-q[data-level="na"] .dax-q__bar { background: none; box-shadow: inset 0 0 0 1px var(--color-border-strong); }
+.dax-q[data-level="na"] .dax-q__value { font-weight: 500; color: var(--color-text-secondary); }
+.dax-cov__row { display: grid; grid-template-columns: minmax(0, 1fr) 72px; grid-template-rows: auto auto; gap: 8px 12px; padding: 12px 16px; border-bottom: 1px solid var(--color-divider); }
+.dax-cov__row:last-child { border-bottom: 0; }
+.dax-cov__label { font-size: 14px; color: var(--color-text); }
+.dax-cov__value { font-size: 14px; font-weight: 600; text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.dax-cov__row > .dax-q__bar { grid-column: 1 / -1; }
+.dax-more { border-top: 1px solid var(--color-border); padding-top: 16px; }
+.dax-more > summary { cursor: pointer; font-size: 14px; font-weight: 600; color: var(--color-text-secondary); }
+.dax-more > summary:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; border-radius: 4px; }
+.dax-more__body { display: grid; gap: 12px; padding-top: 12px; justify-items: start; }
+
+/* 指摘: master-detail */
+.dax-md { grid-template-columns: 340px minmax(0, 1fr); border-radius: 8px; }
+.dax .dax-item { display: grid; gap: 6px; width: 100%; padding: 12px 16px; border: 0; border-bottom: 1px solid var(--color-divider); border-left: 3px solid transparent; background: none; text-align: left; font: inherit; cursor: pointer; }
+.dax .dax-item:hover { background: var(--color-surface-2); }
+.dax .dax-item[aria-selected="true"] { background: var(--color-primary-light); border-left-color: var(--color-primary); }
+.dax-item__title { font-size: 14px; font-weight: 600; line-height: 1.5; color: var(--color-text); overflow-wrap: anywhere; }
+.dax-item__meta { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; font-size: 12px; color: var(--color-text-secondary); }
+.dax-item__st--decision { color: var(--color-warning-tx); } .dax-item__st--resolved { color: var(--color-success-tx); }
+.dax-item__st::before { content: "・"; color: var(--color-text-tertiary); }
+.dax-kind { display: inline-flex; align-items: center; height: 20px; padding: 0 6px; border: 1px solid var(--color-border-strong); border-radius: 4px; font-size: 12px; color: var(--color-text-secondary); background: var(--color-surface); }
+.dax-md__detail { padding: 24px; }
+.dax-dh { padding-bottom: 16px; }
+.dax-dh__tags { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.dax-dh__meta { font-size: 12px; color: var(--color-text-secondary); }
+.dax-dh__title { margin: 12px 0 0; font-size: 20px; font-weight: 600; line-height: 1.35; color: var(--color-text); }
+.dax-md__detail .dax-detail__section p { line-height: 1.6; }
+.dax-dec { margin: 8px 0 16px; padding: 16px; border: 1px solid var(--color-border); border-radius: 8px; background: var(--color-surface-2); display: grid; gap: 12px; }
+.dax-dec .dax-h3 { margin: 0; font-size: 16px; font-weight: 600; }
+.dax-dec__hint, .dax-dec__desc { font-size: 12px; color: var(--color-text-secondary); margin-top: -8px !important; }
+.dax-dec__desc { margin-top: -4px !important; }
+.dax-seg { display: inline-grid; grid-auto-flow: column; grid-auto-columns: 1fr; padding: 2px; gap: 2px; background: var(--color-surface); border: 1px solid var(--color-border-strong); border-radius: 8px; max-width: 100%; }
+.dax-seg__opt { position: relative; display: block; margin: 0; cursor: pointer; }
+.dax-seg__in { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
+.dax-seg__opt > span { display: flex; align-items: center; justify-content: center; height: 32px; padding: 0 16px; border-radius: 6px; font-size: 14px; font-weight: 500; color: var(--color-text-secondary); white-space: nowrap; }
+.dax-seg__opt:hover > span { background: var(--color-surface-2); color: var(--color-text); }
+.dax-seg__in:checked + span { background: var(--color-primary-light); color: var(--color-primary-dark); font-weight: 600; box-shadow: inset 0 0 0 1px var(--color-primary-border); }
+.dax-seg__in:checked + span::before { content: "✓"; margin-right: 6px; font-size: 12px; }
+.dax-seg__in:focus-visible + span { outline: 2px solid var(--color-primary); outline-offset: 1px; }
+.dax-field { display: grid; gap: 4px; }
+.dax-field[hidden] { display: none; }
+.dax-field__label { font-size: 14px; font-weight: 600; color: var(--color-text); }
+.dax-field__hint { font-size: 12px; color: var(--color-text-secondary); }
+.dax-field__err { font-size: 13px; color: var(--color-error-tx); padding: 8px 12px; background: var(--color-error-bg); border: 1px solid var(--color-error-border); border-radius: 6px; }
+.dax .dax-input { width: 100%; padding: 8px 12px; font: inherit; font-size: 14px; line-height: 1.6; color: var(--color-text); background: var(--color-surface); border: 1px solid var(--color-border-strong); border-radius: 6px; box-shadow: none; }
+.dax .dax-input:hover { border-color: var(--color-text-tertiary); }
+.dax .dax-input:focus { outline: 0; border-color: var(--color-primary); box-shadow: 0 0 0 3px var(--color-primary-light); }
+.dax .dax-input[aria-invalid="true"] { border-color: var(--color-error); }
+.dax textarea.dax-input { min-height: 88px; resize: vertical; }
+.dax .dax-input--date { width: 200px; height: 36px; padding: 0 12px; }
+.dax-dec__foot { display: flex; justify-content: flex-end; }
+.dax-dec__foot .dax-btn { height: 36px; padding: 0 16px; font-weight: 600; }
+.dax .dax-btn--primary:disabled { background: var(--color-surface-2); border-color: var(--color-border); color: var(--color-text-disabled); cursor: not-allowed; }
+
+@media (max-width: 1180px) {
+  .dax-cols { grid-template-columns: minmax(0, 1fr); gap: 32px; }
+  .dax-md { grid-template-columns: 300px minmax(0, 1fr); }
+}
+.dax .dax-page { max-width: 1200px; margin: 0 auto; padding: 24px 24px 48px; gap: 32px; }
+.dax .dax-ready__title, .dax .dax-dh__title { font-size: 20px; font-weight: 600; line-height: 1.35; }
+.dax .dax-sec__title { font-size: 16px; font-weight: 600; }
+.dax .dax-md__detail .dax-dh__title { margin: 12px 0 0; font-size: 20px; font-weight: 600; line-height: 1.35; }
+.dax .dax-md__detail .dax-detail__section { padding: 16px 0; border-top: 1px solid var(--color-divider); }
+.dax .dax-md__detail .dax-detail__section > .dax-h3 { margin: 0 0 4px; font-size: 12px; font-weight: 600; color: var(--color-text-secondary); }
+.dax .dax-md__detail .dax-detail__section p { font-size: 14px; line-height: 1.6; }
+.dax .dax-md__detail .dax-dec { margin-top: 8px; }
+.dax .dax-dec > * { margin: 0; }
+.dax .dax-dec__hint, .dax .dax-dec__desc { margin-top: -6px !important; }
+.dax .dax-seg { justify-self: start; width: auto; }
+.dax-md__detail > .dax-adv { margin-top: 8px; }
+.dax .dax-md__detail .dax-dec { padding: 16px; gap: 12px; }
+.dax .dax-dec > .dax-h3 { font-size: 16px; font-weight: 600; color: var(--color-text); }
+/* docverify.css の [data-view]:not(.dvr-view) h2/h3 より強く */
+.dax h2.dax-ready__title, .dax h2.dax-dh__title, .dax .dax-md__detail h2.dax-dh__title { font-size: 20px; font-weight: 600; line-height: 1.35; }
+.dax h2.dax-sec__title { font-size: 16px; font-weight: 600; line-height: 1.4; }
+.dax h3.dax-h3 { line-height: 1.4; }
+.dax .dax-dec > h3.dax-h3 { font-size: 16px; }
+.dax .dax-md__detail .dax-detail__section > h3.dax-h3 { font-size: 12px; color: var(--color-text-secondary); }
+.dax .dax-md__detail section.dax-dec { padding: 16px; }
+.dax .dax-dec > h3.dax-h3 { margin: 0; }
+.dax p.dax-sec__foot { margin-top: 12px; }

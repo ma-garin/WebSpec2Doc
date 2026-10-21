@@ -54,3 +54,6 @@
 /* 旧ビューは弱く */
 .dv-sb .dv-sb__more>summary.dv-sb__item{color:var(--color-text-tertiary);font-size:var(--text-sm);font-weight:400}
 .dv-sb .dv-sb__more>summary.dv-sb__item svg{color:var(--color-text-tertiary)}
+/* 第 1 ゲート: 行 40px で統一・管理群は弱い小見出し＋区切り */
+.dv-sb .dv-sb__group--admin .dv-sb__item,.dv-sb .dv-sb__foot .dv-sb__item{height:40px}
+.dv-sb .dv-sb__heading{padding:4px 12px 6px;font-size:12px;font-weight:500;letter-spacing:.02em;color:var(--color-text-tertiary)}

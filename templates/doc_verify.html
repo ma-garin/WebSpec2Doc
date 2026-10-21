@@ -20,6 +20,7 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='css/docassure.css') }}?v={{ dv_ver }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/docassure-trace-panel.css') }}?v={{ dv_ver }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/docassure-panels.css') }}?v={{ dv_ver }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/docassure-links-panel.css') }}?v={{ dv_ver }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/c-hybrid.css') }}?v={{ _ver }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/c-shell.css') }}?v={{ _ver }}">
 </head>
@@ -32,6 +33,7 @@
     <a href="/systems" class="sys-switcher" title="システムを切り替える"><span class="sys-switcher-label">システム</span><span class="sys-switcher-cur">ドキュメント検証</span><span class="sys-switcher-swap">切替</span></a>
     <nav class="app-nav dv-sidenav" aria-label="メインナビゲーション">
       <a class="app-nav-item dv-sec" href="#reviews" data-sec="doc" data-go="reviews"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="m9 15 2 2 4-4"/></svg><span class="nav-label">レビュー<small>レビューを作って進める</small></span></a>
+      <a class="app-nav-item dv-sec" href="#assure" data-sec="qa" data-go="assure"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 4 6v6c0 4.5 3.2 8 8 9 4.8-1 8-4.5 8-9V6z"/><path d="m9 12 2 2 4-4"/></svg><span class="nav-label">ドキュメント品質保証<small>準備状態・スコア・指摘・矛盾</small></span></a>
       <a class="app-nav-item dv-sec" href="#trace" data-sec="trace" data-go="trace"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="6" cy="6" r="2.5"/><circle cx="18" cy="12" r="2.5"/><circle cx="6" cy="18" r="2.5"/><path d="M8.5 6H12a3 3 0 0 1 3 3v.5M8.5 18H12a3 3 0 0 0 3-3v-.5"/></svg><span class="nav-label">トレーサビリティ<small>要件と設計・テストのつながり</small></span></a>
       <a class="app-nav-item dv-sec" href="#triage" data-sec="find" data-go="triage"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 21V4"/><path d="M5 4h11l-2 4 2 4H5"/></svg><span class="nav-label">指摘<small>見つかった指摘を検討する</small></span></a>
       <a class="app-nav-item dv-sec" href="#screen" data-sec="evid" data-go="screen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="6"/><path d="m20 20-4.2-4.2"/></svg><span class="nav-label">根拠<small>文書・推論・未確認の区別</small></span></a>
@@ -48,18 +50,16 @@
       <header class="c-page-head dv-pagehead" id="dv-pagehead"><div class="c-page-head__main"><h1 class="c-page-head__title" id="dv-ph-title">レビュー</h1><p class="c-page-head__desc" id="dv-ph-desc"></p><div class="c-page-head__state" id="dv-ph-state"></div></div></header>
       <div class="dv-reason" id="dv-reason"></div>
       <nav class="dv-subtabs" id="dv-subtabs" aria-label="画面の切り替え" hidden></nav>
-      <button type="button" class="btn-outline-sm da-open-btn" id="da-open" aria-haspopup="dialog">ドキュメント品質保証を開く</button>
       <div class="dv-banner" id="dv-banner" role="alert" hidden></div>
       <div class="dv-toast" id="dv-toast" role="status" hidden></div>
       {% include 'docverify/_global.html' %}
       {% include 'docverify/_review.html' %}
       {% include 'docverify/_trace.html' %}
+      <section class="dv-view da" data-view="assure" hidden><div id="da-root" aria-label="ドキュメント品質保証"></div></section>
       {% include 'docverify/_process.html' %}
       {% include 'docverify/_accuracy.html' %}
       <dialog class="dv-modal" id="dv-modal" aria-labelledby="dv-modal-title"><h2 class="dv-modal-title" id="dv-modal-title"></h2><div class="dv-modal-body" id="dv-modal-body"></div><div class="dv-modal-actions"><button type="button" class="b" data-modal="cancel"></button><button type="button" class="b p" data-modal="ok"></button></div></dialog>
     </main>
-    <section class="da" id="da-root" aria-label="ドキュメント品質保証" hidden></section>
-    <dialog class="da-dialog" id="da-dialog" aria-label="スコアの根拠"></dialog>
   </div>
 </div>
 <script src="{{ url_for('static', filename='js/c-hybrid.js') }}?v={{ _ver }}"></script>
@@ -79,6 +79,7 @@
 <script src="{{ url_for('static', filename='js/docassure-trace-panel.js') }}?v={{ dv_ver }}"></script>
 <script src="{{ url_for('static', filename='js/docassure-diff-panel.js') }}?v={{ dv_ver }}"></script>
 <script src="{{ url_for('static', filename='js/docassure-review-panel.js') }}?v={{ dv_ver }}"></script>
+<script src="{{ url_for('static', filename='js/docassure-links-panel.js') }}?v={{ dv_ver }}"></script>
 <script>DV.start();</script>
 </body>
 </html>

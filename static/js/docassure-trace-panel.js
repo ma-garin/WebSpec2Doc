@@ -4,12 +4,12 @@
   window.DAPanels = window.DAPanels || {};
 
   var STAGES = [
-    ['requirement', 'Requirement（要件）'],
-    ['design', 'Design（画面・API への言及）'],
-    ['test_designed', 'Test 設計済み（テスト案あり）'],
-    ['execution', 'Execution（実行済み）'],
-    ['passed', 'Passed（合格）'],
-    ['verified', 'Verified（検証済み）']
+    ['requirement', '要件'],
+    ['design', '設計（画面・API への言及）'],
+    ['test_designed', 'テスト設計済み（テスト案あり）'],
+    ['execution', 'テスト実行済み'],
+    ['passed', 'テスト合格'],
+    ['verified', '検証済み']
   ];
   var PROVS = ['EXPLICIT', 'OBSERVED', 'DERIVED', 'INFERRED'];
   var PROV_LABEL = { EXPLICIT: '明示', OBSERVED: '観測', DERIVED: '導出', INFERRED: '推測' };
@@ -79,8 +79,8 @@
         body = '<span class="dat-na">対象 0 件</span>';
       } else {
         var pct = Math.round(m.ratio * 100);
-        body = '<span class="dat-bar" aria-hidden="true"><i style="width:' + pct + '%"></i></span><span>' +
-          esc(String(m.count)) + ' / ' + esc(String(m.total)) + '（' + esc(String(pct)) + '%）</span>';
+        body = '<span class="dat-cov-v"><span class="dat-bar" aria-hidden="true"><i style="width:' + pct + '%"></i></span><span>' +
+          esc(String(m.count)) + ' / ' + esc(String(m.total)) + '（' + esc(String(pct)) + '%）</span></span>';
       }
       return '<div class="dat-cov-row"><span class="dat-cov-name">' + esc(s[1]) + '</span>' + body + '</div>';
     }).join('');
@@ -102,18 +102,18 @@
   }
 
   window.DAPanels.trace = {
-    label: 'Trace',
+    label: 'つながり',
     html: function (ctx) {
       var esc = ctx.esc, t = ctx.data && ctx.data.trace;
       if (!t || t.status === 404) {
-        return '<div class="dat-root"><p class="dat-na">未実行です。検査を実行すると Trace グラフが表示されます。</p></div>';
+        return '<div class="dat-root"><p class="dat-na">まだ分析していません。「分析を実行」を押すと、要件と設計・テストのつながりが表示されます。</p></div>';
       }
       if (!t.ok) {
-        return '<div class="dat-root"><p class="dat-err" role="alert">Trace を取得できませんでした（状態 ' + esc(String(t.status)) + '）。再読み込みしてください。</p></div>';
+        return '<div class="dat-root"><p class="dat-err" role="alert">つながりを読み込めませんでした（状態 ' + esc(String(t.status)) + '）。「もう一度読み込む」か、ページの再読み込みをしてください。</p></div>';
       }
       var tr = (t.body && t.body.trace) || {}, g = tr.graph || { nodes: [], edges: [], orphans: [] };
       var checks = PROVS.map(function (p) {
-        return '<label class="dat-chk"><input type="checkbox" data-prov="' + esc(p) + '" checked> ' + esc(p) + '（' + esc(PROV_LABEL[p]) + '）</label>';
+        return '<label class="dat-chk"><input type="checkbox" data-prov="' + esc(p) + '" checked> ' + esc(PROV_LABEL[p]) + '</label>';
       }).join('');
       var legend = '<ul class="dat-legend" aria-label="凡例">' +
         '<li><svg width="22" height="14" aria-hidden="true"><rect x="2" y="2" width="18" height="10" class="dat-shape"/></svg>要件・業務ルール（四角）</li>' +
@@ -122,12 +122,12 @@
         '<li><svg width="22" height="14" aria-hidden="true"><polygon points="5,1 17,1 21,7 17,13 5,13 1,7" class="dat-shape"/></svg>API（六角形）</li>' +
         '<li><svg width="22" height="14" aria-hidden="true"><ellipse cx="11" cy="7" rx="9" ry="6" class="dat-shape"/></svg>テスト（丸）</li>' +
         '<li><svg width="30" height="8" aria-hidden="true"><line x1="0" y1="4" x2="30" y2="4" class="dat-edge"/></svg>実線: 明示・観測・導出</li>' +
-        '<li><svg width="30" height="8" aria-hidden="true"><line x1="0" y1="4" x2="30" y2="4" class="dat-edge dat-infer"/></svg>点線: 推測（INFERRED。根拠が弱い）</li></ul>';
+        '<li><svg width="30" height="8" aria-hidden="true"><line x1="0" y1="4" x2="30" y2="4" class="dat-edge dat-infer"/></svg>点線: 推測（根拠が弱い）</li></ul>';
       return '<div class="dat-root">' + coverageHtml(tr.coverage || {}, esc) +
-        '<section class="dat-sec" aria-label="Trace グラフ"><h3>Trace グラフ（要件中心）</h3>' +
+        '<section class="dat-sec" aria-label="Trace グラフ"><h3>つながりの図（要件中心）</h3>' +
         '<div class="dat-filter" role="group" aria-label="出所フィルタ">' + checks + '</div>' + legend +
         '<div class="dat-main"><div class="dat-graph" data-role="graph"></div>' +
-        '<aside class="dat-detail" data-role="detail" aria-live="polite"><p class="dat-na">ノードを選ぶと近傍（深さ 2）と詳細を表示します。Esc で解除。</p></aside></div></section>' +
+        '<aside class="dat-detail" data-role="detail" aria-live="polite"><p class="dat-na">図の要素を選ぶと、つながる要素と詳細を表示します。Esc で選択を解除します。</p></aside></div></section>' +
         orphansHtml(g.orphans, g.nodes || [], esc) + '</div>';
     },
     bind: function (root, ctx) {
@@ -148,7 +148,7 @@
 
       function showDetail(vis) {
         if (selected == null) {
-          detail.innerHTML = '<p class="dat-na">ノードを選ぶと近傍（深さ 2）と詳細を表示します。Esc で解除。</p>';
+          detail.innerHTML = '<p class="dat-na">図の要素を選ぶと、つながる要素と詳細を表示します。Esc で選択を解除します。</p>';
           return;
         }
         var n = nodes[selected], rel = vis.filter(function (e) { return e.src === n.id || e.dst === n.id; });

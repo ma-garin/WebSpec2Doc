@@ -22,22 +22,22 @@
       '<h4><span class="dap-badge dap-src-' + esc(src) + '">' + esc(SRC[src] || src) + '</span> ' +
       '<span class="dap-badge">候補</span> ' + esc(f.finding) + '</h4>' +
       (disputed ? '<p class="dap-note">意見が割れています。どちらが正しいかは未確定です。</p>' : '') +
-      '<p class="dap-meta">重要度: ' + esc(SEV[f.severity] || f.severity || '') + ' ／ 確信度: ' + esc(f.confidence == null ? '未算出' : f.confidence) + '</p>' +
+      '<p class="dap-meta">重要度: ' + esc(SEV[f.severity] || f.severity || '') + ' ／ 確からしさ: ' + esc(f.confidence == null ? '未算出' : (Number(f.confidence) >= 0.75 ? '高' : Number(f.confidence) >= 0.4 ? '中' : '低')) + '</p>' +
       (f.reason ? '<p>理由: ' + esc(f.reason) + '</p>' : '') +
       (f.question ? '<p>確認したい点: ' + esc(f.question) + '</p>' : '') +
       (f.recommended_action ? '<p>推奨: ' + esc(f.recommended_action) + '</p>' : '') +
       '<h5>証拠（原文位置・引用）</h5>' + evidence(esc, f.evidence) +
       (st ? '<p class="dap-ok" role="status">判断を記録しました: ' + esc(st) + '</p>' :
         '<label class="dap-label">判断の理由<textarea class="dap-reason" rows="2" maxlength="2000"></textarea></label>' +
-        '<div class="dap-actions"><button type="button" class="dap-btn" data-decide="accepted" data-target="' + id + '">採用する</button> ' +
-        '<button type="button" class="dap-btn dap-btn-sub" data-decide="rejected" data-target="' + id + '">却下する</button></div>') +
+        '<div class="dap-actions"><button type="button" class="c-btn c-btn--secondary c-btn--sm" data-decide="accepted" data-target="' + id + '">採用する</button> ' +
+        '<button type="button" class="c-btn c-btn--secondary c-btn--sm" data-decide="rejected" data-target="' + id + '">却下する</button></div>') +
       '</article>';
   }
 
   function render(ctx, out, decided) {
     var esc = ctx.esc;
     if (out.mode === 'DEGRADED') {
-      return '<p class="dap-note" role="status">AI レビューは使えません（決定論の分析のみ）。設定で AI を有効にすると候補を追加できます。</p>';
+      return '<p class="dap-note" role="status">AI レビューは実行していません（規則による分析のみ）。AI の観点は評価していません。左の「設定」で AI の送信先を選ぶと、候補を追加できます。</p>';
     }
     var fs = out.findings || [], un = out.unsupported || [], dis = out.dismissed || [];
     var by = {};
@@ -46,7 +46,7 @@
       (out.provider && out.provider.name ? '（' + esc(out.provider.name) + ' ' + esc(out.provider.model || '') + '）' : '') + '</p>';
     if (!fs.length) { h += '<p class="dap-empty">根拠付きの指摘はありませんでした。</p>'; }
     Object.keys(by).forEach(function (k) {
-      h += '<section class="dap-group"><h4>Reviewer: ' + esc(k) + '</h4>' + by[k].map(function (p) { return finding(ctx, p[0], p[1], decided); }).join('') + '</section>';
+      h += '<section class="dap-group"><h4>観点: ' + esc(k) + '</h4>' + by[k].map(function (p) { return finding(ctx, p[0], p[1], decided); }).join('') + '</section>';
     });
     if (dis.length) {
       h += '<section class="dap-group"><h4>反証が見つかったため候補から外した指摘（' + dis.length + ' 件）</h4><ul>' +
@@ -62,15 +62,15 @@
   window.DAPanels.review = {
     label: 'AI レビュー',
     html: function (ctx) {
-      return '<section class="dap" aria-labelledby="dap-rv-h"><h3 id="dap-rv-h">AI レビュー（Review Board）</h3>' +
-        '<p class="dap-muted">複数の観点で文書を読み、指摘の候補を出します。決定論の結果は変わりません。</p>' +
-        '<button type="button" class="dap-btn" data-dap-run>AI レビューを実行</button>' +
+      return '<section class="dap" aria-labelledby="dap-rv-h"><h3 id="dap-rv-h">AI レビュー</h3>' +
+        '<p class="dap-muted">複数の観点で文書を読み、指摘の候補を出します。AI の指摘は候補で、規則による分析の結果は変わりません。設定で AI を有効にしていない場合は実行されません。</p>' +
+        '<button type="button" class="c-btn c-btn--secondary" data-dap-run>AI レビューを実行</button>' +
         '<div class="dap-body" data-dap-review aria-live="polite"></div>' +
         '<dialog class="dap-dialog" data-dap-consent aria-labelledby="dap-cs-h"><form method="dialog">' +
         '<h4 id="dap-cs-h">文書の一部を外部へ送ります</h4><p data-dap-dest></p>' +
         '<p>送信してよい場合だけ同意してください。同意しない場合は何も送りません。</p>' +
-        '<div class="dap-actions"><button type="button" class="dap-btn" data-dap-agree>同意して送信</button> ' +
-        '<button type="button" class="dap-btn dap-btn-sub" data-dap-cancel>やめる</button></div></form></dialog></section>';
+        '<div class="dap-actions"><button type="button" class="c-btn c-btn--primary" data-dap-agree>同意して送信</button> ' +
+        '<button type="button" class="c-btn c-btn--secondary" data-dap-cancel>やめる</button></div></form></dialog></section>';
     },
     bind: function (root, ctx) {
       var run = root.querySelector('[data-dap-run]'), box = root.querySelector('[data-dap-review]');
@@ -102,6 +102,7 @@
         var btn = e.target.closest && e.target.closest('[data-decide]');
         if (!btn) { return; }
         var art = btn.closest('article'), ta = art.querySelector('.dap-reason'), target = btn.getAttribute('data-target');
+        if (ta && !ta.value.trim()) { var old = art.querySelector('.dap-error'); if (old) { old.remove(); } var m0 = document.createElement('p'); m0.className = 'dap-error'; m0.setAttribute('role', 'alert'); m0.textContent = '理由が空です。理由を入力してからもう一度押してください。'; art.appendChild(m0); ta.focus(); return; }
         btn.disabled = true;
         ctx.post('decisions', { decision: btn.getAttribute('data-decide'), target: target, reason: ta ? ta.value : '' }).then(function (r) {
           if (!r.ok) { btn.disabled = false; var m = document.createElement('p'); m.className = 'dap-error'; m.setAttribute('role', 'alert'); m.textContent = (r.body && r.body.error) || '記録できませんでした。再度お試しください。'; art.appendChild(m); return; }

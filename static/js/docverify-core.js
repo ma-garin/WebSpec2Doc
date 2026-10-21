@@ -6,7 +6,7 @@
   const TITLES = {
     home: 'ホーム', mine: '自分の担当', reviews: 'レビュー一覧', findings: '指摘一覧',
     plan: '計画', read: '文書を読む', triage: '指摘の検討', questions: '質問票', followup: '修正版の確認',
-    screen: '実画面との照合', gate: '判定と記録', trace: 'トレーサビリティ', checklists: '検証観点', metrics: '履歴', accuracy: '精度', settings: '設定',
+    screen: '実画面との照合', gate: '判定と記録', trace: 'トレーサビリティ', assure: 'ドキュメント品質保証', checklists: '検証観点', metrics: '履歴', accuracy: '精度', settings: '設定',
   };
   const NET_ERR = 'サーバに接続できませんでした。少し待ってから、もう一度お試しください。';
   const handlers = {};
@@ -74,7 +74,7 @@
   // 指摘=「指摘の検討」、根拠=「実画面との照合」の既存画面に対応付ける（新画面は作らない）。
   const SECTIONS = {
     doc: ['home', 'mine', 'reviews', 'findings', 'plan', 'read', 'questions', 'followup', 'gate'],
-    trace: ['trace'], find: ['triage'], evid: ['screen'], hist: ['metrics'], vp: ['checklists', 'accuracy'], set: ['settings'],
+    qa: ['assure'], trace: ['trace'], find: ['triage'], evid: ['screen'], hist: ['metrics'], vp: ['checklists', 'accuracy'], set: ['settings'],
   };
   // ドキュメント検証はレビュー一覧 1 画面。ホーム・自分の担当・指摘一覧は廃止（タブ不要・2026-10-18）。
   const DOC_GONE = ['home', 'mine', 'findings'];
@@ -118,6 +118,7 @@
     screen: ['根拠', '実画面と文書を照らし合わせ、一致・不一致・未確認を見ます。', '照合できていない項目は「未確認」です。一致とは読まないでください。'],
     gate: ['判定と記録', 'レビューの合否を決め、記録を残します。', '判定と承認は人が行います。AI は承認しません。'],
     trace: ['トレーサビリティ', '要件・設計・テストの文書どうしのつながりを確かめます。', 'つながりは文書の記述から読み取った推論です。内容が正しいかは人が確かめてください。'],
+    assure: ['ドキュメント品質保証', '文書が次の工程へ進める状態かを判定し、直すべき点と決めることを示します。', '点数は評価できた範囲だけで出します。評価できなかった範囲を 0 点や 100 点にはしません。'],
     metrics: ['履歴', '過去の判定と記録、指摘の件数と修正の進み具合を見ます。', '数値は、画面に表示された時点の記録です。'],
     checklists: ['観点', '文書の検査で何を見るか、見つけた指摘をどれだけ重く扱うかを決めます。', '観点は区分ごとに、見る内容と重さを決められます。'],
     settings: ['設定', 'レビューで使う言葉と基準、AI の送信先を確認します。', 'AI に文書を送る前には、必ず送る内容の確認が出ます。'],

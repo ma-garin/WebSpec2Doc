@@ -42,7 +42,7 @@
       '<h4><span class="dap-badge dap-' + esc(String(d.change).toLowerCase()) + '">' + c[0] + ' ' + esc(c[1]) + '</span> ' + esc(d.requirement_id) + '</h4>' +
       '<section aria-label="意味の変化"><h5>意味の変化</h5>' + meaning(esc, d) + '</section>' +
       '<section aria-label="原文の差分"><h5>原文の差分（生の差分）</h5><div class="dap-cols">' +
-      side(esc, 'Before（前の版）', d.before) + side(esc, 'After（今の版）', d.after) + '</div></section></article>';
+      side(esc, '前の版', d.before) + side(esc, '今の版', d.after) + '</div></section></article>';
   }
 
   window.DAPanels.diff = {

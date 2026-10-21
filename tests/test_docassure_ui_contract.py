@@ -29,6 +29,6 @@ def test_js_branches_on_null_value_and_never_fabricates():
 
 def test_js_declares_mode_and_conflict_unresolved_notice():
     js = (ROOT / "static/js/docassure.js").read_text(encoding="utf-8")
-    assert "DETERMINISTIC_ONLY" in js and "AI レビューは未実行" in js
+    assert "DETERMINISTIC_ONLY" in js and "AI レビューは実行していません" in js
     assert "どちらが正しいかは未確定" in js
     assert "（任意）" not in js

@@ -8,7 +8,7 @@ CSS = (ROOT / "static/css/docassure-trace-panel.css").read_text(encoding="utf-8"
 
 
 def test_contract_registered():
-    assert "window.DAPanels.trace" in JS and "label: 'Trace'" in JS
+    assert "window.DAPanels.trace" in JS and "label: 'つながり'" in JS
     assert "html: function (ctx)" in JS and "bind: function (root, ctx)" in JS
 
 

@@ -626,3 +626,22 @@ button.dax-metric:hover { background: var(--color-surface-2); }
 /* ③ ヘッダ行と本文の右端は同じ（左揃え・max 1120・左右 24） */
 .dax-header { padding-left: var(--space-6); padding-right: var(--space-6); }
 .dax-header > * { max-width: 1120px; }
+
+/* ========== ブラインド 5 回目: バッジと見出しの重なり解消・余白（後勝ち） ========== */
+.dax-page .dax-hero, .dax-page .dax-hero[class] { grid-template-columns: minmax(0, 1fr); grid-template-rows: none; grid-auto-rows: auto; row-gap: var(--space-3); }
+.dax-page .dax-hero > * { grid-column: 1 / -1; grid-row: auto; position: static; margin: 0; }
+.dax-page .dax-hero > .dax-pill { justify-self: start; }
+.dax-page .dax-hero > .dax-btn { justify-self: start; }
+.dax-page .dax-hero > .dax-metrics { margin-top: var(--space-1); }
+/* ② ヘッダの h1 行は上下 20px。セクション間 24px、区切り線の重複をやめる */
+.dax-header__row { padding: 20px 0; min-height: 0; }
+.dax-header__crumb + .dax-header__row { padding-top: var(--space-2); }
+.dax-page, .dax-page[class] { gap: var(--space-6); }
+.dax-section { border-top: 0; padding-top: 0; }
+.dax-page > .dax-collapse { margin-top: calc(var(--space-6) * -1); }
+.dax-page > .dax-collapse:first-child, .dax-page > :not(.dax-collapse) + .dax-collapse { margin-top: 0; }
+.dax-page .dax-hero > .dax-pill { order: 1; }
+.dax-page .dax-hero > :is(.dax-h2, .dax-hero__state) { order: 2; }
+.dax-page .dax-hero > :is(.dax-meta, .dax-hero__lead) { order: 3; }
+.dax-page .dax-hero > .dax-btn { order: 4; }
+.dax-page .dax-hero > .dax-metrics { order: 5; }

@@ -1,9 +1,12 @@
 """DocAssure の性能テスト。合成した日本語仕様書で analyze の所要時間に上限を置く。"""
 from __future__ import annotations
 
-import time
+import json
+import subprocess
+import sys
+from pathlib import Path
 
-from web.services.docassure import pipeline
+ROOT = Path(__file__).resolve().parent.parent
 
 _DOMAINS = [
     ("受注", "注文", "出荷指示"), ("会員", "会員登録", "退会"), ("決済", "請求", "返金"),
@@ -33,20 +36,42 @@ def make_doc(lines: int, seed: int = 0, prefix: str = "REQ") -> str:
     return "\n".join(out[:lines])
 
 
-def _run(docs: list[dict]) -> float:
-    t = time.monotonic()
-    r = pipeline.analyze(docs)
-    assert r["counts"]["requirements"] > 0
-    return time.monotonic() - t
+_CHILD = (
+    "import sys,time,json;from tests.test_docassure_perf import make_doc;from web.services.docassure import pipeline;"
+    "t=time.monotonic();r=pipeline.analyze([{'id':'D1','name':'a','type':'spec','text':make_doc(int(sys.argv[1]))}]);"
+    "print(json.dumps({'sec':time.monotonic()-t,'req':r['counts']['requirements']}))"
+)
+
+
+def _run(lines: int, limit: float) -> float:
+    """分析を子プロセスで実行し、limit 秒（+余裕 10 秒）で確実に kill する。終了後に子を残さない。"""
+    proc = subprocess.Popen([sys.executable, "-c", _CHILD, str(lines)], cwd=ROOT, stdout=subprocess.PIPE,
+                            stderr=subprocess.PIPE, text=True)
+    try:
+        out, err = proc.communicate(timeout=limit + 10)
+    except subprocess.TimeoutExpired:
+        proc.kill()
+        proc.communicate()
+        raise AssertionError(f"{lines:,} 行: {limit + 10:.0f} 秒で終わらず強制終了（上限 {limit} 秒）")
+    finally:
+        if proc.poll() is None:
+            proc.terminate()
+            try:
+                proc.wait(timeout=3)
+            except subprocess.TimeoutExpired:
+                proc.kill()
+                proc.wait()
+    assert proc.returncode == 0, err[-500:]
+    r = json.loads(out.strip().splitlines()[-1])
+    assert r["req"] > 0
+    return r["sec"]
 
 
 def test_perf_2000_lines_within_20s():
-    pipeline._EXTRACT_CACHE.clear()
-    sec = _run([{"id": "D1", "name": "a", "type": "spec", "text": make_doc(2000)}])
+    sec = _run(2000, 20)
     assert sec <= 20, f"2,000 行: {sec:.1f} 秒（上限 20 秒）"
 
 
 def test_perf_10000_lines_within_120s():
-    pipeline._EXTRACT_CACHE.clear()
-    sec = _run([{"id": "D1", "name": "a", "type": "spec", "text": make_doc(10000)}])
+    sec = _run(10000, 120)
     assert sec <= 120, f"10,000 行: {sec:.1f} 秒（上限 120 秒）"

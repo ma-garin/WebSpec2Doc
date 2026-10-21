@@ -66,3 +66,53 @@ def test_not_evaluated_not_pass():
     r = _run()
     for x in r["rule_results"]:
         assert x["result"] in ("PASS", "FAIL", "NOT_EVALUATED", "NOT_APPLICABLE")
+
+
+def test_single_document_consistency_not_scored_and_traceability_not_fake_100():
+    r = pipeline.analyze([{"id": "A", "text": "- REQ-001 検索は適切に表示すること。\n- REQ-002 結果を保存すること。\n"}])
+    assert r["scores"]["Consistency"]["value"] is None          # 比較していないのに満点にしない（H-4）
+    assert r["scores"]["Traceability"]["value"] is None
+    assert r["readiness"]["state"] != "READY"
+
+
+def test_traceability_zero_links_is_not_100():
+    r = pipeline.analyze([{"id": "A", "text": "- REQ-001 検索は表示すること。\n"},
+                          {"id": "B", "text": "- 無関係な説明文です。\n"}])
+    v = r["scores"]["Traceability"]["value"]
+    assert v is None or v < 100                                   # contains だけでは「つながり」と数えない（H-1）
+
+
+def test_human_decision_applied_and_waiver_expiry():
+    docs = [{"id": "R", "text": "- REQ-003 セッションタイムアウトは30分とする。\n"},
+            {"id": "D", "text": "- REQ-003 セッションのタイムアウトは20分とする。\n"}]
+    base = pipeline.analyze(docs)
+    cid = base["conflicts"][0]["conflict_id"]
+    dec = [{"target": cid, "decision": "conflict_decided", "reason": "設計を正とする", "source": "human", "by": "u"}]
+    r = pipeline.analyze(docs, decisions=dec)
+    c = [x for x in r["conflicts"] if x["conflict_id"] == cid][0]
+    assert c["status"] == "DECIDED" and c["truth"] == "UNKNOWN"   # 人の決定は記録。事実の証明にしない
+    assert r["scores"]["Consistency"]["value"] > base["scores"]["Consistency"]["value"]
+    fid = base["findings"][0]["finding_id"] if base["findings"] else None
+    if fid:
+        exp = pipeline.analyze(docs, decisions=[{"target": fid, "decision": "waived", "expiry": "2020-01-01",
+                                                  "reason": "x", "source": "human"}])
+        f = [x for x in exp["findings"] if x["finding_id"] == fid][0]
+        assert f["status"] == "CANDIDATE" and f.get("waiver_expired")
+
+
+def test_unchanged_document_is_not_reanalyzed_and_metrics_have_no_text():
+    docs = [{"id": "CACHE-A", "text": "- REQ-901 検索は適切に表示すること。\n"}]
+    first = pipeline.analyze(docs)
+    second = pipeline.analyze(docs)
+    assert second["metrics"]["cache_hits"] >= 1 and second["metrics"]["cache_misses"] == 0
+    assert first["findings"] == second["findings"]            # キャッシュで結果が変わらない
+    assert "検索" not in str(second["metrics"])
+    changed = pipeline.analyze([{"id": "CACHE-A", "text": "- REQ-901 検索は3秒以内に表示すること。\n"}])
+    assert changed["metrics"]["cache_misses"] == 1
+
+
+def test_pack_findings_reduce_their_dimension_and_clarity_is_evaluated():
+    r = pipeline.analyze([{"id": "A", "text": "- REQ-001 検索は適切に表示すること。\n- REQ-002 保存は速やかに行うこと。\n"},
+                          {"id": "B", "text": "- REQ-001 検索画面で表示する。\n"}])
+    c = r["scores"]["Clarity"]
+    assert c["value"] is not None and c["value"] < 100      # 曖昧語の指摘が Clarity を下げる（評価不能のままにしない）

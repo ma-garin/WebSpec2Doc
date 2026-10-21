@@ -1,0 +1,20 @@
+{
+ "id": "h-amb-03",
+ "category": "ambiguity",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 在庫管理 要件\n\n## 1 機能要件\n\nREQ-003 発注点を下回った品目について、システムは当日17時までに発注書を作成する。\nREQ-004 納品の遅れは適切に対処すること。\n"
+  }
+ ],
+ "expected": [
+  {
+   "kind": "finding",
+   "rule_or_kind": "AMB-001",
+   "document_id": "A",
+   "line": 6,
+   "severity": "medium"
+  }
+ ],
+ "must_not": []
+}

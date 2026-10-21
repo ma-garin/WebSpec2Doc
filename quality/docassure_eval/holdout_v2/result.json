@@ -1,0 +1,377 @@
+{
+ "holdout": {
+  "total_cases": 83,
+  "expected_items": 59,
+  "per_category": {
+   "ambiguity": 6,
+   "boundary_gap": 5,
+   "broken_reference": 5,
+   "contradiction": 6,
+   "false_positive_trap": 24,
+   "missing_condition": 5,
+   "numeric_conflict": 6,
+   "permission_inconsistency": 5,
+   "state_gap": 5,
+   "trace_orphan": 5,
+   "undefined_term": 5,
+   "untestable": 6
+  }
+ },
+ "overall": {
+  "precision": 0.844,
+  "recall": 0.644,
+  "f1": 0.731,
+  "tp": 38,
+  "fp": 7,
+  "fn": 21,
+  "cases": 83,
+  "critical_recall": 0.605,
+  "critical_expected": 43,
+  "false_positive_case_rate": 0.084,
+  "issue_density_per_100_lines": 10.42,
+  "must_not_hits": 0
+ },
+ "by_category": {
+  "ambiguity": {
+   "precision": 1.0,
+   "recall": 1.0,
+   "f1": 1.0,
+   "tp": 6,
+   "fp": 0,
+   "fn": 0,
+   "cases": 6,
+   "critical_recall": null,
+   "critical_expected": 0,
+   "false_positive_case_rate": 0.0,
+   "issue_density_per_100_lines": 23.08,
+   "must_not_hits": 0
+  },
+  "boundary_gap": {
+   "precision": 1.0,
+   "recall": 1.0,
+   "f1": 1.0,
+   "tp": 5,
+   "fp": 0,
+   "fn": 0,
+   "cases": 5,
+   "critical_recall": 1.0,
+   "critical_expected": 5,
+   "false_positive_case_rate": 0.0,
+   "issue_density_per_100_lines": 33.33,
+   "must_not_hits": 0
+  },
+  "broken_reference": {
+   "precision": 1.0,
+   "recall": 1.0,
+   "f1": 1.0,
+   "tp": 5,
+   "fp": 0,
+   "fn": 0,
+   "cases": 5,
+   "critical_recall": 1.0,
+   "critical_expected": 5,
+   "false_positive_case_rate": 0.0,
+   "issue_density_per_100_lines": 25.0,
+   "must_not_hits": 0
+  },
+  "contradiction": {
+   "precision": 1.0,
+   "recall": 0.167,
+   "f1": 0.286,
+   "tp": 1,
+   "fp": 0,
+   "fn": 5,
+   "cases": 6,
+   "critical_recall": 0.167,
+   "critical_expected": 6,
+   "false_positive_case_rate": 0.0,
+   "issue_density_per_100_lines": 2.38,
+   "must_not_hits": 0
+  },
+  "false_positive_trap": {
+   "precision": 0.0,
+   "recall": null,
+   "f1": null,
+   "tp": 0,
+   "fp": 3,
+   "fn": 0,
+   "cases": 24,
+   "critical_recall": null,
+   "critical_expected": 0,
+   "false_positive_case_rate": 0.125,
+   "issue_density_per_100_lines": 2.0,
+   "must_not_hits": 0
+  },
+  "missing_condition": {
+   "precision": null,
+   "recall": 0.0,
+   "f1": null,
+   "tp": 0,
+   "fp": 0,
+   "fn": 5,
+   "cases": 5,
+   "critical_recall": 0.0,
+   "critical_expected": 5,
+   "false_positive_case_rate": 0.0,
+   "issue_density_per_100_lines": 0.0,
+   "must_not_hits": 0
+  },
+  "numeric_conflict": {
+   "precision": 0.5,
+   "recall": 0.333,
+   "f1": 0.4,
+   "tp": 2,
+   "fp": 2,
+   "fn": 4,
+   "cases": 6,
+   "critical_recall": 0.333,
+   "critical_expected": 6,
+   "false_positive_case_rate": 0.333,
+   "issue_density_per_100_lines": 9.52,
+   "must_not_hits": 0
+  },
+  "permission_inconsistency": {
+   "precision": 0.75,
+   "recall": 0.6,
+   "f1": 0.667,
+   "tp": 3,
+   "fp": 1,
+   "fn": 2,
+   "cases": 5,
+   "critical_recall": 0.6,
+   "critical_expected": 5,
+   "false_positive_case_rate": 0.2,
+   "issue_density_per_100_lines": 11.43,
+   "must_not_hits": 0
+  },
+  "state_gap": {
+   "precision": 1.0,
+   "recall": 0.2,
+   "f1": 0.333,
+   "tp": 1,
+   "fp": 0,
+   "fn": 4,
+   "cases": 5,
+   "critical_recall": null,
+   "critical_expected": 0,
+   "false_positive_case_rate": 0.0,
+   "issue_density_per_100_lines": 6.67,
+   "must_not_hits": 0
+  },
+  "trace_orphan": {
+   "precision": 1.0,
+   "recall": 1.0,
+   "f1": 1.0,
+   "tp": 5,
+   "fp": 0,
+   "fn": 0,
+   "cases": 5,
+   "critical_recall": 1.0,
+   "critical_expected": 5,
+   "false_positive_case_rate": 0.0,
+   "issue_density_per_100_lines": 21.74,
+   "must_not_hits": 0
+  },
+  "undefined_term": {
+   "precision": 1.0,
+   "recall": 1.0,
+   "f1": 1.0,
+   "tp": 5,
+   "fp": 0,
+   "fn": 0,
+   "cases": 5,
+   "critical_recall": null,
+   "critical_expected": 0,
+   "false_positive_case_rate": 0.0,
+   "issue_density_per_100_lines": 25.0,
+   "must_not_hits": 0
+  },
+  "untestable": {
+   "precision": 0.833,
+   "recall": 0.833,
+   "f1": 0.833,
+   "tp": 5,
+   "fp": 1,
+   "fn": 1,
+   "cases": 6,
+   "critical_recall": 0.833,
+   "critical_expected": 6,
+   "false_positive_case_rate": 0.167,
+   "issue_density_per_100_lines": 25.0,
+   "must_not_hits": 0
+  }
+ },
+ "misses": [
+  {
+   "case": "co2-01",
+   "missed": [
+    "temporal@A:6"
+   ]
+  },
+  {
+   "case": "co2-02",
+   "missed": [
+    "semantic_candidate@A:5"
+   ]
+  },
+  {
+   "case": "co2-03",
+   "missed": [
+    "temporal@A:5"
+   ]
+  },
+  {
+   "case": "co2-04",
+   "missed": [
+    "semantic_candidate@A:5"
+   ]
+  },
+  {
+   "case": "co2-05",
+   "missed": [
+    "semantic_candidate@A:5"
+   ]
+  },
+  {
+   "case": "mc2-01",
+   "missed": [
+    "NOT_TESTABLE@A:6"
+   ]
+  },
+  {
+   "case": "mc2-02",
+   "missed": [
+    "NOT_TESTABLE@A:6"
+   ]
+  },
+  {
+   "case": "mc2-03",
+   "missed": [
+    "NOT_TESTABLE@A:6"
+   ]
+  },
+  {
+   "case": "mc2-04",
+   "missed": [
+    "NOT_TESTABLE@A:6"
+   ]
+  },
+  {
+   "case": "mc2-05",
+   "missed": [
+    "NOT_TESTABLE@A:6"
+   ]
+  },
+  {
+   "case": "nc2-01",
+   "missed": [
+    "numeric@A:6"
+   ]
+  },
+  {
+   "case": "nc2-03",
+   "missed": [
+    "numeric@A:5"
+   ]
+  },
+  {
+   "case": "nc2-04",
+   "missed": [
+    "numeric@A:5"
+   ]
+  },
+  {
+   "case": "nc2-05",
+   "missed": [
+    "numeric@A:6"
+   ]
+  },
+  {
+   "case": "pi2-02",
+   "missed": [
+    "permission@A:5"
+   ]
+  },
+  {
+   "case": "pi2-03",
+   "missed": [
+    "permission@A:6"
+   ]
+  },
+  {
+   "case": "sg2-01",
+   "missed": [
+    "NOT_TESTABLE@A:5"
+   ]
+  },
+  {
+   "case": "sg2-02",
+   "missed": [
+    "NOT_TESTABLE@A:5"
+   ]
+  },
+  {
+   "case": "sg2-04",
+   "missed": [
+    "NOT_TESTABLE@A:5"
+   ]
+  },
+  {
+   "case": "sg2-05",
+   "missed": [
+    "NOT_TESTABLE@A:5"
+   ]
+  },
+  {
+   "case": "un2-02",
+   "missed": [
+    "NOT_TESTABLE@A:6"
+   ]
+  }
+ ],
+ "false_positives": [
+  {
+   "case": "fp2-04",
+   "fp": [
+    "testability:NOT_TESTABLE"
+   ]
+  },
+  {
+   "case": "fp2-14",
+   "fp": [
+    "conflict:numeric"
+   ]
+  },
+  {
+   "case": "fp2-23",
+   "fp": [
+    "finding:TERM-001"
+   ]
+  },
+  {
+   "case": "nc2-01",
+   "fp": [
+    "conflict:numeric"
+   ]
+  },
+  {
+   "case": "nc2-05",
+   "fp": [
+    "conflict:numeric"
+   ]
+  },
+  {
+   "case": "pi2-03",
+   "fp": [
+    "conflict:permission"
+   ]
+  },
+  {
+   "case": "un2-04",
+   "fp": [
+    "finding:AMB-001"
+   ]
+  }
+ ],
+ "caveat": "自作 holdout（検出器の実装を見ずに作成）。件数が少なく、実文書への一般化や他製品との優劣を示さない。過学習の可能性の確認用で、ルール名のラベル付けに誤りを含みうる。"
+}

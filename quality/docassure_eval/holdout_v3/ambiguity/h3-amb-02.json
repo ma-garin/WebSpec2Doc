@@ -1,0 +1,20 @@
+{
+ "id": "h3-amb-02",
+ "category": "ambiguity",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 賃貸契約管理 要件定義\n\n3.1 更新通知\n\nSR-201 契約満了の通知は、なるべく早めに入居者へ送付する。\nSR-202 通知方法は書面とし、送付履歴を保存すること。\n"
+  }
+ ],
+ "expected": [
+  {
+   "kind": "finding",
+   "rule_or_kind": "AMB-001",
+   "document_id": "A",
+   "line": 5,
+   "severity": "medium"
+  }
+ ],
+ "must_not": []
+}

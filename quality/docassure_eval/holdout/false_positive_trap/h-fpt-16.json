@@ -1,0 +1,16 @@
+{
+ "id": "h-fpt-16",
+ "category": "false_positive_trap",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 宿泊予約 要件\n\n## 1 機能要件\n\nREQ-225 宿泊料金は1泊あたり8,000円（税込）とする。\n"
+  },
+  {
+   "id": "B",
+   "text": "# 宿泊予約 基本設計\n\n## 1 機能要件\n\nREQ-225 宿泊料金は1泊あたり8000円（税込）とする。\n"
+  }
+ ],
+ "expected": [],
+ "must_not": []
+}

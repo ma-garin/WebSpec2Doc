@@ -1,0 +1,20 @@
+{
+ "id": "h-mis-03",
+ "category": "missing_condition",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 在庫管理 要件\n\n## 1 機能要件\n\nREQ-012 在庫が閾値を下回った場合、システムはアラートを出す。\nREQ-013 ログインに連続5回失敗した場合、システムはアカウントを30分間ロックし、エラーメッセージを表示する。\n"
+  }
+ ],
+ "expected": [
+  {
+   "kind": "testability",
+   "rule_or_kind": "NOT_TESTABLE",
+   "document_id": "A",
+   "line": 5,
+   "severity": "high"
+  }
+ ],
+ "must_not": []
+}

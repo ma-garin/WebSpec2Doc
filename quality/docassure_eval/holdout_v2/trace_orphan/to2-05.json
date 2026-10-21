@@ -1,0 +1,20 @@
+{
+ "id": "to2-05",
+ "category": "trace_orphan",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 経費の申請\n\n## 1 機能\n\nREQ-511 申請者が経費を申請したとき、システムは申請番号を表示する。失敗した場合はエラーを表示する。\nREQ-511 申請者が申請を取り下げたとき、システムは状態を更新する。失敗した場合はエラーを表示する。\n"
+  }
+ ],
+ "expected": [
+  {
+   "kind": "finding",
+   "rule_or_kind": "ID-001",
+   "document_id": "A",
+   "line": 6,
+   "severity": "high"
+  }
+ ],
+ "must_not": []
+}

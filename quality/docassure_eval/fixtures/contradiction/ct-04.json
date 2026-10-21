@@ -1,0 +1,24 @@
+{
+ "id": "ct-04",
+ "category": "contradiction",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 仕様書\n\n## 1 機能\n\nREQ-001 退会したユーザーのデータは即時削除する。\n"
+  },
+  {
+   "id": "B",
+   "text": "# 仕様書\n\n## 1 機能\n\nREQ-001 退会したユーザーのデータは削除しない。\n"
+  }
+ ],
+ "expected": [
+  {
+   "kind": "conflict",
+   "rule_or_kind": "semantic_candidate",
+   "document_id": "A",
+   "line": 5,
+   "severity": "medium"
+  }
+ ],
+ "must_not": []
+}

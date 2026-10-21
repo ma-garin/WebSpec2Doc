@@ -1,0 +1,19 @@
+{
+ "id": "h3-fp-21",
+ "category": "false_positive_trap",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 賃貸契約\n\nSR-2001 契約期間は2年とする。\nSR-2002 契約期間は24か月とする。\n"
+  }
+ ],
+ "expected": [],
+ "must_not": [
+  {
+   "kind": "conflict",
+   "rule_or_kind": "numeric",
+   "document_id": "A",
+   "line": 4
+  }
+ ]
+}

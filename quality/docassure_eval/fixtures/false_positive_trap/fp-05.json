@@ -1,0 +1,12 @@
+{
+ "id": "fp-05",
+ "category": "false_positive_trap",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 仕様書\n\n## 1 機能\n\nREQ-001 入力値が前回と等しいとき、システムは再計算せず前回結果を表示する。失敗した場合はエラーを表示する。\n"
+  }
+ ],
+ "expected": [],
+ "must_not": []
+}

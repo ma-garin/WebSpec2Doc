@@ -1,0 +1,20 @@
+{
+ "id": "amb-03",
+ "category": "ambiguity",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 仕様書\n\n## 1 機能\n\nREQ-001 システムは可能な限りエラーを減らす。送信が失敗した場合はエラーを表示する。\n"
+  }
+ ],
+ "expected": [
+  {
+   "kind": "finding",
+   "rule_or_kind": "AMB-001",
+   "document_id": "A",
+   "line": 5,
+   "severity": "medium"
+  }
+ ],
+ "must_not": []
+}

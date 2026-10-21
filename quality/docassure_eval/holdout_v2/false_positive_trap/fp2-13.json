@@ -1,0 +1,12 @@
+{
+ "id": "fp2-13",
+ "category": "false_positive_trap",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# フードデリバリー\n\n## 1 機能\n\nREQ-821 配達料は、通常料金を一律330円とし、悪天候時は550円とする。\nREQ-822 料金の算出に失敗した場合は、注文を受け付けない。\n"
+  }
+ ],
+ "expected": [],
+ "must_not": []
+}

@@ -1,0 +1,25 @@
+{
+ "id": "h3-fp-22",
+ "category": "false_positive_trap",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 倉庫ピッキング\n\nFR-2101 ピッキング作業者は端末でバーコードを読み取る。\nFR-2102 ハンディターミナルでバーコードを読み取った作業者へ結果を表示する。\n"
+  }
+ ],
+ "expected": [],
+ "must_not": [
+  {
+   "kind": "conflict",
+   "rule_or_kind": "semantic_candidate",
+   "document_id": "A",
+   "line": 4
+  },
+  {
+   "kind": "finding",
+   "rule_or_kind": "TERM-001",
+   "document_id": "A",
+   "line": 4
+  }
+ ]
+}

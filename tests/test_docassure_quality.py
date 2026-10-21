@@ -95,8 +95,20 @@ def good():
 
 
 def test_ready_and_reasons_numeric():
-    r = readiness.gate(good(), [], [])
+    r = readiness.gate(good(), [], [], {"trace_coverage": 0.9})
     assert r["state"] == "READY" and any("90" in x for x in r["reasons"])
+
+
+def test_unmeasured_trace_coverage_never_ready():
+    # trace coverage が未評価（None）のとき READY にしない（独立レビュー H-2）
+    r = readiness.gate(good(), [], [])
+    assert r["state"] == "CONDITIONALLY_READY" and "未評価" in r["reasons"][0]
+
+
+def test_open_high_conflict_blocks_ready_and_decided_one_does_not():
+    cf = {"severity": "high", "status": "UNRESOLVED"}
+    assert readiness.gate(good(), [], [cf], {"trace_coverage": 0.9})["state"] == "CONDITIONALLY_READY"
+    assert readiness.gate(good(), [], [{**cf, "status": "DECIDED"}], {"trace_coverage": 0.9})["state"] == "READY"
 
 
 def test_blocked_cases():
@@ -109,8 +121,7 @@ def test_blocked_cases():
 
 def test_conditionally_ready():
     assert readiness.gate(good(), [F("R1", "AMBIG-1", "high")], [])["state"] == "CONDITIONALLY_READY"
-    g = good(); g["Traceability"] = S(90, 0.4, "Traceability")
-    r = readiness.gate(g, [], [])
+    r = readiness.gate(good(), [], [], {"trace_coverage": 0.4})
     assert r["state"] == "CONDITIONALLY_READY" and "0.4" in r["reasons"][0]
 
 

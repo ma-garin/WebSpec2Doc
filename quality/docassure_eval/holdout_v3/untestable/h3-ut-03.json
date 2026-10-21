@@ -1,0 +1,20 @@
+{
+ "id": "h3-ut-03",
+ "category": "untestable",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# ゲーム課金\n\nNFR-301 決済画面は直感的に操作できること。\nNFR-302 決済結果は5秒以内に表示する。\n"
+  }
+ ],
+ "expected": [
+  {
+   "kind": "testability",
+   "rule_or_kind": "NOT_TESTABLE",
+   "document_id": "A",
+   "line": 3,
+   "severity": "high"
+  }
+ ],
+ "must_not": []
+}

@@ -1,0 +1,20 @@
+{
+ "id": "am2-04",
+ "category": "ambiguity",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 製品の外観検査\n\n## 1 機能\n\nREQ-401 検査員は、ロットごとに抜取検査を行う。判定が不合格のロットは出荷保留とする。\nREQ-402 不合格品は、その他必要な処置を講じたうえで再検査する。\n"
+  }
+ ],
+ "expected": [
+  {
+   "kind": "finding",
+   "rule_or_kind": "AMB-001",
+   "document_id": "A",
+   "line": 6,
+   "severity": "medium"
+  }
+ ],
+ "must_not": []
+}

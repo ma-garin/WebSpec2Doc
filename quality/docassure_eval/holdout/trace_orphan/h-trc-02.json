@@ -1,0 +1,20 @@
+{
+ "id": "h-trc-02",
+ "category": "trace_orphan",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 物流 要件\n\n## 1 機能要件\n\nREQ-101 入荷検品は入荷当日に行う。\nREQ-101 出荷検品は出荷前日に行う。\n"
+  }
+ ],
+ "expected": [
+  {
+   "kind": "finding",
+   "rule_or_kind": "ID-001",
+   "document_id": "A",
+   "line": 6,
+   "severity": "high"
+  }
+ ],
+ "must_not": []
+}

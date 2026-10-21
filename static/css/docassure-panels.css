@@ -1,0 +1,29 @@
+/* Document Assurance パネル（意味差分・AI レビュー）。横スクロールを出さない。 */
+.dap { max-width: 100%; overflow-wrap: anywhere; }
+.dap h3 { margin: 0 0 8px; font-size: 16px; }
+.dap h4 { margin: 0 0 6px; font-size: 14px; }
+.dap h5 { margin: 8px 0 4px; font-size: 12px; color: var(--muted, #555); }
+.dap-muted, .dap-meta { color: var(--muted, #555); font-size: 12px; }
+.dap-item { border: 1px solid var(--border, #d0d5dd); border-radius: 8px; padding: 12px; margin: 10px 0; background: var(--surface, #fff); }
+.dap-cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }
+.dap-side { min-width: 0; }
+.dap-text { white-space: pre-wrap; word-break: break-word; margin: 0; padding: 8px; background: var(--surface-2, #f6f7f9); border-radius: 6px; font: inherit; max-height: 240px; overflow: auto; }
+.dap-badge { display: inline-block; padding: 1px 8px; border-radius: 10px; font-size: 12px; border: 1px solid var(--border, #d0d5dd); background: var(--surface-2, #f6f7f9); }
+.dap-moved { border-style: dashed; }
+.dap-change { font-weight: 600; }
+.dap-note { padding: 8px 10px; border-left: 4px solid var(--warn, #b54708); background: var(--surface-2, #f6f7f9); margin: 8px 0; }
+.dap-error { color: var(--danger, #b42318); }
+.dap-ok { color: var(--ok, #067647); }
+.dap-empty { padding: 16px; text-align: center; color: var(--muted, #555); }
+.dap-evidence { margin: 0; padding-left: 18px; }
+.dap-evidence blockquote { margin: 2px 0 6px; padding-left: 8px; border-left: 3px solid var(--border, #d0d5dd); }
+.dap-unsupported { opacity: .85; }
+.dap-label { display: block; margin-top: 8px; font-size: 12px; }
+.dap-label textarea { display: block; width: 100%; box-sizing: border-box; margin-top: 4px; font: inherit; }
+.dap-actions { margin-top: 8px; display: flex; gap: 8px; flex-wrap: wrap; }
+.dap-btn { min-height: 36px; padding: 6px 14px; border-radius: 6px; border: 1px solid var(--primary, #175cd3); background: var(--primary, #175cd3); color: #fff; font: inherit; cursor: pointer; }
+.dap-btn-sub { background: transparent; color: var(--primary, #175cd3); }
+.dap-btn:disabled { opacity: .5; cursor: not-allowed; }
+.dap-btn:focus-visible, .dap-text:focus-visible, .dap-label textarea:focus-visible, .dap-dialog:focus-visible { outline: 3px solid var(--focus, #1570ef); outline-offset: 2px; }
+.dap-dialog { max-width: min(480px, calc(100vw - 32px)); border: 1px solid var(--border, #d0d5dd); border-radius: 10px; padding: 16px; }
+.dap-dialog::backdrop { background: rgba(0, 0, 0, .4); }

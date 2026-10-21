@@ -11,7 +11,9 @@ DEFAULT_POLICY = {
     "required_sections": (), "present_sections": (),
     "approval_required": False, "approved": False,
     "testability": {}, "requirement_severity": {},
+    "trace_coverage": None,   # trace.coverage の実比率（0..1）。None は未評価で READY にしない
 }
+_DONE = ("RESOLVED", "DECIDED", "REJECTED", "WAIVED", "CONFIRMED_RESOLVED")
 
 
 def _sd(s: Any) -> dict:
@@ -21,7 +23,7 @@ def _sd(s: Any) -> dict:
 def gate(scores: dict, findings: list, conflicts: list, policy: dict | None = None) -> dict:
     p = {**DEFAULT_POLICY, **(policy or {})}
     sc = {k: _sd(v) for k, v in (scores or {}).items()}
-    fs = [to_dict(f) for f in (findings or [])]
+    fs = [to_dict(f) for f in (findings or [])]   # 人が却下・waiver・解決した指摘は status で除外される
     cs = [to_dict(c) for c in (conflicts or [])]
     blocked: list[str] = []
     crit_open = [c for c in cs if c.get("severity") == "critical"
@@ -53,13 +55,18 @@ def gate(scores: dict, findings: list, conflicts: list, policy: dict | None = No
         return {"state": "REVIEWABLE",
                 "reasons": [f"主要次元 {len(unevaluated)} 件が評価不能（{', '.join(unevaluated)}）のため READY にしない"]}
 
-    high = [f for f in fs if f.get("severity") == "high" and f.get("result") == "FAIL"]
-    tr = sc.get("Traceability", {})
-    trace_cov = tr.get("coverage", 0.0) or 0.0
+    high = [f for f in fs if f.get("severity") == "high" and f.get("result") == "FAIL"
+            and f.get("status") not in _DONE]
+    trace_cov = p["trace_coverage"]
+    open_high_cf = [c for c in cs if c.get("severity") in ("high", "critical") and c.get("status") not in _DONE]
     cond: list[str] = []
     if high:
         cond.append(f"high 指摘 {len(high)} 件")
-    if trace_cov < p["min_trace_coverage"]:
+    if open_high_cf:
+        cond.append(f"未解決の高重大度の矛盾候補 {len(open_high_cf)} 件")
+    if trace_cov is None:
+        cond.append("trace coverage は未評価（READY にしない）")
+    elif trace_cov < p["min_trace_coverage"]:
         cond.append(f"trace coverage {trace_cov} < {p['min_trace_coverage']}")
     if cond:
         return {"state": "CONDITIONALLY_READY", "reasons": cond}

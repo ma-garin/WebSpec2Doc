@@ -1,0 +1,20 @@
+{
+ "id": "ct-02",
+ "category": "contradiction",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 仕様書\n\n## 1 機能\n\nREQ-001 承認後に発注する。\nREQ-002 発注後に承認する。\n"
+  }
+ ],
+ "expected": [
+  {
+   "kind": "conflict",
+   "rule_or_kind": "temporal",
+   "document_id": "A",
+   "line": 5,
+   "severity": "medium"
+  }
+ ],
+ "must_not": []
+}

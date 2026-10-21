@@ -1,0 +1,16 @@
+{
+ "id": "h-fpt-13",
+ "category": "false_positive_trap",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 予約 要件\n\n## 1 機能要件\n\nREQ-220 予約のキャンセルは前日18時まで受け付ける。\n"
+  },
+  {
+   "id": "B",
+   "text": "# 予約 基本設計\n\n## 1 機能要件\n\nREQ-220 キャンセル受付は前日の18:00を期限とする。\n"
+  }
+ ],
+ "expected": [],
+ "must_not": []
+}

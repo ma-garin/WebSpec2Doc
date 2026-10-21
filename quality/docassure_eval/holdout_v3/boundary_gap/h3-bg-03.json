@@ -1,0 +1,20 @@
+{
+ "id": "h3-bg-03",
+ "category": "boundary_gap",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 農産物出荷\n\n## 等級\n\n- A等級: 糖度12以上\n- B等級: 糖度9以上11未満\n- C等級: 糖度9未満\n"
+  }
+ ],
+ "expected": [
+  {
+   "kind": "finding",
+   "rule_or_kind": "NUM-002",
+   "document_id": "A",
+   "line": 6,
+   "severity": "high"
+  }
+ ],
+ "must_not": []
+}

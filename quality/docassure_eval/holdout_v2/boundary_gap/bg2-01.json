@@ -1,0 +1,20 @@
+{
+ "id": "bg2-01",
+ "category": "boundary_gap",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 図書館の利用料\n\n## 1 機能\n\nREQ-171 館外貸出の延滞料は、延滞1日以上7日以下は50円、延滞9日以上は100円とする。\n"
+  }
+ ],
+ "expected": [
+  {
+   "kind": "finding",
+   "rule_or_kind": "NUM-002",
+   "document_id": "A",
+   "line": 5,
+   "severity": "high"
+  }
+ ],
+ "must_not": []
+}

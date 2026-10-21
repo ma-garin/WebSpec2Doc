@@ -1,0 +1,20 @@
+{
+ "id": "amb-02",
+ "category": "ambiguity",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 仕様書\n\n## 1 機能\n\nREQ-001 ユーザーが送信ボタンを押したとき、システムは結果を表示する。失敗した場合はエラーを表示する。\nREQ-002 ユーザーが送信したとき、システムは適宜結果を表示する。失敗した場合はエラーを表示する。\n"
+  }
+ ],
+ "expected": [
+  {
+   "kind": "finding",
+   "rule_or_kind": "AMB-001",
+   "document_id": "A",
+   "line": 6,
+   "severity": "medium"
+  }
+ ],
+ "must_not": []
+}

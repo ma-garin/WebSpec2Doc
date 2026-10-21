@@ -1,0 +1,20 @@
+{
+ "id": "h3-term-03",
+ "category": "undefined_term",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 倉庫\n\nFR-301 ASN受領後に入庫予定を作成すること。\nFR-302 入庫予定は担当者が確認する。\n"
+  }
+ ],
+ "expected": [
+  {
+   "kind": "finding",
+   "rule_or_kind": "TERM-001",
+   "document_id": "A",
+   "line": 3,
+   "severity": "low"
+  }
+ ],
+ "must_not": []
+}

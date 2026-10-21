@@ -1,0 +1,20 @@
+{
+ "id": "h3-ref-01",
+ "category": "broken_reference",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 補助金\n\n## 1 申請\n\nFR-101 申請書の様式は別紙3に従うこと。\nFR-102 添付書類は別紙1に記載する。\n\n別紙1 添付書類一覧\n\n- 登記事項証明書\n"
+  }
+ ],
+ "expected": [
+  {
+   "kind": "finding",
+   "rule_or_kind": "REF-001",
+   "document_id": "A",
+   "line": 5,
+   "severity": "high"
+  }
+ ],
+ "must_not": []
+}

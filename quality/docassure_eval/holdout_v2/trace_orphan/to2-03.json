@@ -1,0 +1,20 @@
+{
+ "id": "to2-03",
+ "category": "trace_orphan",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 宿泊の精算\n\n## 1 機能\n\nREQ-311 フロント係が精算を開始したとき、システムは請求明細を表示する。失敗した場合はエラーを表示する。\nREQ-311 フロント係が精算を完了したとき、システムは領収書を発行する。失敗した場合はエラーを表示する。\n"
+  }
+ ],
+ "expected": [
+  {
+   "kind": "finding",
+   "rule_or_kind": "ID-001",
+   "document_id": "A",
+   "line": 6,
+   "severity": "high"
+  }
+ ],
+ "must_not": []
+}

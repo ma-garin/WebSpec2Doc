@@ -1,0 +1,20 @@
+{
+ "id": "h3-sg-04",
+ "category": "state_gap",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 賃貸契約\n\nFR-401 契約の状態は「申込」「契約中」「解約」とする。\nFR-402 申込が承認された場合は契約中へ遷移する。\nFR-403 契約中の契約は更新保留となる場合がある。\n"
+  }
+ ],
+ "expected": [
+  {
+   "kind": "finding",
+   "rule_or_kind": "REQ-ITEMS",
+   "document_id": "A",
+   "line": 5,
+   "severity": "medium"
+  }
+ ],
+ "must_not": []
+}

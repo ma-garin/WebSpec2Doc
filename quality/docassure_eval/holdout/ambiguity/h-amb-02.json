@@ -1,0 +1,20 @@
+{
+ "id": "h-amb-02",
+ "category": "ambiguity",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 宿泊予約 要件\n\n## 1 機能要件\n\nREQ-002 予約内容の変更は、必要に応じて受け付けられるものとする。\nREQ-003 ログインに連続5回失敗した場合、システムはアカウントを30分間ロックし、エラーメッセージを表示する。\n"
+  }
+ ],
+ "expected": [
+  {
+   "kind": "finding",
+   "rule_or_kind": "AMB-001",
+   "document_id": "A",
+   "line": 5,
+   "severity": "medium"
+  }
+ ],
+ "must_not": []
+}

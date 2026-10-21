@@ -1,0 +1,12 @@
+{
+ "id": "h-fpt-04",
+ "category": "false_positive_trap",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 請求管理 要件\n\n## 1 機能要件\n\nREQ-205 請求書の発行条件は REQ-206 に従う。\nREQ-206 請求は月末締め、翌月5日に発行する。\n"
+  }
+ ],
+ "expected": [],
+ "must_not": []
+}

@@ -54,18 +54,31 @@ def analyze(iid: str):
         return err
     body = request.get_json(silent=True) or {}
     docs = _documents_from(body, insp)
+    if any(len(d["id"]) > 64 or len(d["name"]) > 200 for d in docs):
+        return _err("文書の ID・名前が長すぎます。短くしてからもう一度お試しください。", 400, "bad_document")
     if not docs:
         return _err("分析する文書がありません。文書を取り込むか documents を渡してください。", 400, "no_document")
     if len(docs) > _MAX_DOCS or sum(len(d["text"]) for d in docs) > _MAX_CHARS:
         return _err("文書が大きすぎます。分けて分析してください。", 413, "too_large")
     try:
-        result = pipeline.analyze(docs, profile=str(body.get("profile") or "default"))
         prev = store.load(iid) or {}
-        saved = store.save(iid, {**result, "decisions": prev.get("decisions") or []})
+        from web.services.docassure import policy as _policy
+        try:
+            extra = _policy.as_pack_extra(_policy.load(iid) or {})
+        except Exception:
+            log.exception("組織ポリシーを読めませんでした（既定の規則で分析します）")
+            extra = None
+        result = pipeline.analyze(docs, profile=str(body.get("profile") or "default"), pack_extra=extra or None,
+                                  decisions=prev.get("decisions") or [])
+        saved = store.save(iid, {**result, "decisions": prev.get("decisions") or [],
+                                 "source_texts": {d["id"]: d["text"] for d in docs},
+                                 "previous_requirements": prev.get("requirements"),
+                                 "review": prev.get("review")})
     except Exception:
         log.exception("分析に失敗")
         return _err("分析できませんでした。もう一度お試しください。", 500)
-    return jsonify(saved)
+    _perm.record("docassure_analyze", iid, {"documents": len(docs), "requirements": result["counts"]["requirements"]})
+    return jsonify({k: v for k, v in saved.items() if k != "source_texts"})
 
 
 def _section(name: str):
@@ -77,12 +90,13 @@ def _section(name: str):
         r = store.load(iid)
         if r is None:
             return _err("まだ分析していません。先に分析を実行してください。", 404, "not_analyzed")
-        return jsonify({name: r.get(name), "mode": r.get("mode"), "readiness": r.get("readiness")})
+        extra = {"testability": r.get("testability")} if name == "requirements" else {}
+        return jsonify({name: r.get(name), "mode": r.get("mode"), "readiness": r.get("readiness"), **extra})
     view.__name__ = f"view_{name}"
     return view
 
 
-for _n, _p in (("requirements", "requirements"), ("findings", "issues"), ("conflicts", "conflicts"),
+for _n, _p in (("trace", "trace"), ("analyzers", "analyzers"), ("requirements", "requirements"), ("findings", "issues"), ("conflicts", "conflicts"),
                ("scores", "scores"), ("readiness", "readiness")):
     bp.add_url_rule(f"/api/docassure/inspections/<iid>/{_p}", f"get_{_n}", _section(_n), methods=["GET"])
 
@@ -97,6 +111,8 @@ def decide(iid: str):
     b = request.get_json(silent=True) or {}
     if b.get("decision") not in ("accepted", "rejected", "waived", "resolved", "conflict_decided"):
         return _err("判断の種類が不正です。", 400, "bad_decision")
+    if len(str(b.get("target") or "")) > 200 or len(str(b.get("reason") or "")) > 2000:
+        return _err("対象・理由が長すぎます。短くしてからもう一度お試しください。", 400, "too_long")
     if not b.get("target"):
         return _err("対象の ID を指定してください。", 400, "no_target")
     if b["decision"] == "waived" and not (b.get("reason") and b.get("expiry")):
@@ -106,4 +122,137 @@ def decide(iid: str):
              "expiry": b.get("expiry"), "by": current_user(), "source": "human"}
     store.add_decision(iid, entry)
     _perm.record("docassure_decision", f"{iid}:{entry['target']}", {"decision": entry["decision"]})
+    # 人の判断を準備状態・スコアへ反映する（保存済みの原文から決定論で再判定する）
+    from web.services.docassure import pipeline
+    r = store.load(iid) or {}
+    texts = r.get("source_texts") or {}
+    if texts:
+        meta = {d["id"]: d for d in r.get("documents") or []}
+        docs = [{"id": k, "name": (meta.get(k) or {}).get("name", ""), "type": (meta.get(k) or {}).get("type", "other"),
+                 "text": v} for k, v in texts.items()]
+        res = pipeline.analyze(docs, decisions=r.get("decisions") or [])
+        store.save(iid, {**res, "decisions": r.get("decisions") or [], "source_texts": texts,
+                         "previous_requirements": r.get("previous_requirements"), "review": r.get("review")})
     return jsonify(ok=True, decision=entry), 201
+
+
+@bp.route("/api/docassure/inspections/<iid>/diff", methods=["GET"])
+def semantic_diff_view(iid: str):
+    from web.services.docassure import semantic_diff, store
+    insp, err = _insp(iid)
+    if err:
+        return err
+    r = store.load(iid)
+    if r is None:
+        return _err("まだ分析していません。先に分析を実行してください。", 404, "not_analyzed")
+    before = r.get("previous_requirements")
+    if not before:
+        return _err("比較できる前の版がありません。文書を更新して再分析すると差分を表示します。", 404, "no_previous")
+    return jsonify(diff=semantic_diff.diff(before, r.get("requirements") or []))
+
+
+@bp.route("/api/docassure/inspections/<iid>/review", methods=["POST"])
+@_perm.require("finding_edit")
+def review(iid: str):
+    """AI Review Board。LLM が使えない・未設定なら DEGRADED を返す（決定論の結果は変えない）。"""
+    from web.services.docassure import review_board, store
+    from web.services.docverify import llm_settings
+    insp, err = _insp(iid)
+    if err:
+        return err
+    r = store.load(iid)
+    if r is None:
+        return _err("まだ分析していません。先に分析を実行してください。", 404, "not_analyzed")
+    try:
+        client = llm_settings.client_for(llm_settings.load())
+    except Exception:
+        log.exception("LLM 設定を読めませんでした")
+        client = None
+    cfg = llm_settings.load()
+    body = request.get_json(silent=True) or {}
+    if client is not None and cfg.get("destination") == "openai" and body.get("confirm_send") is not True:
+        return jsonify(error="外部の AI へ文書の一部を送ります。送信してよければ確認してからもう一度実行してください。",
+                       code="consent_required", destination="openai"), 409
+    # 根拠の検証は保存済みの原文だけで行う（クライアントが渡した本文は使わない）
+    docs = [{"id": k, "text": v} for k, v in (r.get("source_texts") or {}).items()]
+    out = review_board.run(r.get("requirements") or [], docs, client)
+    store.save(iid, {**r, "review": out})
+    from web.services.docverify import audit
+    from web.services.docverify.settings import current_user
+    audit.append("docassure_review", current_user(), iid,
+                 {"destination": cfg.get("destination") if client is not None else "none", "mode": out.get("mode")})
+    return jsonify(out)
+
+
+@bp.route("/api/docassure/inspections/<iid>/report.<fmt>", methods=["GET"])
+def report(iid: str, fmt: str):
+    from flask import Response
+    from web.services.docassure import report as rp, store
+    insp, err = _insp(iid)
+    if err:
+        return err
+    r = store.load(iid)
+    if r is None:
+        return _err("まだ分析していません。先に分析を実行してください。", 404, "not_analyzed")
+    kinds = {"md": (rp.markdown, "text/markdown"), "csv": (rp.issues_csv, "text/csv"), "json": (rp.as_json, "application/json")}
+    if fmt not in kinds:
+        return _err("出力形式は md・csv・json のいずれかです。", 400, "bad_format")
+    fn, mime = kinds[fmt]
+    return Response(fn(r), mimetype=f"{mime}; charset=utf-8",
+                    headers={"Content-Disposition": f"attachment; filename=document-assurance.{fmt}"})
+
+
+@bp.route("/api/docassure/inspections/<iid>/tests", methods=["GET"])
+def test_candidates(iid: str):
+    """System02 へ渡せるテスト候補（GENERATED / NOT_EXECUTED / NOT_VERIFIED）。連携先への取り込みは未結線。"""
+    from web.services.docassure import integrations, store
+    insp, err = _insp(iid)
+    if err:
+        return err
+    r = store.load(iid)
+    if r is None:
+        return _err("まだ分析していません。先に分析を実行してください。", 404, "not_analyzed")
+    return jsonify(candidates=integrations.test_candidates(r.get("requirements") or []), wired=False)
+
+
+@bp.route("/api/docassure/inspections/<iid>/impact", methods=["GET"])
+def impact(iid: str):
+    """System09 へ渡せる変更ペイロード。前の版が無い間は作らない。"""
+    from web.services.docassure import integrations, semantic_diff, store
+    insp, err = _insp(iid)
+    if err:
+        return err
+    r = store.load(iid)
+    if r is None or not r.get("previous_requirements"):
+        return _err("比較できる前の版がありません。文書を更新して再分析してください。", 404, "no_previous")
+    d = semantic_diff.diff(r["previous_requirements"], r.get("requirements") or [])
+    return jsonify(integrations.impact_payload(d, r.get("requirements") or []))
+
+
+@bp.route("/api/docassure/inspections/<iid>/alignment", methods=["POST"])
+def alignment(iid: str):
+    """System01 の観測 Evidence と仕様の突き合わせ。観測できなかったことは欠陥にしない。"""
+    from web.services.docassure import integrations, store
+    insp, err = _insp(iid)
+    if err:
+        return err
+    r = store.load(iid)
+    if r is None:
+        return _err("まだ分析していません。先に分析を実行してください。", 404, "not_analyzed")
+    obs = (request.get_json(silent=True) or {}).get("observed")
+    if not isinstance(obs, list) or len(obs) > 2000:
+        return _err("観測結果を一覧で渡してください（2000 件まで）。", 400, "bad_observed")
+    return jsonify(alignment=integrations.alignment(r.get("requirements") or [], obs), wired=False)
+
+
+@bp.route("/api/docassure/inspections/<iid>/rewrite/<rid>", methods=["GET"])
+def rewrite_view(iid: str, rid: str):
+    from web.services.docassure import rewrite, store
+    insp, err = _insp(iid)
+    if err:
+        return err
+    r = store.load(iid) or {}
+    unit = next((u for u in r.get("requirements") or [] if u.get("requirement_id") == rid), None)
+    if unit is None:
+        return _err("その要件が見つかりません。要件一覧から選び直してください。", 404, "not_found")
+    return jsonify(rewrite.propose(unit))

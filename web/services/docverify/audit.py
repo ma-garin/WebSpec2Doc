@@ -22,6 +22,7 @@ ACTIONS = {
     "ai_reject": "AI 提案を不採用",
     "ai_question": "質問票へ送る",
     "llm_settings": "送信先の変更",
+    "docassure_review": "品質保証の AI レビュー",
 }
 HEADER = ["日時", "利用者", "操作", "対象", "内容"]
 _DANGEROUS = ("=", "+", "-", "@", "\t", "\r")

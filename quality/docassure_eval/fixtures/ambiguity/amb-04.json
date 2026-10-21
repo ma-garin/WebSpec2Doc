@@ -1,0 +1,20 @@
+{
+ "id": "amb-04",
+ "category": "ambiguity",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 仕様書\n\n## 1 機能\n\nREQ-001 ユーザーが保存したとき、システムは適切に結果を表示する。失敗した場合はエラーを表示する。\n"
+  }
+ ],
+ "expected": [
+  {
+   "kind": "finding",
+   "rule_or_kind": "AMB-001",
+   "document_id": "A",
+   "line": 5,
+   "severity": "medium"
+  }
+ ],
+ "must_not": []
+}

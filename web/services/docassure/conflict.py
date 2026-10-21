@@ -18,6 +18,9 @@ ROLES: dict[str, tuple[str, ...]] = {
     "general": ("一般ユーザー", "通常ユーザー", "一般会員", "一般"),
     "guest": ("ゲスト", "未ログインユーザー", "未ログイン"),
     "operator": ("オペレーター", "運用者"),
+    "viewer": ("閲覧者", "閲覧ユーザー", "ビューア", "ビューワー", "読み取り専用ユーザー"),
+    "manager": ("部長", "課長", "マネージャー", "上長"),
+    "employee": ("一般社員", "社員", "従業員"),
     "all": ("全ユーザー", "すべてのユーザー", "全員", "全ロール"),
 }
 _ROLE_ALIASES = sorted(((a, r) for r, al in ROLES.items() for a in al), key=lambda x: -len(x[0]))
@@ -25,9 +28,10 @@ SCOPE_WORDS = ("初回", "再試行", "夜間", "日中", "本番", "検証環�
                "バッチ", "外部", "社内", "海外", "休日", "平日")
 ACTIONS = {"閲覧": "view", "参照": "view", "表示": "view", "編集": "edit", "更新": "edit", "変更": "edit",
            "削除": "delete", "作成": "create", "登録": "create", "承認": "approve", "実行": "execute",
-           "ダウンロード": "download", "出力": "download"}
-_NEG = re.compile(r"不可|できない|できません|禁止|不許可|不可能|してはならない")
-_POS = re.compile(r"可能|可|できる|できます|許可|とする")
+           "ダウンロード": "download", "出力": "download", "投稿": "create", "書き込": "edit",
+           "修正": "edit", "設定": "edit"}
+_NEG = re.compile(r"不可|できない|できません|行えない|行えません|禁止|不許可|不可能|してはならない")
+_POS = re.compile(r"可能|可|できる|できます|行える|行えます|許可|とする|に限る|に限り|に限られる")
 _EXCL = re.compile(r"のみ|だけ|に限る|に限り|限定")
 _COND = re.compile(r"([^、。,，]{1,20}?)(?:場合|とき|際|時(?=[はに、,]))")
 _STOP = re.compile(r"とする|である|です|ます|するものとする|ものとする|すること|できる|する|こと|とし|べき")
@@ -56,6 +60,7 @@ def _sentences(raw: str) -> list[str]:
     out = []
     for part in re.split(r"[。\n]", nfkc(raw)):
         part = re.sub(r"^\s*(?:[-*・]\s+|\|\s*)", "", part).strip()
+        part = re.sub(r"^[A-Za-z]+-?\d+(?:\.\d+)*[:：]?\s+", "", part)  # 先頭の要件 ID は比較対象の語ではない
         if part:
             out.append(part)
     return out
@@ -83,18 +88,23 @@ def _scope(sentence: str) -> tuple[frozenset[str], str]:
     """スコープ（ロール・条件・環境語）と、それらを除いたトピック用テキスト。"""
     conds, rest = _conditions(sentence)
     roles, rest = _roles_in(rest)
-    words = {w for w in SCOPE_WORDS if w in rest}
+    words = {w for w in SCOPE_WORDS if w in rest} | set(re.findall(r"「([^」]+)」", sentence))
     for w in words:
         rest = rest.replace(w, "")
     return frozenset(roles | conds | words), rest
 
 
 class _Item:
-    __slots__ = ("unit", "sentence", "sid", "qty", "grams", "scope", "bound")
+    __slots__ = ("unit", "sentence", "sid", "qty", "grams", "scope", "bound", "qual")
 
-    def __init__(self, unit, sentence, sid, qty, grams, scope, bound):
+    def __init__(self, unit, sentence, sid, qty, grams, scope, bound, qual=""):
         self.unit, self.sentence, self.sid, self.qty = unit, sentence, sid, qty
-        self.grams, self.scope, self.bound = grams, scope, bound
+        self.grams, self.scope, self.bound, self.qual = grams, scope, bound, qual
+
+
+def _qualifier_differs(a: str, b: str) -> bool:
+    """「X の保持時間」の X（対象の限定句）が双方にあり、包含関係もなく異なるなら別対象。片方にしか無ければ判定しない。"""
+    return bool(a and b and a != b and a not in b and b not in a)
 
 
 def _evidence(unit: dict, quote: str, value=None) -> dict:
@@ -163,7 +173,8 @@ def _numeric(units: list[dict]) -> list[dict]:
                     head = head.replace(w, "")
                 g = _grams(_clean(head + tail))
                 bound = {"gt": "ge", "lt": "le"}.get(q["bound"], q["bound"])
-                items.append(_Item(u, sent, sid, q, g, scope, bound))
+                qual = _clean(head.rsplit("の", 1)[0]) if "の" in head else ""
+                items.append(_Item(u, sent, sid, q, g, scope, bound, qual))
                 prev_end = e
             del offset
     link: dict[tuple[int, int], float] = {}
@@ -173,6 +184,8 @@ def _numeric(units: list[dict]) -> list[dict]:
         if a.qty["unit_kind"] == "count" and _label(a) != _label(b):
             continue  # 文字数と回数のように、同じ count でも単位語が違えば別物
         if a.sid == b.sid or a.qty["unit_kind"] != b.qty["unit_kind"] or a.bound != b.bound or a.scope != b.scope:
+            continue
+        if _qualifier_differs(a.qual, b.qual):
             continue
         d = _dice(a.grams, b.grams)
         if d >= _MIN_DICE:
@@ -204,13 +217,32 @@ def _numeric(units: list[dict]) -> list[dict]:
 
 
 # --- 権限 ---
+_ROLE_BY_ALIAS = {a: r for a, r in _ROLE_ALIASES}
+_ROLE_CHUNK = re.compile(r"(.+?)(のみが|のみに|のみは|のみ|だけが|だけ|に限られる|に限る|に限り|が|も|は)")
+_ROLE_EXCL = ("のみ", "だけ", "に限")
+
+
+def _role_phrase(text: str) -> tuple[str, str] | None:
+    """主語（権限の主体）を語彙に頼らず助詞の並びから取る。返り値は (句, 区切り)。動作語を含む句は対象なので除く。"""
+    cands = [(m.group(1).strip(), m.group(2)) for m in _ROLE_CHUNK.finditer(text)]
+    cands = [(p, k) for p, k in cands if 2 <= len(p) <= 12 and not any(a in p for a in ACTIONS) and not re.search(r"\d", p)]
+    excl = [c for c in cands if c[1].startswith(_ROLE_EXCL)]
+    return (excl or cands or [None])[-1]
+
+
 def _perm_statements(units: list[dict]) -> list[dict]:
     out = []
     for u in units:
         for sent in _sentences(u.get("raw_text", "")):
             action = next((ACTIONS[a] for a in ACTIONS if a in sent), None)
             conds, rest = _conditions(sent)
-            roles, rest = _roles_in(rest)
+            ph = _role_phrase(rest)
+            if ph and ph[0] not in _ROLE_BY_ALIAS:
+                roles, rest = {ph[0]}, rest.replace(ph[0], "", 1)
+            elif ph and ph[0] in _ROLE_BY_ALIAS:
+                roles, rest = {_ROLE_BY_ALIAS[ph[0]]}, rest.replace(ph[0], "", 1)
+            else:
+                roles, rest = _roles_in(rest)
             if not roles or not action:
                 continue
             neg = bool(_NEG.search(sent))
@@ -245,7 +277,7 @@ def _permission(units: list[dict]) -> list[dict]:
     for a, b in combinations(st, 2):
         if a["action"] != b["action"] or a["conds"] != b["conds"] or a["sent"] == b["sent"]:
             continue
-        d = _dice(a["grams"], b["grams"])
+        d = 1.0 if not a["grams"] and not b["grams"] else _dice(a["grams"], b["grams"])  # 対象語が動作だけの文どうし
         if d < _MIN_DICE or not _perm_clash(a, b):
             continue
         ev = [_evidence(a["unit"], a["sent"]), _evidence(b["unit"], b["sent"])]
@@ -258,6 +290,9 @@ def _permission(units: list[dict]) -> list[dict]:
 
 # --- 時系列 ---
 _PRED = re.compile(r"(?:を|が|は)?(?:行う|行い|実施|する|受け付ける|送る|実行|おこなう|行って)$")
+_REL = re.compile(r"^(?P<subj>.+?)は、?(?P<ref>[^、]+?)(?:より(?:も)?|の|した|する|し)(?P<rel>前|後|先|あと)に(?P<pred>.+)$")
+_PAIR_BEFORE = re.compile(r"^(.*?)(?:する前に|より前に|の前に|前に)(.+)$")
+_PHASE = (("開始", 0), ("着手", 0), ("完了", 1), ("終了", 1), ("締切", 1), ("確定", 1))
 _PAIR = re.compile(r"^(.*?)(?:した後(?:に|で)?|の後(?:に|で)?|後に|てから|次に)(.+)$")
 
 
@@ -266,23 +301,51 @@ def _step(s: str) -> str:
     return _PRED.sub("", _clean(s)).strip()
 
 
+def _meta(raw: str) -> tuple[str, int | None]:
+    """手順の (対象語, 開始/完了の相)。「検品が完了」「検品を開始」は同じ対象の別の相。"""
+    m = re.match(r"([^がをは]{2,}?)[がをは](.+)$", nfkc(raw).strip())
+    if not m:
+        return "", None
+    return m.group(1), next((ph for w, ph in _PHASE if w in m.group(2)), None)
+
+
+def _steps(raws: list[str]) -> tuple[list[str], list[tuple[str, int | None]]]:
+    pairs = [(_step(r), _meta(r)) for r in raws]
+    pairs = [p for p in pairs if len(p[0]) >= 2]
+    return [p[0] for p in pairs], [p[1] for p in pairs]
+
+
 def _sequences(units: list[dict]) -> list[dict]:
     seqs = []
     for u in units:
         for sent in _sentences(u.get("raw_text", "")):
+            rel = _REL.match(sent)
+            if rel and not re.search(r"→|->|⇒", sent):
+                ev_raw, ref_raw = rel["subj"] + rel["pred"], rel["ref"]
+                raws = [ev_raw, ref_raw] if rel["rel"] in ("前", "先") else [ref_raw, ev_raw]
+                steps, metas = _steps(raws)
+                if len(steps) == 2 and len(_step(ev_raw)) >= 2 and len(_step(ref_raw)) >= 2:
+                    seqs.append({"unit": u, "sent": sent, "steps": steps, "metas": metas})
+                continue
             if "→" in sent or "->" in sent or "⇒" in sent:
                 parts = re.split(r"→|->|⇒", sent)
                 parts[0] = re.sub(r"^.*(?:は|を|:|：)\s*", "", parts[0]) if len(parts[0]) > 8 else parts[0]
-                steps = [_step(p) for p in parts]
+                raws = parts
             else:
                 m = _PAIR.match(sent)
-                if not m:
+                before = _PAIR_BEFORE.match(sent) if not m else None
+                if not m and not before:
                     continue
-                head = re.split(r"[、,，]", m.group(1))[-1]
-                steps = [_step(head), _step(re.split(r"[、,，]", m.group(2))[0])]
-            steps = [s for s in steps if len(s) >= 2]
+                if m:
+                    raws = [re.split(r"[、,，]", m.group(1))[-1], re.split(r"[、,，]", m.group(2).lstrip("、,， "))[0]]
+                else:  # 「X は、Y する前に Z」: Z → Y の順
+                    raws = [re.split(r"[、,，]", before.group(2))[0], re.split(r"[、,，]", before.group(1))[-1]]
+                    topic = re.match(r"^([^、]+?)は、", before.group(1))
+                    if topic:
+                        raws[0] = topic.group(1) + raws[0]
+            steps, metas = _steps(raws)
             if len(steps) >= 2:
-                seqs.append({"unit": u, "sent": sent, "steps": steps})
+                seqs.append({"unit": u, "sent": sent, "steps": steps, "metas": metas})
     return seqs
 
 
@@ -293,17 +356,32 @@ def _same_step(a: str, b: str) -> bool:
     return (len(short) >= 3 and short in long_ and len(short) / len(long_) >= 0.6) or _dice(_grams(a), _grams(b)) >= 0.7
 
 
+def _phase_match(ma: tuple, mb: tuple) -> bool:
+    return bool(ma[0] and ma[0] == mb[0] and ma[1] is not None and mb[1] is not None and ma[1] != mb[1])
+
+
 def _temporal(units: list[dict]) -> list[dict]:
     out = []
     for a, b in combinations(_sequences(units), 2):
         if a["sent"] == b["sent"]:
             continue
-        common = [(i, j) for i, x in enumerate(a["steps"]) for j, y in enumerate(b["steps"]) if _same_step(x, y)]
+        common, phased = [], {}
+        for i, x in enumerate(a["steps"]):
+            for j, y in enumerate(b["steps"]):
+                if _same_step(x, y):
+                    common.append((i, j))
+                elif _phase_match(a["metas"][i], b["metas"][j]):
+                    common.append((i, j))
+                    phased[(i, j)] = (a["metas"][i][1], b["metas"][j][1])
         if len({i for i, _ in common}) < 2:
             continue
         common.sort()
         js = [j for _, j in common]
         if all(js[k] < js[k + 1] for k in range(len(js) - 1)):
+            continue
+        # 開始 < 完了 の関係で両立する並び（A: 開始後に X / B: 完了前に X）は矛盾にしない
+        first_i = common[0][0]
+        if any((pa >= pb) is False if i == first_i else (pb >= pa) is False for (i, _), (pa, pb) in phased.items()):
             continue
         ev = [_evidence(a["unit"], a["sent"]), _evidence(b["unit"], b["sent"])]
         names = [a["steps"][i] for i, _ in common]
@@ -316,9 +394,13 @@ def _temporal(units: list[dict]) -> list[dict]:
 _IMMEDIATE_DEL = re.compile(r"(?:即時|即座|直ちに|ただちに|すぐ|速やかに)[^。]{0,12}?(?:削除|消去|破棄)|(?:削除|消去|破棄)[^。]{0,4}(?:即時|即座)")
 _RETAIN = re.compile(r"保持|保存|保管")
 _PERPETUAL = re.compile(r"無期限|永久")
+_DEL_NO = re.compile(r"(?:削除|消去|破棄)(?:しない|されない|しません|不可|禁止)")
 _ENC_NO = re.compile(r"暗号化(?:しない|不要)|平文")
+_FREE = re.compile(r"無料|無償|免除")
+_CHARGE_ALWAYS = re.compile(r"(?:請求|課金|徴収|有料)")
+_ALWAYS = re.compile(r"常に|時期を問わず|いかなる場合も|必ず|無条件")
 _ENC_YES = re.compile(r"暗号化(?:する|される|を行う)|暗号化し")
-_KW = re.compile(r"即時|即座|直ちに|ただちに|すぐ|速やかに|削除|消去|破棄|保持|保存|保管|無期限|永久|暗号化|平文|\d+\s*(?:日間|日|年|か月|週間|時間)間?")
+_KW = re.compile(r"即時|即座|直ちに|ただちに|すぐ|速やかに|削除|消去|破棄|保持|保存|保管|無期限|永久|暗号化|平文|無料|無償|免除|常に|時期を問わず|いかなる場合も|必ず|無条件|請求|課金|徴収|有料|しない|されない|しません|\d+\s*(?:日間|日|年|か月|週間|時間)間?")
 
 
 def _semantic(units: list[dict]) -> list[dict]:
@@ -328,8 +410,14 @@ def _semantic(units: list[dict]) -> list[dict]:
             tags = set()
             if _IMMEDIATE_DEL.search(sent):
                 tags.add("immediate_delete")
+            if _DEL_NO.search(sent):
+                tags.add("delete_no")
             if _RETAIN.search(sent) and (any(q["unit_kind"] == "time" for q in normalize_quantity(sent)) or _PERPETUAL.search(sent)):
                 tags.add("retention")
+            if _FREE.search(sent):
+                tags.add("free")
+            if _CHARGE_ALWAYS.search(sent) and _ALWAYS.search(sent) and not _FREE.search(sent):
+                tags.add("charge_always")
             if _ENC_NO.search(sent):
                 tags.add("enc_no")
             elif _ENC_YES.search(sent):
@@ -337,7 +425,7 @@ def _semantic(units: list[dict]) -> list[dict]:
             if tags:
                 _, rest = _roles_in(_KW.sub("", sent))
                 tagged.append((u, sent, tags, _grams(_clean(rest))))
-    pairs = (("immediate_delete", "retention"), ("enc_no", "enc_yes"))
+    pairs = (("immediate_delete", "retention"), ("immediate_delete", "delete_no"), ("enc_no", "enc_yes"), ("free", "charge_always"))
     out = []
     for (ua, sa, ta, ga), (ub, sb, tb, gb) in combinations(tagged, 2):
         if sa == sb:

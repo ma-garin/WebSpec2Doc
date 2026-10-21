@@ -72,7 +72,7 @@ def _norm(text: str) -> str:
 def page() -> str:
     # 静的ファイルの更新が古い版の読み込みで隠れないよう、JS/CSS の更新時刻を URL に付ける
     static = Path(__file__).resolve().parents[2] / "static"
-    files = ["js/docverify-core.js", "js/docverify-global.js", "js/docverify-review.js", "js/docverify-viewpoints.js", "css/docverify.css", "js/docverify-accuracy.js", "js/docverify-ai.js", "js/docverify-process.js", "css/docverify-process.css", "js/docverify-trace.js", "js/docverify-trace-docs.js", "js/docverify-trace-check.js", "js/docverify-trace-report.js", "css/docverify-trace.css", "css/docverify-trace-docs.css", "css/docverify-trace-check.css", "css/docverify-trace-report.css"]
+    files = ["js/docverify-core.js", "js/docverify-global.js", "js/docverify-review.js", "js/docverify-viewpoints.js", "css/docverify.css", "js/docverify-accuracy.js", "js/docverify-ai.js", "js/docverify-process.js", "css/docverify-process.css", "js/docverify-trace.js", "js/docverify-trace-docs.js", "js/docverify-trace-check.js", "js/docverify-trace-report.js", "css/docverify-trace.css", "css/docverify-trace-docs.css", "css/docverify-trace-check.css", "css/docverify-trace-report.css", "js/docassure.js", "css/docassure.css", "js/docassure-trace-panel.js", "js/docassure-diff-panel.js", "js/docassure-review-panel.js", "css/docassure-trace-panel.css", "css/docassure-panels.css"]
     dv_ver = max(int((static / f).stat().st_mtime) for f in files if (static / f).exists())
     return render_template("doc_verify.html", dv_ver=dv_ver)
 

@@ -1,0 +1,20 @@
+{
+ "id": "h-trc-04",
+ "category": "trace_orphan",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 医療事務 要件\n\n## 1 機能要件\n\nREQ-103 患者番号は8桁の数字とする。\nREQ104 診療報酬の請求は月初5営業日以内に行う。\n"
+  }
+ ],
+ "expected": [
+  {
+   "kind": "finding",
+   "rule_or_kind": "ID-003",
+   "document_id": "A",
+   "line": 6,
+   "severity": "low"
+  }
+ ],
+ "must_not": []
+}

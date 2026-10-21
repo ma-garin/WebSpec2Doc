@@ -1,0 +1,20 @@
+{
+ "id": "ut2-03",
+ "category": "undefined_term",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 宿泊予約の外部連携\n\n## 1 機能\n\nREQ-361 システムは、OTAから受信した予約を予約台帳へ取り込む。\nREQ-362 取込に失敗した場合は、エラー一覧に追加する。\n"
+  }
+ ],
+ "expected": [
+  {
+   "kind": "finding",
+   "rule_or_kind": "TERM-001",
+   "document_id": "A",
+   "line": 5,
+   "severity": "low"
+  }
+ ],
+ "must_not": []
+}

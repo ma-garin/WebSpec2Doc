@@ -1,0 +1,19 @@
+{
+ "id": "h3-fp-07",
+ "category": "false_positive_trap",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 倉庫ピッキング\n\nSR-701 平日はピッキング指示を朝8時に出力する。\nSR-702 休日はピッキング指示を朝10時に出力する。\n"
+  }
+ ],
+ "expected": [],
+ "must_not": [
+  {
+   "kind": "conflict",
+   "rule_or_kind": "temporal",
+   "document_id": "A",
+   "line": 4
+  }
+ ]
+}

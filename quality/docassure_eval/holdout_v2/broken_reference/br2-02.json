@@ -1,0 +1,20 @@
+{
+ "id": "br2-02",
+ "category": "broken_reference",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 成績管理の権限\n\n## 1 機能\n\nREQ-251 教員は、担当科目の成績を入力する。権限の詳細は9.2節を参照。\nREQ-252 入力に失敗した場合はエラーを表示する。\n"
+  }
+ ],
+ "expected": [
+  {
+   "kind": "finding",
+   "rule_or_kind": "REF-001",
+   "document_id": "A",
+   "line": 5,
+   "severity": "high"
+  }
+ ],
+ "must_not": []
+}

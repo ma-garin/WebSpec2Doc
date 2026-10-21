@@ -1,0 +1,20 @@
+{
+ "id": "h3-mc-02",
+ "category": "missing_condition",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# ゲーム課金\n\n## 2 購入\n\nREQ-601 未成年の場合は購入を制限する。\nREQ-602 購入履歴は90日間保存する。\n"
+  }
+ ],
+ "expected": [
+  {
+   "kind": "testability",
+   "rule_or_kind": "NOT_TESTABLE",
+   "document_id": "A",
+   "line": 5,
+   "severity": "high"
+  }
+ ],
+ "must_not": []
+}

@@ -1,0 +1,25 @@
+{
+ "id": "h3-fp-01",
+ "category": "false_positive_trap",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 空港手荷物\n\nFR-101 預け手荷物の重量上限は23kgとする。\nFR-102 超過料金は1kgあたり1,500円とする。\nFR-103 重量が23,000gを超えた場合は超過扱いとする。\n"
+  }
+ ],
+ "expected": [],
+ "must_not": [
+  {
+   "kind": "finding",
+   "rule_or_kind": "NUM-001",
+   "document_id": "A",
+   "line": 5
+  },
+  {
+   "kind": "finding",
+   "rule_or_kind": "NUM-001",
+   "document_id": "A",
+   "line": 3
+  }
+ ]
+}

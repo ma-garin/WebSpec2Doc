@@ -1,0 +1,16 @@
+{
+ "id": "h-fpt-01",
+ "category": "false_positive_trap",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 勤怠管理 要件\n\n## 1 機能要件\n\nREQ-200 休憩時間は1.5時間とする。\n"
+  },
+  {
+   "id": "B",
+   "text": "# 勤怠管理 基本設計\n\n## 1 機能要件\n\nREQ-200 休憩時間は90分とする。\n"
+  }
+ ],
+ "expected": [],
+ "must_not": []
+}

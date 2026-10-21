@@ -1,0 +1,24 @@
+{
+ "id": "co2-04",
+ "category": "contradiction",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 製品の出荷判定\n\n## 1 機能\n\nREQ-431 検査に合格したロットは、出荷できる。\nREQ-432 不合格のロットは出荷保留とする。\n"
+  },
+  {
+   "id": "B",
+   "text": "# 製品の出荷判定\n\n## 1 機能\n\nREQ-431 検査に合格したロットであっても、顧客承認があるまで出荷してはならない。承認が得られない場合は保管を継続する。\n"
+  }
+ ],
+ "expected": [
+  {
+   "kind": "conflict",
+   "rule_or_kind": "semantic_candidate",
+   "document_id": "A",
+   "line": 5,
+   "severity": "high"
+  }
+ ],
+ "must_not": []
+}

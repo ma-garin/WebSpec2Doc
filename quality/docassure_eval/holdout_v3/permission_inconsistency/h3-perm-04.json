@@ -1,0 +1,20 @@
+{
+ "id": "h3-perm-04",
+ "category": "permission_inconsistency",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 外来受付\n\nFR-401 受付事務は予約を変更できる。\nFR-402 予約の変更は医師のみが行える。\n"
+  }
+ ],
+ "expected": [
+  {
+   "kind": "conflict",
+   "rule_or_kind": "permission",
+   "document_id": "A",
+   "line": 4,
+   "severity": "high"
+  }
+ ],
+ "must_not": []
+}

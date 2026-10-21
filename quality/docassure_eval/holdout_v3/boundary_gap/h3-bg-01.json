@@ -1,0 +1,20 @@
+{
+ "id": "h3-bg-01",
+ "category": "boundary_gap",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 空港手荷物\n\n## 料金\n\n| 重量 | 料金 |\n|---|---|\n| 0kg〜20kg | 無料 |\n| 21kg〜30kg | 3,000円 |\n"
+  }
+ ],
+ "expected": [
+  {
+   "kind": "finding",
+   "rule_or_kind": "NUM-002",
+   "document_id": "A",
+   "line": 8,
+   "severity": "high"
+  }
+ ],
+ "must_not": []
+}

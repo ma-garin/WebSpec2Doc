@@ -1,0 +1,20 @@
+{
+ "id": "bg-02",
+ "category": "boundary_gap",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 仕様書\n\n## 1 機能\n\nREQ-001 年齢は65歳以上18歳以下のユーザーを対象とする。\n"
+  }
+ ],
+ "expected": [
+  {
+   "kind": "finding",
+   "rule_or_kind": "NUM-002",
+   "document_id": "A",
+   "line": 5,
+   "severity": "high"
+  }
+ ],
+ "must_not": []
+}

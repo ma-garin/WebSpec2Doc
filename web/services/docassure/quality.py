@@ -24,8 +24,17 @@ _STATE_WORDS = ("状態", "ステータス", "遷移", "未処理", "処理中",
 _BOUND_WORDS = ("文字", "件", "桁", "範囲", "以上", "以下", "最大", "最小", "未満", "上限", "下限", "サイズ", "長さ")
 
 
+# 既定 rule pack（rules/packs/default.json）の rule_id の接頭辞 → 次元。先頭一致で誤対応を避ける
+PACK_DIM = (("AMB-", "Clarity"), ("TBD-", "Completeness"), ("PLH-", "Completeness"), ("REQ-ITEMS", "Completeness"),
+            ("REF-", "Traceability"), ("ID-", "Traceability"), ("TERM-", "Consistency"),
+            ("NUM-001", "Measurability"), ("NUM-002", "BoundaryCompleteness"))
+
+
 def _dim_of(rule_id: str) -> str | None:
     r = (rule_id or "").upper()
+    hit = next((d for k, d in PACK_DIM if r.startswith(k)), None)
+    if hit:
+        return hit
     return next((d for k, d in RULE_DIM if k in r), None)
 
 

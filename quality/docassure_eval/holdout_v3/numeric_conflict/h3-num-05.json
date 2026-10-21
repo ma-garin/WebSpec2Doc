@@ -1,0 +1,20 @@
+{
+ "id": "h3-num-05",
+ "category": "numeric_conflict",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# ゲーム課金\n\nSR-501 1日の課金上限は30,000円とする。\nSR-502 1日の課金上限は50,000円とする。\n"
+  }
+ ],
+ "expected": [
+  {
+   "kind": "conflict",
+   "rule_or_kind": "numeric",
+   "document_id": "A",
+   "line": 4,
+   "severity": "high"
+  }
+ ],
+ "must_not": []
+}

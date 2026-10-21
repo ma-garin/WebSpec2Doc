@@ -1,0 +1,20 @@
+{
+ "id": "h3-con-01",
+ "category": "contradiction",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 外来受付 要件\n\n## 1 権限\n\nFR-101 受付事務は患者の診療情報を閲覧できる。\nFR-102 受付事務は患者の診療情報を閲覧できない。\n"
+  }
+ ],
+ "expected": [
+  {
+   "kind": "conflict",
+   "rule_or_kind": "permission",
+   "document_id": "A",
+   "line": 6,
+   "severity": "high"
+  }
+ ],
+ "must_not": []
+}

@@ -1,0 +1,20 @@
+{
+ "id": "h3-mc-03",
+ "category": "missing_condition",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 倉庫ピッキング\n\n## 5.1 ピッキング指示\n\nSR-701 在庫が不足している場合は、担当者へ連絡する。\nSR-702 ピッキングリストは1枚あたり最大30行とする。\n"
+  }
+ ],
+ "expected": [
+  {
+   "kind": "testability",
+   "rule_or_kind": "NOT_TESTABLE",
+   "document_id": "A",
+   "line": 5,
+   "severity": "high"
+  }
+ ],
+ "must_not": []
+}

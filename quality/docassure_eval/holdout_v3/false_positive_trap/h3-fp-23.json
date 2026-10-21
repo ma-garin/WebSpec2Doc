@@ -1,0 +1,19 @@
+{
+ "id": "h3-fp-23",
+ "category": "false_positive_trap",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 空港手荷物\n\n## 3 状態\n\nFR-2201 手荷物の状態は「受付済」「搬送中」「到着」とする。\nFR-2202 受付済は搬送中へ、搬送中は到着へ遷移する。\n"
+  }
+ ],
+ "expected": [],
+ "must_not": [
+  {
+   "kind": "finding",
+   "rule_or_kind": "REQ-ITEMS",
+   "document_id": "A",
+   "line": 5
+  }
+ ]
+}

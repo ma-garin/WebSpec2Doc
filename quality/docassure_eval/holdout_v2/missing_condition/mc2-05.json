@@ -1,0 +1,20 @@
+{
+ "id": "mc2-05",
+ "category": "missing_condition",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 図書の貸出処理\n\n## 1 機能\n\nREQ-621 司書が利用者カードを読み取ったとき、システムは利用者情報を表示する。読取に失敗した場合は再読取を促す。\nREQ-622 司書が図書を読み取ったとき、システムは貸出記録を作成する。\n"
+  }
+ ],
+ "expected": [
+  {
+   "kind": "testability",
+   "rule_or_kind": "NOT_TESTABLE",
+   "document_id": "A",
+   "line": 6,
+   "severity": "high"
+  }
+ ],
+ "must_not": []
+}

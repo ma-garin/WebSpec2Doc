@@ -1,0 +1,20 @@
+{
+ "id": "h3-perm-01",
+ "category": "permission_inconsistency",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 求人応募管理\n\n## 権限\n\nFR-101 採用担当者は応募者の評価コメントを削除できる。\nFR-102 評価コメントは何人も削除できない。\n"
+  }
+ ],
+ "expected": [
+  {
+   "kind": "conflict",
+   "rule_or_kind": "permission",
+   "document_id": "A",
+   "line": 6,
+   "severity": "high"
+  }
+ ],
+ "must_not": []
+}

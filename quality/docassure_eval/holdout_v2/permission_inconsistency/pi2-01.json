@@ -1,0 +1,24 @@
+{
+ "id": "pi2-01",
+ "category": "permission_inconsistency",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 住民票の閲覧\n\n## 1 機能\n\nREQ-181 住民票の交付履歴は、市民課の職員のみが閲覧できる。\nREQ-182 閲覧時は操作ログを記録する。\n"
+  },
+  {
+   "id": "B",
+   "text": "# 住民票の閲覧\n\n## 1 機能\n\nREQ-181 住民票の交付履歴は、全庁の職員が閲覧できる。\n"
+  }
+ ],
+ "expected": [
+  {
+   "kind": "conflict",
+   "rule_or_kind": "permission",
+   "document_id": "A",
+   "line": 5,
+   "severity": "high"
+  }
+ ],
+ "must_not": []
+}

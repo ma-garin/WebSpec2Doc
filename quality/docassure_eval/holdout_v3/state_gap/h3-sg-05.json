@@ -1,0 +1,20 @@
+{
+ "id": "h3-sg-05",
+ "category": "state_gap",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 倉庫\n\nSR-501 ピッキング状態は「指示済」「作業中」「完了」とする。\nSR-502 指示済から作業中、作業中から完了へ遷移する。\nSR-503 作業中のピッキングは一時停止後に再開できる。\n"
+  }
+ ],
+ "expected": [
+  {
+   "kind": "finding",
+   "rule_or_kind": "REQ-ITEMS",
+   "document_id": "A",
+   "line": 5,
+   "severity": "medium"
+  }
+ ],
+ "must_not": []
+}

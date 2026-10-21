@@ -45,6 +45,8 @@ def decisions(iid: str) -> list[dict]:
 
 def add_decision(iid: str, decision: dict) -> dict:
     """人の判断（採否・waiver・矛盾の決定）。AI は呼ばない。分析を再実行しても残す。"""
-    r = load(iid) or {}
+    from web.services.docverify import perm
     entry = {**decision, "at": datetime.now(timezone.utc).isoformat()}
-    return save(iid, {**r, "decisions": [*(r.get("decisions") or []), entry]})
+    with perm.locked(_dv.doc_dir(iid)):   # 同時更新で判断を失わない
+        r = load(iid) or {}
+        return save(iid, {**r, "decisions": [*(r.get("decisions") or []), entry]})

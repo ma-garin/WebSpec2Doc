@@ -1,0 +1,20 @@
+{
+ "id": "h-prm-03",
+ "category": "permission_inconsistency",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 在庫管理 要件\n\n## 1 機能要件\n\nREQ-083 在庫数の修正は倉庫管理者のみ行える。\nREQ-084 一般作業員は在庫数を修正できる。\n"
+  }
+ ],
+ "expected": [
+  {
+   "kind": "conflict",
+   "rule_or_kind": "permission",
+   "document_id": "A",
+   "line": 5,
+   "severity": "high"
+  }
+ ],
+ "must_not": []
+}

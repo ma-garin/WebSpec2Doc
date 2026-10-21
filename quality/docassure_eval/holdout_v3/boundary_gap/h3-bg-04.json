@@ -1,0 +1,20 @@
+{
+ "id": "h3-bg-04",
+ "category": "boundary_gap",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 外来受付\n\nSR-301 年齢が65歳以上の場合は高齢者枠とする。\nSR-302 年齢が64歳以下の場合は一般枠とする。\nSR-303 年齢が65歳未満の場合は一般枠とする。\nSR-304 年齢が12歳未満の場合は小児枠とする。\nSR-305 年齢が13歳以上18歳以下は学生枠とする。\n"
+  }
+ ],
+ "expected": [
+  {
+   "kind": "finding",
+   "rule_or_kind": "NUM-002",
+   "document_id": "A",
+   "line": 7,
+   "severity": "high"
+  }
+ ],
+ "must_not": []
+}

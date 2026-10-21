@@ -1,0 +1,20 @@
+{
+ "id": "h3-con-05",
+ "category": "contradiction",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 倉庫ピッキング\n\n## 2\n\nFR-501 ピッキング完了後に検品を行うこと。\nFR-502 検品後にピッキングを完了とすること。\n"
+  }
+ ],
+ "expected": [
+  {
+   "kind": "conflict",
+   "rule_or_kind": "temporal",
+   "document_id": "A",
+   "line": 6,
+   "severity": "medium"
+  }
+ ],
+ "must_not": []
+}

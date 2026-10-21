@@ -1,0 +1,20 @@
+{
+ "id": "bg2-04",
+ "category": "boundary_gap",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 経費の承認区分\n\n## 1 機能\n\nREQ-571 経費の承認者は、1円以上9,999円以下は課長、20,000円以上は部長とする。\n"
+  }
+ ],
+ "expected": [
+  {
+   "kind": "finding",
+   "rule_or_kind": "NUM-002",
+   "document_id": "A",
+   "line": 5,
+   "severity": "high"
+  }
+ ],
+ "must_not": []
+}

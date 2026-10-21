@@ -1,0 +1,12 @@
+{
+ "id": "fp2-02",
+ "category": "false_positive_trap",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 図書の貸出\n\n## 1 機能\n\nREQ-711 貸出期間は、会員は30日、非会員は14日とする。\nREQ-712 期間を過ぎた場合は、延滞として記録する。\n"
+  }
+ ],
+ "expected": [],
+ "must_not": []
+}

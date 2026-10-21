@@ -1,0 +1,20 @@
+{
+ "id": "h3-term-01",
+ "category": "undefined_term",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 空港手荷物\n\nFR-101 BRS照合に失敗した手荷物は保留棚へ移すこと。\nFR-102 保留棚の手荷物は1時間ごとに確認する。\n"
+  }
+ ],
+ "expected": [
+  {
+   "kind": "finding",
+   "rule_or_kind": "TERM-001",
+   "document_id": "A",
+   "line": 3,
+   "severity": "low"
+  }
+ ],
+ "must_not": []
+}

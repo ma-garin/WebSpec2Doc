@@ -1,0 +1,24 @@
+{
+ "id": "nc2-03",
+ "category": "numeric_conflict",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 宿泊のチェックイン\n\n## 1 機能\n\nREQ-341 チェックインの受付開始時刻は15時とする。\nREQ-342 受付開始前に到着した場合は荷物のみ預かる。\n"
+  },
+  {
+   "id": "B",
+   "text": "# 宿泊のチェックイン\n\n## 1 機能\n\nREQ-341 チェックインの受付開始時刻は16時とする。\n"
+  }
+ ],
+ "expected": [
+  {
+   "kind": "conflict",
+   "rule_or_kind": "numeric",
+   "document_id": "A",
+   "line": 5,
+   "severity": "high"
+  }
+ ],
+ "must_not": []
+}

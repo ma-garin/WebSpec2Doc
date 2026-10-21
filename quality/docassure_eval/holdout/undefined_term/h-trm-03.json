@@ -1,0 +1,20 @@
+{
+ "id": "h-trm-03",
+ "category": "undefined_term",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 在庫管理 要件\n\n## 1 機能要件\n\nREQ-062 WMS から取得した在庫数を画面に表示する。\nREQ-063 ログインに連続5回失敗した場合、システムはアカウントを30分間ロックし、エラーメッセージを表示する。\n"
+  }
+ ],
+ "expected": [
+  {
+   "kind": "finding",
+   "rule_or_kind": "TERM-001",
+   "document_id": "A",
+   "line": 5,
+   "severity": "low"
+  }
+ ],
+ "must_not": []
+}

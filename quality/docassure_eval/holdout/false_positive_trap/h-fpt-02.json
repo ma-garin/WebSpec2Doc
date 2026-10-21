@@ -1,0 +1,12 @@
+{
+ "id": "h-fpt-02",
+ "category": "false_positive_trap",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 予約 要件\n\n## 1 機能要件\n\nREQ-201 通常会員の予約保持時間は30分とする。\nREQ-202 プレミアム会員の予約保持時間は60分とする。\n"
+  }
+ ],
+ "expected": [],
+ "must_not": []
+}

@@ -1,0 +1,25 @@
+{
+ "id": "h3-fp-14",
+ "category": "false_positive_trap",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 補助金\n\nFR-1301 交付決定の通知は、決定日から10営業日以内に行う。\nFR-1302 支払は、請求日から30日以内に行う。\n"
+  }
+ ],
+ "expected": [],
+ "must_not": [
+  {
+   "kind": "finding",
+   "rule_or_kind": "NUM-001",
+   "document_id": "A",
+   "line": 3
+  },
+  {
+   "kind": "finding",
+   "rule_or_kind": "NUM-001",
+   "document_id": "A",
+   "line": 4
+  }
+ ]
+}

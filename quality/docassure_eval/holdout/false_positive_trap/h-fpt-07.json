@@ -1,0 +1,12 @@
+{
+ "id": "h-fpt-07",
+ "category": "false_positive_trap",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 宿泊予約 要件\n\n## 1 機能要件\n\nREQ-210 チェックインは15時から可能とする。\nREQ-211 団体予約（10名以上）のチェックインは14時から可能とする。\n"
+  }
+ ],
+ "expected": [],
+ "must_not": []
+}

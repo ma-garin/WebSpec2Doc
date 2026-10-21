@@ -1,0 +1,24 @@
+{
+ "id": "ct-01",
+ "category": "contradiction",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 仕様書\n\n## 1 機能\n\nREQ-001 閲覧者は帳票を編集できる。\n"
+  },
+  {
+   "id": "B",
+   "text": "# 仕様書\n\n## 1 機能\n\nREQ-001 閲覧者は帳票を編集できない。\n"
+  }
+ ],
+ "expected": [
+  {
+   "kind": "conflict",
+   "rule_or_kind": "permission",
+   "document_id": "A",
+   "line": 5,
+   "severity": "high"
+  }
+ ],
+ "must_not": []
+}

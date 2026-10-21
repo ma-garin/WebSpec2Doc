@@ -1,0 +1,20 @@
+{
+ "id": "h3-mc-05",
+ "category": "missing_condition",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 賃貸契約管理\n\n## 6 解約\n\nSR-901 解約予告が期限に間に合わない場合は、別途対応する。\nSR-902 解約予告は書面で受領すること。\n"
+  }
+ ],
+ "expected": [
+  {
+   "kind": "testability",
+   "rule_or_kind": "NOT_TESTABLE",
+   "document_id": "A",
+   "line": 5,
+   "severity": "high"
+  }
+ ],
+ "must_not": []
+}

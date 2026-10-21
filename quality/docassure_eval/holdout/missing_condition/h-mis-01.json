@@ -1,0 +1,20 @@
+{
+ "id": "h-mis-01",
+ "category": "missing_condition",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 請求管理 要件\n\n## 1 機能要件\n\nREQ-010 支払期限を過ぎた請求については、担当者が督促を行う。\nREQ-011 ログインに連続5回失敗した場合、システムはアカウントを30分間ロックし、エラーメッセージを表示する。\n"
+  }
+ ],
+ "expected": [
+  {
+   "kind": "testability",
+   "rule_or_kind": "NOT_TESTABLE",
+   "document_id": "A",
+   "line": 5,
+   "severity": "high"
+  }
+ ],
+ "must_not": []
+}

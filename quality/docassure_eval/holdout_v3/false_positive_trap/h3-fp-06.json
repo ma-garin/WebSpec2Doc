@@ -1,0 +1,25 @@
+{
+ "id": "h3-fp-06",
+ "category": "false_positive_trap",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 補助金\n\nFR-601 申請者は申請書を提出する。\nFR-602 申込者は申請書を提出する。\n"
+  }
+ ],
+ "expected": [],
+ "must_not": [
+  {
+   "kind": "finding",
+   "rule_or_kind": "NUM-001",
+   "document_id": "A",
+   "line": 3
+  },
+  {
+   "kind": "conflict",
+   "rule_or_kind": "semantic_candidate",
+   "document_id": "A",
+   "line": 4
+  }
+ ]
+}

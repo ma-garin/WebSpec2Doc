@@ -72,3 +72,41 @@ def test_decisions_survive_reanalyze_and_legacy_inspection_untouched(client):
     assert before["inspection"]["findings"] == after["inspection"]["findings"]
     from web.services.docassure import store
     assert [d["target"] for d in store.decisions(iid)] == ["F1"]
+
+
+def test_report_formats_and_csv_injection_guard(client):
+    iid = _iid(client)
+    client.post(f"/api/docassure/inspections/{iid}/analyze", headers=ORIGIN,
+                json={"documents": [{"id": "D1", "text": "- REQ-001 =cmd|calc 適切に表示すること。\n"}]})
+    md = client.get(f"/api/docassure/inspections/{iid}/report.md")
+    assert md.status_code == 200 and "Document Assurance Report" in md.get_data(as_text=True)
+    csvr = client.get(f"/api/docassure/inspections/{iid}/report.csv").get_data(as_text=True)
+    assert all(not ln.split(",")[0].startswith("=") for ln in csvr.splitlines())
+    assert client.get(f"/api/docassure/inspections/{iid}/report.json").status_code == 200
+    assert client.get(f"/api/docassure/inspections/{iid}/report.exe").status_code == 400
+
+
+def test_review_requires_consent_for_openai_and_ignores_client_text(client, monkeypatch):
+    from web.services.docassure import review_board
+    from web.services.docverify import llm_settings
+    iid = _iid(client)
+    client.post(f"/api/docassure/inspections/{iid}/analyze", headers=ORIGIN,
+                json={"documents": [{"id": "D1", "text": "- REQ-001 検索は適切に表示すること。\n"}]})
+    monkeypatch.setattr(llm_settings, "load", lambda: {"destination": "openai"})
+    monkeypatch.setattr(llm_settings, "client_for", lambda cfg: object())
+    seen = {}
+    monkeypatch.setattr(review_board, "run", lambda units, docs, c, **k: seen.update(docs=docs) or {"mode": "OK", "findings": []})
+    r = client.post(f"/api/docassure/inspections/{iid}/review", headers=ORIGIN, json={})
+    assert r.status_code == 409 and r.get_json()["code"] == "consent_required"
+    ok = client.post(f"/api/docassure/inspections/{iid}/review", headers=ORIGIN,
+                     json={"confirm_send": True, "documents": [{"id": "D1", "text": "偽の本文"}]})
+    assert ok.status_code == 200
+    assert "偽の本文" not in str(seen["docs"]) and "適切に" in str(seen["docs"])
+
+
+def test_source_texts_not_exposed(client):
+    iid = _iid(client)
+    r = client.post(f"/api/docassure/inspections/{iid}/analyze", headers=ORIGIN,
+                    json={"documents": [{"id": "D1", "text": "- REQ-001 秘密の本文 すること。\n"}]})
+    assert "source_texts" not in r.get_json()
+    assert "source_texts" not in client.get(f"/api/docassure/inspections/{iid}/report.json").get_data(as_text=True)

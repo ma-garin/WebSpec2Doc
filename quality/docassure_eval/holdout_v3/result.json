@@ -1,0 +1,513 @@
+{
+ "holdout": {
+  "total_cases": 80,
+  "expected_items": 55,
+  "per_category": {
+   "ambiguity": 5,
+   "boundary_gap": 5,
+   "broken_reference": 5,
+   "contradiction": 5,
+   "false_positive_trap": 25,
+   "missing_condition": 5,
+   "numeric_conflict": 5,
+   "permission_inconsistency": 5,
+   "state_gap": 5,
+   "trace_orphan": 5,
+   "undefined_term": 5,
+   "untestable": 5
+  }
+ },
+ "overall": {
+  "precision": 0.51,
+  "recall": 0.473,
+  "f1": 0.491,
+  "tp": 26,
+  "fp": 25,
+  "fn": 29,
+  "cases": 80,
+  "critical_recall": 0.5,
+  "critical_expected": 36,
+  "false_positive_case_rate": 0.263,
+  "issue_density_per_100_lines": 15.89,
+  "must_not_hits": 2
+ },
+ "by_category": {
+  "ambiguity": {
+   "precision": 0.571,
+   "recall": 0.8,
+   "f1": 0.667,
+   "tp": 4,
+   "fp": 3,
+   "fn": 1,
+   "cases": 5,
+   "critical_recall": null,
+   "critical_expected": 0,
+   "false_positive_case_rate": 0.6,
+   "issue_density_per_100_lines": 31.82,
+   "must_not_hits": 0
+  },
+  "boundary_gap": {
+   "precision": 0.2,
+   "recall": 0.2,
+   "f1": 0.2,
+   "tp": 1,
+   "fp": 4,
+   "fn": 4,
+   "cases": 5,
+   "critical_recall": 0.2,
+   "critical_expected": 5,
+   "false_positive_case_rate": 0.2,
+   "issue_density_per_100_lines": 19.23,
+   "must_not_hits": 0
+  },
+  "broken_reference": {
+   "precision": 0.75,
+   "recall": 0.6,
+   "f1": 0.667,
+   "tp": 3,
+   "fp": 1,
+   "fn": 2,
+   "cases": 5,
+   "critical_recall": 0.6,
+   "critical_expected": 5,
+   "false_positive_case_rate": 0.2,
+   "issue_density_per_100_lines": 19.05,
+   "must_not_hits": 0
+  },
+  "contradiction": {
+   "precision": 0.667,
+   "recall": 0.4,
+   "f1": 0.5,
+   "tp": 2,
+   "fp": 1,
+   "fn": 3,
+   "cases": 5,
+   "critical_recall": 1.0,
+   "critical_expected": 1,
+   "false_positive_case_rate": 0.2,
+   "issue_density_per_100_lines": 15.0,
+   "must_not_hits": 0
+  },
+  "false_positive_trap": {
+   "precision": 0.0,
+   "recall": null,
+   "f1": null,
+   "tp": 0,
+   "fp": 5,
+   "fn": 0,
+   "cases": 25,
+   "critical_recall": null,
+   "critical_expected": 0,
+   "false_positive_case_rate": 0.2,
+   "issue_density_per_100_lines": 5.68,
+   "must_not_hits": 2
+  },
+  "missing_condition": {
+   "precision": 0.5,
+   "recall": 0.2,
+   "f1": 0.286,
+   "tp": 1,
+   "fp": 1,
+   "fn": 4,
+   "cases": 5,
+   "critical_recall": 0.2,
+   "critical_expected": 5,
+   "false_positive_case_rate": 0.2,
+   "issue_density_per_100_lines": 10.0,
+   "must_not_hits": 0
+  },
+  "numeric_conflict": {
+   "precision": 0.714,
+   "recall": 1.0,
+   "f1": 0.833,
+   "tp": 5,
+   "fp": 2,
+   "fn": 0,
+   "cases": 5,
+   "critical_recall": 1.0,
+   "critical_expected": 5,
+   "false_positive_case_rate": 0.4,
+   "issue_density_per_100_lines": 33.33,
+   "must_not_hits": 0
+  },
+  "permission_inconsistency": {
+   "precision": 1.0,
+   "recall": 0.6,
+   "f1": 0.75,
+   "tp": 3,
+   "fp": 0,
+   "fn": 2,
+   "cases": 5,
+   "critical_recall": 0.6,
+   "critical_expected": 5,
+   "false_positive_case_rate": 0.0,
+   "issue_density_per_100_lines": 18.75,
+   "must_not_hits": 0
+  },
+  "state_gap": {
+   "precision": 0.0,
+   "recall": 0.0,
+   "f1": 0.0,
+   "tp": 0,
+   "fp": 3,
+   "fn": 5,
+   "cases": 5,
+   "critical_recall": null,
+   "critical_expected": 0,
+   "false_positive_case_rate": 0.4,
+   "issue_density_per_100_lines": 13.64,
+   "must_not_hits": 0
+  },
+  "trace_orphan": {
+   "precision": 0.0,
+   "recall": 0.0,
+   "f1": 0.0,
+   "tp": 0,
+   "fp": 3,
+   "fn": 5,
+   "cases": 5,
+   "critical_recall": 0.0,
+   "critical_expected": 5,
+   "false_positive_case_rate": 0.6,
+   "issue_density_per_100_lines": 8.57,
+   "must_not_hits": 0
+  },
+  "undefined_term": {
+   "precision": 0.6,
+   "recall": 0.6,
+   "f1": 0.6,
+   "tp": 3,
+   "fp": 2,
+   "fn": 2,
+   "cases": 5,
+   "critical_recall": null,
+   "critical_expected": 0,
+   "false_positive_case_rate": 0.4,
+   "issue_density_per_100_lines": 33.33,
+   "must_not_hits": 0
+  },
+  "untestable": {
+   "precision": 1.0,
+   "recall": 0.8,
+   "f1": 0.889,
+   "tp": 4,
+   "fp": 0,
+   "fn": 1,
+   "cases": 5,
+   "critical_recall": 0.8,
+   "critical_expected": 5,
+   "false_positive_case_rate": 0.0,
+   "issue_density_per_100_lines": 26.67,
+   "must_not_hits": 0
+  }
+ },
+ "misses": [
+  {
+   "case": "h3-amb-05",
+   "missed": [
+    "AMB-001@A:6"
+   ]
+  },
+  {
+   "case": "h3-bg-01",
+   "missed": [
+    "NUM-002@A:8"
+   ]
+  },
+  {
+   "case": "h3-bg-02",
+   "missed": [
+    "NUM-002@A:4"
+   ]
+  },
+  {
+   "case": "h3-bg-03",
+   "missed": [
+    "NUM-002@A:6"
+   ]
+  },
+  {
+   "case": "h3-bg-04",
+   "missed": [
+    "NUM-002@A:7"
+   ]
+  },
+  {
+   "case": "h3-ref-02",
+   "missed": [
+    "REF-001@A:3"
+   ]
+  },
+  {
+   "case": "h3-ref-03",
+   "missed": [
+    "REF-001@A:5"
+   ]
+  },
+  {
+   "case": "h3-con-02",
+   "missed": [
+    "semantic_candidate@A:6"
+   ]
+  },
+  {
+   "case": "h3-con-03",
+   "missed": [
+    "temporal@A:6"
+   ]
+  },
+  {
+   "case": "h3-con-04",
+   "missed": [
+    "semantic_candidate@A:6"
+   ]
+  },
+  {
+   "case": "h3-mc-01",
+   "missed": [
+    "NOT_TESTABLE@A:5"
+   ]
+  },
+  {
+   "case": "h3-mc-02",
+   "missed": [
+    "NOT_TESTABLE@A:5"
+   ]
+  },
+  {
+   "case": "h3-mc-04",
+   "missed": [
+    "NOT_TESTABLE@A:5"
+   ]
+  },
+  {
+   "case": "h3-mc-05",
+   "missed": [
+    "NOT_TESTABLE@A:5"
+   ]
+  },
+  {
+   "case": "h3-perm-01",
+   "missed": [
+    "permission@A:6"
+   ]
+  },
+  {
+   "case": "h3-perm-03",
+   "missed": [
+    "permission@A:4"
+   ]
+  },
+  {
+   "case": "h3-sg-01",
+   "missed": [
+    "REQ-ITEMS@A:8"
+   ]
+  },
+  {
+   "case": "h3-sg-02",
+   "missed": [
+    "REQ-ITEMS@A:5"
+   ]
+  },
+  {
+   "case": "h3-sg-03",
+   "missed": [
+    "REQ-ITEMS@A:5"
+   ]
+  },
+  {
+   "case": "h3-sg-04",
+   "missed": [
+    "REQ-ITEMS@A:5"
+   ]
+  },
+  {
+   "case": "h3-sg-05",
+   "missed": [
+    "REQ-ITEMS@A:5"
+   ]
+  },
+  {
+   "case": "h3-to-01",
+   "missed": [
+    "ID-001@B:5"
+   ]
+  },
+  {
+   "case": "h3-to-02",
+   "missed": [
+    "ID-001@B:5"
+   ]
+  },
+  {
+   "case": "h3-to-03",
+   "missed": [
+    "ID-001@B:5"
+   ]
+  },
+  {
+   "case": "h3-to-04",
+   "missed": [
+    "ID-001@B:5"
+   ]
+  },
+  {
+   "case": "h3-to-05",
+   "missed": [
+    "ID-001@B:5"
+   ]
+  },
+  {
+   "case": "h3-term-04",
+   "missed": [
+    "TERM-001@A:3"
+   ]
+  },
+  {
+   "case": "h3-term-05",
+   "missed": [
+    "TERM-001@A:3"
+   ]
+  },
+  {
+   "case": "h3-ut-02",
+   "missed": [
+    "NOT_TESTABLE@A:3"
+   ]
+  }
+ ],
+ "false_positives": [
+  {
+   "case": "h3-amb-01",
+   "fp": [
+    "testability:NOT_TESTABLE"
+   ]
+  },
+  {
+   "case": "h3-amb-02",
+   "fp": [
+    "testability:NOT_TESTABLE"
+   ]
+  },
+  {
+   "case": "h3-amb-03",
+   "fp": [
+    "testability:NOT_TESTABLE"
+   ]
+  },
+  {
+   "case": "h3-bg-03",
+   "fp": [
+    "finding:AMB-001",
+    "finding:AMB-001",
+    "finding:AMB-001",
+    "finding:AMB-001"
+   ]
+  },
+  {
+   "case": "h3-ref-03",
+   "fp": [
+    "finding:ID-002"
+   ]
+  },
+  {
+   "case": "h3-con-02",
+   "fp": [
+    "conflict:permission"
+   ]
+  },
+  {
+   "case": "h3-fp-10",
+   "fp": [
+    "finding:AMB-001"
+   ]
+  },
+  {
+   "case": "h3-fp-14",
+   "fp": [
+    "conflict:numeric"
+   ]
+  },
+  {
+   "case": "h3-fp-18",
+   "fp": [
+    "testability:NOT_TESTABLE"
+   ]
+  },
+  {
+   "case": "h3-fp-21",
+   "fp": [
+    "conflict:numeric"
+   ]
+  },
+  {
+   "case": "h3-fp-23",
+   "fp": [
+    "testability:NOT_TESTABLE"
+   ]
+  },
+  {
+   "case": "h3-mc-05",
+   "fp": [
+    "testability:NOT_TESTABLE"
+   ]
+  },
+  {
+   "case": "h3-num-01",
+   "fp": [
+    "finding:ID-002"
+   ]
+  },
+  {
+   "case": "h3-num-04",
+   "fp": [
+    "testability:NOT_TESTABLE"
+   ]
+  },
+  {
+   "case": "h3-sg-01",
+   "fp": [
+    "testability:NOT_TESTABLE"
+   ]
+  },
+  {
+   "case": "h3-sg-02",
+   "fp": [
+    "testability:NOT_TESTABLE",
+    "testability:NOT_TESTABLE"
+   ]
+  },
+  {
+   "case": "h3-to-01",
+   "fp": [
+    "finding:REF-001"
+   ]
+  },
+  {
+   "case": "h3-to-03",
+   "fp": [
+    "finding:REF-001"
+   ]
+  },
+  {
+   "case": "h3-to-05",
+   "fp": [
+    "finding:REF-001"
+   ]
+  },
+  {
+   "case": "h3-term-02",
+   "fp": [
+    "testability:NOT_TESTABLE"
+   ]
+  },
+  {
+   "case": "h3-term-05",
+   "fp": [
+    "testability:NOT_TESTABLE"
+   ]
+  }
+ ],
+ "caveat": "自作 holdout（検出器の実装を見ずに作成）。件数が少なく、実文書への一般化や他製品との優劣を示さない。過学習の可能性の確認用で、ルール名のラベル付けに誤りを含みうる。"
+}

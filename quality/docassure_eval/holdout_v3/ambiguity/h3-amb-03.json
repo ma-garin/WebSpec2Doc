@@ -1,0 +1,20 @@
+{
+ "id": "h3-amb-03",
+ "category": "ambiguity",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 外来受付\n\n## 2.2 待ち時間表示\n\nFR-210 待ち人数は受付端末に表示する。\nFR-211 混雑時は、できるだけ分かりやすく案内を行うこと。\nFR-212 診察券番号は8桁とする。\n"
+  }
+ ],
+ "expected": [
+  {
+   "kind": "finding",
+   "rule_or_kind": "AMB-001",
+   "document_id": "A",
+   "line": 6,
+   "severity": "medium"
+  }
+ ],
+ "must_not": []
+}

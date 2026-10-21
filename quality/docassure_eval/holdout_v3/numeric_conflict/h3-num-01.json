@@ -1,0 +1,20 @@
+{
+ "id": "h3-num-01",
+ "category": "numeric_conflict",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 空港手荷物\n\n## 2 制限\n\nFR-101 機内預け手荷物の重量上限は23kgとする。\nFR-102 カウンターでは超過料金を1kgごとに請求する。\n\n## 5 画面\n\nFR-501 機内預け手荷物の重量上限は32kgとする。\n"
+  }
+ ],
+ "expected": [
+  {
+   "kind": "conflict",
+   "rule_or_kind": "numeric",
+   "document_id": "A",
+   "line": 10,
+   "severity": "high"
+  }
+ ],
+ "must_not": []
+}

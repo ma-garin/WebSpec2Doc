@@ -1,0 +1,20 @@
+{
+ "id": "h-num-02",
+ "category": "numeric_conflict",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 勤怠管理 要件\n\n## 1 機能要件\n\nREQ-042 有給休暇の繰越上限は20日とする。\nREQ-043 有給休暇の繰越上限は40日とする。\n"
+  }
+ ],
+ "expected": [
+  {
+   "kind": "conflict",
+   "rule_or_kind": "numeric",
+   "document_id": "A",
+   "line": 5,
+   "severity": "high"
+  }
+ ],
+ "must_not": []
+}

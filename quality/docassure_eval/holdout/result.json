@@ -1,0 +1,251 @@
+{
+ "holdout": {
+  "total_cases": 60,
+  "expected_items": 44,
+  "per_category": {
+   "ambiguity": 4,
+   "boundary_gap": 4,
+   "broken_reference": 4,
+   "contradiction": 4,
+   "false_positive_trap": 16,
+   "missing_condition": 4,
+   "numeric_conflict": 4,
+   "permission_inconsistency": 4,
+   "state_gap": 4,
+   "trace_orphan": 4,
+   "undefined_term": 4,
+   "untestable": 4
+  }
+ },
+ "overall": {
+  "precision": 0.878,
+  "recall": 0.977,
+  "f1": 0.925,
+  "tp": 43,
+  "fp": 6,
+  "fn": 1,
+  "cases": 60,
+  "critical_recall": 1.0,
+  "critical_expected": 27,
+  "false_positive_case_rate": 0.1,
+  "issue_density_per_100_lines": 18.56,
+  "must_not_hits": 0
+ },
+ "by_category": {
+  "ambiguity": {
+   "precision": 0.667,
+   "recall": 1.0,
+   "f1": 0.8,
+   "tp": 4,
+   "fp": 2,
+   "fn": 0,
+   "cases": 4,
+   "critical_recall": null,
+   "critical_expected": 0,
+   "false_positive_case_rate": 0.5,
+   "issue_density_per_100_lines": 37.5,
+   "must_not_hits": 0
+  },
+  "boundary_gap": {
+   "precision": 1.0,
+   "recall": 1.0,
+   "f1": 1.0,
+   "tp": 4,
+   "fp": 0,
+   "fn": 0,
+   "cases": 4,
+   "critical_recall": 1.0,
+   "critical_expected": 4,
+   "false_positive_case_rate": 0.0,
+   "issue_density_per_100_lines": 16.67,
+   "must_not_hits": 0
+  },
+  "broken_reference": {
+   "precision": 0.8,
+   "recall": 1.0,
+   "f1": 0.889,
+   "tp": 4,
+   "fp": 1,
+   "fn": 0,
+   "cases": 4,
+   "critical_recall": 1.0,
+   "critical_expected": 4,
+   "false_positive_case_rate": 0.25,
+   "issue_density_per_100_lines": 31.25,
+   "must_not_hits": 0
+  },
+  "contradiction": {
+   "precision": 1.0,
+   "recall": 1.0,
+   "f1": 1.0,
+   "tp": 4,
+   "fp": 0,
+   "fn": 0,
+   "cases": 4,
+   "critical_recall": 1.0,
+   "critical_expected": 1,
+   "false_positive_case_rate": 0.0,
+   "issue_density_per_100_lines": 25.0,
+   "must_not_hits": 0
+  },
+  "false_positive_trap": {
+   "precision": 0.0,
+   "recall": null,
+   "f1": null,
+   "tp": 0,
+   "fp": 1,
+   "fn": 0,
+   "cases": 16,
+   "critical_recall": null,
+   "critical_expected": 0,
+   "false_positive_case_rate": 0.062,
+   "issue_density_per_100_lines": 1.32,
+   "must_not_hits": 0
+  },
+  "missing_condition": {
+   "precision": 1.0,
+   "recall": 1.0,
+   "f1": 1.0,
+   "tp": 4,
+   "fp": 0,
+   "fn": 0,
+   "cases": 4,
+   "critical_recall": 1.0,
+   "critical_expected": 4,
+   "false_positive_case_rate": 0.0,
+   "issue_density_per_100_lines": 25.0,
+   "must_not_hits": 0
+  },
+  "numeric_conflict": {
+   "precision": 1.0,
+   "recall": 1.0,
+   "f1": 1.0,
+   "tp": 4,
+   "fp": 0,
+   "fn": 0,
+   "cases": 4,
+   "critical_recall": 1.0,
+   "critical_expected": 4,
+   "false_positive_case_rate": 0.0,
+   "issue_density_per_100_lines": 22.22,
+   "must_not_hits": 0
+  },
+  "permission_inconsistency": {
+   "precision": 1.0,
+   "recall": 1.0,
+   "f1": 1.0,
+   "tp": 4,
+   "fp": 0,
+   "fn": 0,
+   "cases": 4,
+   "critical_recall": 1.0,
+   "critical_expected": 4,
+   "false_positive_case_rate": 0.0,
+   "issue_density_per_100_lines": 22.22,
+   "must_not_hits": 0
+  },
+  "state_gap": {
+   "precision": 0.667,
+   "recall": 1.0,
+   "f1": 0.8,
+   "tp": 4,
+   "fp": 2,
+   "fn": 0,
+   "cases": 4,
+   "critical_recall": null,
+   "critical_expected": 0,
+   "false_positive_case_rate": 0.5,
+   "issue_density_per_100_lines": 37.5,
+   "must_not_hits": 0
+  },
+  "trace_orphan": {
+   "precision": 1.0,
+   "recall": 1.0,
+   "f1": 1.0,
+   "tp": 4,
+   "fp": 0,
+   "fn": 0,
+   "cases": 4,
+   "critical_recall": 1.0,
+   "critical_expected": 2,
+   "false_positive_case_rate": 0.0,
+   "issue_density_per_100_lines": 25.0,
+   "must_not_hits": 0
+  },
+  "undefined_term": {
+   "precision": 1.0,
+   "recall": 0.75,
+   "f1": 0.857,
+   "tp": 3,
+   "fp": 0,
+   "fn": 1,
+   "cases": 4,
+   "critical_recall": null,
+   "critical_expected": 0,
+   "false_positive_case_rate": 0.0,
+   "issue_density_per_100_lines": 18.75,
+   "must_not_hits": 0
+  },
+  "untestable": {
+   "precision": 1.0,
+   "recall": 1.0,
+   "f1": 1.0,
+   "tp": 4,
+   "fp": 0,
+   "fn": 0,
+   "cases": 4,
+   "critical_recall": 1.0,
+   "critical_expected": 4,
+   "false_positive_case_rate": 0.0,
+   "issue_density_per_100_lines": 25.0,
+   "must_not_hits": 0
+  }
+ },
+ "misses": [
+  {
+   "case": "h-trm-04",
+   "missed": [
+    "TERM-001@A:5"
+   ]
+  }
+ ],
+ "false_positives": [
+  {
+   "case": "h-amb-01",
+   "fp": [
+    "testability:NOT_TESTABLE"
+   ]
+  },
+  {
+   "case": "h-amb-03",
+   "fp": [
+    "testability:NOT_TESTABLE"
+   ]
+  },
+  {
+   "case": "h-ref-01",
+   "fp": [
+    "testability:NOT_TESTABLE"
+   ]
+  },
+  {
+   "case": "h-fpt-10",
+   "fp": [
+    "testability:NOT_TESTABLE"
+   ]
+  },
+  {
+   "case": "h-stg-01",
+   "fp": [
+    "testability:NOT_TESTABLE"
+   ]
+  },
+  {
+   "case": "h-stg-04",
+   "fp": [
+    "testability:NOT_TESTABLE"
+   ]
+  }
+ ],
+ "caveat": "自作 holdout（検出器の実装を見ずに作成）。件数が少なく、実文書への一般化や他製品との優劣を示さない。過学習の可能性の確認用で、ルール名のラベル付けに誤りを含みうる。"
+}

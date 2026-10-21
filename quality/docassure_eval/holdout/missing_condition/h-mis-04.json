@@ -1,0 +1,20 @@
+{
+ "id": "h-mis-04",
+ "category": "missing_condition",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 予約 要件\n\n## 1 機能要件\n\nREQ-013 キャンセル料は規定に従って請求される。\nREQ-014 ログインに連続5回失敗した場合、システムはアカウントを30分間ロックし、エラーメッセージを表示する。\n"
+  }
+ ],
+ "expected": [
+  {
+   "kind": "testability",
+   "rule_or_kind": "NOT_TESTABLE",
+   "document_id": "A",
+   "line": 5,
+   "severity": "high"
+  }
+ ],
+ "must_not": []
+}

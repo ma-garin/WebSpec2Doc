@@ -1,0 +1,20 @@
+{
+ "id": "h3-mc-01",
+ "category": "missing_condition",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 補助金申請\n\n## 3 審査\n\nFR-501 申請額が上限を超える場合は審査を行う。\nFR-502 申請書は電子で提出すること。\n"
+  }
+ ],
+ "expected": [
+  {
+   "kind": "testability",
+   "rule_or_kind": "NOT_TESTABLE",
+   "document_id": "A",
+   "line": 5,
+   "severity": "high"
+  }
+ ],
+ "must_not": []
+}

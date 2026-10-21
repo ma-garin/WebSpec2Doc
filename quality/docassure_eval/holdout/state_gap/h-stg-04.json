@@ -1,0 +1,20 @@
+{
+ "id": "h-stg-04",
+ "category": "state_gap",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 請求管理 要件\n\n## 1 機能要件\n\nREQ-096 請求書の状態は「発行済」「入金済」とする。\nREQ-097 入金期限を過ぎた請求書は「延滞」へ遷移する。\n"
+  }
+ ],
+ "expected": [
+  {
+   "kind": "finding",
+   "rule_or_kind": "REQ-ITEMS",
+   "document_id": "A",
+   "line": 5,
+   "severity": "medium"
+  }
+ ],
+ "must_not": []
+}

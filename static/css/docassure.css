@@ -1,0 +1,51 @@
+/* Document Assurance ビュー。値は tokens.css の変数のみ。.da-body だけが縦スクロールする（ta2.css 方式）。 */
+.da-open-btn { margin: 0 0 12px; }
+.da { position: fixed; inset: 0; z-index: 40; display: grid; grid-template-rows: auto auto auto minmax(0, 1fr); background: var(--color-bg, #fff); padding: 16px 28px 0; min-height: 0; overflow: hidden; }
+.da[hidden] { display: none; }
+.da-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; padding-bottom: 8px; }
+.da-title { margin: 0; font-size: 18px; font-weight: 700; color: var(--color-text); }
+.da-head-actions { display: flex; gap: 8px; }
+.da-tabs { display: flex; flex-wrap: wrap; gap: 4px; border-bottom: 1px solid var(--color-border); }
+.da-tab { border: 0; background: none; padding: 8px 14px; font-size: 13px; color: var(--color-text-secondary); cursor: pointer; border-bottom: 3px solid transparent; }
+.da-tab[aria-selected="true"] { color: var(--color-primary-dark); font-weight: 700; border-bottom-color: var(--color-primary); }
+.da-body { min-height: 0; overflow-y: auto; padding: 14px 0 32px; display: flex; flex-direction: column; gap: 12px; }
+.da-card { border: 1px solid var(--color-border); border-radius: 8px; padding: 12px 14px; background: var(--color-surface, #fff); min-width: 0; }
+.da-h { margin: 0 0 6px; font-size: 14px; font-weight: 700; color: var(--color-text); }
+.da-big { margin: 0 0 6px; font-size: 18px; font-weight: 700; color: var(--color-text); }
+.da-why { margin: 4px 0 2px; font-size: 13px; }
+.da-mut { margin: 0; font-size: 12px; color: var(--color-text-secondary); overflow-wrap: anywhere; }
+.da-note { margin: 0; padding: 8px 10px; border-radius: 6px; background: var(--color-primary-light); color: var(--color-primary-dark); font-size: 13px; }
+.da-err { margin: 8px 0 0; padding: 8px 10px; border-radius: 6px; background: var(--color-critical-bg); border: 1px solid var(--color-critical-border); color: var(--color-critical-tx); font-size: 13px; }
+.da-list { margin: 0; padding-left: 18px; font-size: 13px; overflow-wrap: anywhere; }
+.da-st-BLOCKED { border-color: var(--color-critical-border); background: var(--color-critical-bg); }
+.da-st-CONDITIONALLY_READY { border-color: var(--color-high-border); background: var(--color-high-bg); }
+.da-st-READY { background: var(--color-success-bg); }
+.da-scores { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
+.da-score { display: flex; flex-direction: column; gap: 2px; text-align: left; border: 1px solid var(--color-border); border-radius: 8px; padding: 10px 12px; background: var(--color-surface, #fff); cursor: pointer; font: inherit; }
+.da-score.da-ne { border-style: dashed; }
+.da-sl { font-size: 12px; color: var(--color-text-secondary); }
+.da-sv { font-size: 20px; font-weight: 700; color: var(--color-text); }
+.da-sv small { font-size: 11px; font-weight: 400; color: var(--color-text-secondary); }
+.da-sc { font-size: 11px; color: var(--color-text-secondary); }
+.da-counts { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; margin: 0; }
+.da-counts div { border: 1px solid var(--color-border); border-radius: 6px; padding: 8px 10px; }
+.da-counts dt { font-size: 12px; color: var(--color-text-secondary); }
+.da-counts dd { margin: 0; font-size: 18px; font-weight: 700; }
+.da-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.da-chip { border: 1px solid var(--color-border); border-radius: 999px; background: none; padding: 4px 12px; font-size: 12px; cursor: pointer; color: var(--color-text); }
+.da-chip[aria-pressed="true"] { background: var(--color-primary-light); border-color: var(--color-primary); color: var(--color-primary-dark); font-weight: 700; }
+.da-tscroll { overflow-x: auto; max-width: 100%; }
+.da-table { width: 100%; border-collapse: collapse; font-size: 13px; table-layout: fixed; }
+.da-table th, .da-table td { padding: 6px 8px; border-bottom: 1px solid var(--color-border); text-align: left; vertical-align: top; overflow-wrap: anywhere; }
+.da-table th:first-child { width: 14%; }
+.da-badge { display: inline-block; font-size: 11px; padding: 0 6px; border-radius: 4px; background: var(--color-surface-3); color: var(--color-text); }
+.da-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.da-ev { border: 1px solid var(--color-border); border-radius: 6px; padding: 8px 10px; min-width: 0; overflow-wrap: anywhere; font-size: 13px; }
+.da-ev p { margin: 4px 0 0; }
+.da-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.da-dialog { max-width: min(560px, 92vw); border: 1px solid var(--color-border); border-radius: 8px; padding: 16px; }
+.da-dialog h4 { margin: 10px 0 2px; font-size: 13px; }
+.da :focus-visible, .da-dialog :focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
+@media (max-width: 960px) { .da { padding: 12px 16px 0; } .da-pair { grid-template-columns: 1fr; } }
+.da-reason{display:block;margin-top:8px;font-size:12px}
+.da-reason textarea{display:block;width:100%;margin-top:4px;box-sizing:border-box}

@@ -1,0 +1,12 @@
+{
+ "id": "h-fpt-06",
+ "category": "false_positive_trap",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 在庫管理 要件\n\n## 1 機能要件\n\nREQ-208 賞味期限まで30日未満の商品には「期限間近」を表示する。\nREQ-209 賞味期限まで7日未満の商品には「要値引」を表示する。\n"
+  }
+ ],
+ "expected": [],
+ "must_not": []
+}

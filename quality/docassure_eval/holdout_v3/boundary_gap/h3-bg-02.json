@@ -1,0 +1,20 @@
+{
+ "id": "h3-bg-02",
+ "category": "boundary_gap",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# ゲーム課金\n\nFR-101 購入額が0円以上5,000円未満の場合は確認を省略する。\nFR-102 購入額が5,001円以上の場合は確認画面を表示する。\n"
+  }
+ ],
+ "expected": [
+  {
+   "kind": "finding",
+   "rule_or_kind": "NUM-002",
+   "document_id": "A",
+   "line": 4,
+   "severity": "high"
+  }
+ ],
+ "must_not": []
+}

@@ -1,0 +1,20 @@
+{
+ "id": "h-num-01",
+ "category": "numeric_conflict",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 宿泊予約 要件\n\n## 1 機能要件\n\nREQ-040 仮予約の保持時間は15分とする。\nREQ-041 仮予約の保持時間は20分とする。\n"
+  }
+ ],
+ "expected": [
+  {
+   "kind": "conflict",
+   "rule_or_kind": "numeric",
+   "document_id": "A",
+   "line": 5,
+   "severity": "high"
+  }
+ ],
+ "must_not": []
+}

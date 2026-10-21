@@ -1,0 +1,20 @@
+{
+ "id": "ut2-04",
+ "category": "undefined_term",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 品質検査の指標\n\n## 1 機能\n\nREQ-461 検査結果は、Cpkを算出して画面に表示する。\nREQ-462 算出できない場合は「算出不可」と表示する。\n"
+  }
+ ],
+ "expected": [
+  {
+   "kind": "finding",
+   "rule_or_kind": "TERM-001",
+   "document_id": "A",
+   "line": 5,
+   "severity": "low"
+  }
+ ],
+ "must_not": []
+}

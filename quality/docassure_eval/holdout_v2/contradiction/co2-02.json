@@ -1,0 +1,24 @@
+{
+ "id": "co2-02",
+ "category": "contradiction",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 成績の修正\n\n## 1 機能\n\nREQ-231 確定済みの成績は、担任が修正できる。\nREQ-232 修正した場合は、修正履歴を記録する。\n"
+  },
+  {
+   "id": "B",
+   "text": "# 成績の修正\n\n## 1 機能\n\nREQ-231 確定済みの成績は、いかなる場合も修正できない。修正が必要な場合は新規に再評価を登録する。\n"
+  }
+ ],
+ "expected": [
+  {
+   "kind": "conflict",
+   "rule_or_kind": "semantic_candidate",
+   "document_id": "A",
+   "line": 5,
+   "severity": "high"
+  }
+ ],
+ "must_not": []
+}

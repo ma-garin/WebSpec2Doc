@@ -1,0 +1,20 @@
+{
+ "id": "h-bnd-04",
+ "category": "boundary_gap",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 物流 要件\n\n## 1 機能要件\n\nREQ-073 荷物の重量に応じて送料を定める。\n\n| 重量 | 送料 |\n| 5kg以下 | 800円 |\n| 10kg超 | 1500円 |\n"
+  }
+ ],
+ "expected": [
+  {
+   "kind": "finding",
+   "rule_or_kind": "NUM-002",
+   "document_id": "A",
+   "line": 9,
+   "severity": "high"
+  }
+ ],
+ "must_not": []
+}

@@ -1,0 +1,20 @@
+{
+ "id": "am2-01",
+ "category": "ambiguity",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 住民票の写しの交付\n\n## 1 機能\n\nREQ-101 窓口職員は、申請者の本人確認を行う。確認できない場合は交付を拒否し、理由を申請者へ伝える。\nREQ-102 窓口職員は、必要に応じて委任状の原本を預かる。\nREQ-103 手数料は1通につき300円とする。\n"
+  }
+ ],
+ "expected": [
+  {
+   "kind": "finding",
+   "rule_or_kind": "AMB-001",
+   "document_id": "A",
+   "line": 6,
+   "severity": "medium"
+  }
+ ],
+ "must_not": []
+}

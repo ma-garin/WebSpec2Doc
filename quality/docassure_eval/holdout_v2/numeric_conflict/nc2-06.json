@@ -1,0 +1,24 @@
+{
+ "id": "nc2-06",
+ "category": "numeric_conflict",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 貸出の延長回数\n\n## 1 機能\n\nREQ-641 貸出期間の延長は、1冊につき2回までとする。\nREQ-642 予約が入っている図書は延長できない。\n"
+  },
+  {
+   "id": "B",
+   "text": "# 貸出の延長回数\n\n## 1 機能\n\nREQ-641 貸出期間の延長は、1冊につき1回までとする。\n"
+  }
+ ],
+ "expected": [
+  {
+   "kind": "conflict",
+   "rule_or_kind": "numeric",
+   "document_id": "A",
+   "line": 5,
+   "severity": "high"
+  }
+ ],
+ "must_not": []
+}

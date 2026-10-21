@@ -1,0 +1,12 @@
+{
+ "id": "fp-08",
+ "category": "false_positive_trap",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 仕様書\n\n## 1 機能\n\n## 2 詳細\n\n### 2.1 計算\n\nREQ-001 ユーザーが送信したとき、システムは結果を表示する。失敗した場合はエラーを表示する。詳細は2.1節を参照。\n"
+  }
+ ],
+ "expected": [],
+ "must_not": []
+}

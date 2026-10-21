@@ -1,0 +1,20 @@
+{
+ "id": "br2-04",
+ "category": "broken_reference",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 品質検査の基準\n\n## 1 機能\n\nREQ-451 検査員は、検査基準に従って判定する。基準は付録Dを参照。\nREQ-452 判定できない場合は上長へ確認する。\n"
+  }
+ ],
+ "expected": [
+  {
+   "kind": "finding",
+   "rule_or_kind": "REF-001",
+   "document_id": "A",
+   "line": 5,
+   "severity": "high"
+  }
+ ],
+ "must_not": []
+}

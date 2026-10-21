@@ -1,0 +1,20 @@
+{
+ "id": "h-unt-03",
+ "category": "untestable",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 医療事務 要件\n\n## 1 機能要件\n\nREQ-022 受付画面は洗練された美しいデザインであること。\nREQ-023 ログインに連続5回失敗した場合、システムはアカウントを30分間ロックし、エラーメッセージを表示する。\n"
+  }
+ ],
+ "expected": [
+  {
+   "kind": "testability",
+   "rule_or_kind": "NOT_TESTABLE",
+   "document_id": "A",
+   "line": 5,
+   "severity": "high"
+  }
+ ],
+ "must_not": []
+}

@@ -1,0 +1,20 @@
+{
+ "id": "mc2-01",
+ "category": "missing_condition",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 住民票の郵送請求\n\n## 1 機能\n\nREQ-121 窓口職員が請求書を受け付けたとき、システムは請求番号を採番して表示する。採番に失敗した場合はエラーを表示する。\nREQ-122 窓口職員が手数料の入金を確認したとき、システムは交付準備中に状態を更新する。\n"
+  }
+ ],
+ "expected": [
+  {
+   "kind": "testability",
+   "rule_or_kind": "NOT_TESTABLE",
+   "document_id": "A",
+   "line": 6,
+   "severity": "high"
+  }
+ ],
+ "must_not": []
+}

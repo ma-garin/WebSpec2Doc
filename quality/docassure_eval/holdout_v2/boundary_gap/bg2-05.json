@@ -1,0 +1,20 @@
+{
+ "id": "bg2-05",
+ "category": "boundary_gap",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 成績の評価\n\n## 1 機能\n\nREQ-671 成績評価は、90点以上100点以下をS、80点以上89点以下をA、60点以上79点以下をB、0点以上50点以下をCとする。\n"
+  }
+ ],
+ "expected": [
+  {
+   "kind": "finding",
+   "rule_or_kind": "NUM-002",
+   "document_id": "A",
+   "line": 5,
+   "severity": "high"
+  }
+ ],
+ "must_not": []
+}

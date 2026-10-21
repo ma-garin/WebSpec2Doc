@@ -66,6 +66,11 @@ _EVENT_WRITE_LOCK = threading.Lock()
 def main() -> None:
     logging.basicConfig(level=logging.INFO, format=LOGGER_FORMAT)
     load_dotenv()
+    if sys.argv[1:2] == ["doc"]:
+        sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+        from web.cli_doc_assure import main as doc_main
+
+        sys.exit(doc_main(sys.argv[2:]))
     signal.signal(signal.SIGTERM, _request_stop)
     signal.signal(signal.SIGINT, _request_stop)
     args = parse_args()

@@ -1,0 +1,20 @@
+{
+ "id": "sg-01",
+ "category": "state_gap",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 仕様書\n\n## 1 機能\n\nREQ-001 注文の状態は「受付」「発送済」「完了」とする。受付から発送済へ遷移する。完了からの遷移は定めない。\n"
+  }
+ ],
+ "expected": [
+  {
+   "kind": "testability",
+   "rule_or_kind": "NOT_TESTABLE",
+   "document_id": "A",
+   "line": 5,
+   "severity": "medium"
+  }
+ ],
+ "must_not": []
+}

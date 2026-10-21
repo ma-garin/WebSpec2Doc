@@ -105,6 +105,8 @@ def detect_ambiguity(ctx: Ctx) -> Outcome:
                     continue  # 近傍に数値と単位があり定義済み
                 if any(ln.text.startswith(f, e) for f in t.get("follow_exempt", [])):
                     continue  # 画面名・モード名などの名称用法
+                if any(h.line == ln.no for h in out.hits):
+                    continue  # 同一行の 2 語目以降は同じ指摘として 1 件にまとめる
                 out.hits.append(Hit(ln.no, f"曖昧語「{m.group(0)}」: {ln.text.strip()[max(0, s - 10):e + 10]}", 0.7,
                                     ("語彙一致", "近傍に数値定義なし"), ("文脈によっては許容される用法の可能性",)))
     return out
@@ -186,7 +188,7 @@ def detect_broken_ref(ctx: Ctx) -> Outcome:
                 continue  # 定義行そのもの
             out.checked += 1
             if m.group(1) not in app_defs:
-                out.hits.append(Hit(ln.no, f"「別紙{m.group(1)}」が文書内にも他文書にも無い", 0.8, ("別紙の照合",)))
+                out.hits.append(Hit(ln.no, f"「{m.group(0).strip()}」が文書内にも他文書にも無い", 0.8, ("別紙の照合",)))
     if all_def_keys:
         for key, tok, no in id_refs:
             out.checked += 1
@@ -271,28 +273,75 @@ def detect_id_orphan(ctx: Ctx) -> Outcome:
     return out
 
 
-def detect_term_variance(ctx: Ctx) -> Outcome:
+_ACRO = re.compile(r"(?<![A-Za-z0-9_\-])([A-Z][A-Z0-9]{1,5}|[A-Z][bcdfghjklmnpqrstvwxz]{2,4})(?![A-Za-z0-9_\-])")
+
+
+def _undefined_acronyms(ctx: Ctx) -> Outcome:
+    """略語（BCP・KPI など）が初出までに定義されているか。定義＝「略語（…）」「…（略語）」「略語とは」等。"""
+    p = ctx.params
+    known = {a.upper() for a in p.get("known_acronyms", [])}
+    known |= {x.upper() for x in p.get("id_prefixes", [])}
+    known |= {u.upper() for u in p.get("units", {})}
+    markers = p.get("term_define_markers", [])
+    text = "\n".join(ln.text for ln in ctx.lines)
+    glossary = re.compile(r"^[\s>#*\-+|_・●○\d.)）]*(?:[A-Z]{2,4}-\d+\s+)?([A-Za-z][A-Za-z0-9]{1,5})\s*(?:[:：|｜]|とは)", re.M)
+    gloss_defs = {m.group(1) for m in glossary.finditer(text)}  # 用語表・用語節の定義は初出より後ろにあってもよい
+    out, seen = Outcome(), set()
+    for ln in ctx.lines:
+        fresh = []
+        for m in _ACRO.finditer(ln.text):
+            ac = m.group(1)
+            if ac in known or ac in seen or ac in gloss_defs or re.fullmatch(r"[A-Z]+\d+", ac) and re.sub(r"\d+$", "", ac) in known:
+                continue  # 既知の接頭辞＋数字（REQ104 など）は ID の表記違いで、略語ではない
+            seen.add(ac)
+            out.checked += 1
+            tail, head = ln.text[m.end():m.end() + 8], ln.text[max(0, m.start() - 2):m.start()]
+            defined = (tail.lstrip().startswith(("（", "(")) or head.rstrip().endswith(("（", "(")) or "：" in tail[:1]
+                       or any(mk in tail for mk in markers) or re.search(r"[|｜]\s*" + re.escape(ac) + r"\s*[|｜]", ln.text)
+                       or re.search(re.escape(ac) + r"\s*[:：]", ln.text)
+                       or re.search(r"[（(]\s*" + re.escape(ac) + r"\s*[）)]", text))
+            if not defined:
+                fresh.append(ac)
+        if fresh:
+            out.hits.append(Hit(ln.no, "略語「" + "」「".join(fresh) + "」が初出時に定義されていない", 0.5,
+                                ("略語の初出に定義（括弧書き・「とは」）が無い",), ("業界で自明な略語の可能性",)))
+    return out
+
+
+def _term_variance(ctx: Ctx) -> Outcome:
     p = ctx.params
     out = Outcome()
     markers = p.get("term_define_markers", [])
     for group in p.get("term_groups", []):
         rxs = [(g, re.compile(g)) for g in group]
-        first, defined = {}, set()
+        first, defined, together = {}, set(), False
         for ln in ctx.lines:
+            on_line = set()
             for g, rx in rxs:
                 m = rx.search(ln.text)
                 if m:
                     first.setdefault(g, ln.no)
+                    on_line.add(g)
                     if any(mk in ln.text[m.end():m.end() + 6] for mk in markers):
                         defined.add(g)
+            if len(on_line) >= 2:
+                together = True  # 同じ文に並べて書く＝別の対象として区別している形跡
         if not first:
             continue
         out.checked += 1
-        if len(first) < 2 or len(defined) >= 2:
-            continue  # 1 語のみ、または各語が用語定義で区別されている
+        if len(first) < 2 or len(defined) >= 2 or together:
+            continue  # 1 語のみ、各語が用語定義で区別されている、または同一文に併記されている
         order = sorted(first.items(), key=lambda kv: kv[1])
         out.hits.append(Hit(order[1][1], "表記揺れ候補: " + "・".join(f"「{g}」(初出 行{n})" for g, n in order), 0.4,
                             ("同一グループの語が混在",), ("同義とは断定できない。別の対象を指す可能性",)))
+    return out
+
+
+def detect_term_variance(ctx: Ctx) -> Outcome:
+    if not ctx.lines:
+        return Outcome(skip="本文が空")
+    a, b = _term_variance(ctx), _undefined_acronyms(ctx)
+    out = Outcome(hits=a.hits + b.hits, checked=a.checked + b.checked)
     if out.checked == 0:
         out.skip = "対象の用語が文書に無い"
     return out
@@ -325,13 +374,130 @@ def detect_number_unit(ctx: Ctx) -> Outcome:
     return out
 
 
+_NUMV = r"(\d[\d,]*(?:\.\d+)?)"
+_UNITV = r"([^\d\s以未超〜~～,、.|:：]{0,3})"
+_IV_TILDE = re.compile(_NUMV + _UNITV + r"\s*(?:〜|~|～)\s*" + _NUMV + _UNITV)
+_IV_LOW = re.compile(_NUMV + _UNITV + r"\s*(以上|超)(?:\s*" + _NUMV + _UNITV + r"\s*(以下|未満))?")
+_IV_HIGH = re.compile(_NUMV + _UNITV + r"\s*(以下|未満)")
+_LIST_MARK = re.compile(r"^\s*(?:[-*+・●○]|\d+[.)）])\s+")
+
+
+def _interval(cell: str):
+    """区分の見出しセルを (下限, 下限を含む, 上限, 上限を含む, 単位) に。解釈できなければ None。"""
+    c = cell.strip()
+    inf = float("inf")
+    f = lambda x: float(x.replace(",", ""))
+    m = _IV_TILDE.match(c)
+    if m:
+        return f(m.group(1)), True, f(m.group(3)), True, m.group(2) or m.group(4)
+    m = _IV_LOW.match(c)
+    if m:
+        lo_inc = m.group(3) == "以上"
+        if m.group(4):
+            return f(m.group(1)), lo_inc, f(m.group(4)), m.group(6) == "以下", m.group(2) or m.group(5)
+        return f(m.group(1)), lo_inc, inf, False, m.group(2)
+    m = _IV_HIGH.match(c)
+    if m:
+        return -inf, False, f(m.group(1)), m.group(3) == "以下", m.group(2)
+    return None
+
+
+def _range_rows(ctx: Ctx):
+    """連続する表の行・箇条書きの先頭セルを区分として読み、(行番号, 区間) の塊に分ける。"""
+    groups, cur, last = [], [], None
+    for ln in ctx.lines:
+        t = ln.text.strip()
+        if t.startswith("|"):
+            cells = [x for x in t.strip("|").split("|") if x.strip()]
+            key = cells[0] if cells else ""
+        elif _LIST_MARK.match(ln.text):
+            key = re.split(r"[:：]", _LIST_MARK.sub("", ln.text), 1)[0]
+        else:
+            key = None
+        if key is None or (last is not None and ln.no != last + 1):
+            if len(cur) >= 2:
+                groups.append(cur)
+            cur = []
+        last = ln.no
+        iv = _interval(key) if key else None
+        if iv:
+            cur.append((ln.no, iv))
+    if len(cur) >= 2:
+        groups.append(cur)
+    return groups
+
+
+_IV_INLINE = re.compile(_NUMV + _UNITV + r"\s*(以上|超)\s*" + _NUMV + _UNITV + r"\s*(以下|未満)")
+
+
+def _inline_groups(ctx: Ctx):
+    """1 文中に「A以上B以下」型の区分が 2 つ以上並ぶ記述（表でなく文章で書かれた区分）を区分の塊として返す。"""
+    groups = []
+    for ln in ctx.lines:
+        if ln.text.strip().startswith("|"):
+            continue
+        row = []
+        f = lambda x: float(x.replace(",", ""))
+        for m in _IV_LOW.finditer(ln.text):
+            if m.group(4):
+                row.append((ln.no, (f(m.group(1)), m.group(3) == "以上", f(m.group(4)), m.group(6) == "以下", m.group(2) or m.group(5))))
+            elif row:  # 上限の無い末尾の区分（「9日以上は…」）は、区分が先に並んでいるときだけ数える
+                row.append((ln.no, (f(m.group(1)), m.group(3) == "以上", float("inf"), False, m.group(2))))
+        # 同じ単位の区分が 2 つ以上、かつ範囲の読点区切り（同一条件の並列）に限る
+        if len(row) >= 2 and len({iv[4] for _, iv in row}) == 1 and any(iv[2] != float("inf") for _, iv in row):
+            groups.append(row)
+    return groups
+
+
+def _range_gaps(ctx: Ctx) -> Outcome:
+    """区分表の隣り合う区分の間に、どの区分にも入らない値が残っていないか。"""
+    out = Outcome()
+    for g in _range_rows(ctx) + _inline_groups(ctx):
+        units = {iv[4] for _, iv in g if iv[4]}
+        if len(units) > 1:
+            continue
+        out.checked += 1
+        rows = sorted(g, key=lambda r: (r[1][0], r[1][2]))
+        whole = all(float(x).is_integer() for _, iv in rows for x in (iv[0], iv[2]) if abs(x) != float("inf"))
+        step = 1 if whole else 0
+        _, (_, _, hi, hi_inc, _) = rows[0]
+        for no, (lo, lo_inc, nhi, nhi_inc, _) in rows[1:]:
+            if whole:
+                top, bottom = (hi if hi_inc else hi - 1), (lo if lo_inc else lo + 1)
+                gap = bottom > top + step
+                missing = f"{top + 1:g}" if bottom - top == 2 else f"{top + 1:g}〜{bottom - 1:g}"
+            else:
+                gap = lo > hi or (lo == hi and not hi_inc and not lo_inc)
+                missing = f"{hi:g} と {lo:g} の間"
+            if gap:
+                out.hits.append(Hit(no, f"区分の境界に抜け: 直前の区分との間（{missing}）がどの区分にも入らない", 0.7,
+                                    ("隣り合う区分の上限・下限の比較",), ("該当値が入力として発生しない可能性",)))
+            if hi < nhi or (hi == nhi and nhi_inc):
+                hi, hi_inc = nhi, nhi_inc
+    return out
+
+
 def detect_number_range(ctx: Ctx) -> Outcome:
     u = ctx.unit_re
     n = r"(?<![A-Za-z0-9._\-/:])(\d[\d,]*(?:\.\d+)?)\s*(%s)?" % u
     tilde = re.compile(n + r"\s*(?:〜|~|～|から)\s*(\d[\d,]*(?:\.\d+)?)\s*(%s)?" % u)
     upper = re.compile(n + r"\s*以上[^。\d]{0,12}?(\d[\d,]*(?:\.\d+)?)\s*(%s)?\s*(?:以下|未満)" % u)
+    both = re.compile(n + r"\s*(以下|未満)\s*(?:かつ|、かつ|であり、?かつ)\s*(\d[\d,]*(?:\.\d+)?)\s*(%s)?\s*(以上|超)" % u)
+    unspec = re.compile(r"(?:%s)?\s*(?:〜|~|～)\s*\d[\d,]*(?:\.\d+)?\s*(?:%s)?[^。]{0,6}?の?(?:扱い|動作|挙動|料金|処理)は(?:定めない|未定義|記載しない|未記載|規定しない|不明)" % (u, u))
+    fuzzy = re.compile(n + r"\s*(前後|付近|近辺)")
     out = Outcome()
     for ln in ctx.lines:
+        for m in both.finditer(ln.text):
+            a, b = float(m.group(1).replace(",", "")), float(m.group(4).replace(",", ""))
+            out.checked += 1
+            if b > a:
+                out.hits.append(Hit(ln.no, f"条件が矛盾: 「{m.group(0).strip()}」（上限 {m.group(1)} 以下かつ下限 {m.group(4)} 以上で満たす値が無い）", 0.8, ("上限と下限の数値比較",)))
+        for m in unspec.finditer(ln.text):
+            out.checked += 1
+            out.hits.append(Hit(ln.no, f"範囲の境界が未定義: 「{m.group(0).strip()}」", 0.6, ("範囲に対し扱いが定められていない旨の記述",), ("別の節で定義されている可能性",)))
+        for m in fuzzy.finditer(ln.text):
+            out.checked += 1
+            out.hits.append(Hit(ln.no, f"境界の包含が不明: 「{m.group(0).strip()}」", 0.5, ("「前後・付近」は境界値を含むか決められない",), ("文脈上の目安にすぎない可能性",)))
         for rx in (tilde, upper):
             for m in rx.finditer(ln.text):
                 a, ua, b, ub = float(m.group(1).replace(",", "")), m.group(2), float(m.group(3).replace(",", "")), m.group(4)
@@ -345,21 +511,90 @@ def detect_number_range(ctx: Ctx) -> Outcome:
                 out.checked += 1
                 if a > b:
                     out.hits.append(Hit(ln.no, f"範囲が逆転: 「{m.group(0).strip()}」", 0.85, ("数値比較（単位換算あり）",)))
+    sub = _range_gaps(ctx)
+    out.hits += sub.hits
+    out.checked += sub.checked
     if out.checked == 0:
         out.skip = "範囲表現（A〜B・A以上B以下）が文書に無い"
     return out
 
 
+_QUOTED_RUN = re.compile(r"(?:[「『][^」』]{1,12}[」』][、,・と及びや]*){1,}")
+_STATE_WORD = re.compile(r"(?:状態|ステータス)")
+_STATE_REF = re.compile(r"[「『]([^」』]{1,12})[」』](?=\s*(?:状態|から|へ|に遷移|になっ))")
+_STATE_OMIT = re.compile(r"状態(?:の扱い)?は(?:未記載|記載しない|定めない|未定義|規定しない)")
+
+
+def _state_list(ln_text: str) -> set:
+    """「状態は「A」「B」」「「A」「B」の状態を持つ」のように、状態語に隣接した引用語の並びを状態一覧とみなす。"""
+    found = set()
+    for m in _QUOTED_RUN.finditer(ln_text):
+        before, after = ln_text[max(0, m.start() - 8):m.start()], ln_text[m.end():m.end() + 8]
+        if re.search(r"(?:状態|ステータス)(?:は|として|を|の一覧は)?\s*$", before) or re.match(r"\s*(?:の|が)?\s*(?:状態|ステータス)", after):
+            found |= set(re.findall(r"[「『]([^」』]{1,12})[」』]", m.group(0)))
+    return found
+
+
+def _state_gaps(ctx: Ctx) -> Outcome:
+    """簡易の状態欠落: 状態一覧に無い状態が遷移・状態として参照されている／状態の扱いが未記載と明記されている。
+    一覧に欠けがあるのは一覧側の欠陥なので、一覧を書いた行に報告する（参照行は理由に書く）。"""
+    defined, def_line = set(), None
+    for ln in ctx.lines:
+        got = _state_list(ln.text)
+        if got:
+            defined |= got
+            def_line = def_line or ln.no
+    out = Outcome()
+    reported = set()
+    for ln in ctx.lines:
+        if defined:
+            refs = [x for x in _STATE_REF.findall(ln.text)]
+            out.checked += len(refs)
+            miss = [x for x in dict.fromkeys(refs) if x not in defined and x not in reported]
+            if miss:
+                reported |= set(miss)
+                at = def_line if def_line else ln.no
+                out.hits.append(Hit(at, "状態の欠落: 状態一覧に無い状態「" + "」「".join(miss) + f"」が参照されている（行 {ln.no}）", 0.6,
+                                    ("状態一覧・遷移の照合",), ("別の節で定義されている可能性",)))
+        if _STATE_OMIT.search(ln.text):
+            out.checked += 1
+            out.hits.append(Hit(ln.no, "状態の欠落: 状態の扱いが未記載と明記されている", 0.6, ("状態一覧・遷移の照合",), ("別の節で定義されている可能性",)))
+    return out
+
+
+def _typed_required(ctx: Ctx) -> Outcome:
+    """文書種別（認証・アップロード等）ごとの必須項目。種別を判定できなければ評価しない。"""
+    text = "\n".join(ln.text for ln in ctx.lines)
+    out = Outcome()
+    for t in ctx.params.get("required_items_by_type", []):
+        found = [w for w in t["triggers"] if w in text]
+        if len(found) < t.get("min_triggers", 3):
+            continue  # 種別を判定する材料が足りない
+        first = next(ln.no for ln in ctx.lines if any(w in ln.text for w in found))
+        for it in t["items"]:
+            names = it if isinstance(it, list) else [it]
+            out.checked += 1
+            if not any(n in text for n in names):
+                out.hits.append(Hit(first, f"{t['type']}の必須項目「{names[0]}」が文書に無い", 0.6,
+                                    (f"種別判定語 {len(found)} 語（{'・'.join(found[:3])}）",), ("別文書で定義されている可能性",)))
+    return out
+
+
 def detect_required_items(ctx: Ctx) -> Outcome:
+    if not ctx.lines:
+        return Outcome(skip="本文が空")
     items = ctx.params.get("required_items", [])
-    if not items:
-        return Outcome(skip="必須項目が未設定（extra で指定する）")
     text = "\n".join(ln.text for ln in ctx.lines)
     out = Outcome(checked=len(items))
     for it in items:
         names = it if isinstance(it, list) else [it]
         if not any(n in text for n in names):
             out.hits.append(Hit(1, f"必須項目「{names[0]}」が文書に無い", 0.8, ("語の有無",)))
+    for sub in (_typed_required(ctx), _state_gaps(ctx)):
+        out.hits += sub.hits
+        out.checked += sub.checked
+    if out.checked == 0:
+        out.skip = "必須項目が未設定、かつ文書種別・状態の記述から評価できない（extra で指定する）"
     return out
 
 

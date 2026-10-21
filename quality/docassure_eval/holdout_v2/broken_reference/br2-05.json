@@ -1,0 +1,20 @@
+{
+ "id": "br2-05",
+ "category": "broken_reference",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 経費精算の規程\n\n## 1 機能\n\nREQ-551 申請者は、旅費規程に従い交通費を申請する。上限額は8.1章を参照。\nREQ-552 上限を超える場合はエラーを表示する。\n"
+  }
+ ],
+ "expected": [
+  {
+   "kind": "finding",
+   "rule_or_kind": "REF-001",
+   "document_id": "A",
+   "line": 5,
+   "severity": "high"
+  }
+ ],
+ "must_not": []
+}

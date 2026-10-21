@@ -1,0 +1,19 @@
+{
+ "id": "h3-fp-03",
+ "category": "false_positive_trap",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 外来受付\n\nFR-301 通常画面から診察券を読み取る。\nFR-302 診察券の読み取り結果は受付画面に表示する。\n"
+  }
+ ],
+ "expected": [],
+ "must_not": [
+  {
+   "kind": "finding",
+   "rule_or_kind": "AMB-001",
+   "document_id": "A",
+   "line": 3
+  }
+ ]
+}

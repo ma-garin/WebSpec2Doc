@@ -1,0 +1,20 @@
+{
+ "id": "h3-term-04",
+ "category": "undefined_term",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# ゲーム課金\n\nREQ-401 ガチャ天井に到達した場合は確定枠を付与する。\nREQ-402 付与履歴は保存する。\n"
+  }
+ ],
+ "expected": [
+  {
+   "kind": "finding",
+   "rule_or_kind": "TERM-001",
+   "document_id": "A",
+   "line": 3,
+   "severity": "low"
+  }
+ ],
+ "must_not": []
+}

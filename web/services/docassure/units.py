@@ -21,6 +21,11 @@ _UNIT_TABLE: tuple[tuple[str, str, float], ...] = (
     ("バイト", "size", 1), ("KB", "size", 1024), ("MB", "size", 1024 ** 2), ("GB", "size", 1024 ** 3), ("TB", "size", 1024 ** 4),
     ("件", "count", 1), ("回", "count", 1), ("個", "count", 1), ("人", "count", 1), ("名", "count", 1),
     ("文字", "count", 1), ("桁", "count", 1), ("行", "count", 1), ("ページ", "count", 1), ("台", "count", 1),
+    ("ケース", "count", 1), ("パック", "count", 1), ("品目", "count", 1), ("世帯", "count", 1), ("拠点", "count", 1),
+    ("枚", "count", 1), ("本", "count", 1), ("箱", "count", 1), ("点", "count", 1), ("泊", "count", 1), ("室", "count", 1),
+    ("席", "count", 1), ("冊", "count", 1), ("通", "count", 1), ("組", "count", 1), ("袋", "count", 1), ("店", "count", 1),
+    ("トン", "weight", 1000000), ("kg", "weight", 1000), ("g", "weight", 1),
+    ("km", "length", 1000), ("cm", "length", 0.01), ("mm", "length", 0.001), ("m", "length", 1),
     ("%", "percent", 1), ("パーセント", "percent", 1),
     ("万円", "money", 10000), ("円", "money", 1),
 )

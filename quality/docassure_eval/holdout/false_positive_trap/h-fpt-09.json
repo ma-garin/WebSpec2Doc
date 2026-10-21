@@ -1,0 +1,16 @@
+{
+ "id": "h-fpt-09",
+ "category": "false_positive_trap",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 物流 要件\n\n## 1 機能要件\n\nREQ-214 積載重量の上限は2トンとする。\n"
+  },
+  {
+   "id": "B",
+   "text": "# 物流 基本設計\n\n## 1 機能要件\n\nREQ-214 積載重量の上限は2000kgとする。\n"
+  }
+ ],
+ "expected": [],
+ "must_not": []
+}

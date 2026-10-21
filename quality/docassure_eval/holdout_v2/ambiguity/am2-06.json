@@ -1,0 +1,20 @@
+{
+ "id": "am2-06",
+ "category": "ambiguity",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 図書の貸出\n\n## 1 機能\n\nREQ-601 貸出冊数は1人10冊までとする。上限を超える場合は貸出を受け付けない。\nREQ-602 返却期限を過ぎた利用者には、延滞の程度に応じて貸出を制限する等の措置をとる。\n"
+  }
+ ],
+ "expected": [
+  {
+   "kind": "finding",
+   "rule_or_kind": "AMB-001",
+   "document_id": "A",
+   "line": 6,
+   "severity": "medium"
+  }
+ ],
+ "must_not": []
+}

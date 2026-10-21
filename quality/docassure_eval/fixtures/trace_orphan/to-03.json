@@ -1,0 +1,20 @@
+{
+ "id": "to-03",
+ "category": "trace_orphan",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 仕様書\n\n## 1 機能\n\nREQ-001 ユーザーが送信ボタンを押したとき、システムは結果を表示する。失敗した場合はエラーを表示する。\nreq_2 ユーザーが送信ボタンを押したとき、システムは結果を表示する。失敗した場合はエラーを表示する。\n"
+  }
+ ],
+ "expected": [
+  {
+   "kind": "finding",
+   "rule_or_kind": "ID-003",
+   "document_id": "A",
+   "line": 6,
+   "severity": "low"
+  }
+ ],
+ "must_not": []
+}

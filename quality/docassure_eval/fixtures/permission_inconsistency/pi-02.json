@@ -1,0 +1,24 @@
+{
+ "id": "pi-02",
+ "category": "permission_inconsistency",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 仕様書\n\n## 1 機能\n\nREQ-001 管理者のみが設定を変更できる。\n"
+  },
+  {
+   "id": "B",
+   "text": "# 仕様書\n\n## 1 機能\n\nREQ-001 一般ユーザーも設定を変更できる。\n"
+  }
+ ],
+ "expected": [
+  {
+   "kind": "conflict",
+   "rule_or_kind": "permission",
+   "document_id": "A",
+   "line": 5,
+   "severity": "high"
+  }
+ ],
+ "must_not": []
+}

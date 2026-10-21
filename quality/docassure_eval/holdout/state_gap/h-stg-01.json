@@ -1,0 +1,20 @@
+{
+ "id": "h-stg-01",
+ "category": "state_gap",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 在庫管理 要件\n\n## 1 機能要件\n\nREQ-090 注文は「受付」「出荷済」「完了」の状態を持つ。\nREQ-091 「出荷済」の注文は返品処理により「返品」へ遷移する。\n"
+  }
+ ],
+ "expected": [
+  {
+   "kind": "finding",
+   "rule_or_kind": "REQ-ITEMS",
+   "document_id": "A",
+   "line": 5,
+   "severity": "medium"
+  }
+ ],
+ "must_not": []
+}

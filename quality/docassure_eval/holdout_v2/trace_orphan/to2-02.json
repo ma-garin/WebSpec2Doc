@@ -1,0 +1,20 @@
+{
+ "id": "to2-02",
+ "category": "trace_orphan",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 成績の確定\n\n## 1 機能\n\nREQ-211 教員が成績を確定したとき、システムは確定日時を記録する。失敗した場合はエラーを表示する。\nREQ-212 確定後は編集を禁止する。解除に失敗した場合は教務課へ通知する。\nREQ-211 教務課が確定を取り消したとき、システムは取消理由を記録する。失敗した場合はエラーを表示する。\n"
+  }
+ ],
+ "expected": [
+  {
+   "kind": "finding",
+   "rule_or_kind": "ID-001",
+   "document_id": "A",
+   "line": 7,
+   "severity": "high"
+  }
+ ],
+ "must_not": []
+}

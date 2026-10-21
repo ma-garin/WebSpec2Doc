@@ -1,0 +1,19 @@
+{
+ "id": "h3-fp-19",
+ "category": "false_positive_trap",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 補助金\n\n## 2 審査\n\nFR-1801 審査は別紙2の基準に従う。\n\n## 付録\n\n別紙2 審査基準\n\n- 事業の実現可能性\n- 費用の妥当性\n"
+  }
+ ],
+ "expected": [],
+ "must_not": [
+  {
+   "kind": "finding",
+   "rule_or_kind": "REF-001",
+   "document_id": "A",
+   "line": 5
+  }
+ ]
+}

@@ -1,0 +1,12 @@
+{
+ "id": "fp-10",
+ "category": "false_positive_trap",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 仕様書\n\n## 1 機能\n\nREQ-001 パスワードは8文字以上20文字以下とする。範囲外のとき、システムはエラーを表示する。\n"
+  }
+ ],
+ "expected": [],
+ "must_not": []
+}

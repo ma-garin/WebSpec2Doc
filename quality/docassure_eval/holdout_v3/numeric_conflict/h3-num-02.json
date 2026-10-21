@@ -1,0 +1,20 @@
+{
+ "id": "h3-num-02",
+ "category": "numeric_conflict",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 賃貸契約\n\nSR-201 更新通知は満了の60日前に送付すること。\nSR-202 通知は書面とする。\nSR-203 更新通知は満了の30日前に送付すること。\n"
+  }
+ ],
+ "expected": [
+  {
+   "kind": "conflict",
+   "rule_or_kind": "numeric",
+   "document_id": "A",
+   "line": 5,
+   "severity": "high"
+  }
+ ],
+ "must_not": []
+}

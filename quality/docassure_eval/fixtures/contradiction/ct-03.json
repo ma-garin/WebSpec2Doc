@@ -1,0 +1,24 @@
+{
+ "id": "ct-03",
+ "category": "contradiction",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 仕様書\n\n## 1 機能\n\nREQ-001 注文の確認メールは、決済完了より前に送信する。\n"
+  },
+  {
+   "id": "B",
+   "text": "# 仕様書\n\n## 1 機能\n\nREQ-001 注文の確認メールは、決済完了より後に送信する。\n"
+  }
+ ],
+ "expected": [
+  {
+   "kind": "conflict",
+   "rule_or_kind": "temporal",
+   "document_id": "A",
+   "line": 5,
+   "severity": "medium"
+  }
+ ],
+ "must_not": []
+}

@@ -1,0 +1,20 @@
+{
+ "id": "un2-01",
+ "category": "untestable",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 保険金請求画面\n\n## 1 機能\n\nREQ-111 請求者は、請求書の必須項目を入力して送信する。必須項目が未入力の場合は送信できない。\nREQ-112 請求入力画面は、誰にとっても使いやすいものとする。\n"
+  }
+ ],
+ "expected": [
+  {
+   "kind": "testability",
+   "rule_or_kind": "NOT_TESTABLE",
+   "document_id": "A",
+   "line": 6,
+   "severity": "high"
+  }
+ ],
+ "must_not": []
+}

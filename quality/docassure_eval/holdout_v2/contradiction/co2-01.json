@@ -1,0 +1,24 @@
+{
+ "id": "co2-01",
+ "category": "contradiction",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 住民票の交付\n\n## 1 機能\n\nREQ-131 窓口職員は、申請の受付後に本人確認を行う。確認できない場合は交付を拒否する。\nREQ-132 交付は、本人確認の完了後に手数料を徴収してから行う。\n"
+  },
+  {
+   "id": "B",
+   "text": "# 住民票の交付\n\n## 1 機能\n\nREQ-131 窓口職員は、本人確認を行う前に手数料を徴収する。徴収に失敗した場合は受付を中止する。\n"
+  }
+ ],
+ "expected": [
+  {
+   "kind": "conflict",
+   "rule_or_kind": "temporal",
+   "document_id": "A",
+   "line": 6,
+   "severity": "high"
+  }
+ ],
+ "must_not": []
+}

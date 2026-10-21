@@ -1,0 +1,20 @@
+{
+ "id": "un2-02",
+ "category": "untestable",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 検針データ集計\n\n## 1 機能\n\nREQ-211 システムは、検針データを日次で集計する。\nREQ-212 集計処理は、十分な性能で完了すること。\n"
+  }
+ ],
+ "expected": [
+  {
+   "kind": "testability",
+   "rule_or_kind": "NOT_TESTABLE",
+   "document_id": "A",
+   "line": 6,
+   "severity": "high"
+  }
+ ],
+ "must_not": []
+}

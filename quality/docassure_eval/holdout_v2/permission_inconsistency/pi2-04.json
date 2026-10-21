@@ -1,0 +1,24 @@
+{
+ "id": "pi2-04",
+ "category": "permission_inconsistency",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 経費の承認\n\n## 1 機能\n\nREQ-481 経費の最終承認は、経理部長のみが実施できる。\nREQ-482 承認時は承認者の氏名を記録する。\n"
+  },
+  {
+   "id": "B",
+   "text": "# 経費の承認\n\n## 1 機能\n\nREQ-481 経費の最終承認は、申請者の所属長が実施できる。\n"
+  }
+ ],
+ "expected": [
+  {
+   "kind": "conflict",
+   "rule_or_kind": "permission",
+   "document_id": "A",
+   "line": 5,
+   "severity": "high"
+  }
+ ],
+ "must_not": []
+}

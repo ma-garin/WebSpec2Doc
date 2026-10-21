@@ -1,0 +1,20 @@
+{
+ "id": "h3-con-04",
+ "category": "contradiction",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# ゲーム課金\n\n3.2 返金\n\nSR-401 購入済みアイテムは返金できる。\nSR-402 購入済みアイテムは返金できない。\n"
+  }
+ ],
+ "expected": [
+  {
+   "kind": "conflict",
+   "rule_or_kind": "semantic_candidate",
+   "document_id": "A",
+   "line": 6,
+   "severity": "medium"
+  }
+ ],
+ "must_not": []
+}

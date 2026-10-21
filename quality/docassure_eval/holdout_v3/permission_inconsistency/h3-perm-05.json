@@ -1,0 +1,20 @@
+{
+ "id": "h3-perm-05",
+ "category": "permission_inconsistency",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# ゲーム運営\n\nSR-501 運営者は他ユーザーの課金履歴を参照できること。\nSR-502 課金履歴は本人のみ参照できること。\n"
+  }
+ ],
+ "expected": [
+  {
+   "kind": "conflict",
+   "rule_or_kind": "permission",
+   "document_id": "A",
+   "line": 4,
+   "severity": "high"
+  }
+ ],
+ "must_not": []
+}

@@ -1,0 +1,12 @@
+{
+ "id": "fp-11",
+ "category": "false_positive_trap",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 仕様書\n\n## 1 機能\n\nREQ-001 契約終了日が未設定の場合、システムは9999-12-31を表示する。失敗した場合はエラーを表示する。\n"
+  }
+ ],
+ "expected": [],
+ "must_not": []
+}

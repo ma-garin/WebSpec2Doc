@@ -1,0 +1,20 @@
+{
+ "id": "h3-ref-03",
+ "category": "broken_reference",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 倉庫ピッキング\n\n## 3.1 ピッキング\n\nFR-301 誤ピック時の処理は4.5節に従う。\n\n## 4 返品\n\nFR-401 返品は検品後に受け付ける。\n"
+  }
+ ],
+ "expected": [
+  {
+   "kind": "finding",
+   "rule_or_kind": "REF-001",
+   "document_id": "A",
+   "line": 5,
+   "severity": "high"
+  }
+ ],
+ "must_not": []
+}

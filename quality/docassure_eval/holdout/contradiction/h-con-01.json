@@ -1,0 +1,20 @@
+{
+ "id": "h-con-01",
+ "category": "contradiction",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 物流 要件\n\n## 1 機能要件\n\nREQ-030 出荷指示は、検品が完了した後に行う。\nREQ-031 出荷指示は、検品を開始する前に行う。\n"
+  }
+ ],
+ "expected": [
+  {
+   "kind": "conflict",
+   "rule_or_kind": "temporal",
+   "document_id": "A",
+   "line": 5,
+   "severity": "medium"
+  }
+ ],
+ "must_not": []
+}

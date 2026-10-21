@@ -1,0 +1,12 @@
+{
+ "id": "h-fpt-14",
+ "category": "false_positive_trap",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 勤怠管理 要件\n\n## 1 機能要件\n\nREQ-221 時間外労働の上限は月45時間とする。\nREQ-222 特別条項を適用する場合の上限は月80時間とする。\n"
+  }
+ ],
+ "expected": [],
+ "must_not": []
+}

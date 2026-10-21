@@ -1,0 +1,20 @@
+{
+ "id": "ut-01",
+ "category": "undefined_term",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 仕様書\n\n## 1 機能\n\nREQ-001 顧客は注文できる。\nREQ-002 利用者は注文を取り消せる。\nREQ-003 会員は注文を確認できる。\n"
+  }
+ ],
+ "expected": [
+  {
+   "kind": "finding",
+   "rule_or_kind": "TERM-001",
+   "document_id": "A",
+   "line": 6,
+   "severity": "low"
+  }
+ ],
+ "must_not": []
+}

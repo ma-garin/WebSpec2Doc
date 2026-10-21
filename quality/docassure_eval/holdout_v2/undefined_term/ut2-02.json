@@ -1,0 +1,20 @@
+{
+ "id": "ut2-02",
+ "category": "undefined_term",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 成績の連携\n\n## 1 機能\n\nREQ-261 システムは、確定した成績を毎日22時に校務システムへ連携する。\nREQ-262 連携はSFTPで行い、失敗した場合は再送する。\n"
+  }
+ ],
+ "expected": [
+  {
+   "kind": "finding",
+   "rule_or_kind": "TERM-001",
+   "document_id": "A",
+   "line": 6,
+   "severity": "low"
+  }
+ ],
+ "must_not": []
+}

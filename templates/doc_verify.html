@@ -17,6 +17,9 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='css/docverify-trace-check.css') }}?v={{ dv_ver }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/docverify-trace-report.css') }}?v={{ dv_ver }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/docverify-process.css') }}?v={{ dv_ver }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/docassure.css') }}?v={{ dv_ver }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/docassure-trace-panel.css') }}?v={{ dv_ver }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/docassure-panels.css') }}?v={{ dv_ver }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/c-hybrid.css') }}?v={{ _ver }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/c-shell.css') }}?v={{ _ver }}">
 </head>
@@ -45,6 +48,7 @@
       <header class="c-page-head dv-pagehead" id="dv-pagehead"><div class="c-page-head__main"><h1 class="c-page-head__title" id="dv-ph-title">レビュー</h1><p class="c-page-head__desc" id="dv-ph-desc"></p><div class="c-page-head__state" id="dv-ph-state"></div></div></header>
       <div class="dv-reason" id="dv-reason"></div>
       <nav class="dv-subtabs" id="dv-subtabs" aria-label="画面の切り替え" hidden></nav>
+      <button type="button" class="btn-outline-sm da-open-btn" id="da-open" aria-haspopup="dialog">ドキュメント品質保証を開く</button>
       <div class="dv-banner" id="dv-banner" role="alert" hidden></div>
       <div class="dv-toast" id="dv-toast" role="status" hidden></div>
       {% include 'docverify/_global.html' %}
@@ -54,6 +58,8 @@
       {% include 'docverify/_accuracy.html' %}
       <dialog class="dv-modal" id="dv-modal" aria-labelledby="dv-modal-title"><h2 class="dv-modal-title" id="dv-modal-title"></h2><div class="dv-modal-body" id="dv-modal-body"></div><div class="dv-modal-actions"><button type="button" class="b" data-modal="cancel"></button><button type="button" class="b p" data-modal="ok"></button></div></dialog>
     </main>
+    <section class="da" id="da-root" aria-label="ドキュメント品質保証" hidden></section>
+    <dialog class="da-dialog" id="da-dialog" aria-label="スコアの根拠"></dialog>
   </div>
 </div>
 <script src="{{ url_for('static', filename='js/c-hybrid.js') }}?v={{ _ver }}"></script>
@@ -69,6 +75,10 @@
 <script src="{{ url_for('static', filename='js/docverify-trace-report.js') }}?v={{ dv_ver }}"></script>
 <script src="{{ url_for('static', filename='js/docverify-process.js') }}?v={{ dv_ver }}"></script>
 <script src="{{ url_for('static', filename='js/docverify-accuracy.js') }}?v={{ dv_ver }}"></script>
+<script src="{{ url_for('static', filename='js/docassure.js') }}?v={{ dv_ver }}"></script>
+<script src="{{ url_for('static', filename='js/docassure-trace-panel.js') }}?v={{ dv_ver }}"></script>
+<script src="{{ url_for('static', filename='js/docassure-diff-panel.js') }}?v={{ dv_ver }}"></script>
+<script src="{{ url_for('static', filename='js/docassure-review-panel.js') }}?v={{ dv_ver }}"></script>
 <script>DV.start();</script>
 </body>
 </html>

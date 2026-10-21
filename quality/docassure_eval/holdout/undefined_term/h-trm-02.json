@@ -1,0 +1,20 @@
+{
+ "id": "h-trm-02",
+ "category": "undefined_term",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 医療事務 要件\n\n## 1 機能要件\n\nREQ-061 DPC 区分に応じて請求額を算出する。\nREQ-062 ログインに連続5回失敗した場合、システムはアカウントを30分間ロックし、エラーメッセージを表示する。\n"
+  }
+ ],
+ "expected": [
+  {
+   "kind": "finding",
+   "rule_or_kind": "TERM-001",
+   "document_id": "A",
+   "line": 5,
+   "severity": "low"
+  }
+ ],
+ "must_not": []
+}

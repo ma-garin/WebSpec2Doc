@@ -63,3 +63,14 @@
 .dv-page .app-topbar .usermenu-trigger:hover{background:var(--color-surface-2)}
 .dv-page .app-topbar .usermenu-trigger:focus-visible{border-color:var(--color-primary);box-shadow:0 0 0 3px var(--color-primary-light)}
 .dv-page .app-topbar .usermenu-avatar{width:28px;height:28px;border:0;box-shadow:none}
+/* 1280px 未満はラベル付きの 176px（アイコン 16＋ラベル 13px）。1280px 以上は 232px */
+@media (max-width:1279px) and (min-width:861px){
+  .dv-page .app-shell:not(.sidebar-collapsed){--sidebar-w:176px}
+  .dv-page .app-sidebar.dv-sb{padding:12px 8px}
+  .dv-sb .dv-sb__brand{margin:-12px -8px 12px;padding:0 8px 0 6px}
+  .dv-sb .dv-sb__switch{display:none}
+  .dv-sb .dv-sb__names small{display:none}
+  .dv-sb .dv-sb__item{gap:8px;padding:0 8px;font-size:13px}
+  .dv-sb .dv-sb__group--admin .dv-sb__item,.dv-sb .dv-sb__foot .dv-sb__item{font-size:13px}
+  .dv-sb .dv-sb__heading{padding:4px 8px 6px}
+}

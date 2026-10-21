@@ -53,25 +53,35 @@ def test_analyze_without_document_is_400(client):
     assert r.status_code == 400
 
 
+def _analyzed_fid(client, iid):
+    r = client.post(f"/api/docassure/inspections/{iid}/analyze", headers=ORIGIN,
+                    json={"documents": [{"id": "D1", "text": TEXT}]}).get_json()
+    return r["findings"][0]["finding_id"]
+
+
 def test_decision_validation_and_waiver_needs_expiry(client):
     iid = _iid(client)
+    fid = _analyzed_fid(client, iid)
     base = f"/api/docassure/inspections/{iid}/decisions"
+    # 存在しない対象への判断は記録しない
+    assert client.post(base, headers=ORIGIN, json={"decision": "accepted", "target": "NO-SUCH"}).status_code == 404
     assert client.post(base, headers=ORIGIN, json={"decision": "x", "target": "a"}).status_code == 400
     assert client.post(base, headers=ORIGIN, json={"decision": "accepted"}).status_code == 400
-    assert client.post(base, headers=ORIGIN, json={"decision": "waived", "target": "a"}).status_code == 400
-    ok = client.post(base, headers=ORIGIN, json={"decision": "waived", "target": "a", "reason": "r", "expiry": "2027-01-01"})
+    assert client.post(base, headers=ORIGIN, json={"decision": "waived", "target": fid}).status_code == 400
+    ok = client.post(base, headers=ORIGIN, json={"decision": "waived", "target": fid, "reason": "r", "expiry": "2027-01-01"})
     assert ok.status_code == 201 and ok.get_json()["decision"]["source"] == "human"
 
 
 def test_decisions_survive_reanalyze_and_legacy_inspection_untouched(client):
     iid = _iid(client)
+    fid = _analyzed_fid(client, iid)
     before = client.get(f"/api/docverify/inspections/{iid}").get_json()
-    client.post(f"/api/docassure/inspections/{iid}/decisions", headers=ORIGIN, json={"decision": "accepted", "target": "F1"})
+    client.post(f"/api/docassure/inspections/{iid}/decisions", headers=ORIGIN, json={"decision": "accepted", "target": fid})
     client.post(f"/api/docassure/inspections/{iid}/analyze", headers=ORIGIN, json={"documents": [{"text": TEXT}]})
     after = client.get(f"/api/docverify/inspections/{iid}").get_json()
     assert before["inspection"]["findings"] == after["inspection"]["findings"]
     from web.services.docassure import store
-    assert [d["target"] for d in store.decisions(iid)] == ["F1"]
+    assert [d["target"] for d in store.decisions(iid)] == [fid]
 
 
 def test_report_formats_and_csv_injection_guard(client):

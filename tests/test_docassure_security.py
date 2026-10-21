@@ -131,7 +131,9 @@ def test_import_doc_role_enforced_on_analyze(env, analyzed):
 
 def test_finding_edit_role_enforced_on_decisions_and_review(env, analyzed):
     """(3) decisions/review は finding_edit（moderator/reviewer/scribe）。author・approver は 403、reviewer・moderator は 2xx 系。"""
-    dec = {"target": "ISS-1", "decision": "accepted", "reason": "確認済み"}
+    amb = {"documents": [{"id": "D1", "text": "- REQ-001 検索結果は適切に表示すること。\n"}]}
+    fid = env["c"]["alice"].post(f"{BASE}/{analyzed}/analyze", json=amb, headers=H).get_json()["findings"][0]["finding_id"]
+    dec = {"target": fid, "decision": "accepted", "reason": "確認済み"}
     for who in ("carol", "dave"):
         assert env["c"][who].post(f"{BASE}/{analyzed}/decisions", json=dec, headers=H).status_code == 403, who
         assert env["c"][who].post(f"{BASE}/{analyzed}/review", json={}, headers=H).status_code == 403, who

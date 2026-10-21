@@ -131,6 +131,11 @@ def decide(iid: str):
         return _err("対象の ID を指定してください。", 400, "no_target")
     if b["decision"] == "waived" and not (b.get("reason") and b.get("expiry")):
         return _err("waiver には理由と期限が必要です。", 400, "waiver_incomplete")
+    r0 = store.load(iid) or {}
+    known = {str(f.get("finding_id")) for f in r0.get("findings") or []} | \
+        {str(c.get("conflict_id")) for c in r0.get("conflicts") or []}
+    if str(b["target"]) not in known:   # 存在しない対象への判断を記録しない
+        return _err("対象の指摘・矛盾が見つかりません。再分析した後なら一覧から選び直してください。", 404, "unknown_target")
     from web.services.docverify.settings import current_user
     entry = {"target": str(b["target"]), "decision": b["decision"], "reason": str(b.get("reason") or ""),
              "expiry": b.get("expiry"), "by": current_user(), "source": "human"}

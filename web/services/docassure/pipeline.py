@@ -43,7 +43,8 @@ def _stage(name: str, fn: Callable, errors: list, default):
 
 
 def analyze(documents: list[dict], profile: str = "default", pack_extra: dict | None = None,
-            policy: dict | None = None, decisions: list[dict] | None = None) -> dict:
+            policy: dict | None = None, decisions: list[dict] | None = None,
+            design_tests: list[dict] | None = None, execution: dict | None = None) -> dict:
     """documents: [{id,name,type,text}]。戻りは JSON 化できる dict。"""
     from web.services.docassure import conflict, quality, readiness, requirement_engine, testability
     from web.services.docassure.rules import engine as rules
@@ -97,8 +98,8 @@ def analyze(documents: list[dict], profile: str = "default", pack_extra: dict | 
 
     def run_trace():
         from web.services.docassure import coverage, trace_graph
-        g = trace_graph.build(units_by_doc)
-        trace.update({"graph": g, "coverage": coverage.compute(g)})
+        g = trace_graph.build(units_by_doc, design_tests)
+        trace.update({"graph": g, "coverage": coverage.compute(g, execution)})
     _, timings["trace"] = _stage("trace", run_trace, errors, None)
 
     analyzers: dict = {"state": [], "decision_tables": [], "crud": [], "nfr": [], "completeness": [], "boundary": [], "glossary": {}}
@@ -147,7 +148,7 @@ def analyze(documents: list[dict], profile: str = "default", pack_extra: dict | 
             scores["Traceability"] = M.Score(
                 "Traceability", round(100.0 * ratio, 1), 1.0,
                 (f"設計・参照とのつながりが無い要件 {len(reqs) - len(best)} / {len(reqs)} 件（推論リンクは 0.5 として数える）",),
-                ("要件→設計・画面・API・テストの明示/推論リンク",), ("テスト実行 Evidence は未取込",))
+                ("要件→設計・画面・API・テストの明示/推論リンク",), (("テスト実行結果を反映済み（System02）",) if execution else ("テスト実行 Evidence は未取込",)))
     _, timings["derived"] = _stage("derived", run_derived_scores, errors, None)
 
     gate, timings["readiness"] = _stage("readiness", lambda: readiness.gate(scores, [_d(f) for f in findings],

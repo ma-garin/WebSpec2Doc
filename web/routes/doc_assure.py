@@ -54,10 +54,17 @@ def analyze(iid: str):
         return err
     body = request.get_json(silent=True) or {}
     docs = _documents_from(body, insp)
+    if not docs:   # 画面の「分析を実行」は本文を送らない。前回分析した原文があれば、それで再分析する
+        try:
+            prev_texts = (store.load(iid) or {}).get("source_texts") or {}
+        except Exception:
+            log.exception("前回の原文を読めませんでした")
+            prev_texts = {}
+        docs = [{"id": str(k), "name": "", "type": "other", "text": str(v)} for k, v in prev_texts.items() if v]
     if any(len(d["id"]) > 64 or len(d["name"]) > 200 for d in docs):
         return _err("文書の ID・名前が長すぎます。短くしてからもう一度お試しください。", 400, "bad_document")
     if not docs:
-        return _err("分析する文書がありません。文書を取り込むか documents を渡してください。", 400, "no_document")
+        return _err("分析する文書がありません。レビューに文書を取り込んでから「分析を実行」を押してください。", 400, "no_document")
     if len(docs) > _MAX_DOCS or sum(len(d["text"]) for d in docs) > _MAX_CHARS:
         return _err("文書が大きすぎます。分けて分析してください。", 413, "too_large")
     try:
@@ -68,8 +75,15 @@ def analyze(iid: str):
         except Exception:
             log.exception("組織ポリシーを読めませんでした（既定の規則で分析します）")
             extra = None
+        tests = execution = None
+        try:   # System02 のテスト設計・実行結果（無い・読めないときは未評価のまま）
+            from web.services.docassure import links_sys02
+            tests = links_sys02.tests_for_graph(iid) or None
+            execution = links_sys02.as_execution(iid) or None
+        except Exception:
+            log.exception("System02 の結果を読めませんでした（テスト実行は未評価で分析します）")
         result = pipeline.analyze(docs, profile=str(body.get("profile") or "default"), pack_extra=extra or None,
-                                  decisions=prev.get("decisions") or [])
+                                  decisions=prev.get("decisions") or [], design_tests=tests, execution=execution)
         saved = store.save(iid, {**result, "decisions": prev.get("decisions") or [],
                                  "source_texts": {d["id"]: d["text"] for d in docs},
                                  "previous_requirements": prev.get("requirements"),

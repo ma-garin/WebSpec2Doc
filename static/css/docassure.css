@@ -38,7 +38,7 @@
 .dax-nav__item:focus-visible { outline: 2px solid var(--color-primary); outline-offset: -2px; border-radius: var(--radius-sm); }
 .dax-count {
   display: inline-block; min-width: 20px; padding: 0 6px; border-radius: var(--radius-full);
-  background: var(--color-surface-2); color: var(--color-text-secondary); font-size: var(--text-xs); line-height: 18px; text-align: center; font-variant-numeric: tabular-nums;
+  background: var(--color-surface-2); color: var(--color-text-secondary); font-size: 12px; line-height: 18px; text-align: center; font-variant-numeric: tabular-nums;
 }
 .dax-nav__item[aria-selected="true"] .dax-count { background: var(--color-primary-light); color: var(--color-primary-dark); }
 
@@ -129,14 +129,13 @@
 .dax-metric__value { font-size: var(--text-lg); font-weight: 700; line-height: var(--leading-tight); color: var(--color-text); font-variant-numeric: tabular-nums; }
 
 .dax-summary { display: flex; flex-direction: column; gap: var(--space-4); min-width: 0; }
-.dax-actions { margin: 0; padding: 0; list-style: none; counter-reset: dax-act; border-top: 1px solid var(--color-border); }
-.dax-action { counter-increment: dax-act; border-bottom: 1px solid var(--color-divider); }
+.dax-actions { margin: 0; padding: 0; list-style: none; border-top: 1px solid var(--color-border); }
+.dax-action { border-bottom: 1px solid var(--color-divider); }
 .dax-action > button, button.dax-action, .dax-action > a {
   display: grid; grid-template-columns: 24px minmax(0, 1fr) auto; align-items: baseline; gap: var(--space-2);
   width: 100%; padding: var(--space-2) var(--space-2); border: 0; background: none; text-align: left;
   font: inherit; color: var(--color-text); cursor: pointer; text-decoration: none; border-radius: var(--radius-sm);
 }
-.dax-action > button::before, button.dax-action::before, .dax-action > a::before { content: counter(dax-act); font-size: 12px; font-weight: 700; color: var(--color-text-secondary); font-variant-numeric: tabular-nums; }
 .dax-action > button:hover, button.dax-action:hover, .dax-action > a:hover { background: var(--color-surface-2); }
 .dax-action > button:focus-visible, .dax-action > a:focus-visible { outline: 2px solid var(--color-primary); outline-offset: -2px; }
 
@@ -304,7 +303,7 @@
 .dax-metrics { display: flex; flex-wrap: wrap; align-items: flex-end; gap: var(--space-2) 0; margin: 0; padding: 0; border: 0; background: none; box-shadow: none; min-inline-size: 0; }
 .dax-metric { all: unset; box-sizing: border-box; display: flex; flex-direction: column; gap: 2px; padding: 0 var(--space-6) 0 0; margin: 0 var(--space-6) 0 0; border-right: 1px solid var(--color-border); text-align: left; }
 .dax-metric:last-child { border-right: 0; margin-right: 0; padding-right: 0; }
-.dax-metric__label { font-size: var(--text-xs); color: var(--color-text-secondary); white-space: nowrap; }
+.dax-metric__label { font-size: 12px; color: var(--color-text-secondary); white-space: nowrap; }
 .dax-metric__value { font-size: var(--text-xl); font-weight: 700; line-height: var(--leading-tight); color: var(--color-text); font-variant-numeric: tabular-nums; }
 /* ② 品質: 値の列に最小幅、補足は値の下に 1 行 */
 .dax-qrow { grid-template-columns: minmax(120px, 220px) minmax(8em, max-content) minmax(80px, 360px); align-items: center; }
@@ -312,7 +311,7 @@
 .dax-qrow__value .dax-meta, .dax-qrow .dax-meta { display: block; font-weight: 400; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 16em; }
 .dax-qrow__name { white-space: nowrap; }
 /* ③ 重大度は行内の小さいバッジ */
-.dax :is(.dax-sev--critical, .dax-sev--high, .dax-sev--medium, .dax-sev--low), .dax-drawer :is(.dax-sev--critical, .dax-sev--high, .dax-sev--medium, .dax-sev--low) { display: inline-flex; width: auto; max-width: max-content; flex: none; align-self: flex-start; height: 20px; padding: 0 6px; font-size: var(--text-xs); }
+.dax :is(.dax-sev--critical, .dax-sev--high, .dax-sev--medium, .dax-sev--low), .dax-drawer :is(.dax-sev--critical, .dax-sev--high, .dax-sev--medium, .dax-sev--low) { display: inline-flex; width: auto; max-width: max-content; flex: none; align-self: flex-start; height: 20px; padding: 0 6px; font-size: 12px; }
 /* ④ 判断フォーム: ラベルの上に入力、ボタン列は右寄せ */
 .dax-drawer form, .dax-md__detail form { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-2); }
 .dax-drawer form label, .dax-md__detail form label { display: grid; gap: var(--space-1); font-size: 12px; font-weight: 600; color: var(--color-text-secondary); }
@@ -408,3 +407,222 @@
 .dax-collapse > summary, .dax-collapse:not([open]) > summary { padding: var(--space-3) 0; }
 .dax-page > .dax-collapse { margin-top: calc(var(--space-8) * -1); }
 .dax-page > .dax-collapse:first-child { margin-top: 0; }
+
+/* ========== 改訂 2（App Shell 作り直し・後勝ち） ========== */
+/* 骨格: ナビ廃止。header / main の 2 段 */
+.dax { grid-template-rows: auto minmax(0, 1fr); }
+.dax > .dax-main { grid-row: -2 / -1; }
+.dax-nav { display: none; }
+/* ① 文字 4 段 */
+.dax-h1 { font-size: 20px; font-weight: 600; line-height: var(--leading-tight); }
+.dax-h2 { font-size: 16px; font-weight: 600; line-height: var(--leading-tight); margin-bottom: var(--space-4); }
+.dax-h3 { font-size: 14px; font-weight: 600; }
+.dax { font-size: 14px; line-height: 1.6; }
+.dax-meta { font-size: 12px; line-height: 1.5; }
+/* ⑥ 本文: 最大 1200px・左揃え・左右 32px */
+.dax-page { max-width: calc(1200px + var(--space-8) * 2); margin: 0; padding: var(--space-6) var(--space-8) var(--space-8); gap: var(--space-8); }
+/* ③ ヘッダ: パンくず＋1 行（h1・meta 左／操作 右）。本文と同じ幅・余白で右端をそろえる */
+.dax-header { display: block; padding: 0 var(--space-8); min-height: 0; background: var(--color-surface); border-bottom: 1px solid var(--color-border); }
+.dax-header > * { max-width: 1200px; }
+.dax-header__crumb { display: flex; flex-wrap: nowrap; gap: var(--space-1); padding-top: var(--space-3); font-size: 12px; line-height: 1.5; color: var(--color-text-tertiary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dax-header__crumb a { color: inherit; text-decoration: none; }
+.dax-header__crumb a:hover { color: var(--color-text); text-decoration: underline; }
+.dax-header__row { display: flex; align-items: center; justify-content: space-between; gap: var(--space-4); min-height: 56px; padding: var(--space-2) 0; min-width: 0; }
+.dax-header__row > :first-child:not(.dax-header__actions) { display: flex; align-items: baseline; gap: var(--space-3); flex: 1 1 auto; min-width: 0; }
+.dax-header__row .dax-h1, .dax-header__title { margin: 0; font-size: 20px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dax-header__meta { font-size: 12px; color: var(--color-text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.dax-header__actions { display: flex; flex: none; flex-wrap: nowrap; align-items: center; gap: var(--space-2); }
+/* 旧構造（crumb/row なし）でも 1 行に並べる */
+.dax-header > div:first-child:not(.dax-header__crumb):not(.dax-header__row) { display: flex; align-items: center; gap: var(--space-3); min-height: 56px; min-width: 0; }
+.dax-header > div:first-child:not(.dax-header__crumb):not(.dax-header__row) > .dax-header__actions { margin-left: auto; }
+/* ④ ヒーロー: 白い大カードをやめ、左 3px の状態線＋罫線なし。指標は右に縦 2 列 */
+.dax-hero { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-2); padding: var(--space-2) 0 var(--space-2) var(--space-4); background: none; border: 0; border-left: 3px solid var(--color-border-strong); border-radius: 0; }
+.dax-hero:has(.dax-pill--ready) { border-left: 3px solid var(--color-success); }
+.dax-hero:has(.dax-pill--conditional) { border-left: 3px solid var(--color-warning); }
+.dax-hero:has(.dax-pill--blocked) { border-left: 3px solid var(--color-error); }
+.dax-hero__state { font-size: 24px; font-weight: 600; line-height: var(--leading-tight); }
+.dax-hero__lead { font-size: 14px; line-height: 1.6; color: var(--color-text-secondary); }
+.dax-hero > .dax-btn { grid-column: 1; grid-row: auto; justify-self: start; margin-top: var(--space-2); }
+.dax-metrics { display: grid; grid-template-columns: max-content max-content; gap: var(--space-1) var(--space-4); align-content: start; margin: 0; padding: 0; border: 0; }
+.dax-metric { all: unset; display: contents; }
+.dax-metric__label { font-size: 13px; color: var(--color-text-tertiary); white-space: nowrap; }
+.dax-metric__value { font-size: 14px; font-weight: 600; line-height: 1.6; color: var(--color-text); text-align: right; font-variant-numeric: tabular-nums; }
+.dax-metric[data-zero] .dax-metric__value { font-size: 14px; color: var(--color-text-tertiary); }
+.dax-metric[data-warn] .dax-metric__value { color: var(--color-warning-tx); }
+@media (min-width: 1024px) {
+  .dax-page:has(> .dax-hero + .dax-metrics) { display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: var(--space-8); row-gap: var(--space-8); align-items: start; }
+  .dax-page:has(> .dax-hero + .dax-metrics) > * { grid-column: 1 / -1; }
+  .dax-page:has(> .dax-hero + .dax-metrics) > .dax-hero { grid-column: 1; }
+  .dax-page:has(> .dax-hero + .dax-metrics) > .dax-metrics { grid-column: 2; grid-row: 1; }
+  .dax-page > .dax-collapse { margin-top: calc(var(--space-8) * -1); }
+  .dax-hero:has(> .dax-metrics) { grid-template-columns: minmax(0, 1fr) auto; column-gap: var(--space-8); }
+  .dax-hero:has(> .dax-metrics) > :not(.dax-metrics) { grid-column: 1; }
+  .dax-hero > .dax-metrics { grid-column: 2; grid-row: 1 / span 4; }
+}
+/* ⑤ 必須対応 */
+.dax-action > button, button.dax-action { grid-template-columns: 24px minmax(0, 1fr); align-items: center; min-height: 48px; padding: var(--space-2) var(--space-2); }
+.dax-action > button > .dax-action__meta { grid-column: 2; }
+.dax-action__title { display: block; font-size: 14px; font-weight: 500; color: var(--color-text); overflow-wrap: anywhere; }
+.dax-action__meta { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); margin-top: 2px; font-size: 12px; color: var(--color-text-secondary); }
+.dax-action > button::before { grid-row: 1 / span 2; align-self: start; padding-top: 2px; }
+/* 追加 ① 判断ブロックを詳細ペイン下端に固定 */
+.dax-md__detail .dax-detail__section:has(fieldset, [data-field], textarea) {
+  position: sticky; bottom: 0; z-index: 2; margin: 0 calc(var(--space-6) * -1) calc(var(--space-6) * -1);
+  padding: var(--space-4) var(--space-6); background: var(--color-surface); border-top: 1px solid var(--color-border);
+}
+@media (max-width: 1100px) { .dax-header { padding: 0 var(--space-6); } .dax-page { padding-left: var(--space-6); padding-right: var(--space-6); } }
+
+/* ========== ブラインド判定の修正（後勝ち） ========== */
+/* ① 左右の基準線は 24px の 1 本（幅で変えない） */
+.dax-header, .dax-header[class] { padding-left: var(--space-6); padding-right: var(--space-6); }
+.dax-page, .dax-page[class] { padding-left: var(--space-6); padding-right: var(--space-6); }
+@media (max-width: 1100px) { .dax-header { padding-left: var(--space-6); padding-right: var(--space-6); } .dax-page { padding-left: var(--space-6); padding-right: var(--space-6); } }
+/* ② 本文 max-width 1200px（左揃え）。上下の余白を詰める */
+.dax-page { max-width: calc(1200px + var(--space-6) * 2); margin: 0; padding-top: var(--space-4); gap: var(--space-6); }
+.dax-header > * { max-width: 1200px; }
+.dax-header__crumb { padding-top: var(--space-2); }
+.dax-header__row { min-height: 48px; padding: var(--space-1) 0 var(--space-2); }
+/* ②③ ヒーロー: 左 1fr ／右 指標 320px。状態語を最も強く */
+.dax-hero, .dax-hero:has(> .dax-metrics) {
+  display: grid; grid-template-columns: minmax(0, 1fr) 320px; column-gap: var(--space-6); row-gap: var(--space-2); align-items: start;
+  padding: var(--space-1) 0 var(--space-1) var(--space-4); border: 0; border-left: 2px solid var(--color-border); background: none; border-radius: 0;
+}
+.dax-hero:has(.dax-pill--ready) { border-left: 2px solid var(--color-success-border); }
+.dax-hero:has(.dax-pill--conditional) { border-left: 2px solid var(--color-warning-border); }
+.dax-hero:has(.dax-pill--blocked) { border-left: 2px solid var(--color-error-border); }
+.dax-hero > :not(.dax-metrics) { grid-column: 1; }
+.dax-hero > .dax-pill { height: 20px; padding: 0 var(--space-2); font-size: 12px; font-weight: 500; background: var(--color-surface-2); border-color: var(--color-border); color: var(--color-text-secondary); }
+.dax-hero > .dax-pill::before { display: none; }
+.dax-hero__state { font-size: 24px; font-weight: 600; color: var(--color-text); }
+.dax-hero > .dax-btn { margin-top: var(--space-1); }
+.dax-hero > .dax-meta { display: block; padding: var(--space-1) var(--space-2); background: var(--color-surface-2); border-radius: var(--radius-sm); color: var(--color-text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+/* ④ 指標: 2×2 の compact な stat */
+.dax-hero > .dax-metrics { grid-column: 2; grid-row: 1 / span 6; }
+.dax-metrics, .dax-hero > .dax-metrics { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-2); margin: 0; padding: 0; border: 0; }
+.dax-metric, button.dax-metric {
+  all: unset; box-sizing: border-box; display: flex; flex-direction: column; gap: 2px; padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-surface); cursor: pointer; min-width: 0;
+}
+button.dax-metric:hover { background: var(--color-surface-2); }
+button.dax-metric:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
+.dax-metric__label { font-size: 12px; color: var(--color-text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dax-metric__value { font-size: 20px; font-weight: 600; line-height: var(--leading-tight); color: var(--color-text); text-align: left; }
+.dax-metric[data-zero] .dax-metric__value { font-size: 20px; color: var(--color-text-tertiary); }
+.dax-metric[data-warn] .dax-metric__value { color: var(--color-warning-tx); }
+@media (max-width: 900px) {
+  .dax-hero, .dax-hero:has(> .dax-metrics) { grid-template-columns: minmax(0, 1fr); }
+  .dax-hero > .dax-metrics { grid-column: 1; grid-row: auto; }
+}
+/* ⑤ 必須対応: 52px、題 1fr / 要件 ID 120 / 重大度 96 / › 16 */
+.dax-action > button, button.dax-action {
+  display: grid; grid-template-columns: minmax(0, 1fr) 120px 96px 16px; align-items: center; column-gap: var(--space-3);
+  min-height: 52px; padding: var(--space-1) var(--space-3); cursor: pointer; border-radius: 0;
+}
+.dax-action > button::before, button.dax-action::before { content: none; display: none; }
+.dax-action > button::after, button.dax-action::after { content: "›"; grid-column: 4; font-size: 18px; line-height: 1; color: var(--color-text-tertiary); text-align: right; }
+.dax-action__title { grid-column: 1; font-size: 14px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dax-action__meta { grid-column: 2 / span 2; margin: 0; display: grid; grid-template-columns: 120px 96px; column-gap: var(--space-3); align-items: center; font-size: 12px; color: var(--color-text-secondary); white-space: nowrap; }
+.dax-action__meta > [class*="dax-sev--"] { grid-column: 2; justify-self: start; }
+.dax-action:hover > button, .dax-action > button:hover { background: var(--color-surface-2); }
+/* ⑥ アイコンのみの操作ボタン（aria-label）は 32px 正方の ghost */
+.dax-header__actions .dax-btn[aria-label]:not(:has(> :not(svg))) , .dax-header__actions summary.dax-btn[aria-label] { width: 32px; height: 32px; padding: 0; justify-content: center; background: transparent; border-color: transparent; color: var(--color-text-secondary); }
+.dax-header__actions .dax-btn[aria-label]:hover { background: var(--color-surface-2); color: var(--color-text); }
+/* ⑤ 補正: › は A のマークアップが持つ。meta の子を行の列に直接並べる */
+.dax-action > button::after, button.dax-action::after { content: none; display: none; }
+.dax-action__meta { display: contents; }
+.dax-action__meta > * { font-size: 12px; color: var(--color-text-secondary); white-space: nowrap; min-width: 0; }
+.dax-action__meta > [class*="dax-sev--"] { grid-column: 3; justify-self: start; }
+.dax-action__meta > :last-child:not([class*="dax-sev--"]) { grid-column: 4; justify-self: end; color: var(--color-text-tertiary); font-size: 16px; }
+.dax-action > button { grid-auto-flow: row; }
+
+/* ========== ブラインド 2 回目の修正（後勝ち） ========== */
+/* ①②⑤ 必須対応: 1 本の基準線・左端 0・max-width 880 */
+.dax-actions { max-width: 880px; }
+.dax-action > button, button.dax-action {
+  display: grid; grid-template-columns: minmax(0, 1fr) 120px 100px 16px; align-items: center; column-gap: var(--space-3);
+  min-height: 52px; padding: var(--space-1) 0; margin: 0;
+}
+.dax-action__meta > *, .dax-action__meta > [class*="dax-sev--"] { margin: 0; position: static; align-self: center; vertical-align: middle; }
+.dax-action__meta > [class*="dax-sev--"] { grid-column: 3; justify-self: start; }
+.dax-action > button:hover { background: var(--color-surface-2); box-shadow: -8px 0 0 var(--color-surface-2), 8px 0 0 var(--color-surface-2); }
+.dax-quality, .dax-funnel { max-width: 880px; }
+.dax-qrow, .dax-funnel__row { padding-left: 0; padding-right: 0; }
+/* ⑥ 色の意味: 品質の低い値も warning。danger は重大度 critical/high のバッジだけ */
+.dax-qrow[data-level="low"] .dax-bar__fill { background: var(--color-warning); }
+.dax-qrow[data-level="low"] .dax-qrow__value { color: var(--color-warning-tx); }
+.dax-qrow[data-level="ok"] .dax-qrow__value { color: var(--color-text); }
+/* ④ ヒーロー: 縦線なし。状態はバッジ 1 つ、見出しは 20px/600 の文 */
+.dax-hero, .dax-hero:has(> .dax-metrics), .dax-hero:has(.dax-pill--ready), .dax-hero:has(.dax-pill--conditional), .dax-hero:has(.dax-pill--blocked) { border-left: 0; padding: 0; }
+.dax-hero > .dax-pill { height: 28px; padding: 0 var(--space-3); gap: 6px; font-size: 14px; font-weight: 600; border-radius: var(--radius-full); }
+.dax-hero > .dax-pill--conditional { background: var(--color-warning-bg); border-color: var(--color-warning-border); color: var(--color-warning-tx); }
+.dax-hero > .dax-pill--ready { background: var(--color-success-bg); border-color: var(--color-success-border); color: var(--color-success-tx); }
+.dax-hero > .dax-pill--blocked { background: var(--color-error-bg); border-color: var(--color-error-border); color: var(--color-error-tx); }
+.dax-hero > .dax-pill--draft { background: var(--color-surface-2); border-color: var(--color-border); color: var(--color-text-secondary); }
+.dax-hero > .dax-pill svg { width: 16px; height: 16px; flex: none; }
+.dax-hero__state { font-size: 20px; font-weight: 600; }
+/* ③ 1200 以上は右 300px、未満はヒーローの下に 1 行 4 列。補足は折り返す */
+.dax-hero, .dax-hero:has(> .dax-metrics) { grid-template-columns: minmax(0, 1fr) 300px; }
+.dax-hero > .dax-meta { white-space: normal; overflow: visible; text-overflow: clip; }
+@media (max-width: 1199px) {
+  .dax-hero, .dax-hero:has(> .dax-metrics) { grid-template-columns: minmax(0, 1fr); }
+  .dax-hero > .dax-metrics { grid-column: 1; grid-row: auto; grid-template-columns: repeat(4, minmax(0, 1fr)); margin-top: var(--space-2); }
+}
+@media (max-width: 900px) { .dax-hero > .dax-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.dax .dax-action .dax-action__meta > [class*="dax-sev--"] { align-self: center; margin: 0; }
+.dax .dax-action > button > [class*="dax-sev--"] { grid-column: 3; align-self: center; justify-self: start; margin: 0; }
+.dax .dax-action > button > .dax-meta { grid-column: 2; align-self: center; white-space: nowrap; }
+.dax .dax-action > button > [aria-hidden="true"]:last-child { grid-column: 4; align-self: center; justify-self: end; color: var(--color-text-tertiary); }
+
+/* ========== ブラインド 3 回目の修正（後勝ち） ========== */
+/* ① 本文は max-width 1120px の 1 コンテナ。各ブロックはコンテナ幅いっぱいで右端をそろえる */
+.dax-page, .dax-page[class] { max-width: calc(1120px + var(--space-6) * 2); }
+.dax-header > * { max-width: 1120px; }
+.dax-actions, .dax-quality, .dax-funnel { max-width: none; width: 100%; }
+/* ②③ 指標: コンテナ内の右列 300px。カード枠をやめ、淡い区切り 1 本、値 18/600、ラベルは折り返す */
+.dax-hero, .dax-hero:has(> .dax-metrics) { grid-template-columns: minmax(0, 1fr) 300px; column-gap: var(--space-6); width: 100%; min-width: 0; }
+.dax-hero > .dax-metrics { min-width: 0; width: 100%; gap: 0 var(--space-4); border-left: 1px solid var(--color-divider); padding-left: var(--space-4); }
+.dax-metric, button.dax-metric { border: 0; border-radius: var(--radius-sm); background: none; padding: var(--space-2) var(--space-1); min-width: 0; }
+button.dax-metric:hover { background: var(--color-surface-2); }
+.dax-metric__label { white-space: normal; overflow: visible; text-overflow: clip; overflow-wrap: anywhere; font-size: 12px; line-height: 1.4; }
+.dax-metric__value, .dax-metric[data-zero] .dax-metric__value { font-size: 18px; font-weight: 600; }
+@media (max-width: 1199px) {
+  .dax-hero, .dax-hero:has(> .dax-metrics) { grid-template-columns: minmax(0, 1fr); }
+  .dax-hero > .dax-metrics { grid-column: 1; grid-row: auto; grid-template-columns: repeat(4, minmax(0, 1fr)); border-left: 0; padding-left: 0; border-top: 1px solid var(--color-divider); padding-top: var(--space-2); }
+}
+@media (max-width: 900px) { .dax-hero > .dax-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+/* ④ 必須対応の列見出し行: 行と同じ 4 列 */
+.dax-actions__head, .dax-actions > li:not(.dax-action), .dax-actions > [role="row"]:first-child {
+  display: grid; grid-template-columns: minmax(0, 1fr) 120px 100px 16px; column-gap: var(--space-3); align-items: center;
+  min-height: 32px; padding: 0; font-size: 12px; font-weight: 500; color: var(--color-text-secondary); border-bottom: 1px solid var(--color-border);
+}
+/* ⑤ ヒーロー内の注記 */
+.dax-hero > .dax-meta { font-size: 13px; color: var(--color-text-secondary); display: flex; align-items: flex-start; gap: 6px; }
+.dax-hero > .dax-meta svg { width: 14px; height: 14px; flex: none; margin-top: 3px; }
+
+/* ========== ブラインド 4 回目の修正（後勝ち） ========== */
+/* ① 必須対応の列見出し（.dax-actions 直前の .dax-meta）を行と同じ 4 列に */
+.dax-meta:has(+ .dax-actions) {
+  display: grid; grid-template-columns: minmax(0, 1fr) 120px 100px 16px; column-gap: var(--space-3); align-items: end;
+  padding: 0 0 var(--space-1); font-size: 12px; color: var(--color-text-secondary); max-width: none;
+}
+.dax-meta:has(+ .dax-actions) > span { min-width: 0; white-space: nowrap; }
+.dax-h2:has(+ .dax-meta + .dax-actions) { margin-bottom: var(--space-2); }
+/* ②④ 状態ブロックは 1 枚のカード: 1 段目 バッジ＋見出し / 2 段目 注記 / 3 段目 ボタン / 4 段目 指標 4 列 */
+.dax-hero, .dax-hero:has(> .dax-metrics), .dax-hero[class] {
+  display: grid; grid-template-columns: auto minmax(0, 1fr); column-gap: var(--space-3); row-gap: var(--space-3); align-items: center;
+  padding: var(--space-6); background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-lg);
+}
+.dax-hero > .dax-pill { grid-column: 1; grid-row: 1; }
+.dax-hero > .dax-h2, .dax-hero > .dax-hero__state { grid-column: 2; grid-row: 1; margin: 0; font-size: 20px; font-weight: 600; line-height: var(--leading-tight); }
+.dax-hero > .dax-meta { grid-column: 1 / -1; grid-row: 2; display: flex; align-items: flex-start; gap: 6px; padding: 0; background: none; border-radius: 0; font-size: 13px; color: var(--color-text-secondary); white-space: normal; }
+.dax-hero > .dax-hero__lead { grid-column: 1 / -1; }
+.dax-hero > .dax-btn { grid-column: 1 / -1; grid-row: 3; justify-self: start; margin: 0; }
+.dax-hero > .dax-metrics, .dax-hero > .dax-metrics[class] {
+  grid-column: 1 / -1; grid-row: 4; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0 var(--space-4);
+  margin: var(--space-1) 0 0; padding: var(--space-3) 0 0; border: 0; border-top: 1px solid var(--color-divider);
+}
+@media (max-width: 1199px) { .dax-hero > .dax-metrics { grid-template-columns: repeat(4, minmax(0, 1fr)); padding-left: 0; } }
+@media (max-width: 816px) { .dax-hero > .dax-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+/* ③ ヘッダ行と本文の右端は同じ（左揃え・max 1120・左右 24） */
+.dax-header { padding-left: var(--space-6); padding-right: var(--space-6); }
+.dax-header > * { max-width: 1120px; }

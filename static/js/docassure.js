@@ -157,45 +157,56 @@
     if (sc.value == null) return '評価不能（評価できた範囲 ' + pct(sc.coverage) + '%）';
     return Math.round(sc.value) + '%';
   }
+  function topicOf(t) {
+    var s = String(t || '').replace(/^\s*\d+[.．]\s*/, '').replace(/[。．.]\s*$/, '');
+    var m = s.match(/^(.{1,14}?)(は|を|で|が|に)/); return m ? m[1] : s.slice(0, 12);
+  }
+  function actionTitle(it) {
+    if (it.kind === 'c') return '「' + (it.short || '記述') + '」の食い違いを解消する';
+    var tp = topicOf(it.reqText);
+    if (it.kind === 't') { var miss = (it.raw.missing || [])[0]; return (tp ? tp + 'の' : '') + (miss || '合否の基準') + 'を決める'; }
+    var q = String(it.raw.reason || '').match(/「([^」]{1,20})」/);
+    if (/AMB|曖昧/i.test((it.raw.rule_id || '') + it.short) && q) return '『' + q[1] + '』の基準を決める';
+    if (/ITEMS|必須/i.test((it.raw.rule_id || '') + it.short)) return (tp ? tp + 'の' : '') + '必須項目を確認する';
+    return (tp ? tp + '：' : '') + it.short + 'を確認する';
+  }
   function overviewHtml() {
     var rd = readiness();
     if (!rd && notRun('scores') && notRun('requirements')) return emptyBox();
     var st = rd ? (READY[rd.state] || ['ドラフト', 'draft']) : ['ドラフト', 'draft'];
-    var pr = priorities(), n = pr.length, f = findings(), sc = scores();
-    var lead = n ? n + ' 件の確認が必要です' : '確認が必要な項目は検出されていません（検出できた範囲）';
-    var h = '<section class="dax-hero" aria-label="準備状態"><span class="dax-pill dax-pill--' + st[1] + '">準備状態</span>'
-      + '<p class="dax-hero__state">' + esc(st[0]) + '</p><p class="dax-hero__lead">' + esc(lead) + '</p>'
-      + '<button type="button" class="dax-btn dax-btn--primary" data-tab-go="issues">問題を確認</button></section>';
-    var verdict = st[1] === 'ready' ? 'この文書は次工程へ進めます' : st[1] === 'conditional' ? 'この文書は条件付きで次工程へ進めます' : st[1] === 'blocked' ? 'この文書はこのままでは次工程へ進めません' : 'この文書はまだ判定に足る評価がありません';
-    h += '<section class="dax-summary" aria-label="要約"><p>' + esc(verdict) + (n ? '。' + n + ' 件の確認が必要です。優先して確認:' : '。') + '</p>'
-      + (n ? '<ol class="dax-actions">' + pr.slice(0, 3).map(function (a) { return '<li class="dax-action"><button type="button" class="dax-btn dax-btn--ghost" data-pgo="' + a.go + '" data-pid="' + esc(a.id) + '">' + esc(a.text) + '</button></li>'; }).join('') + '</ol>' : '')
-      + (rd && (rd.reasons || []).length ? '<details class="dax-adv"><summary>判定の理由</summary><ul>' + rd.reasons.map(function (x) { return '<li>' + esc(x) + '</li>'; }).join('') + '</ul></details>' : '') + '</section>';
-    var openF = f.filter(isOpenF), cnt = function (s) { return openF.filter(function (x) { return x.severity === s; }).length; };
-    var unres = conflicts().filter(function (c) { return c.status === 'UNRESOLVED'; }).length;
-    var metric = function (label, v, go, raw) { var flag = v === 0 ? ' data-zero' : (raw != null && raw < 70 ? ' data-warn' : ''); return '<button type="button" class="dax-metric"' + flag + ' data-tab-go="' + go + '"><span class="dax-metric__label">' + label + '</span><span class="dax-metric__value">' + esc(v) + '</span></button>'; };
-    var bm = buildModel().filter(function (it) { return it.open; }), bc = function (fn) { return bm.filter(fn).length; };
-    var parts = [['重大', bc(function (it) { return it.sev === 'critical'; })], ['高', bc(function (it) { return it.sev === 'high'; })], ['中', bc(function (it) { return it.sev === 'medium'; })], ['テスト不可', bc(function (it) { return it.kind === 't'; })], ['矛盾', bc(function (it) { return it.kind === 'c'; })]];
-    h += '<div class="dax-metrics" role="group" aria-label="主な指標">' + metric('確認が必要', bm.length, 'issues')
-      + parts.filter(function (p) { return p[1] > 0; }).map(function (p) { return metric(p[0], p[1], p[0] === '矛盾' ? 'conf' : 'issues'); }).join('')
-      + ''
-      + '</div>'
-      + '<p class="dax-meta">点数は評価できた範囲だけで出します。評価できなかった範囲を 0 点や 100 点にはしません。</p>';
-    if (mode() === 'DETERMINISTIC_ONLY') h += '<p class="dax-meta">AI レビューは実行していません（規則による解析のみ）。AI の観点は評価に含まれていません。</p>';
-    h += '<details class="dax-collapse" open><summary class="dax-h2">品質</summary><div class="dax-quality">' + QUAL.map(function (q) {
+    var all = buildModel(), open = all.filter(function (it) { return it.open; }), n = open.length, sc = scores();
+    var why = st[1] === 'ready' ? '次工程へ進めます。' : st[1] === 'conditional' ? '次工程へ進めますが、' + n + ' 件の確認が残っています。' : st[1] === 'blocked' ? 'このままでは次工程へ進めません。' + (n ? n + ' 件の対応が必要です。' : '') : 'まだ判定に足る評価がありません。';
+    var bc = function (fn) { return open.filter(fn).length; };
+    var metric = function (label, v, go, raw, tip) { var flag = v === 0 ? ' data-zero' : (raw != null && raw < 70 ? ' data-warn' : ''); return '<button type="button" class="dax-metric"' + flag + (tip ? ' title="' + tip + '"' : '') + ' data-tab-go="' + go + '"><span class="dax-metric__label">' + label + '</span><span class="dax-metric__value">' + esc(v) + '</span></button>'; };
+    var icon = '<svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="8" cy="8" r="6.5"/>' + (st[1] === 'ready' ? '<path d="M5 8.2l2 2 4-4.2"/>' : '<path d="M8 4.5v4M8 11v.5"/>') + '</svg>';
+    var head = n ? '次工程へ進む前に ' + n + ' 件の確認が必要です' : (st[1] === 'ready' ? '次工程へ進めます' : why);
+    var h = '<section class="dax-hero" aria-label="準備状態"><span class="dax-pill dax-pill--' + st[1] + '">' + icon + ' ' + esc(st[0]) + '</span>'
+      + (mode() === 'DETERMINISTIC_ONLY' ? ' <span class="dax-meta"><svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="8" cy="8" r="6.5"/><path d="M8 7.5v4M8 5v.5"/></svg> AI レビューは実行していません。規則による解析のみで判定しています。</span>' : '')
+      + '<h2 class="dax-h2">' + esc(head) + '</h2>'
+      + (n ? '<button type="button" class="dax-btn" data-tab-go="issues">' + n + ' 件を確認</button>' : '')
+      + '<div class="dax-metrics" role="group" aria-label="主な指標">' + metric('確認が必要', n, 'issues')
+      + [['重大', bc(function (it) { return it.sev === 'critical'; }), 'issues'], ['高', bc(function (it) { return it.sev === 'high'; }), 'issues'], ['矛盾', bc(function (it) { return it.kind === 'c'; }), 'conf']].filter(function (p) { return p[1] > 0; }).map(function (p) { return metric(p[0], p[1], p[2]); }).join('')
+      + metric('テスト不可', bc(function (it) { return it.kind === 't'; }), 'issues')
+      + metric('テスト可能性', scoreText(sc.Testability), 'req', rawScore(sc.Testability), 'テスト可能性スコア') + metric('トレーサビリティ', scoreText(sc.Traceability), 'trace', rawScore(sc.Traceability), 'トレーサビリティスコア') + '</div></section>';
+    h += '<section class="dax-section" aria-labelledby="dx-must"><h2 class="dax-h2" id="dx-must">必須対応</h2>' + (n ? '<div class="dax-meta" aria-hidden="true"><span>確認すること</span><span>要件</span><span>重要度</span><span></span></div><ol class="dax-actions">' + open.map(function (it) {
+      var sk = it.kind === 'f' && SEV[it.sev] ? it.sev : 'medium', sv = 'dax-sev--' + esc(sk);
+      return '<li class="dax-action"><button type="button" data-pgo="f" data-pid="' + esc(it.key) + '"><span class="dax-action__title">' + esc(actionTitle(it) + (it.kind === 't' ? '（テスト不可）' : it.kind === 'c' ? '（矛盾）' : '')) + '</span><span class="dax-meta">' + esc(it.req || '要件なし') + '</span><span class="' + sv + '">' + esc(SEV[sk]) + '</span><span aria-hidden="true">›</span></button></li>';
+    }).join('') + '</ol>' : '<p class="dax-meta">検出なし（検出できた範囲）。検出が無いことは、問題が無いことの証明ではありません。</p>') + '</section>';
+    h += '<section class="dax-section"><h2 class="dax-h2">品質</h2><div class="dax-quality">' + QUAL.map(function (q) {
       var s = sc[q[0]], w = s && s.value != null ? Math.max(0, Math.min(100, Math.round(s.value))) : null;
       var lv = w == null ? '' : ' data-level="' + (w < 50 ? 'low' : w < 75 ? 'mid' : 'ok') + '"';
-      return '<button type="button" class="dax-qrow"' + lv + ' data-score="' + q[0] + '"><span class="dax-qrow__name">' + q[1] + '</span><span class="dax-qrow__value">' + esc(scoreText(s)) + '</span>'
-        + (w == null ? '' : '<span class="dax-bar" aria-hidden="true"><span class="dax-bar__fill" style="width:' + w + '%"></span></span>') + '</button>';
-    }).join('') + '</div></details>';
-    var ch = changedIds(), chN = Object.keys(ch).length;
-    h += '<details class="dax-collapse"><summary class="dax-h2">最近の変更 — ' + (notRun('diff') || !body('diff') ? '比較なし' : chN + ' 件') + '</summary>' + (notRun('diff') || !body('diff') ? '<p class="dax-meta">前の版との比較はまだありません。</p>'
-      : '<div class="dax-change"><p class="dax-change__title">変更のあった要件 ' + chN + ' 件</p><p class="dax-change__impact">' + Object.keys(ch).slice(0, 8).map(function (k) { return '<span class="dax-tag">' + esc(k) + '</span>'; }).join(' ') + '</p><button type="button" class="dax-btn dax-btn--ghost dax-btn--sm" data-tab-go="diff">変更を見る</button></div>') + '</details>';
+      var na = s && s.value == null, tip = na ? ' title="評価不能（評価できた範囲 ' + pct(s.coverage) + '%）"' : '';
+      return '<button type="button" class="dax-qrow"' + lv + tip + ' data-score="' + q[0] + '"><span class="dax-qrow__name">' + q[1] + '</span><span class="dax-qrow__value">' + esc(na ? '評価不能' : scoreText(s)) + '</span>'
+        + '<span class="dax-bar" aria-hidden="true">' + (w == null ? '' : '<span class="dax-bar__fill" style="width:' + w + '%"></span>') + '</span></button>';
+    }).join('') + '</div><p class="dax-meta">点数は評価できた範囲だけで出します。評価できなかった範囲を 0 点や 100 点にはしません。</p></section>';
     var rm = reqModel(), tot = rm.length, can = rm.filter(function (m) { return m.tv === 'CAN_TEST' || m.tv === 'PARTIALLY_TESTABLE'; }).length;
-    var tr = body('trace'), linked = tr && tr.graph ? rm.filter(function (m) { return !m.notest; }).length : null;
-    var frow = function (label, v) { var w = tot && v != null ? Math.round(v / tot * 100) : null; return '<div class="dax-funnel__row"><span>' + label + '</span><span>' + (v == null ? '未評価' : v + ' / ' + tot) + '</span>' + (w == null ? '' : '<span class="dax-bar" aria-hidden="true"><span class="dax-bar__fill" style="width:' + w + '%"></span></span>') + '</div>'; };
-    h += '<details class="dax-collapse"><summary class="dax-h2">被覆 — テスト可能と判定された要件 ' + can + ' / ' + tot + ' 件・テストへのつながりがある要件 ' + (linked == null ? '未評価' : linked + ' / ' + tot + ' 件') + '</summary><div class="dax-funnel">' + frow('要件', tot) + frow('テスト可能と判定された要件', body('requirements') ? can : null) + frow('テストへのつながりがある要件', linked) + '</div></details>';
-    var allIt = buildModel(), dec = allIt.filter(function (it) { return !it.open || (it.kind === 'f' && it.raw.status === 'ACCEPTED'); }).length;
-    h += '<details class="dax-collapse" open><summary class="dax-h2">レビューの進み — 判断済み ' + dec + ' / ' + allIt.length + '</summary><div class="dax-funnel">' + frow2('判断済みの指摘', dec, allIt.length) + frow2('決定済みの矛盾', conflicts().length - unres, conflicts().length) + '</div></details>';
+    var linked = body('trace') && body('trace').graph ? rm.filter(function (m) { return !m.notest; }).length : null;
+    h += '<section class="dax-section"><h2 class="dax-h2">被覆</h2><div class="dax-funnel">' + frow2('要件', tot, tot) + frow2('テスト可能と判定された要件', can, tot) + (linked == null ? '<div class="dax-funnel__row"><span>テストへのつながりがある要件</span><span>未評価</span></div>' : frow2('テストへのつながりがある要件', linked, tot)) + '</div></section>';
+    var ch = changedIds(), chN = Object.keys(ch).length, dec = all.length - n;
+    h += '<details class="dax-collapse"><summary class="dax-h2">詳細 — 最近の変更 ' + (notRun('diff') || !body('diff') ? 'なし' : chN + ' 件') + '・判断済み ' + dec + ' / ' + all.length + '</summary>'
+      + '<div class="dax-funnel">' + frow2('判断済み', dec, all.length) + '</div>'
+      + (chN ? '<div class="dax-change"><p class="dax-change__title">変更のあった要件 ' + chN + ' 件</p><p class="dax-change__impact">' + Object.keys(ch).slice(0, 8).map(function (k) { return '<span class="dax-tag">' + esc(k) + '</span>'; }).join(' ') + '</p><button type="button" class="dax-btn dax-btn--ghost dax-btn--sm" data-tab-go="diff">変更を見る</button></div>' : '')
+      + (rd && (rd.reasons || []).length ? '<details class="dax-adv"><summary>判定の理由</summary><ul>' + rd.reasons.map(function (x) { return '<li>' + esc(x) + '</li>'; }).join('') + '</ul></details>' : '') + '</details>';
     return h;
   }
   function frow2(label, v, t) { var w = t ? Math.round(v / t * 100) : null; return '<div class="dax-funnel__row"><span>' + label + '</span><span>' + (t ? v + ' / ' + t : '対象なし') + '</span>' + (w == null ? '' : '<span class="dax-bar" aria-hidden="true"><span class="dax-bar__fill" style="width:' + w + '%"></span></span>') + '</div>'; }
@@ -408,24 +419,27 @@
     var lab = k === 'req' ? '要対応 ' + n + ' 件' : '未対応 ' + n + ' 件';
     return n ? ' <span class="dax-count" aria-label="' + lab + '" title="' + lab + '">' + n + '</span>' : '';
   }
+  function counts() {
+    var req = body('requirements') ? reqModel().filter(function (m) { return m.st[1] === 'attention'; }).length : null;
+    var open = buildModel().filter(function (it) { return it.open; });
+    return { issues: open.length, conf: open.filter(function (it) { return it.kind === 'c'; }).length, req: req };
+  }
+  function tabName() { return (NAV.filter(function (n) { return n[0] === S.tab; })[0] || NAV[0])[1]; }
   function headerHtml() {
-    var rq = body('requirements') || {}, sc = body('scores') || {}, rd = readiness(), st = rd ? READY[rd.state] || ['ドラフト', 'draft'] : null;
+    var rq = body('requirements') || {}, sc = body('scores') || {};
     var vs = ((window.DV && DV.state && DV.state.review && DV.state.review.versions) || []).map(function (v) { return v && typeof v === 'object' ? (v.version != null ? v.version : v.no) : v; }).filter(function (v) { return v != null && v !== ''; });
     var ver = vs.length ? vs.reduce(function (a, b) { return Number(b) > Number(a) ? b : a; }) : null;
     var at = rq.saved_at || sc.saved_at || (body('issues') || {}).saved_at || (S.full && S.full.saved_at) || null;
     var hasData = !notRun('scores');
-    return '<header class="dax-header"><div><h1 class="dax-h1 dax-header__title">ドキュメント品質保証</h1><p class="dax-header__meta dax-meta">' + esc(rname() || '') + (ver != null ? ' ・ 版 ' + esc(ver) : '') + (at ? ' ・ 最終解析 ' + esc(String(at).replace('T', ' ').slice(0, 16)) : '')
-      + ''
-      + '<div class="dax-header__actions"><button type="button" class="dax-btn dax-btn--ghost" data-act="run"' + (S.busy ? ' disabled' : '') + '>' + (S.busy ? '解析中…' : '再解析') + '</button>'
+    return '<header class="dax-header">'
+      + '<div class="dax-header__row"><div><h1 class="dax-h1">' + esc(tabName()) + '</h1><p class="dax-header__meta">レビュー: ' + esc(rname() || '') + (ver != null ? ' ・ 版 ' + esc(ver) : '') + (at ? ' ・ 最終解析 ' + esc(String(at).replace('T', ' ').slice(0, 16)) : '') + '</p></div>'
+      + '<div class="dax-header__actions"><button type="button" class="dax-btn dax-btn--primary" data-act="run"' + (S.busy ? ' disabled' : '') + '>' + (S.busy ? '解析中…' : '再解析') + '</button>'
       + '<button type="button" class="dax-btn dax-btn--ghost" data-tab-go="diff">比較</button>'
-      + '<details class="dax-menu"' + (hasData ? '' : ' hidden') + '><summary class="dax-btn dax-btn--ghost">エクスポート</summary><div role="menu"><a role="menuitem" href="' + url('report.md') + '" download>レポート（Markdown）</a><a role="menuitem" href="' + url('report.csv') + '" download>指摘一覧（CSV）</a></div></details>'
-      + '<button type="button" class="dax-btn dax-btn--ghost" data-act="settings">設定</button></div></header>';
+      + '<details class="dax-menu"><summary class="dax-btn dax-btn--ghost" aria-label="その他の操作" title="その他の操作"><span aria-hidden="true">⋯</span></summary><div role="menu">'
+      + (hasData ? '<a role="menuitem" href="' + url('report.md') + '" download>エクスポート（Markdown）</a><a role="menuitem" href="' + url('report.csv') + '" download>エクスポート（CSV）</a>' : '')
+      + '<button type="button" role="menuitem" data-act="settings">設定</button></div></details></div></div></header>';
   }
-  function navHtml() {
-    return '<nav class="dax-nav" role="tablist" aria-label="品質保証の表示">' + NAV.map(function (t) {
-      var on = S.tab === t[0];
-      return '<button type="button" role="tab" class="dax-nav__item" id="dx-t-' + t[0] + '" aria-selected="' + on + '"' + (on ? ' aria-current="page"' : '') + ' tabindex="' + (on ? 0 : -1) + '" data-tab="' + t[0] + '">' + t[1] + navCount(t[0]) + '</button>'; }).join('') + '</nav>';
-  }
+  function navHtml() { return ''; }   // ナビはサイド（.dv-sb）へ移った。件数は dax:counts で渡す
   function render() {
     var root = $('#da-root'); if (!root) return;
     if (!rid()) { root.innerHTML = '<div class="dax"><main class="dax-main">' + stateBox('empty', '文書を選んでいません', 'レビュー一覧から対象の文書を開いてください。', '<a class="dax-btn dax-btn--primary" href="#reviews" data-go="reviews">レビュー一覧へ</a>') + '</main></div>'; return; }
@@ -439,12 +453,14 @@
     else if (S.loadFail) main = failBox();
     else if (pn) main = pn.html(ctx());
     else main = views[S.tab]();
-    root.innerHTML = '<div class="dax">' + headerHtml() + navHtml() + '<main class="dax-main" id="dx-main" aria-labelledby="dx-t-' + S.tab + '"><div class="dax-page">' + main + '</div></main></div>';
+    window.DAX_IID = rid();
+    if (S.loaded) { try { window.dispatchEvent(new CustomEvent('dax:counts', { detail: counts() })); } catch (e) { /* 古いブラウザでは件数を出さないだけ */ } }
+    root.innerHTML = '<div class="dax">' + headerHtml() + navHtml() + '<main class="dax-main" id="dx-main" aria-label="' + esc(tabName()) + '"><div class="dax-page">' + main + '</div></main></div>';
     var mb = $('#dx-main .dax-page');
     if (pn && pn.bind && mb && S.loaded && !S.error && !S.blocked) pn.bind(mb, ctx());
   }
-  function syncHash() { if (rid()) history.replaceState(null, '', '#assure/' + encodeURIComponent(rid()) + (S.tab !== 'overview' ? '/' + S.tab : '')); }
-  function setTab(t, focus) { S.tab = t; syncHash(); closeDrawer(); render(); if (focus !== false) { var n = document.getElementById('dx-t-' + t); if (n) n.focus(); } }
+  function syncHash() { if (rid()) history.replaceState(null, '', '#assure/' + encodeURIComponent(rid()) + (S.tab !== 'overview' ? '/' + (S.tab === 'diff' ? 'changes' : S.tab) : '')); }
+  function setTab(t, focus) { S.tab = t; syncHash(); closeDrawer(); render(); if (focus !== false) { var n = document.querySelector('#da-root .dax-h1'); if (n) { n.setAttribute('tabindex', '-1'); n.focus(); } } }
   function closeMenu(ret) { var m = document.querySelector('#da-root details.dax-menu[open]'); if (!m) return false; m.open = false; if (ret) { var su = m.querySelector('summary'); if (su) su.focus(); } return true; }
 
   document.addEventListener('click', function (e) {
@@ -505,13 +521,14 @@
     }
   });
   function enter() {
-    var hp = location.hash.slice(1).split('/');
-    if (hp[0] === 'assure' && hp[2] && NAV.some(function (n) { return n[0] === hp[2]; })) S.tab = hp[2];
+    var ht = tabFromHash(); if (ht) S.tab = ht;
     syncHash();
     if (rid() !== S.iid) { S.data = {}; S.loaded = false; S.full = null; S.draft = {}; S.ferr = {}; S.rw = {}; S.selF = null; S.error = ''; S.blocked = null; }
     if (S.busy) return render();
     load();
   }
+  function tabFromHash() { var hp = location.hash.slice(1).split('/'); if (hp[0] !== 'assure' || !hp[2]) return hp[0] === 'assure' ? 'overview' : null; var t = hp[2] === 'changes' ? 'diff' : hp[2]; return NAV.some(function (n) { return n[0] === t; }) ? t : 'overview'; }
+  window.addEventListener('hashchange', function () { var t = tabFromHash(); if (t && t !== S.tab && rid()) { S.tab = t; closeDrawer(); render(); } });
   if (window.DV && window.DV.on) window.DV.on('assure', enter);
   window.DocAssure = { open: function () { if (window.DV) window.DV.show('assure'); }, close: closeDrawer, reload: load };
 })();

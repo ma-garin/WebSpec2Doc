@@ -19,3 +19,21 @@ Document Assurance 再設計 クラス契約（A=JS/HTML、B=CSS が共有。追
 ボタン: .dax-btn（--primary / --ghost / --danger / --sm）; アイコンのみは aria-label 必須
 状態画面: .dax-state（--empty / --error / --blocked）> .dax-state__title / __body / .dax-btn ; 読み込み .dax-skel
 文字: .dax-h1 / .dax-h2 / .dax-h3 / 本文 / .dax-meta（4 段のみ）
+
+== 改訂 2（00:10 App Shell 作り直し。旧 .dax-nav タブは廃止） ==
+サイド（D 担当・templates/doc_verify.html と static/css/docverify-sidebar.css）:
+ aside.dv-sb > .dv-sb__brand（製品名「WebSpec2Doc」＋小さく「Document Assurance」＋ compact switcher ⌄）
+ nav > .dv-sb__group（見出しなし）> a.dv-sb__item[data-da-tab=overview|req|issues|conf|trace|changes|review]（アイコン 16px＋名称 1 行＋右端 .dv-sb__count）
+ hr.dv-sb__sep > .dv-sb__group--admin（レビュー一覧・観点・履歴・根拠 などの既存ビュー）> 最下部 a.dv-sb__item「設定」
+ 現在位置: [aria-current=page]
+ 件数: A が window に CustomEvent('dax:counts', {detail:{issues,conf,req}}) を出す → D の script が .dv-sb__count に反映
+ クリック: location.hash = '#assure/<iid>/<tab>'（iid は A が window.DAX_IID に置く）
+ヘッダ（A=構造, B=見た目）:
+ .dax-header > .dax-header__crumb（パンくず: ドキュメント検証 / レビュー名 / 画面名）
+            > .dax-header__row（左: h1.dax-h1 画面名 + .dax-header__meta（文書名・版・最終解析）／右: .dax-header__actions）
+ 操作: .dax-btn--primary「再解析」1 つ・.dax-btn--ghost「比較」・details.dax-menu「その他」(エクスポート Markdown/CSV・設定)
+概要のヒーロー: .dax-hero（枠は細い罫線のみ・巨大な白カード禁止）> .dax-pill + .dax-hero__state + .dax-hero__lead（なぜ）+ .dax-btn「n 件を確認」(secondary 強調)
+ 指標: .dax-metrics（右または下に compact な縦並び 2 列: ラベル・値）
+必須対応: ol.dax-actions > li.dax-action > button > .dax-action__title（人が読む題）+ .dax-action__meta（ID・重大度）
+文字: .dax-h1 20px / .dax-h2 16px / 本文 14px / .dax-meta 12px（主要情報に 12px 以下を使わない）
+余白トークン: 4/8/12/16/24/32（--space-*）。ナビ行 40px、ナビ左右 12px

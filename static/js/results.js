@@ -16,6 +16,7 @@ const TAB_DEFS = {
                    subs: { diagram: 'renderTransition', table: 'renderTransitionTable' } },
   runs:          { panel: 'rp-runs', render: 'renderTestRuns' },
   'doc-fusion':  { panel: 'rp-doc-fusion', render: 'renderDocFusion' },
+  'code-fusion': { panel: 'rp-code-fusion', render: 'renderCodeFusion' },
   history:       { panel: 'rp-history', render: 'renderTimeline' },
   compare:       { panel: 'rp-compare', render: 'renderCompare' },
 };
@@ -30,7 +31,7 @@ const LEGACY_TAB_MAP = {
   'transition-table': ['flow', 'table'],
 };
 
-let resultData = null, reportJson = null, docFusionData = null;
+let resultData = null, reportJson = null, docFusionData = null, codeFusionData = null;
 // 状態遷移表など、report.json ではなくサーバ側の導出結果を取りに行くビューが使う。
 let currentResultDomain = '';
 // 実行回を指定して開いているときの run_id（空ならサイト単位の最新）。
@@ -133,6 +134,23 @@ async function showResults(domain, tab, sub, runId) {
   if (docFusionTab) docFusionTab.hidden = !docFusionData;
   if (docFusionData) {
     setTabCount('tab-count-doc-fusion', (docFusionData.meta && docFusionData.meta.field_gaps) || 0);
+  }
+
+  // ソース突合タブ（code_fusion.json 存在時のみ表示）。
+  // 件数バッジは未到達ルート数 — 「テストできていない画面が何件あるか」が要点。
+  codeFusionData = null;
+  try {
+    const cfRes = await fetch('/api/code-fusion?domain=' + encodeURIComponent(domain));
+    if (cfRes.ok) codeFusionData = await cfRes.json();
+  } catch (e) { /* 突合結果なしとして扱う */ }
+  const codeFusionTab = document.getElementById('tab-code-fusion');
+  if (codeFusionTab) codeFusionTab.hidden = !codeFusionData;
+  if (codeFusionData) {
+    // バッジは「画面」の未到達件数のみ。summary.unreached は API を含むため、
+    // そのまま出すと QA が手を付けるべき件数より桁違いに大きく見える。
+    const unreachedPages = (codeFusionData.unreached || [])
+      .filter(u => (u.route || {}).kind !== 'api').length;
+    setTabCount('tab-count-code-fusion', unreachedPages);
   }
 
   setHeader(['ダッシュボード', domain], domain);

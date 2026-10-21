@@ -194,6 +194,25 @@ def parse_args() -> argparse.Namespace:
         ),
     )
     parser.add_argument(
+        "--source-dir",
+        type=Path,
+        action="append",
+        help=(
+            "ソースコードのルートディレクトリ。ルート定義を抽出して実測クロールと突合し、"
+            "未到達ルート（テストできていない画面）を code_fusion.md に出力する。複数指定可。"
+            "対応: Flask / FastAPI / Django / Express / Next.js"
+        ),
+    )
+    parser.add_argument(
+        "--source-repo",
+        action="append",
+        help=(
+            "ソースコードの Git リポジトリ。shallow clone して --source-dir と同じ突合を行う。"
+            "owner/repo の短縮指定、https URL、ssh URL に対応。"
+            "'URL@ブランチ名' でブランチ／タグを指定できる。複数指定可"
+        ),
+    )
+    parser.add_argument(
         "--record-session",
         action="store_true",
         help=(
@@ -907,6 +926,7 @@ def _run_crawl(args: argparse.Namespace, auth_path: Path | None) -> None:
         ("transition", "遷移の品質を評価"),
         ("impact", "影響範囲を算出"),
         ("doc_fusion", "文書と実測を突合"),
+        ("code_fusion", "ソースと実測を突合"),
         ("ux", "UX・アクセシビリティを評価"),
         ("snapshot", "スナップショットを保存"),
         ("diff", "差分レポートを作成"),
@@ -949,6 +969,15 @@ def _run_crawl(args: argparse.Namespace, auth_path: Path | None) -> None:
         refresh_doc=bool(getattr(args, "refresh_doc", False)),
     )
     emit_generate("doc_fusion", "文書と実測を突合", done=True)
+
+    emit_generate("code_fusion", "ソースと実測を突合")
+    _run_code_fusion(
+        analyzed_pages,
+        getattr(args, "source_dir", None),
+        output_dir,
+        source_repos=getattr(args, "source_repo", None),
+    )
+    emit_generate("code_fusion", "ソースと実測を突合", done=True)
 
     emit_generate("ux", "UX・アクセシビリティを評価")
     exploration_coverage = _load_exploration_coverage(output_dir)
@@ -1391,6 +1420,163 @@ def _save_diff_summary(diff: object, output_dir: Path) -> None:
     }
     (output_dir / "diff_summary.json").write_text(
         json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8"
+    )
+
+
+def _run_code_fusion(
+    pages: list[AnalyzedPage],
+    source_dirs: list[Path] | None,
+    output_dir: Path,
+    source_repos: list[str] | None = None,
+) -> None:
+    """ソースディレクトリ／リポジトリがあればルート定義を抽出し、実測結果と突合する。
+
+    突合結果は code_fusion.json / code_fusion.md として出力する。
+    走査失敗はクロール成果を無駄にしないため警告に留める（文書突合と同じ方針）。
+    リポジトリは一時ディレクトリへ shallow clone し、突合後に破棄する。
+    """
+    if not source_dirs and not source_repos:
+        return
+    import tempfile
+
+    with tempfile.TemporaryDirectory(prefix="webspec2doc-src-") as work_dir:
+        targets, labels, failures = _resolve_source_targets(
+            source_dirs, source_repos, Path(work_dir)
+        )
+        if not targets and not failures:
+            return
+        _fuse_source_targets(pages, targets, labels, output_dir, failures)
+
+
+def _resolve_source_targets(
+    source_dirs: list[Path] | None,
+    source_repos: list[str] | None,
+    work_dir: Path,
+) -> tuple[list[Path], dict[str, str], list[str]]:
+    """走査対象のローカルパス一覧・表示用ラベル・取得失敗の記録を返す。
+
+    リポジトリ指定は clone に失敗しても他の対象を捨てない（警告に留める）。
+    失敗はレポートにも残す（黙って対象が減ると利用者に伝わらない）。
+    """
+    from ingest.repo_fetcher import (
+        RepositoryFetchError,
+        fetch_repository,
+        normalize_repo_url,
+        redact,
+        split_repo_ref,
+    )
+
+    targets: list[Path] = list(source_dirs or [])
+    labels: dict[str, str] = {}
+    failures: list[str] = []
+    seen: set[tuple[str, str]] = set()
+    for index, raw in enumerate(source_repos or []):
+        url, ref = split_repo_ref(str(raw))
+        try:
+            # 重複判定を clone の前に置く（後ろに置くと同じリポジトリを 2 回取得する）
+            key = (normalize_repo_url(url), ref)
+            if key in seen:
+                logger.warning("同じリポジトリが重複指定されています（無視）: %s", redact(url))
+                continue
+            seen.add(key)
+            fetched = fetch_repository(url, work_dir / f"repo{index}", ref=ref)
+        except RepositoryFetchError as exc:
+            logger.warning("リポジトリの取得に失敗しました（この対象をスキップ）: %s", exc)
+            failures.append(f"{redact(url)}: 取得失敗（{exc}）")
+            continue
+        targets.append(fetched.path)
+        labels[str(fetched.path.resolve())] = (
+            f"{fetched.url}@{fetched.ref}" if fetched.ref else fetched.url
+        )
+    return targets, labels, failures
+
+
+def _fuse_source_targets(
+    pages: list[AnalyzedPage],
+    source_dirs: list[Path],
+    labels: dict[str, str],
+    output_dir: Path,
+    failures: list[str] | None = None,
+) -> None:
+    """走査対象を 1 つのバンドルに束ねて突合し、レポートを出力する。
+
+    取得に失敗した対象（failures）も skipped として持ち回る。
+    ルートが 1 件も取れなくても、失敗があればレポートを出して痕跡を残す。
+    """
+    from generator.code_fusion_reporter import save_code_fusion_outputs
+    from ingest.code_models import CodeBundle
+    from ingest.code_reader import scan_source_tree
+    from ingest.route_matcher import fuse_code
+
+    routes: list = []
+    seen_routes: set[tuple] = set()
+    source_files: list[str] = []
+    seen_files: set[str] = set()
+    frameworks: set[str] = set()
+    skipped: list[str] = list(failures or [])
+    roots: list[str] = []
+    for source_dir in source_dirs:
+        try:
+            bundle = scan_source_tree(Path(source_dir))
+        except (FileNotFoundError, ValueError, OSError) as exc:
+            logger.warning("ソース走査に失敗しました（突合をスキップ）: %s: %s", source_dir, exc)
+            continue
+        label = labels.get(str(Path(source_dir).resolve()), bundle.root)
+        if label in roots:
+            logger.warning("同じソースディレクトリが重複指定されています（無視）: %s", label)
+            continue
+        roots.append(label)
+        # 重複・入れ子指定（--source-dir . --source-dir ./web 等）でルートが多重計上され、
+        # 到達率が指定回数分の 1 になるのを防ぐ。scan_source_tree が単一バンドル内で
+        # 行っている dedup と同じキーで、バンドル結合時にも畳む。
+        for route in bundle.routes:
+            evidence = route.evidence
+            key = (
+                route.prefix,
+                route.path,
+                route.methods,
+                evidence.file if evidence else "",
+                evidence.line if evidence else 0,
+            )
+            if key in seen_routes:
+                continue
+            seen_routes.add(key)
+            routes.append(route)
+        for name in bundle.source_files:
+            if name not in seen_files:
+                seen_files.add(name)
+                source_files.append(name)
+        frameworks.update(bundle.frameworks)
+        skipped.extend(bundle.skipped)
+    if not roots and not skipped:
+        return
+    merged = CodeBundle(
+        root=" / ".join(roots) if roots else "（取得に失敗）",
+        routes=tuple(routes),
+        source_files=tuple(source_files),
+        frameworks=tuple(sorted(frameworks)),
+        skipped=tuple(dict.fromkeys(skipped)),
+    )
+    if not merged.routes:
+        logger.warning(
+            "ソースからルート定義を検出できませんでした（未対応フレームワークの可能性）: %s",
+            merged.root or "（走査対象なし）",
+        )
+        if not merged.skipped:
+            return
+        # 走査できなかった理由があるなら、レポートを出して利用者に見える形で残す
+    try:
+        result = fuse_code(pages, merged)
+        save_code_fusion_outputs(result, merged, output_dir)
+    except (OSError, ValueError, KeyError) as exc:
+        # docstring の宣言どおり、突合・出力の失敗でクロール成果ごとランを落とさない。
+        logger.warning("ソース突合の出力に失敗しました（スキップ）: %s", exc)
+        return
+    logger.info(
+        "ソース×実測の突合が完了しました: ルート %d 件・対応 %d 件・未到達 %d 件（code_fusion.md）",
+        len(merged.routes),
+        len(result.matches),
+        len(result.unreached),
     )
 
 

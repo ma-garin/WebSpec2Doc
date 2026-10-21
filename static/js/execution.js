@@ -242,6 +242,9 @@ document.getElementById('form').addEventListener('submit', (e) => {
     auth: document.getElementById('auth-path').value.trim() || getSettings().auth || '',
     crawl_mode: mode,
     reference_docs: referenceDocPaths.map(d => d.path).join(','),
+    // ソース突合（Code Fusion）。画面はリポジトリ URL のみを受け付け、
+    // 妥当性の判定はサーバ側（web/validation.py::_safe_source_repo）に任せる。
+    source_repo: document.getElementById('source-repo')?.value.trim() || '',
     login_urls: loginUrls.join(','),
     login_landing_url: loginLandingUrl,
     scope_preset: discoverScopePreset(),

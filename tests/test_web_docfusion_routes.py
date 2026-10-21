@@ -5,12 +5,15 @@
     - web/routes/crawl.py::api_doc_fusion (GET /api/doc-fusion)
     - web/routes/crawl.py::run の reference_docs パラメータ処理
     - web/validation.py::_safe_reference_doc_paths
+    - web/routes/crawl.py::run の source_repo パラメータ処理（Code Fusion）
+    - web/validation.py::_safe_source_repo
 """
 
 from __future__ import annotations
 
 import io
 import json
+import os
 import sys
 from pathlib import Path
 
@@ -22,12 +25,13 @@ import web.routes.login as login_mod
 import web.routes.report as report_mod
 import web.routes.site as site_mod
 import web.summary as summary_mod
-from web.validation import _safe_reference_doc_paths
+from web.validation import _safe_reference_doc_paths, _safe_source_repo
 
 
 class _Popen:
-    def __init__(self, cmd, stdout=None, stderr=None, text=None, bufsize=None) -> None:
+    def __init__(self, cmd, stdout=None, stderr=None, text=None, bufsize=None, env=None) -> None:
         self.cmd = cmd
+        self.env = env
         self.stdout = iter(["クロールを開始しました\n", "クロール完了\n"])
         self.returncode = None
 
@@ -243,3 +247,146 @@ class TestSafeReferenceDocPaths:
         doc.write_text("# 要件", encoding="utf-8")
 
         assert _safe_reference_doc_paths([str(doc)], "example.com") == [str(doc.resolve())]
+
+
+class TestSafeSourceRepo:
+    """ブラウザから来るリポジトリ指定の検証（web/validation.py::_safe_source_repo）。"""
+
+    def test_shorthand_expands_to_github_https(self) -> None:
+        url, reject = _safe_source_repo("owner/repo")
+        assert url == "https://github.com/owner/repo"
+        assert reject == ""
+
+    def test_https_url_and_ref_are_kept(self) -> None:
+        url, reject = _safe_source_repo("https://github.com/owner/repo@develop")
+        assert url == "https://github.com/owner/repo@develop"
+        assert reject == ""
+
+    def test_ssh_is_rejected_with_reason(self) -> None:
+        """ssh を許すとサーバの鍵で private リポジトリを引けてしまう。"""
+        url, reject = _safe_source_repo("git@github.com:owner/repo.git")
+        assert url == ""
+        assert "https" in reject
+
+    def test_credentials_in_url_are_rejected(self) -> None:
+        url, reject = _safe_source_repo("https://user:ghp_secret@github.com/owner/repo")
+        assert url == ""
+        assert "ghp_secret" not in reject
+
+    def test_query_string_is_rejected(self) -> None:
+        url, reject = _safe_source_repo("https://github.com/o/r?private_token=secret")
+        assert url == ""
+        assert "secret" not in reject
+
+    def test_host_outside_allowlist_is_rejected(self, monkeypatch) -> None:
+        url, reject = _safe_source_repo("https://gitlab.com/owner/repo")
+        assert url == ""
+        assert "gitlab.com" in reject
+        # 許可リストは関数内で都度解決するため、環境変数の差し替えが効く
+        monkeypatch.setenv("WEBSPEC2DOC_SOURCE_REPO_HOSTS", "gitlab.com")
+        url, reject = _safe_source_repo("https://gitlab.com/owner/repo")
+        assert url == "https://gitlab.com/owner/repo"
+        assert reject == ""
+
+    def test_local_and_option_like_values_are_rejected(self) -> None:
+        for bad in ("file:///etc", "ext::sh -c id", "--upload-pack=evil", "https://github.com/a/b/../../c"):
+            url, reject = _safe_source_repo(bad)
+            assert url == "", bad
+            assert reject, bad
+
+    def test_invalid_ref_is_rejected(self) -> None:
+        """ref に使えない文字は弾く。
+
+        末尾に "/" を含む値（"main;rm -rf /"）は split_repo_ref が ref とみなさず
+        URL 側へ回るため、理由はパス形式の側で出る。どちらの経路でも拒否はされる。
+        """
+        url, reject = _safe_source_repo("https://github.com/o/r@main;rm")
+        assert url == ""
+        assert "ブランチ" in reject
+
+        url, reject = _safe_source_repo("https://github.com/o/r@main;rm -rf /")
+        assert url == ""
+        assert reject
+
+    def test_empty_input_is_not_an_error(self) -> None:
+        assert _safe_source_repo("") == ("", "")
+
+
+class TestRunSourceRepoWiring:
+    """/run から --source-repo が渡り、git が資格情報なしで走ること。"""
+
+    def _run(self, monkeypatch, source_repo: str):
+        popen_calls = []
+
+        def fake_popen(cmd, *args, **kwargs):
+            popen_calls.append({"cmd": cmd, "env": kwargs.get("env")})
+            return _Popen(cmd, *args, **kwargs)
+
+        monkeypatch.setattr(crawl_mod.subprocess, "Popen", fake_popen)
+        body = _client().post(
+            "/run",
+            data={
+                "urls": "https://example.com/",
+                "format": "md,html",
+                "source_repo": source_repo,
+            },
+        ).get_data(as_text=True)
+        return popen_calls, body
+
+    def test_run_appends_source_repo_arg(self, tmp_path: Path, monkeypatch) -> None:
+        _patch_output_dirs(tmp_path, monkeypatch)
+        calls, _ = self._run(monkeypatch, "https://github.com/ma-garin/WebSpec2Doc")
+        cmd = calls[0]["cmd"]
+        assert "--source-repo" in cmd
+        assert cmd[cmd.index("--source-repo") + 1] == "https://github.com/ma-garin/WebSpec2Doc"
+
+    def test_run_disables_git_credentials(self, tmp_path: Path, monkeypatch) -> None:
+        """~/.gitconfig の credential.helper 経由で private リポジトリを引かせない。"""
+        _patch_output_dirs(tmp_path, monkeypatch)
+        calls, _ = self._run(monkeypatch, "https://github.com/ma-garin/WebSpec2Doc")
+        env = calls[0]["env"]
+        assert env is not None
+        assert env["GIT_CONFIG_GLOBAL"] == os.devnull
+        assert env["GIT_CONFIG_SYSTEM"] == os.devnull
+        assert env["GIT_TERMINAL_PROMPT"] == "0"
+
+    def test_rejected_repo_is_reported_and_crawl_continues(
+        self, tmp_path: Path, monkeypatch
+    ) -> None:
+        """黙って落とすと「突合したつもりで突合していない」になるため理由を出す。"""
+        _patch_output_dirs(tmp_path, monkeypatch)
+        calls, body = self._run(monkeypatch, "git@github.com:owner/repo.git")
+        assert "ソース突合:" in body
+        assert "--source-repo" not in calls[0]["cmd"]
+        assert calls[0]["env"] is None
+        assert "クロール完了" in body
+
+    def test_no_repo_leaves_command_unchanged(self, tmp_path: Path, monkeypatch) -> None:
+        _patch_output_dirs(tmp_path, monkeypatch)
+        calls, body = self._run(monkeypatch, "")
+        assert "--source-repo" not in calls[0]["cmd"]
+        assert calls[0]["env"] is None
+        assert "ソース突合:" not in body
+
+
+class TestCodeFusionApi:
+    def test_code_fusion_api_returns_payload(self, tmp_path: Path, monkeypatch) -> None:
+        _patch_output_dirs(tmp_path, monkeypatch)
+        domain_dir = tmp_path / "example.com"
+        domain_dir.mkdir(parents=True)
+        payload = {"summary": {"unreached": 3}, "claim_notice": "未到達は欠陥ではない"}
+        (domain_dir / "code_fusion.json").write_text(
+            json.dumps(payload, ensure_ascii=False), encoding="utf-8"
+        )
+        res = _client().get("/api/code-fusion?domain=example.com")
+        assert res.status_code == 200
+        assert res.get_json()["summary"]["unreached"] == 3
+
+    def test_code_fusion_api_missing_is_404(self, tmp_path: Path, monkeypatch) -> None:
+        _patch_output_dirs(tmp_path, monkeypatch)
+        (tmp_path / "example.com").mkdir(parents=True)
+        assert _client().get("/api/code-fusion?domain=example.com").status_code == 404
+
+    def test_code_fusion_api_invalid_domain(self, tmp_path: Path, monkeypatch) -> None:
+        _patch_output_dirs(tmp_path, monkeypatch)
+        assert _client().get("/api/code-fusion?domain=../etc").status_code == 404

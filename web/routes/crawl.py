@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 import sys
 import uuid
@@ -20,6 +21,7 @@ from web.validation import (
     _domain_of,
     _safe_auth_path,
     _safe_reference_doc_paths,
+    _safe_source_repo,
     _valid_domain,
 )
 
@@ -106,6 +108,9 @@ def run() -> Response:
         domain_name = ""
     domain = domain_name or (_domain_of(urls.split(",")[0]) if urls else "")
     reference_docs = _safe_reference_doc_paths(request.form.get("reference_docs", ""), domain)
+    # ソース突合（Code Fusion）。画面からはリポジトリ URL のみ受け付ける。
+    # 却下理由は捨てずに実行ログへ流す（黙って落とすと「突合したつもり」になる）。
+    source_repo, source_repo_reject = _safe_source_repo(request.form.get("source_repo", ""))
 
     # 実行条件（解析範囲）。実行履歴に「どの範囲を解析した結果か」を残すためだけの値で、
     # クロール自体の引数には使わない（depth/max_pages は既存フィールドが持つ）。
@@ -167,13 +172,31 @@ def run() -> Response:
             cmd += ["--auth", auth]
         for doc_path in reference_docs:
             cmd += ["--reference-doc", doc_path]
+        if source_repo:
+            cmd += ["--source-repo", source_repo]
+        # リポジトリ取得を伴う場合だけ、git を資格情報なしで走らせる。
+        # repo_fetcher の GIT_TERMINAL_PROMPT=0 / GIT_ASKPASS=true だけでは足りない。
+        # ~/.gitconfig の credential.helper が刺さっていれば認証は通ってしまい、
+        # 画面の操作者がサーバの資格情報で任意の private リポジトリを引ける。
+        # CLI から直接実行する場合の挙動は変えない（ここは Web 経路のみ）。
+        env = None
+        if source_repo:
+            env = {
+                **os.environ,
+                "GIT_CONFIG_GLOBAL": os.devnull,
+                "GIT_CONFIG_SYSTEM": os.devnull,
+                "GIT_TERMINAL_PROMPT": "0",
+                "GIT_ASKPASS": "true",
+            }
         proc = subprocess.Popen(
-            cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, bufsize=1
+            cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, bufsize=1, env=env
         )
         _RUNNING_PROCS[run_id] = proc
         skipped_count = 0
         try:
             yield f"RUN_ID:{run_id}\n"
+            if source_repo_reject:
+                yield f"ソース突合: {source_repo_reject}\n"
             # 行は一切加工せずそのまま流す（クライアントの表示・パースを壊さないため）。
             # 横でスキップ件数だけ数え、実行条件と一緒に履歴へ残す。
             tail_lines: list[str] = []
@@ -342,3 +365,22 @@ def api_doc_fusion() -> tuple[dict, int]:
         return json.loads(path.read_text(encoding="utf-8")), 200
     except (OSError, json.JSONDecodeError):
         return {"error": "doc_fusion.json を読み込めませんでした"}, 500
+
+
+@bp.get("/api/code-fusion")
+def api_code_fusion() -> tuple[dict, int]:
+    """output/{domain}/code_fusion.json をそのまま返す（無ければ 404）。
+
+    api_doc_fusion と同じ寛容な読み方。ソース突合を実行していない run では
+    ファイルが存在しないため、404 を異常として扱わない。
+    """
+    domain = request.args.get("domain", "")
+    if not _valid_domain(domain):
+        return {"error": "not found"}, 404
+    path = _out() / domain / "code_fusion.json"
+    if not path.is_file():
+        return {"error": "code_fusion.json not found"}, 404
+    try:
+        return json.loads(path.read_text(encoding="utf-8")), 200
+    except (OSError, json.JSONDecodeError):
+        return {"error": "code_fusion.json を読み込めませんでした"}, 500

@@ -404,3 +404,33 @@ class TestDiscoverScopeControls:
     def test_default_preset_is_standard(self, spa: str) -> None:
         """既定は標準（深さ2 / 最大30）。旧既定の 300画面固定に戻っていないこと。"""
         assert "checked" in _input_tag(spa, "discover-scope-standard")
+
+
+class TestCodeFusionControls:
+    """ソース突合（Code Fusion）の入力欄と結果タブが配られていること。
+
+    JS の振る舞い（タブ切替・表示/非表示）は本ファイルでも E2E でも未検証。
+    ここで担保できるのは「要素が HTML に存在するか」までである。
+    """
+
+    def test_source_repo_input_exists(self, spa: str) -> None:
+        """条件設定にリポジトリ入力欄があること。"""
+        assert 'id="source-repo"' in spa
+        assert "ソースコードのリポジトリ" in spa
+
+    def test_source_repo_input_is_text_not_path(self, spa: str) -> None:
+        """画面で受けるのは URL のみ。ローカルパスを打たせる作りに戻っていないこと。"""
+        tag = _input_tag(spa, "source-repo")
+        assert 'type="text"' in tag
+        assert "owner/repo" in tag
+
+    def test_code_fusion_tab_and_panel_exist(self, spa: str) -> None:
+        """結果ビューにソース突合タブとパネルがあること。"""
+        assert 'id="tab-code-fusion"' in spa
+        assert 'id="rp-code-fusion"' in spa
+        assert 'id="tab-count-code-fusion"' in spa
+
+    def test_code_fusion_tab_is_hidden_by_default(self, spa: str) -> None:
+        """突合していない run でタブが出っぱなしにならないこと。"""
+        assert re.search(r'id="tab-code-fusion"[^>]*\shidden', spa)
+        assert re.search(r'id="rp-code-fusion"[^>]*\shidden', spa)

@@ -709,6 +709,79 @@
       ]
     },
     {
+      "feature_id": "code_fusion",
+      "name": "ソース×実測突合（Code Fusion — 未到達ルートの洗い出し）",
+      "risk_level": "high",
+      "status": "implemented",
+      "ui_files": [
+        "templates/partials/view-generate.html",
+        "templates/partials/result-panel.html",
+        "static/js/execution.js",
+        "static/js/results.js",
+        "static/js/code-fusion.js"
+      ],
+      "route_files": [
+        "web/routes/crawl.py",
+        "web/validation.py"
+      ],
+      "core_files": [
+        "src/ingest/code_models.py",
+        "src/ingest/code_reader.py",
+        "src/ingest/route_matcher.py",
+        "src/ingest/repo_fetcher.py",
+        "src/generator/code_fusion_reporter.py"
+      ],
+      "symbols": [
+        "scan_source_tree",
+        "fuse_code",
+        "effective_path",
+        "normalize_route_pattern",
+        "fetch_repository",
+        "normalize_repo_url",
+        "split_repo_ref",
+        "redact",
+        "scrub_text",
+        "build_code_fusion_payload",
+        "build_code_fusion_markdown",
+        "save_code_fusion_outputs",
+        "code_route_to_dict",
+        "_safe_source_repo",
+        "allowed_source_repo_hosts"
+      ],
+      "outputs": [
+        "code_fusion.json",
+        "code_fusion.md",
+        "unreached routes list in code_fusion.md",
+        "GET /api/code-fusion",
+        "結果ビューのソース突合タブ"
+      ],
+      "persistence": [
+        "output/{domain}/code_fusion.json",
+        "output/{domain}/code_fusion.md"
+      ],
+      "failure_modes": [
+        "unsupported_framework",
+        "no_routes_detected",
+        "repository_fetch_failed",
+        "repository_fetch_timeout",
+        "disallowed_transport",
+        "disallowed_repo_host",
+        "credential_in_repo_url",
+        "invalid_ref_name",
+        "duplicate_source_target",
+        "dynamic_route_path_recorded_as_skipped",
+        "catch_all_route_does_not_steal_specific_match",
+        "unreached_not_asserted_as_defect",
+        "report_write_failed"
+      ],
+      "required_tests": [
+        "happy_path",
+        "error_path",
+        "unreached_detection",
+        "evidence"
+      ]
+    },
+    {
       "feature_id": "exploration_capture",
       "name": "探索セッション記録 / カバレッジヒートマップ",
       "risk_level": "high",

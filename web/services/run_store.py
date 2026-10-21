@@ -62,6 +62,7 @@ _ROOT_ARTIFACTS: tuple[str, ...] = (
     "comparison.html",
     "ux_review.html",
     "doc_fusion.json",
+    "code_fusion.json",
     "transition.mmd",
 )
 _QA_ARTIFACTS: tuple[str, ...] = (

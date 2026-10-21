@@ -1,0 +1,21 @@
+Document Assurance 再設計 クラス契約（A=JS/HTML、B=CSS が共有。追加は双方へ通知）
+接頭辞 dax-。既存 tokens（static/css/tokens.css 等）の変数のみ使用。色は neutral/primary/success/warning/danger の 5 系統。8px グリッド。
+骨格: #da-root > .dax（grid: header / nav / main。main だけ内側スクロール）
+ .dax-header: .dax-header__title / __meta（文書名・版・最終解析）/ __actions（.dax-btn--primary「再解析」1 つ、.dax-btn--ghost「比較」「エクスポート」(.dax-menu)、「設定」）
+ .dax-nav（role=tablist）> .dax-nav__item[aria-selected] ×7: 概要/要件/指摘/矛盾/トレーサビリティ/変更/レビュー（件数は .dax-count）
+ .dax-main > .dax-page
+概要: .dax-hero（.dax-pill + .dax-hero__state 大きな状態語 + .dax-hero__lead 一文 + .dax-btn--primary）
+ .dax-metrics（1 行の小さな指標列: .dax-metric > .dax-metric__label/.dax-metric__value）
+ .dax-summary（要約文 + ol.dax-actions > li.dax-action[button]）
+ .dax-section（見出し h2.dax-h2 + 中身。枠なし。区切りは上の罫線）/ details.dax-collapse（折りたたみ）
+ 品質: .dax-quality > button.dax-qrow（.dax-qrow__name / __value / .dax-bar>.dax-bar__fill）
+ 変更: .dax-change（.dax-change__title / __diff（before → after）/ __impact（.dax-tag））
+ 被覆: .dax-funnel > .dax-funnel__row（label / value / .dax-bar）
+表: .dax-toolbar（.dax-search, .dax-chips>.dax-chip[aria-pressed], .dax-colsel）/ .dax-table-wrap > table.dax-table（行 tr[tabindex=0] でクリック→詳細）
+状態: .dax-pill--ready|--conditional|--blocked|--draft ; .dax-sev--critical|--high|--medium|--low（色＋文字）; .dax-status--open|--decision|--resolved|--waived ; .dax-req--ok|--attention|--unknown
+マスター詳細: .dax-md > .dax-md__list（.dax-item[aria-selected]）+ .dax-md__detail（.dax-detail__section h3.dax-h3）
+矛盾: .dax-compare > .dax-compare__side ×2 + .dax-compare__topic（中央）+ .dax-unknown（正しい値: 未確定）
+ドロワー: .dax-drawer[role=dialog] > .dax-drawer__head / __body ; 根拠は details.dax-adv（「根拠の詳細」）の中だけ
+ボタン: .dax-btn（--primary / --ghost / --danger / --sm）; アイコンのみは aria-label 必須
+状態画面: .dax-state（--empty / --error / --blocked）> .dax-state__title / __body / .dax-btn ; 読み込み .dax-skel
+文字: .dax-h1 / .dax-h2 / .dax-h3 / 本文 / .dax-meta（4 段のみ）

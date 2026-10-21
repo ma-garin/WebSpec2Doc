@@ -1,189 +1,410 @@
-/* ドキュメント品質保証（/docverify の #assure）。値は tokens.css の変数のみ。ページ内のメイン領域に表示し、スクロールは .dv-content が担う。 */
-.da { min-width: 0; }
-#da-root { min-width: 0; --da-sticky-h: 96px; }
-.da *, .da *::before, .da *::after { box-sizing: border-box; }
-.da-i { width: 16px; height: 16px; flex: none; vertical-align: -3px; margin-right: 6px; }
-.da-i-lg { width: 36px; height: 36px; margin: 0; color: var(--color-text-secondary); }
-.da-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+/* ドキュメント品質保証（/docverify #assure）— クラス契約は static/css/DAX_CONTRACT.txt。
+ * 値は static/tokens.css の変数のみ。色は neutral / primary / success / warning / danger の 5 系統。
+ * 余白: 要素間 8px（--space-2）/ ブロック間 16px（--space-4）/ セクション間 32px（--space-8）の 3 種。
+ * 文字: .dax-h1 22 / .dax-h2 16 / .dax-h3 14 太字 / 本文 14 / .dax-meta 12。
+ * レイアウト: ta2.css 方式。#assure 表示中は .dv-content のスクロールを止め、.dax-main だけを内側スクロールにする。 */
 
-/* 固定ヘッダ（分析ボタンは常に見える） */
-.da-sticky { position: sticky; top: -20px; z-index: 6; margin: 0 -28px; padding: 8px 28px 0; background: var(--color-bg); border-bottom: 1px solid var(--color-border); }
-.da-top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-2) var(--space-4); padding-bottom: var(--space-2); }
-.da-who { display: flex; flex-direction: column; min-width: 0; }
-.da-name { font-size: var(--text-md); color: var(--color-text); overflow-wrap: anywhere; }
-.da-head-actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
-.da-head-actions .c-btn { display: inline-flex; align-items: center; text-decoration: none; }
-.da-head-actions .c-btn .da-i { margin-right: 6px; }
-.da-tabs { display: flex; flex-wrap: wrap; gap: 2px; }
-.da-tab { border: 0; background: none; padding: 9px 14px; font: inherit; font-size: var(--text-sm); color: var(--color-text-secondary); cursor: pointer; border-bottom: 3px solid transparent; margin-bottom: -1px; }
-.da-tab:hover { color: var(--color-text); }
-.da-tab[aria-selected="true"] { color: var(--color-primary-dark); font-weight: 700; border-bottom-color: var(--color-primary); }
-.da-tn { display: inline-block; min-width: 18px; padding: 0 5px; margin-left: 2px; border-radius: var(--radius-full); background: var(--color-surface-3); color: var(--color-text); font-size: 11px; text-align: center; font-weight: 600; }
-.da-body { padding: var(--space-4) 0 var(--space-8); display: flex; flex-direction: column; gap: var(--space-4); min-width: 0; }
+/* ---------- 骨格 ---------- */
+.dv-content:has(.dv-view.da:not([hidden])) { overflow: hidden; padding: 0; display: flex; flex-direction: column; }
+.dv-view.da:not([hidden]) { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; }
+#da-root { flex: 1 1 auto; min-height: 0; min-width: 0; display: flex; flex-direction: column; }
+.dax, .dax *, .dax *::before, .dax *::after { box-sizing: border-box; }
+.dax {
+  flex: 1 1 auto; min-height: 0; min-width: 0; height: 100%;
+  display: grid; grid-template-rows: auto auto minmax(0, 1fr); grid-template-columns: minmax(0, 1fr);
+  background: var(--color-bg); color: var(--color-text);
+  font-family: var(--font-main); font-size: var(--text-base); line-height: var(--leading-normal);
+}
+.dax-header {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-2) var(--space-4);
+  padding: var(--space-4) var(--space-6) var(--space-2); background: var(--color-surface); min-width: 0;
+}
+.dax-header__title { margin: 0; font-size: var(--text-lg); font-weight: 700; line-height: var(--leading-tight); color: var(--color-text); overflow-wrap: anywhere; }
+.dax-header__meta { display: flex; flex-wrap: wrap; gap: 0 var(--space-3); margin-top: 2px; font-size: 12px; color: var(--color-text-secondary); }
+.dax-header__actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
 
-/* 共通部品 */
-.da-card { border: 1px solid var(--color-border); border-radius: var(--radius-lg); padding: var(--space-4); background: var(--color-surface); min-width: 0; box-shadow: var(--shadow-sm); }
-.da-h { margin: 0 0 var(--space-2); font-size: var(--text-base); font-weight: 700; color: var(--color-text); }
-.da-big { margin: 0 0 6px; font-size: var(--text-lg); font-weight: 700; color: var(--color-text); }
-.da-mut { margin: 0; font-size: var(--text-xs); color: var(--color-text-secondary); overflow-wrap: anywhere; }
-.da-note { margin: 0; padding: 8px 12px; border-radius: var(--radius-md); background: var(--color-info-bg); border: 1px solid var(--color-info-border); color: var(--color-info-tx); font-size: var(--text-sm); }
-.da-err { display: flex; gap: 8px; align-items: flex-start; padding: 10px 12px; border-radius: var(--radius-md); background: var(--color-critical-bg); border: 1px solid var(--color-critical-border); color: var(--color-critical-tx); font-size: var(--text-sm); margin-top: var(--space-3); }
-.da-err .da-i { margin: 2px 0 0; }
-.da-list { margin: 0; padding-left: 18px; font-size: var(--text-sm); overflow-wrap: anywhere; }
-.da-quote { margin: 6px 0; padding: 8px 12px; border-left: 3px solid var(--color-border-strong); background: var(--color-surface-2); font-size: var(--text-sm); overflow-wrap: anywhere; border-radius: 0 var(--radius-sm) var(--radius-sm) 0; }
-.da-fix { margin: 6px 0 0; font-size: var(--text-sm); overflow-wrap: anywhere; }
-.da-pre { white-space: pre-wrap; overflow-wrap: anywhere; font-family: inherit; font-size: var(--text-sm); background: var(--color-surface-2); padding: 8px 12px; border-radius: var(--radius-md); margin: 6px 0 0; }
-.da-badge { display: inline-block; font-size: 11px; padding: 1px 7px; border-radius: var(--radius-sm); background: var(--color-surface-3); color: var(--color-text); border: 1px solid var(--color-border); }
-.da-b-ai, .da-b-hybrid { background: var(--color-primary-light); color: var(--color-primary-dark); border-color: var(--color-primary-border); }
-.da-prov-INFERRED { background: var(--color-warning-bg); color: var(--color-warning-tx); border-color: var(--color-warning-border); }
-.da-pill { display: inline-flex; align-items: center; gap: 4px; padding: 1px 8px; border-radius: var(--radius-full); font-size: 12px; white-space: nowrap; border: 1px solid var(--color-border); background: var(--color-surface-2); color: var(--color-text); }
-.da-pill-ok { background: var(--color-success-bg); color: var(--color-success-tx); border-color: var(--color-success-border); }
-.da-pill-warn { background: var(--color-warning-bg); color: var(--color-warning-tx); border-color: var(--color-warning-border); }
-.da-pill-bad { background: var(--color-critical-bg); color: var(--color-critical-tx); border-color: var(--color-critical-border); }
-.da-sev { display: inline-flex; align-items: center; gap: 4px; padding: 1px 8px; border-radius: var(--radius-sm); font-size: 12px; font-weight: 700; border: 1px solid var(--color-border); white-space: nowrap; }
-.da-sev-critical { background: var(--color-critical-bg); color: var(--color-critical-tx); border-color: var(--color-critical-border); }
-.da-sev-high { background: var(--color-high-bg); color: var(--color-high-tx); border-color: var(--color-high-border); }
-.da-sev-medium { background: var(--color-medium-bg); color: var(--color-medium-tx); border-color: var(--color-medium-border); }
-.da-sev-low { background: var(--color-low-bg); color: var(--color-low-tx); border-color: var(--color-low-border); }
-.da-sev-info { background: var(--color-info-bg); color: var(--color-info-tx); border-color: var(--color-info-border); }
-.da-tx-bad { color: var(--color-critical-tx); } .da-tx-warn { color: var(--color-warning-tx); } .da-tx-info { color: var(--color-info-tx); }
+.dax-nav {
+  display: flex; gap: var(--space-1); padding: 0 var(--space-6); background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border); overflow-x: auto; scrollbar-width: none; min-width: 0;
+}
+.dax-nav::-webkit-scrollbar { display: none; }
+.dax-nav__item {
+  display: inline-flex; align-items: center; gap: 6px; flex: none;
+  padding: 10px var(--space-3); margin-bottom: -1px; border: 0; border-bottom: 2px solid transparent; background: none;
+  font: inherit; font-size: var(--text-sm); color: var(--color-text-secondary); cursor: pointer; white-space: nowrap;
+}
+.dax-nav__item:hover { color: var(--color-text); }
+.dax-nav__item[aria-selected="true"] { color: var(--color-text); font-weight: 600; border-bottom-color: var(--color-primary); }
+.dax-nav__item:focus-visible { outline: 2px solid var(--color-primary); outline-offset: -2px; border-radius: var(--radius-sm); }
+.dax-count {
+  display: inline-block; min-width: 20px; padding: 0 6px; border-radius: var(--radius-full);
+  background: var(--color-surface-2); color: var(--color-text-secondary); font-size: var(--text-xs); line-height: 18px; text-align: center; font-variant-numeric: tabular-nums;
+}
+.dax-nav__item[aria-selected="true"] .dax-count { background: var(--color-primary-light); color: var(--color-primary-dark); }
 
-/* 準備状態バナー */
-.da-banner { display: flex; gap: var(--space-4); align-items: flex-start; padding: var(--space-4); border-radius: var(--radius-lg); border: 1px solid var(--color-border); background: var(--color-surface); }
-.da-bn-ic { display: grid; place-items: center; width: 40px; height: 40px; border-radius: var(--radius-full); flex: none; background: var(--color-surface-3); }
-.da-bn-ic .da-i { width: 22px; height: 22px; margin: 0; }
-.da-bn-t { margin: 0 0 4px; font-size: var(--text-lg); font-weight: 700; color: var(--color-text); }
-.da-bn-w { margin: 0; font-size: var(--text-sm); color: var(--color-text); overflow-wrap: anywhere; }
-.da-bn-ok { background: var(--color-success-bg); border-color: var(--color-success-border); } .da-bn-ok .da-bn-ic { color: var(--color-success-tx); background: var(--color-surface); }
-.da-bn-warn { background: var(--color-warning-bg); border-color: var(--color-warning-border); } .da-bn-warn .da-bn-ic { color: var(--color-warning-tx); background: var(--color-surface); }
-.da-bn-bad { background: var(--color-critical-bg); border-color: var(--color-critical-border); } .da-bn-bad .da-bn-ic { color: var(--color-critical-tx); background: var(--color-surface); }
-.da-bn-info { background: var(--color-info-bg); border-color: var(--color-info-border); } .da-bn-info .da-bn-ic { color: var(--color-info-tx); background: var(--color-surface); }
+.dax-main { min-height: 0; min-width: 0; overflow-y: auto; overflow-x: hidden; }
+.dax-page { max-width: 1200px; margin: 0 auto; padding: var(--space-6) var(--space-6) var(--space-12); display: flex; flex-direction: column; gap: var(--space-8); min-width: 0; }
 
-/* スコア */
-.da-grid2 { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); gap: var(--space-4); }
-.da-ringcard { display: flex; flex-direction: column; align-items: center; text-align: center; gap: var(--space-2); }
-.da-ringcard .da-h { align-self: flex-start; }
-.da-gauge { position: relative; width: 156px; height: 156px; border: 0; background: none; padding: 0; cursor: pointer; border-radius: var(--radius-full); font: inherit; }
-.da-gauge svg { width: 100%; height: 100%; display: block; }
-.da-ring-t { stroke: var(--color-border-strong); opacity: .5; }
-.da-ring-v { stroke: var(--color-text-secondary); }
-.da-ring-v.da-tone-ok { stroke: var(--color-success); } .da-ring-v.da-tone-warn { stroke: var(--color-warning); } .da-ring-v.da-tone-bad { stroke: var(--color-critical); }
-.da-gauge-c { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; }
-.da-gauge-n { font-size: 32px; line-height: 1.1; font-weight: 700; color: var(--color-text); }
-.da-gauge-n small { font-size: 12px; font-weight: 400; color: var(--color-text-secondary); }
-.da-gauge-ne { font-size: var(--text-lg); color: var(--color-text-secondary); }
-.da-gauge-s { font-size: 11px; color: var(--color-text-secondary); max-width: 100px; }
-.da-dims { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: var(--space-2); }
-.da-dim { display: flex; flex-direction: column; gap: 4px; text-align: left; border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: 10px 12px; background: var(--color-surface); cursor: pointer; font: inherit; color: var(--color-text); min-width: 0; }
-.da-dim:hover, .da-cc:hover, .da-gauge:hover { border-color: var(--color-primary); }
-.da-dim.da-ne { border-style: dashed; background: var(--color-surface-2); }
-.da-sl { font-size: var(--text-xs); color: var(--color-text-secondary); }
-.da-sv { font-size: var(--text-lg); font-weight: 700; }
-.da-sv small { font-size: 11px; font-weight: 400; color: var(--color-text-secondary); }
-.da-sc { font-size: 11px; color: var(--color-text-secondary); }
-.da-bar { display: block; height: 6px; border-radius: var(--radius-full); background: var(--color-surface-3); overflow: hidden; }
-.da-bar i { display: block; height: 100%; background: var(--color-primary); }
+/* ---------- 文字（4 段） ---------- */
+.dax-h1 { margin: 0; font-size: var(--text-xl); font-weight: 700; line-height: var(--leading-tight); letter-spacing: .01em; color: var(--color-text); }
+.dax-h2 { margin: 0 0 var(--space-4); font-size: var(--text-md); font-weight: 700; line-height: var(--leading-tight); color: var(--color-text); }
+.dax-h3 { margin: 0 0 var(--space-2); font-size: var(--text-base); font-weight: 700; line-height: var(--leading-tight); color: var(--color-text); }
+.dax-meta { font-size: 12px; line-height: var(--leading-tight); color: var(--color-text-secondary); }
+.dax p { margin: 0; max-width: 72ch; overflow-wrap: anywhere; }
 
-/* 件数カード */
-.da-cards { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--space-3); }
-.da-cc { display: flex; flex-direction: column; gap: 4px; text-align: left; border: 1px solid var(--color-border); border-radius: var(--radius-lg); padding: var(--space-3) var(--space-4); background: var(--color-surface); cursor: pointer; font: inherit; color: var(--color-text); border-left-width: 4px; border-left-color: var(--color-border-strong); }
-.da-cc-bad { border-left-color: var(--color-critical); background: var(--color-critical-bg); } .da-cc-warn { border-left-color: var(--color-warning); background: var(--color-warning-bg); } .da-cc-info { border-left-color: var(--color-info); background: var(--color-info-bg); }
-.da-cc-l { font-size: var(--text-sm); color: var(--color-text-secondary); }
-.da-cn { font-size: 28px; line-height: 1.1; font-weight: 700; }
-.da-cn-ne { font-size: var(--text-md); color: var(--color-text-secondary); }
+/* ---------- ボタン ---------- */
+.dax-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  height: 32px; padding: 0 var(--space-3); border: 1px solid var(--color-border-strong); border-radius: var(--radius-md);
+  background: var(--color-surface); color: var(--color-text); font: inherit; font-size: var(--text-sm); font-weight: 600;
+  white-space: nowrap; cursor: pointer; text-decoration: none; transition: background var(--motion-fast), border-color var(--motion-fast);
+}
+.dax-btn:hover { background: var(--color-surface-2); }
+.dax-btn:focus-visible, .dax-chip:focus-visible, .dax-qrow:focus-visible, .dax-action:focus-visible, .dax-item:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
+.dax-btn:disabled, .dax-btn[aria-disabled="true"] { color: var(--color-text-disabled); background: var(--color-surface-2); border-color: var(--color-border); cursor: not-allowed; }
+.dax-btn--primary { background: var(--color-primary); border-color: var(--color-primary); color: var(--color-on-primary); }
+.dax-btn--primary:hover { background: var(--color-primary-dark); border-color: var(--color-primary-dark); }
+.dax-btn--ghost { background: transparent; border-color: transparent; color: var(--color-text-secondary); }
+.dax-btn--ghost:hover { background: var(--color-surface-2); color: var(--color-text); }
+.dax-btn--danger { background: var(--color-surface); border-color: var(--color-error-border); color: var(--color-error-tx); }
+.dax-btn--danger:hover { background: var(--color-error-bg); }
+.dax-btn--sm { height: 28px; padding: 0 var(--space-2); font-size: 12px; }
+.dax-btn svg { width: 16px; height: 16px; flex: none; }
 
-/* 次にやること・直近の変更 */
-.da-next { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-2); counter-reset: n; }
-.da-next li { counter-increment: n; }
-.da-next-b { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); width: 100%; text-align: left; border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: 10px 12px; background: var(--color-surface); cursor: pointer; font: inherit; font-size: var(--text-sm); color: var(--color-text); }
-.da-next-b::before { counter-increment: none; content: counter(n); display: grid; place-items: center; width: 22px; height: 22px; flex: none; border-radius: var(--radius-full); background: var(--color-primary-light); color: var(--color-primary-dark); font-size: 12px; font-weight: 700; }
-.da-next-b span { flex: 1; min-width: 0; overflow-wrap: anywhere; }
-.da-next-b:hover { border-color: var(--color-primary); }
-.da-next-b .da-i { margin: 0; color: var(--color-text-secondary); }
-.da-recent { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-2); font-size: var(--text-sm); }
-.da-recent li { overflow-wrap: anywhere; }
+.dax-menu { position: relative; display: inline-block; }
+.dax-menu > summary { list-style: none; }
+.dax-menu > summary::-webkit-details-marker { display: none; }
+.dax-menu > :not(summary) {
+  position: absolute; right: 0; top: calc(100% + 4px); z-index: 20; min-width: 200px; padding: var(--space-1);
+  background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-md); box-shadow: var(--shadow-pop);
+  display: flex; flex-direction: column;
+}
+.dax-menu > :not(summary) > * { justify-content: flex-start; width: 100%; }
 
-/* 表（固定ヘッダ） */
-.da-tools { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-4); }
-.da-search input { width: 240px; max-width: 100%; padding: 7px 10px; border: 1px solid var(--color-border-strong); border-radius: var(--radius-md); font: inherit; font-size: var(--text-sm); background: var(--color-surface); color: var(--color-text); }
-.da-chips { display: flex; flex-wrap: wrap; gap: 6px; }
-.da-chip { border: 1px solid var(--color-border); border-radius: var(--radius-full); background: var(--color-surface); padding: 4px 12px; font: inherit; font-size: 12px; cursor: pointer; color: var(--color-text); }
-.da-chip[aria-pressed="true"] { background: var(--color-primary-light); border-color: var(--color-primary); color: var(--color-primary-dark); font-weight: 700; }
-.da-fl { font-size: var(--text-xs); color: var(--color-text-secondary); display: inline-flex; align-items: center; gap: 4px; }
-.da-fl select { font: inherit; font-size: var(--text-sm); padding: 4px 6px; border: 1px solid var(--color-border-strong); border-radius: var(--radius-sm); background: var(--color-surface); color: var(--color-text); max-width: 180px; }
-.da-filters { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-4); }
-.da-tscroll { overflow-x: auto; max-width: 100%; }
-.da-table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: var(--text-sm); table-layout: fixed; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-lg); }
-.da-table th, .da-table td { padding: 9px 10px; border-bottom: 1px solid var(--color-divider); text-align: left; vertical-align: top; overflow-wrap: anywhere; }
-.da-table thead th { position: sticky; top: calc(var(--da-sticky-h) - 20px); z-index: 4; background: var(--color-surface-2); font-size: var(--text-xs); color: var(--color-text-secondary); font-weight: 700; border-bottom: 1px solid var(--color-border); }
-.da-req th:nth-child(1) { width: 92px; } .da-req th:nth-child(3) { width: 116px; } .da-req th:nth-child(4) { width: 128px; } .da-req th:nth-child(5) { width: 84px; } .da-req th:nth-child(6) { width: 64px; } .da-req th:nth-child(7) { width: 92px; }
-.da-id { font-weight: 700; white-space: nowrap; }
-.da-reqrow { cursor: pointer; }
-.da-reqrow:hover { background: var(--color-surface-2); }
-.da-reqrow td .da-i { margin-right: 4px; }
+/* ---------- 状態の印（色＋文字。色だけに依存しない） ---------- */
+.dax-pill, [class*="dax-sev--"], [class*="dax-status--"], [class*="dax-req--"], .dax-tag {
+  display: inline-flex; align-items: center; gap: 4px; height: 22px; padding: 0 var(--space-2);
+  border: 1px solid var(--color-border); border-radius: var(--radius-sm); background: var(--color-surface-2); color: var(--color-text-secondary);
+  font-size: 12px; font-weight: 600; line-height: 1; white-space: nowrap; vertical-align: middle;
+}
+.dax-pill { border-radius: var(--radius-full); }
+.dax-pill::before, [class*="dax-sev--"]::before { content: ""; width: 6px; height: 6px; border-radius: var(--radius-full); background: currentColor; flex: none; }
+.dax-pill--ready { background: var(--color-success-bg); border-color: var(--color-success-border); color: var(--color-success-tx); }
+.dax-pill--conditional { background: var(--color-warning-bg); border-color: var(--color-warning-border); color: var(--color-warning-tx); }
+.dax-pill--blocked { background: var(--color-error-bg); border-color: var(--color-error-border); color: var(--color-error-tx); }
+.dax-pill--draft { background: var(--color-surface-2); border-color: var(--color-border); color: var(--color-text-secondary); }
+/* 重大度: 形も変える（critical=塗り四角 / high=四角 / medium=丸 / low=丸枠） */
+.dax-sev--critical { background: var(--color-error-bg); border-color: var(--color-error-border); color: var(--color-error-tx); }
+.dax-sev--critical::before, .dax-sev--high::before { border-radius: 1px; }
+.dax-sev--high { background: var(--color-high-bg); border-color: var(--color-high-border); color: var(--color-high-tx); }
+.dax-sev--medium { background: var(--color-warning-bg); border-color: var(--color-warning-border); color: var(--color-warning-tx); }
+.dax-sev--low { background: var(--color-surface-2); border-color: var(--color-border); color: var(--color-text-secondary); }
+.dax-sev--low::before { background: transparent; border: 1.5px solid currentColor; }
+.dax-status--open { background: var(--color-surface); border-color: var(--color-border-strong); color: var(--color-text); }
+.dax-status--decision { background: var(--color-warning-bg); border-color: var(--color-warning-border); color: var(--color-warning-tx); }
+.dax-status--resolved { background: var(--color-success-bg); border-color: var(--color-success-border); color: var(--color-success-tx); }
+.dax-status--waived { background: var(--color-surface-2); border-color: var(--color-border); color: var(--color-text-tertiary); text-decoration: line-through; }
+.dax-req--ok { background: var(--color-success-bg); border-color: var(--color-success-border); color: var(--color-success-tx); }
+.dax-req--attention { background: var(--color-warning-bg); border-color: var(--color-warning-border); color: var(--color-warning-tx); }
+.dax-req--unknown { background: var(--color-surface-2); border-color: var(--color-border); color: var(--color-text-secondary); border-style: dashed; }
+.dax-tag { font-weight: 500; }
 
-/* 指摘カード */
-.da-flist { display: flex; flex-direction: column; gap: var(--space-3); }
-.da-fc { border: 1px solid var(--color-border); border-left: 4px solid var(--color-border-strong); border-radius: var(--radius-lg); padding: var(--space-3) var(--space-4); background: var(--color-surface); min-width: 0; }
-.da-fc-critical { border-left-color: var(--color-critical); } .da-fc-high { border-left-color: var(--color-high); } .da-fc-medium { border-left-color: var(--color-medium); } .da-fc-low { border-left-color: var(--color-low); } .da-fc-info { border-left-color: var(--color-info); }
-.da-fc-h { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; }
-.da-fc-t { font-size: var(--text-base); overflow-wrap: anywhere; flex: 1 1 200px; min-width: 0; }
-.da-fc-st { margin-left: auto; font-size: var(--text-xs); color: var(--color-text-secondary); }
-.da-dec { margin-top: var(--space-2); border-top: 1px dashed var(--color-border); padding-top: var(--space-2); }
-.da-dec summary { cursor: pointer; font-size: var(--text-sm); color: var(--color-primary-dark); font-weight: 600; }
-.da-reason { display: block; margin-top: 8px; font-size: var(--text-xs); color: var(--color-text-secondary); }
-.da-reason textarea, .da-reason input { display: block; width: 100%; margin-top: 4px; padding: 7px 10px; font: inherit; font-size: var(--text-sm); border: 1px solid var(--color-border-strong); border-radius: var(--radius-md); background: var(--color-surface); color: var(--color-text); }
-.da-reason input[type="date"] { width: auto; }
-.da-ferr { margin: 6px 0 0; font-size: var(--text-sm); color: var(--color-critical-tx); font-weight: 600; }
-.da-actions { display: flex; flex-wrap: wrap; gap: var(--space-2); margin-top: var(--space-2); }
+/* ---------- 概要: ヒーロー・指標・要約 ---------- */
+.dax-hero {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: var(--space-2) var(--space-6);
+  padding: var(--space-6); background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-lg);
+}
+.dax-hero > .dax-pill { grid-column: 1; justify-self: start; }
+.dax-hero__state { grid-column: 1; margin: 0; font-size: var(--text-2xl); font-weight: 700; line-height: var(--leading-tight); letter-spacing: .01em; color: var(--color-text); }
+.dax-hero__lead { grid-column: 1; margin: 0; max-width: 64ch; color: var(--color-text-secondary); }
+.dax-hero > .dax-btn { grid-column: 2; grid-row: 1 / span 3; align-self: center; }
+.dax-hero:has(.dax-pill--ready) { border-left: 4px solid var(--color-success); }
+.dax-hero:has(.dax-pill--conditional) { border-left: 4px solid var(--color-warning); }
+.dax-hero:has(.dax-pill--blocked) { border-left: 4px solid var(--color-error); }
 
-/* 矛盾 */
-.da-pair { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: var(--space-3); align-items: stretch; }
-.da-ev { border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: 10px 12px; min-width: 0; overflow-wrap: anywhere; font-size: var(--text-sm); background: var(--color-surface-2); }
-.da-ev-l { font-size: var(--text-xs); color: var(--color-primary-dark); }
-.da-vs { display: grid; place-items: center; color: var(--color-text-secondary); } .da-vs .da-i { margin: 0; width: 22px; height: 22px; }
-.da-cf { display: flex; flex-direction: column; gap: var(--space-2); }
+.dax-metrics { display: flex; flex-wrap: wrap; gap: var(--space-2) 0; margin: calc(var(--space-8) * -1 + var(--space-4)) 0 0; padding: 0; list-style: none; }
+.dax-metric { display: flex; flex-direction: column; gap: 2px; min-width: 112px; padding: 0 var(--space-6) 0 0; margin-right: var(--space-6); border-right: 1px solid var(--color-border); }
+.dax-metric:last-child { border-right: 0; margin-right: 0; }
+.dax-metric__label { font-size: 12px; color: var(--color-text-secondary); white-space: nowrap; }
+.dax-metric__value { font-size: var(--text-lg); font-weight: 700; line-height: var(--leading-tight); color: var(--color-text); font-variant-numeric: tabular-nums; }
 
-/* 空・失敗・読み込み */
-.da-blank { display: flex; flex-direction: column; align-items: center; text-align: center; gap: var(--space-2); padding: var(--space-12) var(--space-4); border: 1px dashed var(--color-border-strong); border-radius: var(--radius-lg); background: var(--color-surface); }
-.da-blank-t { margin: 0; font-size: var(--text-md); font-weight: 700; color: var(--color-text); }
-.da-blank .c-btn { display: inline-flex; align-items: center; margin-top: var(--space-2); }
-.da-skel { display: flex; flex-direction: column; gap: var(--space-4); }
-.da-sk { background: linear-gradient(90deg, var(--color-surface-3), var(--color-surface-2), var(--color-surface-3)); background-size: 200% 100%; animation: da-sh 1.4s linear infinite; border-radius: var(--radius-lg); }
-.da-sk-banner { height: 72px; } .da-sk-ring { width: 156px; height: 156px; border-radius: var(--radius-full); flex: none; } .da-sk-blk { flex: 1; height: 156px; } .da-sk-card { flex: 1; height: 84px; }
-.da-sk-row { display: flex; gap: var(--space-4); flex-wrap: wrap; } .da-sk-row .da-sk-card { min-width: 160px; }
-@keyframes da-sh { to { background-position: -200% 0; } }
-@media (prefers-reduced-motion: reduce) { .da-sk { animation: none; } }
-.da-prog { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-4); font-size: var(--text-sm); }
-.da-prog li { display: flex; align-items: center; gap: 6px; color: var(--color-text-secondary); }
-.da-prog-n { display: grid; place-items: center; width: 22px; height: 22px; border-radius: var(--radius-full); border: 1px solid var(--color-border-strong); font-size: 12px; }
-.da-prog-done { color: var(--color-success-tx) !important; } .da-prog-done .da-prog-n { background: var(--color-success-bg); border-color: var(--color-success-border); }
-.da-prog-now { color: var(--color-primary-dark) !important; font-weight: 700; } .da-prog-now .da-prog-n { background: var(--color-primary); border-color: var(--color-primary); color: var(--color-on-primary); }
+.dax-summary { display: flex; flex-direction: column; gap: var(--space-4); min-width: 0; }
+.dax-actions { margin: 0; padding: 0; list-style: none; counter-reset: dax-act; border-top: 1px solid var(--color-border); }
+.dax-action { counter-increment: dax-act; border-bottom: 1px solid var(--color-divider); }
+.dax-action > button, button.dax-action, .dax-action > a {
+  display: grid; grid-template-columns: 24px minmax(0, 1fr) auto; align-items: baseline; gap: var(--space-2);
+  width: 100%; padding: var(--space-2) var(--space-2); border: 0; background: none; text-align: left;
+  font: inherit; color: var(--color-text); cursor: pointer; text-decoration: none; border-radius: var(--radius-sm);
+}
+.dax-action > button::before, button.dax-action::before, .dax-action > a::before { content: counter(dax-act); font-size: 12px; font-weight: 700; color: var(--color-text-secondary); font-variant-numeric: tabular-nums; }
+.dax-action > button:hover, button.dax-action:hover, .dax-action > a:hover { background: var(--color-surface-2); }
+.dax-action > button:focus-visible, .dax-action > a:focus-visible { outline: 2px solid var(--color-primary); outline-offset: -2px; }
 
-/* ドロワー */
-.da-backdrop { position: fixed; inset: 0; background: rgba(16, 24, 40, .35); z-index: 1000; }
-.da-backdrop[hidden], .da-drawer[hidden] { display: none; }
-.da-drawer { position: fixed; top: 0; right: 0; bottom: 0; width: min(520px, 100vw); overflow: hidden; display: flex; flex-direction: column; background: var(--color-surface); border-left: 1px solid var(--color-border); z-index: 1001; box-shadow: var(--shadow-lg); }
-.da-dr-h { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); padding: var(--space-3) var(--space-4); border-bottom: 1px solid var(--color-border); }
-.da-dr-h .da-h { margin: 0; }
-.da-dr-b { overflow-y: auto; padding: var(--space-3) var(--space-4) var(--space-8); min-height: 0; flex: 1; }
-.da-dr-b h4 { margin: var(--space-4) 0 var(--space-1); font-size: var(--text-sm); color: var(--color-text); }
-.da-kv { margin: 0; display: grid; gap: var(--space-2); }
-.da-kv div { border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: 6px 10px; }
-.da-kv dt { font-size: var(--text-xs); color: var(--color-text-secondary); } .da-kv dd { margin: 0; font-size: var(--text-sm); overflow-wrap: anywhere; }
-.da-counts { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; margin: 0; }
-.da-counts div { border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: 8px 10px; }
-.da-counts dt { font-size: 12px; color: var(--color-text-secondary); } .da-counts dd { margin: 0; font-size: 18px; font-weight: 700; }
+/* ---------- セクション・折りたたみ ---------- */
+.dax-section { padding-top: var(--space-6); border-top: 1px solid var(--color-border); min-width: 0; }
+.dax-collapse { border-top: 1px solid var(--color-border); min-width: 0; }
+.dax-collapse > summary {
+  display: flex; align-items: center; gap: var(--space-2); padding: var(--space-4) 0; cursor: pointer; list-style: none;
+  font-size: var(--text-md); font-weight: 700; color: var(--color-text);
+}
+.dax-collapse > summary::-webkit-details-marker { display: none; }
+.dax-collapse > summary::before {
+  content: ""; width: 6px; height: 6px; flex: none; margin: 0 4px; border-right: 1.5px solid var(--color-text-secondary); border-bottom: 1.5px solid var(--color-text-secondary);
+  transform: rotate(-45deg); transition: transform var(--motion-fast);
+}
+.dax-collapse[open] > summary::before { transform: rotate(45deg); }
+.dax-collapse > summary:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; border-radius: var(--radius-sm); }
+.dax-collapse > :not(summary) { margin-bottom: var(--space-4); }
 
-.da :focus-visible, .da-drawer :focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
-.da-gauge:focus-visible { border-radius: var(--radius-full); }
-@media (max-width: 1100px) { .da-c-opt { display: none; } .da-req th:nth-child(1) { width: 76px; } .da-req th:nth-child(4) { width: 118px; } }
-@media (max-width: 1000px) { .da-grid2 { grid-template-columns: 1fr; } .da-sticky { margin: 0 -16px; padding: 8px 16px 0; } }
-@media (max-width: 760px) { .da-pair { grid-template-columns: 1fr; } .da-vs { display: none; } .da-banner { flex-direction: column; } }
+/* ---------- 品質の行・被覆・バー ---------- */
+.dax-quality { display: flex; flex-direction: column; }
+.dax-qrow {
+  display: grid; grid-template-columns: minmax(120px, 220px) 56px minmax(80px, 360px); align-items: center; gap: var(--space-4);
+  width: 100%; padding: var(--space-2); border: 0; border-bottom: 1px solid var(--color-divider); background: none;
+  font: inherit; color: var(--color-text); text-align: left; cursor: pointer; border-radius: 0;
+}
+.dax-qrow:hover { background: var(--color-surface-2); }
+.dax-qrow__name { font-size: var(--text-sm); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dax-qrow__value { font-size: var(--text-sm); font-weight: 600; text-align: right; font-variant-numeric: tabular-nums; }
+.dax-bar { position: relative; height: 4px; width: 100%; border-radius: var(--radius-full); background: var(--color-surface-2); overflow: hidden; }
+.dax-bar__fill { display: block; height: 100%; max-width: 100%; border-radius: inherit; background: var(--color-primary); }
+.dax-funnel { display: flex; flex-direction: column; }
+.dax-funnel__row { display: grid; grid-template-columns: minmax(120px, 220px) 72px minmax(80px, 360px); align-items: center; gap: var(--space-4); padding: var(--space-2); border-bottom: 1px solid var(--color-divider); font-size: var(--text-sm); }
+.dax-funnel__row > :nth-child(2) { text-align: right; font-weight: 600; font-variant-numeric: tabular-nums; }
 
-.da-fc-done { padding: 1px 8px; border-radius: var(--radius-full); background: var(--color-success-bg); color: var(--color-success-tx); border: 1px solid var(--color-success-border); font-size: var(--text-xs); font-weight: 600; }
-.da-err .c-btn { margin-left: auto; flex: none; }
-.da-pick { border: 0; padding: 0; margin: var(--space-3) 0 0; display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-4); }
-.da-pick legend { font-size: var(--text-xs); color: var(--color-text-secondary); margin-bottom: 4px; padding: 0; }
-.da-pick-o { display: inline-flex; align-items: center; gap: 6px; font-size: var(--text-sm); cursor: pointer; }
-@media (max-width: 1180px) { .da-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+/* ---------- 変更 ---------- */
+.dax-change { display: flex; flex-direction: column; gap: var(--space-2); padding: var(--space-4) 0; border-bottom: 1px solid var(--color-divider); min-width: 0; }
+.dax-change__title { font-weight: 600; color: var(--color-text); overflow-wrap: anywhere; }
+.dax-change__diff { font-size: var(--text-sm); color: var(--color-text-secondary); overflow-wrap: anywhere; max-width: 72ch; }
+.dax-change__diff del { color: var(--color-error-tx); text-decoration: line-through; }
+.dax-change__diff ins { color: var(--color-success-tx); text-decoration: none; font-weight: 600; }
+.dax-change__impact { display: flex; flex-wrap: wrap; gap: var(--space-1); }
+
+/* ---------- 表 ---------- */
+.dax-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); margin-bottom: var(--space-4); min-width: 0; }
+.dax-search {
+  flex: 1 1 240px; max-width: 360px; height: 32px; padding: 0 var(--space-3); border: 1px solid var(--color-border-strong); border-radius: var(--radius-md);
+  background: var(--color-surface); color: var(--color-text); font: inherit; font-size: var(--text-sm);
+}
+.dax-search:focus { outline: 2px solid var(--color-primary); outline-offset: -1px; border-color: var(--color-primary); }
+.dax-chips { display: flex; flex-wrap: wrap; gap: var(--space-1); }
+.dax-chip {
+  height: 28px; padding: 0 var(--space-3); border: 1px solid var(--color-border); border-radius: var(--radius-full); background: var(--color-surface);
+  font: inherit; font-size: 12px; color: var(--color-text-secondary); cursor: pointer; white-space: nowrap;
+}
+.dax-chip:hover { border-color: var(--color-border-strong); color: var(--color-text); }
+.dax-chip[aria-pressed="true"] { background: var(--color-primary-light); border-color: var(--color-primary-border); color: var(--color-primary-dark); font-weight: 600; }
+.dax-colsel { margin-left: auto; }
+.dax-table-wrap { max-height: min(640px, 70vh); overflow: auto; border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-surface); min-width: 0; }
+.dax-table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: var(--text-sm); table-layout: auto; }
+.dax-table th {
+  position: sticky; top: 0; z-index: 1; padding: var(--space-2) var(--space-3); background: var(--color-surface-3);
+  border-bottom: 1px solid var(--color-border); text-align: left; font-size: 12px; font-weight: 600; color: var(--color-text-secondary); white-space: nowrap;
+}
+.dax-table td { height: 48px; padding: var(--space-2) var(--space-3); border-bottom: 1px solid var(--color-divider); vertical-align: middle; color: var(--color-text); }
+.dax-table td > :where(span, p, div):only-child:not([class*="dax-sev"]):not([class*="dax-status"]):not([class*="dax-req"]):not(.dax-pill) {
+  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; overflow-wrap: anywhere;
+}
+.dax-table tbody tr:last-child td { border-bottom: 0; }
+.dax-table td:first-child { white-space: nowrap; font-variant-numeric: tabular-nums; color: var(--color-text-secondary); }
+.dax-table tbody tr[tabindex] { cursor: pointer; }
+.dax-table tbody tr:hover td { background: var(--color-surface-2); }
+.dax-table tbody tr[aria-selected="true"] td { background: var(--color-primary-light); }
+.dax-table tbody tr[aria-selected="true"] td:first-child { box-shadow: inset 2px 0 0 var(--color-primary); }
+.dax-table tbody tr:focus-visible { outline: 2px solid var(--color-primary); outline-offset: -2px; }
+.dax-table td[data-num] { text-align: right; font-variant-numeric: tabular-nums; }
+
+/* ---------- マスター詳細 ---------- */
+.dax-md { display: grid; grid-template-columns: 320px minmax(0, 1fr); gap: 0; min-width: 0; border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-surface); overflow: hidden; }
+.dax-md__list { max-height: min(720px, 72vh); overflow-y: auto; border-right: 1px solid var(--color-border); min-width: 0; }
+.dax-item {
+  display: flex; flex-direction: column; gap: var(--space-1); width: 100%; padding: var(--space-3) var(--space-4); border: 0; border-bottom: 1px solid var(--color-divider);
+  background: none; font: inherit; font-size: var(--text-sm); color: var(--color-text); text-align: left; cursor: pointer; min-width: 0;
+}
+.dax-item:hover { background: var(--color-surface-2); }
+.dax-item[aria-selected="true"] { background: var(--color-primary-light); box-shadow: inset 2px 0 0 var(--color-primary); }
+.dax-item:focus-visible { outline-offset: -2px; }
+.dax-md__detail { padding: var(--space-6); max-height: min(720px, 72vh); overflow-y: auto; min-width: 0; }
+.dax-detail__section { padding: var(--space-4) 0; border-top: 1px solid var(--color-divider); }
+.dax-detail__section:first-child { padding-top: 0; border-top: 0; }
+
+/* ---------- 矛盾の比較 ---------- */
+.dax-compare { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: stretch; gap: var(--space-4); min-width: 0; }
+.dax-compare__side { padding: var(--space-4); border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-surface); min-width: 0; overflow-wrap: anywhere; }
+.dax-compare__topic { align-self: center; max-width: 160px; text-align: center; font-size: 12px; font-weight: 600; color: var(--color-text-secondary); }
+.dax-unknown { display: inline-flex; align-items: center; gap: 4px; padding: 2px var(--space-2); border: 1px dashed var(--color-warning-border); border-radius: var(--radius-sm); background: var(--color-warning-bg); color: var(--color-warning-tx); font-size: 12px; font-weight: 600; }
+
+/* ---------- ドロワー ---------- */
+.dax-drawer {
+  position: fixed; top: 0; right: 0; bottom: 0; z-index: 60; width: min(560px, 100vw);
+  display: flex; flex-direction: column; background: var(--color-surface); border-left: 1px solid var(--color-border); box-shadow: var(--shadow-pop);
+}
+.dax-drawer[hidden] { display: none; }
+.dax-drawer__head { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-4); padding: var(--space-4) var(--space-6); border-bottom: 1px solid var(--color-border); }
+.dax-drawer__body { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: var(--space-6); display: flex; flex-direction: column; gap: var(--space-4); overflow-wrap: anywhere; }
+.dax-adv { border-top: 1px solid var(--color-border); }
+.dax-adv > summary { padding: var(--space-2) 0; cursor: pointer; font-size: var(--text-sm); font-weight: 600; color: var(--color-text-secondary); }
+.dax-adv > summary:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; border-radius: var(--radius-sm); }
+.dax-adv > :not(summary) { font-size: var(--text-sm); color: var(--color-text-secondary); }
+
+/* ---------- 状態画面・スケルトン ---------- */
+.dax-state {
+  display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-2); max-width: 560px;
+  padding: var(--space-6); border: 1px dashed var(--color-border-strong); border-radius: var(--radius-md); background: var(--color-surface);
+}
+.dax-state__title { margin: 0; font-size: var(--text-md); font-weight: 700; color: var(--color-text); }
+.dax-state__body { margin: 0 0 var(--space-2); color: var(--color-text-secondary); max-width: 64ch; }
+.dax-state--error { border-style: solid; border-color: var(--color-error-border); border-left: 4px solid var(--color-error); }
+.dax-state--error .dax-state__title::before { content: "エラー: "; color: var(--color-error-tx); }
+.dax-state--blocked { border-style: solid; border-color: var(--color-warning-border); border-left: 4px solid var(--color-warning); }
+.dax-state--blocked .dax-state__title::before { content: "停止中: "; color: var(--color-warning-tx); }
+.dax-skel { display: block; height: 14px; margin: var(--space-2) 0; border-radius: var(--radius-sm); background: var(--color-surface-2); animation: dax-pulse 1.4s ease-in-out infinite; }
+@keyframes dax-pulse { 50% { opacity: .5; } }
+@media (prefers-reduced-motion: reduce) { .dax-skel { animation: none; } .dax * { transition: none !important; } }
+
+/* ---------- 幅 ---------- */
+@media (max-width: 1100px) {
+  .dax-header, .dax-nav { padding-left: var(--space-4); padding-right: var(--space-4); }
+  .dax-page { padding: var(--space-4) var(--space-4) var(--space-12); }
+}
+@media (max-width: 900px) {
+  .dax-md { grid-template-columns: minmax(0, 1fr); }
+  .dax-md__list { max-height: 320px; border-right: 0; border-bottom: 1px solid var(--color-border); }
+  .dax-md__detail { max-height: none; }
+  .dax-compare { grid-template-columns: minmax(0, 1fr); }
+  .dax-compare__topic { max-width: none; text-align: left; }
+  .dax-hero { grid-template-columns: minmax(0, 1fr); }
+  .dax-hero > .dax-btn { grid-column: 1; grid-row: auto; justify-self: start; }
+  .dax-qrow, .dax-funnel__row { grid-template-columns: minmax(0, 1fr) 56px minmax(64px, 30%); gap: var(--space-2); }
+}
+
+/* ---------- C レビュー反映（後勝ち） ---------- */
+/* ③ ヘッダは 1 段: タイトル・メタ・操作を 1 行に */
+.dax-header { flex-wrap: nowrap; align-items: center; gap: var(--space-4); padding: var(--space-2) var(--space-6); min-height: 48px; }
+.dax-header > :first-child:not(.dax-header__actions) { display: flex; align-items: baseline; gap: var(--space-3); flex: 1 1 auto; min-width: 0; }
+.dax-header__title { flex: 0 1 auto; min-width: 0; font-size: var(--text-md); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; overflow-wrap: normal; }
+.dax-header__meta { flex: 1 1 auto; min-width: 0; margin-top: 0; flex-wrap: nowrap; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dax-header__actions { flex: none; flex-wrap: nowrap; }
+@media (max-width: 1100px) { .dax-header { padding: var(--space-2) var(--space-4); } }
+/* ④ ghost は枠線ありの secondary */
+.dax-btn--ghost { background: var(--color-surface); border-color: var(--color-border-strong); color: var(--color-text); font-weight: 500; }
+.dax-btn--ghost:hover { background: var(--color-surface-2); color: var(--color-text); }
+/* ① メニューは開いたときだけ浮かぶ面 */
+.dax-menu:not([open]) > :not(summary) { display: none; }
+.dax-menu[open] > :not(summary) { display: flex; position: absolute; right: 0; top: calc(100% + var(--space-1)); z-index: 30; box-shadow: var(--shadow-pop); }
+/* ② 指標帯: ラベル小・値 md・縦罫線のみ */
+.dax-metric { padding-right: var(--space-4); margin-right: var(--space-4); min-width: 0; }
+.dax-metric__label { font-size: 12px; font-weight: 400; color: var(--color-text-secondary); }
+.dax-metric__value { font-size: var(--text-md); font-weight: 600; }
+.dax-metric[data-zero] .dax-metric__value { color: var(--color-text-tertiary); }
+.dax-metric[data-warn] .dax-metric__value { color: var(--color-warning-tx); }
+
+/* ---------- C レビュー 2 回目（後勝ち） ---------- */
+/* ① 指標: 箱なしの 1 行 KPI 列。既定の枠（fieldset/button 等）を打ち消す */
+.dax-metrics { display: flex; flex-wrap: wrap; align-items: flex-end; gap: var(--space-2) 0; margin: 0; padding: 0; border: 0; background: none; box-shadow: none; min-inline-size: 0; }
+.dax-metric { all: unset; box-sizing: border-box; display: flex; flex-direction: column; gap: 2px; padding: 0 var(--space-6) 0 0; margin: 0 var(--space-6) 0 0; border-right: 1px solid var(--color-border); text-align: left; }
+.dax-metric:last-child { border-right: 0; margin-right: 0; padding-right: 0; }
+.dax-metric__label { font-size: var(--text-xs); color: var(--color-text-secondary); white-space: nowrap; }
+.dax-metric__value { font-size: var(--text-xl); font-weight: 700; line-height: var(--leading-tight); color: var(--color-text); font-variant-numeric: tabular-nums; }
+/* ② 品質: 値の列に最小幅、補足は値の下に 1 行 */
+.dax-qrow { grid-template-columns: minmax(120px, 220px) minmax(8em, max-content) minmax(80px, 360px); align-items: center; }
+.dax-qrow__value { display: flex; flex-direction: column; align-items: flex-end; min-width: 8em; white-space: nowrap; }
+.dax-qrow__value .dax-meta, .dax-qrow .dax-meta { display: block; font-weight: 400; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 16em; }
+.dax-qrow__name { white-space: nowrap; }
+/* ③ 重大度は行内の小さいバッジ */
+.dax :is(.dax-sev--critical, .dax-sev--high, .dax-sev--medium, .dax-sev--low), .dax-drawer :is(.dax-sev--critical, .dax-sev--high, .dax-sev--medium, .dax-sev--low) { display: inline-flex; width: auto; max-width: max-content; flex: none; align-self: flex-start; height: 20px; padding: 0 6px; font-size: var(--text-xs); }
+/* ④ 判断フォーム: ラベルの上に入力、ボタン列は右寄せ */
+.dax-drawer form, .dax-md__detail form { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-2); }
+.dax-drawer form label, .dax-md__detail form label { display: grid; gap: var(--space-1); font-size: 12px; font-weight: 600; color: var(--color-text-secondary); }
+.dax-drawer :is(textarea, input[type="date"], input[type="text"], select), .dax-md__detail form :is(textarea, input[type="date"], input[type="text"], select) {
+  width: 100%; min-height: 32px; padding: 6px var(--space-2); border: 1px solid var(--color-border-strong); border-radius: var(--radius-md);
+  background: var(--color-surface); color: var(--color-text); font: inherit; font-size: var(--text-sm);
+}
+.dax-drawer input[type="date"], .dax-md__detail form input[type="date"] { width: auto; max-width: 220px; }
+.dax-drawer textarea, .dax-md__detail form textarea { min-height: calc(3 * 1.7em + 12px); resize: vertical; line-height: var(--leading-normal); }
+.dax-drawer :is(textarea, input, select):focus, .dax-md__detail form :is(textarea, input, select):focus { outline: 2px solid var(--color-primary); outline-offset: -1px; border-color: var(--color-primary); }
+.dax-drawer form > :last-child:has(.dax-btn), .dax-md__detail form > :last-child:has(.dax-btn) { display: flex; justify-content: flex-end; gap: var(--space-2); }
+/* ⑤ ドロワー: 影・左罫線・暗幕、dl 2 列、ul の字下げ */
+.dax-drawer { box-shadow: var(--shadow-pop); border-left: 1px solid var(--color-border); }
+.dax-drawer::backdrop { background: color-mix(in srgb, var(--color-text) 32%, transparent); }
+.dax-drawer:not([hidden])::before { content: ""; position: fixed; top: 0; bottom: 0; left: 0; right: min(560px, 100vw); background: color-mix(in srgb, var(--color-text) 32%, transparent); pointer-events: none; }
+.dax-drawer dl { display: grid; grid-template-columns: 9em minmax(0, 1fr); gap: var(--space-1) var(--space-3); margin: 0; font-size: var(--text-sm); }
+.dax-drawer dt { color: var(--color-text-secondary); }
+.dax-drawer dd { margin: 0; overflow-wrap: anywhere; }
+.dax-drawer ul, .dax-drawer ol { margin: 0; padding-left: 1.25em; }
+/* ⑥ 表ページ: 上の余白を詰める */
+.dax-page:has(> .dax-toolbar:first-child) { padding-top: var(--space-4); gap: var(--space-4); }
+.dax-page > .dax-toolbar:first-child { margin-bottom: 0; }
+
+/* ---------- C レビュー 3 回目（後勝ち） ---------- */
+/* ① 判断フォーム（form 要素なし: .dax-detail__section 直下の label / ボタン列） */
+:is(.dax-md__detail, .dax-drawer__body) .dax-detail__section > label {
+  display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-1); margin: 0 0 var(--space-3); width: 100%;
+  font-size: 12px; font-weight: 600; color: var(--color-text-secondary);
+}
+:is(.dax-md__detail, .dax-drawer__body) .dax-detail__section > label > :is(textarea, input, select) {
+  display: block; width: 100%; min-height: 32px; padding: 6px var(--space-2); border: 1px solid var(--color-border-strong); border-radius: var(--radius-md);
+  background: var(--color-surface); color: var(--color-text); font: inherit; font-size: var(--text-sm); font-weight: 400;
+}
+:is(.dax-md__detail, .dax-drawer__body) .dax-detail__section > label > input[type="date"] { width: auto; max-width: 220px; }
+:is(.dax-md__detail, .dax-drawer__body) .dax-detail__section > label > textarea { min-height: calc(3 * 1.7em + 12px); line-height: var(--leading-normal); resize: vertical; }
+:is(.dax-md__detail, .dax-drawer__body) .dax-detail__section > label > :is(textarea, input, select):focus { outline: 2px solid var(--color-primary); outline-offset: -1px; border-color: var(--color-primary); }
+:is(.dax-md__detail, .dax-drawer__body) .dax-detail__section > div:has(> .dax-btn) { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: var(--space-2); }
+.dax-drawer__body [data-foot] { position: sticky; bottom: calc(var(--space-6) * -1); margin: 0 calc(var(--space-6) * -1) calc(var(--space-6) * -1); padding: var(--space-3) var(--space-6); background: var(--color-surface); border-top: 1px solid var(--color-border); display: flex; justify-content: flex-end; gap: var(--space-2); z-index: 1; }
+/* ② 品質: 名前 12em / バー 1fr / 値 8em（DOM 順は 名前・値・バー） */
+.dax-qrow { grid-template-columns: 12em minmax(0, 1fr) 8em; grid-template-areas: "name bar value"; }
+.dax-qrow__name { grid-area: name; }
+.dax-qrow > .dax-bar { grid-area: bar; }
+.dax-qrow__value { grid-area: value; min-width: 0; }
+/* ③ 閉じた折りたたみの上下余白を詰める */
+.dax-collapse:not([open]) > summary { padding: var(--space-2) 0; }
+/* ④ 0 の指標は小さく弱く */
+.dax-metric[data-zero] .dax-metric__value { font-size: var(--text-md); color: var(--color-text-tertiary); }
+
+/* ---------- C レビュー 4 回目（後勝ち） ---------- */
+/* ① 判断フォーム: fieldset の既定を消し、ラジオはセグメント風 */
+.dax-detail__section fieldset { border: 0; padding: 0; margin: 0; min-width: 0; }
+.dax-detail__section legend { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+.dax-detail__section fieldset:has(input[type="radio"]) { display: flex; flex-wrap: wrap; gap: 6px; }
+.dax-detail__section label:has(> input[type="radio"]) {
+  display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 var(--space-3); margin: 0;
+  border: 1px solid var(--color-border-strong); border-radius: var(--radius-md); background: var(--color-surface);
+  font-size: var(--text-sm); font-weight: 500; color: var(--color-text); cursor: pointer; width: auto;
+}
+.dax-detail__section label:has(> input[type="radio"]):hover { background: var(--color-surface-2); }
+.dax-detail__section label:has(> input[type="radio"]:checked) { background: var(--color-primary-light); border-color: var(--color-primary-border); color: var(--color-primary-dark); font-weight: 600; }
+.dax-detail__section label:has(> input[type="radio"]:focus-visible) { outline: 2px solid var(--color-primary); outline-offset: 2px; }
+.dax-detail__section label > input[type="radio"] { width: auto; min-height: 0; margin: 0; accent-color: var(--color-primary); }
+.dax [data-field] { display: grid; gap: 4px; margin-top: 12px; min-width: 0; }
+.dax [data-field] textarea, .dax-drawer [data-field] textarea { width: 100%; min-height: 72px; box-sizing: border-box; }
+.dax [data-field] input[type="date"], .dax-drawer [data-field] input[type="date"] { width: 200px; }
+.dax-drawer [data-field] { display: grid; gap: 4px; margin-top: 12px; min-width: 0; }
+/* ② 要件ドロワーの「問題」: 1 件 1 面、左罫線は重大度色 */
+.dax-drawer .dax-detail__section > ul { list-style: none; padding-left: 0; margin: 0; display: flex; flex-direction: column; gap: var(--space-2); }
+.dax-drawer .dax-detail__section > ul > li {
+  padding: var(--space-2) var(--space-3); border-left: 3px solid var(--color-border-strong); background: var(--color-surface-3);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0; overflow-wrap: anywhere;
+}
+.dax-drawer .dax-detail__section > ul > li:has(.dax-sev--critical) { border-left-color: var(--color-error); }
+.dax-drawer .dax-detail__section > ul > li:has(.dax-sev--high) { border-left-color: var(--color-high-tx); }
+.dax-drawer .dax-detail__section > ul > li:has(.dax-sev--medium) { border-left-color: var(--color-warning); }
+.dax-drawer .dax-detail__section > ul > li ul { list-style: none; padding-left: 0; margin: var(--space-1) 0 0; }
+.dax-drawer .dax-detail__section > ul > li .dax-btn--ghost { height: auto; min-height: 0; padding: 0; border: 0; background: none; font-weight: 600; text-align: left; white-space: normal; justify-content: flex-start; }
+.dax-drawer .dax-detail__section > ul > li .dax-btn--ghost:hover { background: none; text-decoration: underline; }
+/* ③ 評価不能の行にも空のバー（薄い斜線） */
+.dax-qrow .dax-bar:not(:has(.dax-bar__fill)), .dax-qrow .dax-bar:has(.dax-bar__fill[style*="width:0"]), .dax-qrow .dax-bar:has(.dax-bar__fill[style*="width: 0"]) {
+  background: repeating-linear-gradient(-45deg, var(--color-border) 0 2px, var(--color-surface-2) 2px 5px);
+}
+
+/* ---------- C レビュー 5 回目（後勝ち） ---------- */
+/* ① 品質の水準で色を変える（文字も同系） */
+.dax-qrow[data-level="low"] .dax-bar__fill { background: var(--color-error); }
+.dax-qrow[data-level="low"] .dax-qrow__value { color: var(--color-error-tx); }
+.dax-qrow[data-level="mid"] .dax-bar__fill { background: var(--color-warning); }
+.dax-qrow[data-level="mid"] .dax-qrow__value { color: var(--color-warning-tx); }
+.dax-qrow[data-level="ok"] .dax-bar__fill { background: var(--color-primary); }
+.dax-qrow[data-level="ok"] .dax-qrow__value { color: var(--color-primary-dark); }
+/* ② 閉じた折りたたみ: summary 上下 12px、前との間の余白を 0 */
+.dax-collapse > summary, .dax-collapse:not([open]) > summary { padding: var(--space-3) 0; }
+.dax-page > .dax-collapse { margin-top: calc(var(--space-8) * -1); }
+.dax-page > .dax-collapse:first-child { margin-top: 0; }

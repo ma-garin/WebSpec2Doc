@@ -129,6 +129,9 @@
     const info = PAGE[view];
     const ws = window.WS2D;
     if (!info) return;
+    const own = view === 'assure';  // System06 は自前のヘッダ 1 段だけを出す
+    ['#dv-pagehead', '#dv-reason'].forEach((q) => { const n = $(q); if (n) n.hidden = own; });
+    if (own) return;
     const t = $('#dv-ph-title'), d = $('#dv-ph-desc'), st = $('#dv-ph-state'), rs = $('#dv-reason');
     if (t) t.textContent = info[0];
     if (d) d.textContent = info[1];
@@ -149,6 +152,7 @@
   }
 
   function show(view) {
+    view = String(view || '').split('/')[0];   // #assure/<iid>/<tab> の深いリンクは先頭だけで画面を決める
     if (!TITLES[view] || DOC_GONE.includes(view)) view = 'reviews';
     const needReview = REVIEW_VIEWS.includes(view) && !DV.state.review;
     if (needReview) view = 'reviews';
@@ -156,7 +160,7 @@
     const sec = needReview && location.hash.slice(1) === 'setcheck' ? 'trace' : sectionOf(view);
     document.querySelectorAll('.dv-sec').forEach((a) => a.classList.toggle('active', a.dataset.sec === sec));
     const title = $('#topbar-title');
-    if (title) title.textContent = TITLES[view];
+    if (title) { title.textContent = TITLES[view]; title.hidden = view === 'assure'; }
     const crumb = $('#topbar-breadcrumb');
     if (crumb) {
       const r = DV.state.review;
@@ -164,7 +168,7 @@
         + (r && REVIEW_VIEWS.includes(view) ? `<span class="sep">/</span><span>${esc(r.name)}</span>` : '');
     }
     DV.current = view;
-    if (location.hash.slice(1) !== view) history.replaceState(null, '', `#${view}`);
+    if (location.hash.slice(1).split('/')[0] !== view) history.replaceState(null, '', `#${view}`);
     banner(needReview ? 'この画面はレビューを開いてから使えます。一覧からレビューを選んでください。' : '');
     renderSubtabs(view);
     renderPageHead(view);
@@ -196,12 +200,18 @@
       if (location.hash.slice(1) !== v) history.pushState(null, '', `#${v}`);   // 戻る・進むで辿れるように履歴へ積む
       show(v);
     });
-    const sync = () => { const h = location.hash.slice(1); if (h && h !== DV.current) show(h); };
+    const sync = () => {
+      const d = location.hash.slice(1).split('/'), h = d[0];
+      if (h === 'assure' && d[1] && (!DV.state.review || DV.state.review.id !== decodeURIComponent(d[1]))) { openReview(decodeURIComponent(d[1]), 'assure').catch(() => show('reviews')); return; }
+      if (h && h !== DV.current) show(h);
+    };
     window.addEventListener('hashchange', sync);
     window.addEventListener('popstate', sync);
     let saved = null;
     try { saved = sessionStorage.getItem('dv-review'); } catch (e) { saved = null; }
-    if (saved) { try { await openReview(saved, location.hash.slice(1) || 'read'); return; } catch (e) { banner(''); } }
+    const deep = location.hash.slice(1).split('/');
+    if (deep[0] === 'assure' && deep[1]) saved = decodeURIComponent(deep[1]);   // #assure/<iid> からレビューを復元する
+    if (saved) { try { await openReview(saved, deep[0] || 'read'); return; } catch (e) { banner(''); } }
     show(location.hash.slice(1) || 'reviews');
   }
 

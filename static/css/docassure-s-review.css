@@ -96,3 +96,29 @@
 .dar-pill--rule { border-color: var(--dx-line-strong); background: var(--dx-sunk); color: var(--dx-text-2); }
 .dar .dap-item > p { margin: 4px 0; }
 .dar .dap-item > h5 { margin: 10px 0 4px; }
+/* カード文法の統一: 白地・1px 枠・r8。状態は左上のピルだけで示す */
+.dar-card, .dar-card--idle, .dar-card--run, .dar-card--done, .dar-card--fail, .dar-card--part, .dar-card--plain { background: var(--dx-surface); border: 1px solid var(--dx-line); border-radius: 8px; }
+.dar-range, .dar-range--ok, .dar-range--ng { border: 1px solid var(--dx-line); border-left-width: 1px; border-left-color: var(--dx-line); border-radius: 8px; background: var(--dx-surface); }
+.dar-st { height: 22px; padding: 0 10px; border-radius: 11px; }
+.dar-st--done { border-color: var(--dx-ok-line); background: var(--dx-ok-bg); color: var(--dx-ok-tx); }
+.dar-st--fail { border-color: var(--dx-err-line); background: var(--dx-err-bg); color: var(--dx-err-tx); }
+.dar-st--part { border-color: var(--dx-warn-line); background: var(--dx-warn-bg); color: var(--dx-warn-tx); }
+.dar-st--idle, .dar-st--run { border-color: var(--dx-line-strong); background: var(--dx-sunk); color: var(--dx-text-2); }
+/* 階層の整理: 数値だけ大きくしない。サマリーは 1 行の帯 */
+.dar-strip { margin: 0; display: flex; flex-wrap: wrap; gap: 0; font-size: 14px; border: 1px solid var(--dx-line); border-radius: 8px; background: var(--dx-sunk); }
+.dar-strip > span { padding: 8px 14px; border-right: 1px solid var(--dx-line); }
+.dar-strip > span:last-child { border-right: 0; }
+.dar-strip b, .dar-big { font-size: 14px !important; font-weight: 600; }
+.dar-big > span { font-size: 14px; font-weight: 600; color: inherit; }
+.dar-sum { gap: 12px; align-items: center; }
+.dar-flow li { background: var(--dx-surface); border-color: var(--dx-line); }
+.dar-ico { width: 20px; height: 20px; background: none; color: var(--dx-primary-dark); font-size: 20px; line-height: 20px; font-weight: 600; }
+.dar-role { font-size: 13px; color: #4b5563; }
+.dar-list .dap-item { padding: 16px 20px; }
+/* 数字ステッパー */
+.dar-flow { counter-reset: none; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0; margin: 4px 0 8px; }
+.dar-flow li { position: relative; display: grid; grid-template-columns: 22px minmax(0, 1fr); align-items: start; gap: 10px; padding: 6px 16px 6px 0; border: 0; background: none; font-size: 14px; line-height: 1.7; color: var(--dx-text); }
+.dar-flow li + li::before { content: ""; position: absolute; top: 17px; left: -16px; width: 12px; height: 1px; background: var(--dx-line-strong); }
+.dar-flow li::after { content: ""; position: absolute; top: 17px; right: 4px; left: calc(22px + 10px + 100%); }
+.dar-ico { display: inline-grid; place-items: center; width: 22px; height: 22px; margin-top: 1px; border-radius: 50%; background: #eef2ff; color: #1d4ed8; font-size: 13px; font-weight: 600; line-height: 1; }
+.dar-sub { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

@@ -914,3 +914,39 @@
   .dax-dbar__row2 .dax-dbar__reason { min-height: 56px !important; max-height: 56px !important; }
   .dax-dbar__row2 .dax-dec__why { align-self: center; }
 }
+/* 概要: 文字階層（見出し 16/600・本文 14・補足 12） */
+.dax .dax-page--overview .dax-ready__title, .dax-page--overview .dax-sec__title { font-size: 16px !important; font-weight: 600 !important; }
+.dax-page--overview .dax-ready__one, .dax-page--overview .dax-todo__title { font-size: 14px; }
+.dax-page--overview .dax-ready__head { gap: 8px; }
+.dax-page--overview .dax-bc__n { font-size: 12px; color: #4b5563; }
+/* ---- 指摘 狭幅（〜900px） ---- */
+@media (max-width: 900px) {
+  .dax-ftool { flex-wrap: wrap !important; overflow: visible !important; row-gap: 8px; }
+  .dax-ftool > * { flex-wrap: wrap !important; min-width: 0; }
+  .dax-ftool .dax-fsel { flex: 1 1 100%; display: flex; flex-wrap: wrap; gap: 8px; }
+  .dax-ftool .dax-fsearch { flex: 1 1 100%; width: 100% !important; }
+  .dax-md__hmeta { flex-wrap: wrap !important; white-space: normal; min-width: 0; row-gap: 4px; overflow: visible; }
+  .dax-md__hmeta > * { flex: none; min-width: 0; }
+  .dax-md__hmeta .dax-hrule { flex-basis: auto; }
+  .dax-md__hmeta .dax-hrule, .dax-md__hmeta .dax-fsib { order: 9; }
+  .dax-md__hmeta .dax-hrule { margin-left: 0; }
+  .dax-dbar .dax-dbar__row { flex-wrap: wrap !important; }
+  .dax-dbar .dax-seg { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); width: 100%; }
+  .dax-dbar .dax-seg .dax-seg__opt { height: auto !important; min-height: 36px; padding: 4px 6px; white-space: normal; line-height: 1.3; }
+  .dax-dbar { max-height: none !important; }
+  .dax-dbar .dax-dbar__row2 { grid-template-columns: minmax(0, 1fr) !important; grid-template-areas: "ex" "lab" "reason" "why" "btn" !important; }
+  .dax-dbar__row2 .dax-dbar__lab { line-height: 1.4; padding-top: 0; }
+  .dax-dbar__row2 [data-fsubmit] { justify-self: end; }
+}
+@media (max-width: 900px) { .dax-dbar .dax-kbd { display: none; } }
+.dax-seg .dax-seg__opt:focus-visible, .dax-dbar .dax-choice:focus-visible { outline: 2px solid #1d4ed8 !important; outline-offset: 2px !important; position: relative; z-index: 1; }
+/* ---- 指摘 1024 欠陥修正 ---- */
+.dax-md .dax-md__hmeta { display: flex; flex-wrap: wrap !important; gap: 6px 10px; align-items: center; white-space: normal; overflow: visible; }
+.dax-md .dax-md__hmeta > * { white-space: nowrap; flex: none; }
+.dax-md .dax-md__hmeta .dax-sd { display: inline-flex; align-items: center; gap: 4px; }
+.dax-md .dax-md__hmeta .dax-sd > i { display: inline-block; flex: none; width: 8px; height: 8px; margin-right: 2px; position: static; }
+.dax-md .dax-md__hmeta .dax-fnav { margin-left: auto; }
+.dax-dbar .dax-dbar__row2 textarea.dax-dbar__reason { min-height: 72px !important; max-height: 96px !important; height: 72px !important; line-height: 1.5; padding: 6px 10px; overflow-y: auto; }
+.dax-dbar .dax-seg { border: 1px solid #9ca3af; border-radius: 6px; overflow: hidden; box-sizing: border-box; }
+.dax-dbar .dax-seg .dax-seg__opt { border: 0 !important; border-left: 1px solid #9ca3af !important; border-radius: 0 !important; margin: 0; }
+.dax-dbar .dax-seg .dax-seg__opt:first-child { border-left: 0 !important; }

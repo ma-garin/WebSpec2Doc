@@ -12,12 +12,12 @@
     ['passed', '合格', '合格の結果がある'],
     ['verified', '検証', '証跡で確かめられた']
   ];
-  var NA_TIP = '評価していません。テストの実行結果（System02）がまだ無いため、0 件や合格とは扱いません。';
+  var NA_TIP = '未取り込みです。テストの実行結果（System02）がまだ取り込まれていないため、0 件や合格とは扱いません。';
   var PROV_LABEL = { EXPLICIT: '原文に明記', OBSERVED: '原文に記載', DERIVED: '原文から導出', INFERRED: '推測' };
   var TYPE_LABEL = { Requirement: '要件', BusinessRule: '業務ルール', Document: '文書', Section: '節', Screen: '画面', API: 'API', Test: 'テスト', Evidence: '証跡' };
   var KIND_LABEL = { contains: '記載箇所', mentions: '画面・API を参照', references: '参照', relates: '関連', verifies: 'テストで確認', exercises: 'テストで実行', evidences: '証跡あり' };
   var COLS = [['文書', ['Document', 'Section']], ['要件', ['Requirement', 'BusinessRule']], ['画面・API', ['Screen', 'API']], ['テスト', ['Test']], ['証跡', ['Evidence']]];
-  var GAPS = [['any', '要対応'], ['', 'すべて'], ['design', '設計無'], ['test', 'テスト無'], ['evidence', '証跡無']];
+  var GAPS = [['any', '途切れあり'], ['', 'すべて'], ['design', '設計無'], ['test', 'テスト無'], ['evidence', '証跡無']];
   var GAP_TIP = '欠陥とは限りません。候補です。つながりが見つからなかっただけで、無いと証明したものではありません。';
   var GUIDE = '要件を選ぶと、その要件につながる文書・画面・API・テスト・証跡を表示します。';
   var ST = {};   // レビューごとの表示状態（再描画をまたいで保つ）
@@ -80,32 +80,36 @@
   }
 
   var LATE = { execution: 1, passed: 1, verified: 1 };
-  /* 要件ごとの 6 段の経路: true=つながりあり／false=見つからない／null=未接続（評価していない） */
+  /* 要件ごとの 6 段の経路: true=つながりあり／false=見つからない／null=未取り込み */
   function path(r, execNA) { var ex = execNA ? null : !r.noEv; return [true, !r.noDesign, !r.noTest, ex, null, null]; }
   function brk(p) { for (var i = 0; i < p.length; i++) if (p[i] === false) return i; return -1; }
   function dots(r, execNA, short) {
     var p = path(r, execNA), b = brk(p), n = 0; while (n < 6 && p[n] === true) n++;
-    var pill = b >= 0 ? '<span class="dat-pill" title="' + STAGES[b][1] + 'で途切れ（候補）">' + STAGES[b][1] + (short ? '' : 'で途切れ') + '</span>' : '<span class="dat-pill dat-pill--n" title="途切れた段は見つかっていません。以降は未接続（評価していません）">途切れなし</span>';
-    return pill + '<span class="dat-reach" title="6 段のうちつながりを確認できた段の数">到達 ' + n + '/6</span>';
+    var pill = b >= 0 ? '<span class="dat-pill" title="' + STAGES[b][1] + 'の段で' + 'つながりを検出できませんでした（不在の証明ではありません）' + '">途切れ：' + STAGES[b][1] + '</span>' : '<span class="dat-pill dat-pill--n" title="途切れた段は見つかっていません。以降は未取り込み">途切れなし</span>';
+    var D = p.filter(function (v) { return v !== null; }).length, nd = Math.min(n, D);
+    return pill + '<span class="dat-reach" title="取り込み済みの ' + D + ' 段のうち ' + nd + ' 段に到達。' + (D < 6 ? '実行・合格・検証は未取り込みのため評価していません' : '') + '">到達 ' + nd + '/' + D + (D < 6 && !short ? '・以降は未取り込み' : '') + '</span>';
   }
   function covHtml(m, esc, infoTip, allN) {
     var late = [], T = m.reqs.length, reached = [0, 0, 0, 0, 0, 0], lost = [0, 0, 0, 0, 0, 0], ex = m.excl.length;
     m.reqs.forEach(function (r) { var p = path(r, m.execNA); for (var i = 0; i < 6; i++) { if (p[i] === true) reached[i]++; else { if (p[i] === false) lost[i]++; break; } } });
-    var head = '追跡対象 ' + T + ' 件' + (ex ? '（重複 ID ' + ex + ' 件は対象外・抽出は ' + (allN || T + ex) + ' 件）' : '');
+    var dn = function (id) { var sec = m.nodes.filter(function (n) { return n.type === 'Section' && n.document_id === id; })[0], mm = sec && String(sec.label || '').match(/([^\s　「」（）]+書)/); return mm ? mm[1] : id; };
+    var tdoc = m.reqs[0] && m.reqs[0].n.document_id, xdocs = {}; m.excl.forEach(function (x) { xdocs[x.doc] = 1; });
+    var head = '追跡対象 ' + T + ' 件＝' + (tdoc ? dn(tdoc) + 'の要件' : '要件') + (ex ? '。' + Object.keys(xdocs).map(dn).join('・') + 'の ' + ex + ' 件は、' + (tdoc ? dn(tdoc) : '追跡対象') + 'に同じ ID があるため対象外' : '');
     var cells = STAGES.map(function (s, i) {
       var c = m.cov[s[0]], isNa = c == null || c.ratio == null || (m.execNA && LATE[s[0]]);
       var l = '<span class="dat-kpi__l" title="' + esc(s[2]) + '">' + (i + 1) + '. ' + esc(s[1]) + '</span>';
       if (isNa) { late.push((i + 1) + '. ' + s[1]); return ''; }
       var p = T ? Math.round(reached[i] / T * 100) : 0;
-      return '<div class="dat-kpi' + (lost[i] ? ' dat-kpi--cut' : '') + '" data-stage="' + s[0] + '">' + l + '<span class="dat-kpi__v">' + reached[i] + '<small>/' + T + '</small></span>'
+      return '<div class="dat-kpi' + (lost[i] ? ' dat-kpi--cut' : '') + '" data-stage="' + s[0] + '">' + l + '<span class="dat-kpi__v" title="分母は追跡対象 ' + T + ' 件">' + reached[i] + '<small>/' + T + '</small></span>'
         + '<span class="dax-bar dax-bar--progress dat-bar" aria-hidden="true"><span style="width:' + p + '%"></span></span>'
-        + (i === 0 ? '<span class="dat-lost dat-lost--z">起点</span>' : lost[i] ? '<button type="button" class="dax-link dat-lost" data-trgap="brk' + i + '" title="この段で新たにつながりが見つからなくなった ' + lost[i] + ' 件（候補）を一覧に表示">未達 ' + lost[i] + ' 件 ›</button>' : '<span class="dat-lost dat-lost--z">未達 0 件</span>') + '</div>';
+        + (i === 0 ? '<span class="dat-lost dat-lost--z">起点</span>' : lost[i] ? '<button type="button" class="dax-link dat-lost' + (lost[i] === Math.max.apply(null, lost) ? ' dat-lost--main' : '') + '" data-trgap="brk' + i + '" title="この段で新たにつながりを検出できなかった ' + lost[i] + ' 件（候補）を一覧に表示">未達 ' + lost[i] + ' 件 ›</button>' : '<span class="dat-lost dat-lost--z">未達 0 件</span>') + '</div>';
     }).join('');
     var notTest = T - reached[2];
     var lp = lost.filter(function (x) { return x; }), lsum = lp.reduce(function (x, y) { return x + y; }, 0);
     var foot0 = lp.length ? '未達 ' + lp.join('＋') + (lp.length > 1 ? '＝' + lsum : '') + ' 件＝一覧の途切れ段の件数。' : '';
-    var foot = foot0 + (notTest ? (notTest === T ? T + ' 件すべてが' : T + ' 件中 ' + notTest + ' 件が') + 'テスト設計まで届いていません。' : '');
-    return '<section class="dat-kpis" aria-labelledby="dat-cov-h"><h2 class="dat-kpis__h" id="dat-cov-h"><span class="dat-kpis__t">' + esc(head) + '</span><span class="dat-kpis__tip">' + infoTip('到達＝その段までつながった要件の数（分母は追跡対象）。未達 n＝その段で新たにつながりが見つからなくなった数（候補）。' + NA_TIP) + '</span></h2><div class="dat-kpis__row">' + cells + (late.length ? '<div class="dat-late2" title="' + esc(NA_TIP) + '"><span class="dat-kpi__l">' + esc(late.join(' → ')) + '</span><span class="dat-kpi__v">未接続</span><a class="dax-btn dax-btn--sm" href="/systems">実行結果を取り込む</a></div>' : '') + '</div>' + (foot ? '<p class="dat-kpis__foot">' + esc(foot) + '</p>' : '') + '</section>';
+    var exNote = ex ? '対象外の ' + ex + ' 件（' + Object.keys(xdocs).map(dn).join('・') + '）は設計の到達数に含みません。' : '';
+    var foot = (notTest ? (notTest === T ? T + ' 件すべてが' : T + ' 件中 ' + notTest + ' 件が') + 'テスト設計まで届いていません。' : '');
+    return '<section class="dat-kpis" aria-labelledby="dat-cov-h"><h2 class="dat-kpis__h" id="dat-cov-h"><span class="dat-kpis__t">追跡対象 ' + T + ' 件' + (tdoc ? '（' + esc(dn(tdoc)) + '）' : '') + '</span><span class="dat-kpis__tip">' + infoTip(head + '。' + exNote + '到達＝その段までつながった要件の数（分母は追跡対象）。未達 n＝その段で新たにつながりを検出できなかった数（候補）。' + NA_TIP) + '</span></h2>' + '<div class="dat-kpis__row">' + cells + (late.length ? '<div class="dat-late2" title="' + esc(NA_TIP) + '"><span class="dat-late2__t">' + esc(late.map(function (x) { return x.replace(/^\d+\. /, ''); }).join('・')) + ': 未取り込み（評価していません）</span><a class="dax-btn dax-btn--sm" href="/systems">実行結果を取り込む</a></div>' : '') + '</div>' + (foot ? '<p class="dat-kpis__foot"><span aria-hidden="true">ⓘ</span> ' + esc(foot) + '</p>' : '') + '</section>';
   }
   var GAP_SEL = [['design', '設計無'], ['test', 'テスト無'], ['evidence', '証跡無']];
   function gapHtml(m, s, infoTip) {
@@ -150,10 +154,10 @@
     var rows = STAGES.map(function (st, i) {
       if (i === 0) return '';
       var v = p[i], cell;
-      if (v === null) cell = '<span class="dat-na">未接続（評価していません）</span>';
+      if (v === null) cell = '<span class="dat-na">未取り込み</span>';
       else {
         var ts = STG_T[i] || [], ns = Object.keys(h.nodes).filter(function (id) { return ts.indexOf(m.byId[id].type) >= 0; });
-        cell = ns.length ? ns.map(function (id) { var n = m.byId[id]; return '<span class="dat-tag">' + esc(TYPE_LABEL[n.type] || n.type) + ' ' + esc(n.label || id) + '</span>'; }).join(' ') : '<span class="dat-gapcell">見つかりません（候補）</span>';
+        cell = ns.length ? ns.map(function (id) { var n = m.byId[id]; return '<span class="dat-tag">' + esc(TYPE_LABEL[n.type] || n.type) + ' ' + esc(n.label || id) + '</span>'; }).join(' ') : '<span class="dat-gapcell">つながりを検出できませんでした（不在の証明ではありません）</span>';
       }
       return '<tr class="' + (v === false ? 'is-gap' : '') + '"><th scope="row">' + (i + 1) + '. ' + esc(st[1]) + '</th><td>' + cell + '</td></tr>';
     }).join('');
@@ -162,9 +166,9 @@
   function nextGap(r, execNA) {
     var p = path(r, execNA), out = [], na = [];
     var first = brk(p), ACT = function (i) { if (i === first) return ''; var c = 'dax-btn dax-btn--sm'; return i === 1 ? '<button type="button" class="' + c + '" data-tab-go="req">設計を紐付け</button>' : i === 2 ? '<button type="button" class="' + c + '" data-tab-go="review">テスト案を生成</button>' : ''; };
-    p.forEach(function (v, i) { if (i === 0) return; if (v === false) out.push('<li class="dat-next__row"><span><b>' + (i + 1) + '. ' + STAGES[i][1] + '</b>：' + STAGES[i][2].replace('がある', '') + 'が見つかりません（候補）</span>' + ACT(i) + '</li>'); else if (v === null) na.push((i + 1) + '. ' + STAGES[i][1]); });
+    p.forEach(function (v, i) { if (i === 0) return; if (v === false) out.push('<li class="dat-next__row"><span><b>' + (i + 1) + '. ' + STAGES[i][1] + '</b>：' + STAGES[i][2].replace('がある', '') + '：つながりを検出できませんでした（不在の証明ではありません）</span>' + ACT(i) + '</li>'); else if (v === null) na.push((i + 1) + '. ' + STAGES[i][1]); });
     return '<section class="dat-next"><h3 class="dat-next__h">次の段の不足</h3>' + (out.length ? '<ul>' + out.join('') + '</ul>' : '<p class="dax-meta">切れた段は見つかっていません。</p>')
-      + (na.length ? '<p class="dax-meta dat-next__na">' + na.join('・') + '：未接続（評価していません。合格とは扱いません）</p>' : '') + '</section>';
+      + (na.length ? '<p class="dax-meta dat-next__na">' + na.join('・') + '：未取り込み（合格とは扱いません）</p>' : '') + '</section>';
   }
   /* 近傍グラフ: 列＝ノード型（文書→要件→画面/API→テスト→証跡）。列内は縦に積むので重ならない */
   function graphSvg(m, h, center, focusId, width, esc) {
@@ -210,23 +214,23 @@
     var items = rel.map(function (e) {
       var o = m.byId[e.src === id ? e.dst : e.src] || {};
       return '<li>' + esc(KIND_LABEL[e.kind] || e.kind) + ' → ' + esc(TYPE_LABEL[o.type] || o.type || '') + '「' + esc(o.label || o.id || '') + '」<br><span class="dax-meta">出所: ' + esc(provName(e.provenance))
-        + ' ・ 根拠: ' + esc(e.basis || '記録なし') + ' ・ 関連度: ' + esc(level(e.confidence)) + '</span></li>';
+        + ' ・ 根拠: ' + esc(e.basis || '未提供') + ' ・ 関連度: ' + esc(level(e.confidence)) + '</span></li>';
     }).join('');
     return '<section class="dax-sec" aria-live="polite"><div class="dax-sec__head"><h3 class="dax-sec__title">' + esc(n.label || n.id) + '</h3></div><dl class="dax-props dax-props--one">'
       + row('種類', esc(TYPE_LABEL[n.type] || n.type)) + row('ID', esc(n.id)) + (n.document_id ? row('文書', esc(n.document_id)) : '') + '</dl>'
-      + (items ? '<ul class="dat-rel">' + items + '</ul>' : '<p class="dax-meta">この範囲ではつながりが見つかりません（無いと証明したものではありません）。</p>') + '</section>';
+      + (items ? '<ul class="dat-rel">' + items + '</ul>' : '<p class="dax-meta">この範囲ではつながりを検出できませんでした（不在の証明ではありません）。</p>') + '</section>';
   }
   function tableHtml(m, h, center, esc) {
     var es = h.edges.map(function (i) { return m.edges[i]; });
-    if (!es.length) return '<p class="dax-meta">この要件のつながりは見つかりません。欠陥とは限りません。</p>';
-    var stOf = function (e) { return e.provenance === 'INFERRED' || e.provenance === 'DERIVED' ? '要確認' : '確認済み'; };
+    if (!es.length) return '<p class="dax-meta">つながりを検出できませんでした（不在の証明ではありません）。</p>';
+    var stOf = function (e) { return e.provenance === 'INFERRED' || e.provenance === 'DERIVED' ? '推定' : '確認済み'; };
     var cnt = {}; es.forEach(function (e) { cnt[e.provenance] = (cnt[e.provenance] || 0) + 1; });
     var major = Object.keys(cnt).sort(function (a, b) { return cnt[b] - cnt[a]; })[0];
     var anyEx = es.some(function (e) { return e.provenance !== major || stOf(e) !== '確認済み'; });
     var rows = es.map(function (e) {
       var a = m.byId[e.src] || {}, b = m.byId[e.dst] || {};
       var tgt = function (n, id) { return n.type === 'Requirement' ? '<button type="button" class="dax-link" data-trq="' + esc(n.id) + '">' + esc(reqId(n)) + '</button>' : esc(TYPE_LABEL[n.type] || '') + '「' + esc(n.label || id) + '」'; };
-      var badge = (e.provenance !== major ? '<span class="dat-ex">' + esc(provName(e.provenance)) + '</span>' : '') + (stOf(e) !== '確認済み' ? '<span class="dat-ex">要確認</span>' : '');
+      var badge = (e.provenance !== major ? '<span class="dat-ex">' + esc(provName(e.provenance)) + '</span>' : '') + (stOf(e) !== '確認済み' ? '<span class="dat-ex">推定</span>' : '');
       return '<tr><td>' + tgt(a, e.src) + ' → ' + tgt(b, e.dst) + '<div class="dat-sub">' + esc(KIND_LABEL[e.kind] || e.kind) + '</div></td>' + (anyEx ? '<td title="確からしさ ' + esc(level(e.confidence)) + '">' + (badge || '—') + '</td>' : '') + '</tr>';
     }).join('');
     return '<div class="dax-table-wrap"><table class="dax-table dat-table"><thead><tr><th>つながり</th>' + (anyEx ? '<th>状態</th>' : '') + '</tr></thead><tbody>' + rows + '</tbody></table></div>'
@@ -289,6 +293,13 @@
       });
       box.addEventListener('keydown', function (ev) {
         var tg = ev.target;
+        if (tg.matches && tg.matches('[role="tab"][data-trgap]') && /^(ArrowRight|ArrowLeft|Home|End)$/.test(ev.key)) {
+          ev.preventDefault(); ev.stopPropagation();
+          var tabs = [].slice.call(tg.parentNode.querySelectorAll('[role="tab"][data-trgap]:not([disabled])')), k = tabs.indexOf(tg);
+          var nx = ev.key === 'Home' ? tabs[0] : ev.key === 'End' ? tabs[tabs.length - 1] : tabs[(k + (ev.key === 'ArrowRight' ? 1 : -1) + tabs.length) % tabs.length];
+          if (nx && nx !== tg) nx.click();
+          return;
+        }
         if ((ev.key === 'ArrowDown' || ev.key === 'ArrowUp') && tg.matches && tg.matches('[data-trq]')) {
           ev.preventDefault(); ev.stopPropagation();
           var its = [].slice.call(listEl.querySelectorAll('[data-trq]')), j = its.indexOf(tg) + (ev.key === 'ArrowDown' ? 1 : -1);

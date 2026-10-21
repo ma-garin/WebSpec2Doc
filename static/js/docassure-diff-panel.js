@@ -53,12 +53,12 @@
     return t.length > 48 ? t.slice(0, 48) + '…' : (t || '本文なし');
   }
   function badge(esc, d) {
-    var c = CHANGE[d.change] || ['?', d.change || '不明'];
+    var c = CHANGE[d.change] || ['?', d.change || '種別未評価'];
     return '<span class="dax-tag dac-ch dac-ch--' + esc(String(d.change || '').toLowerCase()) + '">' + c[0] + ' ' + esc(c[1]) + '</span>';
   }
   function basisWord(d) {
     var n = (d.impacted_requirements || []).length;
-    if (n) { return '参照' + n + '件'; }
+    if (n) { return '参照 ' + n + ' 件'; }
     return d.change_type ? (TYPE[d.change_type] || d.change_type).replace(/の変更$/, '') : (CHANGE[d.change] || ['', ''])[1];
   }
   function impactList(esc, d) {
@@ -110,8 +110,9 @@
 
   function impactHtml(esc, d) {
     var reqs = d.impacted_requirements || [];
-    var basis = d.change === 'MOVED' ? '位置のみの変更のため' : (d.risk ? '変更の種類と、この要件を参照する要件の候補 ' + reqs.length + ' 件から' : '判定材料が無いため未評価と');
-    return '<p>影響 ' + esc((RISK[d.risk] || ['未評価'])[0]) + '：' + esc(basis) + '推定しました。</p>';
+    var basis = d.change === 'MOVED' ? '位置のみの変更のため' : (d.risk ? '変更の種類と、この要件を参照する要件の候補 ' + reqs.length + ' 件から推定しました' : '判定の材料が無いため評価していません');
+    if (d.change === 'MOVED') { basis += '推定しました'; }
+    return '<p>影響 ' + esc(d.change === 'MOVED' ? 'なし' : (RISK[d.risk] || ['未評価'])[0]) + '：' + esc(basis) + '。</p>';
     var rows = '<div class="dax-props__row"><dt>根拠</dt><dd>' + esc(basis) + '推定</dd></div>' +
       '<div class="dax-props__row"><dt>要件の候補</dt><dd>' + (reqs.length ? reqs.map(function (r) { return '<span class="dax-tag">' + esc(r) + '</span>'; }).join(' ') : '<span class="dax-meta">候補なし（影響なしの証明ではありません）</span>') + '</dd></div>';
     return '<dl class="dax-props dax-props--one">' + rows + '</dl>';
@@ -122,7 +123,7 @@
     var n = (d.impacted_requirements || []).length;
     var head = '<header class="dax-md__head dac-head"><div class="dac-head__l"><div class="dax-md__hmeta">' + badge(esc, d) + impact(esc, d) + '<span class="dax-item__req">' + esc(d.requirement_id || '') + '</span></div>' +
       '<h2 class="dax-dh__title">' + esc(titleOf(d)) + '</h2>' + '<p class="dac-cand"><span class="dax-meta">影響の候補</span> ' + (n ? d.impacted_requirements.map(function (r) { return '<span class="dax-tag">' + esc(r) + '</span>'; }).join(' ') : '<span class="dax-meta">なし（影響なしの証明ではありません）</span>') + '</p>' + '</div>' +
-      '<div class="dac-cta-w"><button type="button" class="dax-btn dax-btn--primary dac-cta" data-tab-go="trace">影響を確認（' + n + '件）</button><span class="dax-meta dac-cta__hint">トレーサビリティで影響範囲を開きます</span></div>' + '</header>';
+      '<div class="dac-cta-w"><button type="button" class="dax-btn dax-btn--primary dac-cta" data-tab-go="trace">影響を確認（要件 ' + n + ' 件）</button><span class="dax-meta dac-cta__hint">トレーサビリティで影響範囲を開きます</span></div>' + '</header>';
     var ba = '<section class="dax-detail__section" aria-label="原文の差分"><h3 class="dax-h3">原文の差分（Before / After）</h3><div class="dac-ba">' +
       sideHtml(esc, 'Before（前の版）', d.before, md[0]) + sideHtml(esc, 'After（今の版）', d.after, md[1]) + '</div>' +
       '<p class="dax-meta dac-legend"><del class="dac-del">削除</del> <ins class="dac-ins">追加</ins> を語単位で示します。</p></section>';
@@ -137,7 +138,7 @@
     return vs.length ? '版 ' + vs.reduce(function (a, b) { return Number(b) > Number(a) ? b : a; }) : '今の版';
   }
   var VER = null;
-  function verPair() { return VER && VER[0] != null && VER[1] != null ? '第' + VER[0] + '版 → 第' + VER[1] + '版' : '前の版 → ' + curLabel(); }
+  function verPair() { return VER && VER[0] != null && VER[1] != null ? '第' + VER[0] + '版 → 第' + VER[1] + '版' : '前の版 → ' + curLabel() + '（版番号は未提供）'; }
   function curLabel() { var v = versionsText(); return v === '今の版' ? v : '今の版（' + v + '）'; }
   function curVer() {
     var v = versionsText(); if (v !== '今の版') { return '第' + v.replace('版 ', '') + '版'; }
@@ -192,7 +193,7 @@
         if (r.status === 404 && r.body && r.body.code === 'no_previous') {
           var dx = root.closest('.dax'), hm = dx && dx.querySelector('.dax-header__meta');
           if (hm) { hm.textContent = curVer() ? curVer() + '（比較できる前の版なし）' : '比較できる前の版なし'; }
-          box.innerHTML = emptyHtml(ctx.esc, '比較できる前の版がありません', '版が 1 つだけです。文書を更新して再解析すると差分が出ます。'); return; }
+          box.innerHTML = emptyHtml(ctx.esc, '比較できる前の版がありません', (curVer() ? 'この文書は' + curVer().replace(/第(\d+)版/, '第 $1 版') + 'のみ保存されています。' : '保存されている版は 1 つだけです。') + '文書を更新して再解析すると、前の版との差分が出ます。'); return; }
         if (!r.ok) {
           box.innerHTML = '<section class="dax-state dax-state--error" role="alert"><p class="dax-state__title">差分を取得できませんでした</p><p class="dax-state__body">' +
             ctx.esc((r.body && r.body.error) || '時間をおいて再度お試しください。') + '</p><button type="button" class="dax-btn" data-tab-go="diff">再読み込み</button></section>';

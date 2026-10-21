@@ -67,7 +67,7 @@
         if(ob)ob.observe(n,{subtree:true,attributes:true,attributeFilter:['class']});}
       n.addEventListener('click',function(e){var a=e.target.closest('[data-da-tab]');if(!a)return;e.preventDefault();var t=a.dataset.daTab;location.hash=window.DAX_IID?('#assure/'+window.DAX_IID+'/'+t):(t==='overview'?'#assure':'#assure');});
       n.querySelectorAll('.dv-sb__item').forEach(function(it){var l=it.querySelector('.dv-sb__label');if(l&&!it.title)it.title=l.textContent.trim();});
-      window.addEventListener('dax:counts',function(e){var d=e.detail||{};n.querySelectorAll('.dv-sb__count').forEach(function(c){var v=d[c.dataset.count];if(v==null||v===''||+v===0){c.hidden=true;return;}c.textContent=v;var lb=(c.dataset.count==='conf'?'未解決の矛盾 ':'未解決 ')+v+' 件';c.title=lb;c.setAttribute('aria-label',lb);c.hidden=false;});});
+      window.addEventListener('dax:counts',function(e){var d=e.detail||{};n.querySelectorAll('.dv-sb__count').forEach(function(c){var v=d[c.dataset.count];if(v==null||v===''||+v===0){c.hidden=true;return;}c.textContent=v;var L=(window.DAM||{}).LABEL,k=c.dataset.count,lb=L?(k==='conf'?L.confOf(d.issues,v):k==='req'?L.reqOpen(v):L.issues(v)):(k==='conf'?'判断待ち '+d.issues+' 件のうち矛盾 ':'判断待ち ')+v+' 件';c.title=lb;c.setAttribute('aria-label',lb);c.hidden=false;});});
       function crumb(){var bc=document.getElementById('topbar-breadcrumb');if(!bc)return;var cur=n.querySelector('[aria-current="page"] .dv-sb__label');var isDA=/^#assure/.test(location.hash||'');var r=window.DV&&DV.state&&DV.state.review&&DV.state.review.name;var parts=['Document Assurance'];if(isDA){if(r&&cur){parts.push(r,cur.textContent.trim());}else parts.push('ドキュメント品質保証');}else if(cur){parts.push(cur.textContent.trim());}
         var h=parts.map(function(t,i){var e=document.createElement('span');e.textContent=t;if(i===parts.length-1)e.setAttribute('aria-current','page');return e.outerHTML;}).join('<span class="sep">/</span>');var f=bc.firstElementChild;if(f&&f.textContent.trim()==='WebSpec2Doc'){f.hidden=true;if(f.nextElementSibling)f.nextElementSibling.hidden=true;var rest=Array.prototype.slice.call(bc.children,2).map(function(e){return e.outerHTML;}).join('');if(rest===h)return;}if(bc.innerHTML!==h)bc.innerHTML=h;}
       var bcEl=document.getElementById('topbar-breadcrumb');if(bcEl)new MutationObserver(function(){setTimeout(crumb,0);}).observe(bcEl,{childList:true,subtree:true,characterData:true});
@@ -111,6 +111,7 @@
 <script src="{{ url_for('static', filename='js/docverify-trace-report.js') }}?v={{ dv_ver }}"></script>
 <script src="{{ url_for('static', filename='js/docverify-process.js') }}?v={{ dv_ver }}"></script>
 <script src="{{ url_for('static', filename='js/docverify-accuracy.js') }}?v={{ dv_ver }}"></script>
+<script src="{{ url_for('static', filename='js/docassure-vocab.js') }}?v={{ dv_ver }}"></script>
 <script src="{{ url_for('static', filename='js/docassure.js') }}?v={{ dv_ver }}"></script>
 <script src="{{ url_for('static', filename='js/docassure-trace-panel.js') }}?v={{ dv_ver }}"></script>
 <script src="{{ url_for('static', filename='js/docassure-diff-panel.js') }}?v={{ dv_ver }}"></script>

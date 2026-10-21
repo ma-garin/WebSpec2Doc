@@ -2,7 +2,9 @@
 import re
 from pathlib import Path
 
-JS = (Path(__file__).resolve().parent.parent / "static/js/docassure.js").read_text(encoding="utf-8")
+_STATIC = Path(__file__).resolve().parent.parent / "static/js"
+# 語と指標の正本（docassure-vocab.js）も画面の文言の一部として検査する
+JS = (_STATIC / "docassure.js").read_text(encoding="utf-8") + (_STATIC / "docassure-vocab.js").read_text(encoding="utf-8")
 
 
 def test_panel_registry_and_ctx():

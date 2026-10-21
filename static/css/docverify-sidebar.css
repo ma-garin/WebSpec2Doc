@@ -139,3 +139,4 @@
   .dv-sb .dv-sb__item,.dv-sb .dv-sb__group--admin .dv-sb__item,.dv-sb .dv-sb__foot .dv-sb__item,.dv-sb .dv-sb__group--admin .dv-sb__item.dv-sb__item--sub{width:88px}
   .dv-sb .dv-sb__item .dv-sb__label,.dv-sb .dv-sb__item:hover .dv-sb__label,.dv-sb .dv-sb__item:focus-visible .dv-sb__label{max-width:88px;font-size:11px;letter-spacing:-.03em}
 }
+.dv-sb .dv-sb__heading{font-weight:600 !important;color:rgb(97,104,117) !important;letter-spacing:.04em}

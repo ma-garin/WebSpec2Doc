@@ -226,3 +226,21 @@
 .dat-row .dat-pill{display:inline-block}
 .dax-md__hmeta .dat-reach{margin-left:8px}
 @media (max-width:1199px){.dat-row{grid-template-columns:54px minmax(0,1fr) auto}.dat-row .dat-reach{display:none}}
+/* 一覧 2 段: 1 行目 ID＋途切れ段＋到達、2 行目 題名（最大 2 行） */
+.dat-row{grid-template-columns:auto auto minmax(0,1fr);grid-template-areas:"id pill reach" "t t t";height:auto;min-height:0;padding:8px 12px;row-gap:2px;align-items:center}
+.dat-row__id{grid-area:id}
+.dat-row .dat-pill{grid-area:pill}
+.dat-row .dat-reach{grid-area:reach;justify-self:end;display:inline}
+.dat-row__t{grid-area:t;white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;word-break:normal;overflow-wrap:anywhere;line-height:1.45}
+.dat-excl>span:last-child{display:none}
+@media (max-width:1199px){.dat-row{grid-template-columns:auto auto minmax(0,1fr);padding:6px 8px}.dat-row .dat-reach{display:none}}
+.dat-kpis__sub{margin:0;padding:4px 12px;border-bottom:1px solid var(--dx-line);font-size:13px;color:var(--dx-text-2)}
+/* 第 7 回ゲート: 主導線は最大の「未達 n 件 ›」1 つ／バー 1 色／注記は灰 1 行 */
+.dat-kpi--cut .dat-bar{background:var(--dx-sunk,#eef0f3);box-shadow:none}
+.dat-bar>span{background:var(--dx-text-3,#8a93a0)}
+.dat-lost{font-weight:500;font-size:13px}
+.dat-lost--main{font-weight:700;font-size:14px;text-decoration:underline}
+.dat-kpis__foot{color:var(--dx-text-2);background:var(--dx-sunk,#f4f6f9);font-size:12px}
+.dat-late2{align-content:center}
+.dat-late2__t{font-size:13px;color:var(--dx-text-2);font-weight:500}
+.dat-kpis__t{font-size:14px;font-weight:600}

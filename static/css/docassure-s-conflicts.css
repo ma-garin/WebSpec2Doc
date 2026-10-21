@@ -90,3 +90,51 @@ label.dax-h3 { display: block; margin-top: 4px; }
 .dax-cf .dax-md__body { scroll-padding-top: 0; }
 .dax-cf__bar .dax-cf__why { font-weight: 600; color: var(--dx-text); }
 .dax-cf__bar .dax-cf__why--err { color: var(--dx-err-tx); }
+/* 1024 幅の折り目の上: 記述 A/B・差異・判断の 4 択 */
+.dax-cf__ev { display: none; }
+@media (max-width: 1199px) {
+  .dax-cf__wide, .dax-cf .dax-compare__side .dax-cf__more { display: none; }
+  .dax-cf__ev { display: block; font-size: 13px; }
+  .dax-cf__ev > summary { cursor: pointer; color: var(--dx-text-2); }
+  .dax-cf__ev[open] > .dax-cf__basis { margin-top: 6px; }
+  .dax-cf__evctx { display: grid; gap: 2px; margin-top: 6px; }
+  .dax-cf .dax-compare__side { gap: 2px; padding: 6px 10px; }
+  .dax-cf .dax-cf__q { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .dax-cf .dax-cf__src { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .dax-cf .dax-cf__src br { display: none; }
+  .dax-cf .dax-cf__sec::before { content: " ・ "; }
+  .dax-cf__note { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .dax-cf .dax-md__body { gap: 10px; padding-top: 12px; }
+  .dax-cf .dax-md__head { padding-top: 10px; padding-bottom: 10px; gap: 4px; }
+  .dax-cf .dax-cf__card { gap: 6px; padding: 10px 14px; }
+  .dax-cf .dax-cf__radios { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+  .dax-cf .dax-cf__radio { min-height: 34px; padding: 4px 10px; }
+  .dax-md.dax-cf.dax-cf--one { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); gap: 8px; }
+  .dax-cf--one .dax-md__left { flex-direction: row; align-items: center; border-radius: var(--dx-r-lg); }
+  .dax-cf--one .dax-cf__lhead { border-bottom: 0; padding: 6px 8px; width: 300px; flex: none; }
+  .dax-cf--one .dax-cf__scope, .dax-cf--one .dax-cf__end, .dax-cf--one .dax-cf__docs { display: none; }
+  .dax-cf--one .dax-md__left > .dax-md__list { display: block; flex: 1 1 auto; min-width: 0; max-height: 72px; overflow: hidden; border: 0; border-left: 1px solid var(--dx-line); border-radius: 0; }
+  .dax-cf--one .dax-md__list .dax-item { display: grid; gap: 2px; padding: 6px 12px; min-height: 0; }
+  .dax-cf--one .dax-md__list .dax-item__title { font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .dax-cf--one .dax-md__list .dax-item__meta { flex-wrap: nowrap; overflow: hidden; }
+}
+.dax-cf .dax-cf__radio:focus-visible, .dax-cf .dax-cf__reason:focus-visible, .dax-cf__fix .dax-input:focus-visible, .dax-cf__bar .dax-cf__ok:focus-visible, .dax-cf .dax-item:focus-visible, .dax-cf__tabs .dax-segc__opt:focus-visible { outline: 2px solid var(--dx-primary); outline-offset: 2px; }
+/* 1100px 以下: 見出しを本文と一緒にスクロールさせる（確定バーは下端固定のまま） */
+@media (max-width: 1100px) {
+  .dax-cf .dax-md__detail { overflow-x: hidden; overflow-y: auto; display: block; }
+  .dax-cf .dax-md__head { position: static; }
+  .dax-cf .dax-md__detail > .dax-md__body { overflow: visible; min-height: 0; padding-bottom: 24px; }
+  .dax-cf .dax-cf__bar { position: sticky; bottom: 0; z-index: 2; }
+}
+/* 共通 Owner が左ペインを 300px に固定したため、1024 の 1 件時はタブの下に項目行を縦に置く */
+@media (max-width: 1199px) {
+  .dax-cf--one .dax-md__left { flex-direction: column; align-items: stretch; align-self: start; }
+  .dax-cf--one .dax-cf__lhead { width: auto; border-bottom: 1px solid var(--dx-line); }
+  .dax-cf--one .dax-md__left > .dax-md__list { border-left: 0; flex: none; }
+}
+/* 1024: A/B の本文は省略せず全文を折り返す。未選択ラジオは白地 1px 枠 */
+@media (max-width: 1199px) {
+  .dax-cf .dax-compare__side .dax-cf__q { white-space: normal; overflow: visible; text-overflow: clip; max-height: none; }
+}
+.dax-cf .dax-cf__radio[aria-checked="false"] { background: var(--dx-surface); border-width: 1px; box-shadow: none; }
+.dax-cf .dax-cf__radio[aria-checked="false"]:hover { background: var(--dx-sunk); }

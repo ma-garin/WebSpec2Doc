@@ -76,3 +76,14 @@
   .dax-reqtable th:nth-child(4) { width: 108px; }
   .dax-reqtable th:nth-child(5) { width: 100px; }
 }
+/* 1024: 状態・判断待ち・テスト可能性は切らない。本文だけ 2 行まで折り返して省略 */
+@media (max-width: 1180px) {
+  .dax-reqtable th:nth-child(1), .dax-reqtable td.dax-reqidc { width: 112px; }
+  .dax-reqtable th:nth-child(3) { width: 112px; }
+  .dax-reqtable th:nth-child(4) { width: 120px; }
+  .dax-reqtable th:nth-child(5) { width: 100px; }
+  .dax-reqtable th { white-space: nowrap; overflow: visible; }
+  .dax-reqtable tbody td.dax-reqtxt { white-space: normal; line-height: 1.4; padding-top: 4px; padding-bottom: 4px; }
+  .dax-reqtxt__t { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
+  .dax-reqtxt .dax-reqdiff, .dax-reqtxt .dax-reqtag { display: inline-block; }
+}

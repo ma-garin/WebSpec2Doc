@@ -62,7 +62,7 @@
   }
 
   /* ---- System02 ---- */
-  function cell(v, yes) { return v === true ? yes : (v === false ? '未' : '未実行'); }
+  function cell(v, yes) { return v === true ? yes : (v === false ? '未' : '未実施'); }
   function loadStatus(box, ctx) {
     var esc = ctx.esc;
     box.innerHTML = '<p class="dal-muted">読み込み中…</p>';
@@ -70,12 +70,12 @@
       if (!r.ok) { box.innerHTML = fail(esc, r, '状態'); return; }
       var st = (r.body && r.body.status) || {}, ids = Object.keys(st);
       if (!ids.length) { box.innerHTML = '<p class="dal-empty">登録されたテスト案がありません。「テスト案を System02 へ登録」を押してください。</p>'; return; }
-      var RES = { PASSED: '合格', FAILED: '不合格', NONE: '未実行' };
+      var RES = { PASSED: '合格', FAILED: '不合格', NONE: '未実施' };
       box.innerHTML = '<div class="dal-tw"><table class="dal-tbl"><thead><tr><th scope="col">要件</th><th scope="col">設計済み</th><th scope="col">生成済み</th><th scope="col">実行済み</th><th scope="col">合否</th><th scope="col">検証済み</th></tr></thead><tbody>' +
         ids.map(function (id) {
           var s = st[id];
-          return '<tr><th scope="row">' + esc(id) + '</th><td>' + cell(s.designed === true, '設計済み').replace('未実行', '未') + '</td><td>' + (s.generated ? '生成済み' : '未') +
-            '</td><td>' + (s.executed === true ? '実行済み' : '未実行') + '</td><td>' + esc(s.executed === true ? (RES[s.result] || s.result) : '未実行') +
+          return '<tr><th scope="row">' + esc(id) + '</th><td>' + cell(s.designed === true, '設計済み').replace('未実施', '未') + '</td><td>' + (s.generated ? '生成済み' : '未') +
+            '</td><td>' + (s.executed === true ? '実行済み' : '未実施') + '</td><td>' + esc(s.executed === true ? (RES[s.result] || s.result) : '未実施') +
             '</td><td>' + (s.verified === true ? '検証済み' : '未検証') + '</td></tr>';
         }).join('') + '</tbody></table></div><p class="dal-muted">テスト案があるだけでは実行済みになりません。</p>';
     }).catch(function () { netfail(box); });

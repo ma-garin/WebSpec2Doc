@@ -1,0 +1,22 @@
+/* Document Assurance: 画面間で共通の部品（絞り込み・重大度・選択状態・小見出し）の統一。最後に読み込む（共通 Owner だけが編集する） */
+/* C1 絞り込みは「セグメント」1 種類（要件/指摘/矛盾/トレース/変更） */
+.dv-page main .dax-segc,.dv-page main .dax-chips,.dv-page main .dac-chips{display:inline-flex !important;flex-wrap:wrap;align-items:center;gap:4px !important;padding:0 !important;background:transparent !important;border:0 !important;box-shadow:none !important}
+.dv-page main .dax-segc__opt,.dv-page main .dax-chip,.dv-page main .dac-chip{display:inline-flex !important;align-items:center;gap:6px;height:32px !important;min-height:32px !important;padding:0 12px !important;border:1px solid var(--color-border,#d9dde3) !important;border-radius:6px !important;background:#fff !important;color:var(--color-text-secondary,#5b6472) !important;font-size:13px !important;font-weight:500 !important;box-shadow:none !important;line-height:1 !important;white-space:nowrap}
+.dv-page main .dax-segc__opt:hover,.dv-page main .dax-chip:hover,.dv-page main .dac-chip:hover{background:var(--color-surface-muted,#f5f6f8) !important;color:var(--color-text,#1f2430) !important}
+.dv-page main .dax-segc__opt:is([aria-pressed="true"],[aria-selected="true"],[aria-checked="true"]),.dv-page main .dax-chip:is([aria-pressed="true"],[aria-selected="true"]),.dv-page main .dac-chip:is([aria-pressed="true"],[aria-selected="true"]){background:#e8efff !important;border-color:#b9cbff !important;color:#1d4ed8 !important;font-weight:600 !important}
+.dv-page main .dax-segc__n,.dv-page main .dac-chip__n,.dv-page main .dax-chip>span{display:inline-flex !important;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 6px !important;border-radius:9px !important;background:#eef0f3 !important;color:#5b6472 !important;font-size:11px !important;font-weight:600 !important;box-shadow:none !important;border:0 !important}
+.dv-page main .dax-segc__opt:focus-visible,.dv-page main .dax-chip:focus-visible,.dv-page main .dac-chip:focus-visible{outline:2px solid #1d4ed8 !important;outline-offset:1px}
+/* M1 重大度は「点＋文字」（高=赤・中=琥珀・低/情報=グレー） */
+.dv-page main :is(.dax-sd,.dax-reqsev,.dax-cf__sev){display:inline-flex !important;align-items:center;gap:5px;padding:0 !important;border:0 !important;border-radius:0 !important;background:transparent !important;box-shadow:none !important;font-size:12px !important;font-weight:600 !important;width:auto !important;height:auto !important;min-width:0 !important}
+.dv-page main :is(.dax-reqsev,.dax-cf__sev)::before{content:"";flex:0 0 8px;width:8px;height:8px;border-radius:50%;background:currentColor}
+.dv-page main :is(.dax-sd--high,.dax-reqsev--high,.dax-cf__sev--high){color:#d92d20 !important}
+.dv-page main :is(.dax-sd--medium,.dax-sd--mid,.dax-reqsev--medium,.dax-cf__sev--medium){color:#b54708 !important}
+.dv-page main :is(.dax-sd--low,.dax-sd--info,.dax-reqsev--low,.dax-reqsev--info,.dax-cf__sev--low,.dax-cf__sev--info){color:#667085 !important}
+/* M2 判断の選択中は青塗り＋白太字（免除も同じ。橙・琥珀の塗りは廃止） */
+.dv-page main :is(.dax-seg__opt,.dax-choice)[aria-pressed="true"],.dv-page main .dax-cf__radio:is([aria-checked="true"],[aria-pressed="true"]){background:#1d4ed8 !important;border-color:#1d4ed8 !important;color:#fff !important;font-weight:700 !important;box-shadow:none !important}
+.dv-page main :is(.dax-seg__opt,.dax-choice)[aria-pressed="true"] *,.dv-page main .dax-cf__radio:is([aria-checked="true"],[aria-pressed="true"]) *{color:#fff !important;border-color:rgba(255,255,255,.6) !important}
+/* M3 小見出しの共通様式 */
+.dv-page main :is(.dax-h3,.dat-next__h,.dat-tools__h){font-size:12px !important;font-weight:600 !important;letter-spacing:.04em !important;color:var(--color-text-secondary,#5b6472) !important;line-height:1.4 !important}
+.dv-page main .dax-cf__tabs{flex-wrap:nowrap !important}
+.dv-page main .dax-cf__tabs .dax-segc__opt{padding:0 8px !important;gap:4px;font-size:12px !important}
+.dv-page main .dax-chips .dax-chip{padding:0 10px !important}

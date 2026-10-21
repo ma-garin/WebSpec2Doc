@@ -21,6 +21,11 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='css/docassure-trace-panel.css') }}?v={{ dv_ver }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/docassure-panels.css') }}?v={{ dv_ver }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/docassure-links-panel.css') }}?v={{ dv_ver }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/docassure-s-conflicts.css') }}?v={{ dv_ver }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/docassure-s-changes.css') }}?v={{ dv_ver }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/docassure-s-review.css') }}?v={{ dv_ver }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/docassure-s-requirements.css') }}?v={{ dv_ver }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/docassure-s-shared.css') }}?v={{ dv_ver }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/c-hybrid.css') }}?v={{ _ver }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/c-shell.css') }}?v={{ _ver }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/docverify-sidebar.css') }}?v={{ dv_ver }}">
@@ -31,7 +36,7 @@
   {# ドキュメント検証（System 06）。管理群は レビュー一覧・観点・履歴 の 3 つ＋設定。根拠（実画面との照合）は「履歴」画面の中のタブ。 #}
   <aside class="app-sidebar dv-sb" aria-label="ドキュメント検証のナビゲーション">
     <div class="dv-sb__brand">
-      <a href="/systems" class="dv-sb__product" title="WebSpec2Doc のシステム一覧"><span class="app-brand-mark" aria-hidden="true">W</span><span class="dv-sb__names"><strong>WebSpec2Doc</strong><small>Document Assurance</small></span></a>
+      <a href="/systems" class="dv-sb__product" title="WebSpec2Doc のシステム一覧"><span class="app-brand-mark" aria-hidden="true">W</span><span class="dv-sb__names"><strong>Document Assurance</strong></span></a>
       <a href="/systems" class="dv-sb__switch" title="システムを切り替える" aria-label="システムを切り替える（現在: ドキュメント検証）"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></a>
     </div>
     <nav class="app-nav dv-sidenav" aria-label="メインナビゲーション">
@@ -63,7 +68,7 @@
       n.addEventListener('click',function(e){var a=e.target.closest('[data-da-tab]');if(!a)return;e.preventDefault();var t=a.dataset.daTab;location.hash=window.DAX_IID?('#assure/'+window.DAX_IID+'/'+t):(t==='overview'?'#assure':'#assure');});
       n.querySelectorAll('.dv-sb__item').forEach(function(it){var l=it.querySelector('.dv-sb__label');if(l&&!it.title)it.title=l.textContent.trim();});
       window.addEventListener('dax:counts',function(e){var d=e.detail||{};n.querySelectorAll('.dv-sb__count').forEach(function(c){var v=d[c.dataset.count];if(v==null||v===''||+v===0){c.hidden=true;return;}c.textContent=v;var lb=(c.dataset.count==='conf'?'未解決の矛盾 ':'未解決 ')+v+' 件';c.title=lb;c.setAttribute('aria-label',lb);c.hidden=false;});});
-      function crumb(){var bc=document.getElementById('topbar-breadcrumb');if(!bc)return;var cur=n.querySelector('[aria-current="page"] .dv-sb__label');var isDA=/^#assure/.test(location.hash||'');var r=window.DV&&DV.state&&DV.state.review&&DV.state.review.name;var parts=['ドキュメント検証'];if(isDA){if(r&&cur){parts.push(r,cur.textContent.trim());}else parts.push('ドキュメント品質保証');}else if(cur){parts.push(cur.textContent.trim());}
+      function crumb(){var bc=document.getElementById('topbar-breadcrumb');if(!bc)return;var cur=n.querySelector('[aria-current="page"] .dv-sb__label');var isDA=/^#assure/.test(location.hash||'');var r=window.DV&&DV.state&&DV.state.review&&DV.state.review.name;var parts=['Document Assurance'];if(isDA){if(r&&cur){parts.push(r,cur.textContent.trim());}else parts.push('ドキュメント品質保証');}else if(cur){parts.push(cur.textContent.trim());}
         var h=parts.map(function(t,i){var e=document.createElement('span');e.textContent=t;if(i===parts.length-1)e.setAttribute('aria-current','page');return e.outerHTML;}).join('<span class="sep">/</span>');var f=bc.firstElementChild;if(f&&f.textContent.trim()==='WebSpec2Doc'){f.hidden=true;if(f.nextElementSibling)f.nextElementSibling.hidden=true;var rest=Array.prototype.slice.call(bc.children,2).map(function(e){return e.outerHTML;}).join('');if(rest===h)return;}if(bc.innerHTML!==h)bc.innerHTML=h;}
       var bcEl=document.getElementById('topbar-breadcrumb');if(bcEl)new MutationObserver(function(){setTimeout(crumb,0);}).observe(bcEl,{childList:true,subtree:true,characterData:true});
       window.addEventListener('dax:counts',function(){setTimeout(sync,0);setTimeout(crumb,0);});
@@ -75,7 +80,7 @@
   </aside>
 
   <div class="app-main">
-    {% set topbar_crumb = 'ドキュメント検証' %}{% set topbar_title = 'レビュー一覧' %}
+    {% set topbar_crumb = 'Document Assurance' %}{% set topbar_title = 'レビュー一覧' %}
     {% include 'partials/topbar.html' %}
     <main class="app-content dv-content" id="app-content">
       <header class="c-page-head dv-pagehead" id="dv-pagehead"><div class="c-page-head__main"><h1 class="c-page-head__title" id="dv-ph-title">レビュー</h1><p class="c-page-head__desc" id="dv-ph-desc"></p><div class="c-page-head__state" id="dv-ph-state"></div></div></header>

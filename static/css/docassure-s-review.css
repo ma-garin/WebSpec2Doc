@@ -1,0 +1,98 @@
+/* Document Assurance: review 画面専用スタイル（この画面の Owner だけが編集する） */
+.dar { display: grid; gap: 16px; max-width: none; width: 100%; font-size: 14px; }
+
+.dar .dap-body { display: grid; gap: 16px; min-width: 0; }
+.dar-card { display: grid; gap: 12px; padding: 20px; border: 1px solid var(--dx-line); border-radius: var(--dx-r-lg); background: var(--dx-surface); min-width: 0; }
+.dar-card--fail { border-color: var(--dx-err-line); }
+.dar-card--part { border-color: var(--dx-warn-line); }
+.dar-card__head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; min-height: 24px; }
+.dar-card__head > * { margin: 0; line-height: 24px; }
+.dar-card__title { margin: 0; font-size: 16px; font-weight: 600; }
+.dar-card h5 { margin: 0 0 8px; font-size: 12px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--dx-text-3); }
+.dar-st { display: inline-flex; align-items: center; height: 22px; line-height: 22px !important; padding: 0 8px; border-radius: 4px; font-size: 12px; font-weight: 600; border: 1px solid var(--dx-line-strong); color: var(--dx-text-2); background: var(--dx-sunk); }
+.dar-st--run { border-color: var(--dx-primary-line); background: var(--dx-primary-soft); color: var(--dx-primary-dark); }
+.dar-st--done { border-color: var(--dx-ok-line); background: var(--dx-ok-bg); color: var(--dx-ok-tx); }
+.dar-st--fail { border-color: var(--dx-err-line); background: var(--dx-err-bg); color: var(--dx-err-tx); }
+.dar-st--part { border-color: var(--dx-warn-line); background: var(--dx-warn-bg); color: var(--dx-warn-tx); }
+.dar-grid, .dar-cols { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); gap: 16px; }
+.dar-cols { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+.dar-kv { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 8px 16px; margin: 0; font-size: 14px; }
+.dar-kv dt { color: var(--dx-text-2); }
+.dar-kv dd { margin: 0; min-width: 0; overflow-wrap: anywhere; display: flex; flex-wrap: wrap; gap: 4px; }
+.dar-steps { margin: 0; padding-left: 20px; display: grid; gap: 6px; font-size: 14px; }
+.dar-act { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.dar-warn, .dar-err, .dar-cand, .dar-note { margin: 0; padding: 10px 12px; border-radius: var(--dx-r); font-size: 13px; border: 1px solid; }
+.dar-warn { border-color: var(--dx-warn-line); background: var(--dx-warn-bg); color: var(--dx-warn-tx); }
+.dar-err { border-color: var(--dx-err-line); background: var(--dx-err-bg); color: var(--dx-err-tx); }
+.dar-cand { border-color: var(--dx-primary-line); background: var(--dx-primary-soft); color: var(--dx-primary-dark); }
+.dar-note { border-color: var(--dx-line); background: var(--dx-sunk); color: var(--dx-text-2); display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.dar-prog { height: 6px; border-radius: 3px; background: var(--dx-sunk); overflow: hidden; position: relative; }
+.dar-prog > span { position: absolute; inset: 0 auto 0 0; width: 30%; background: var(--dx-primary); animation: dar-ind 1.4s ease-in-out infinite; }
+@keyframes dar-ind { from { left: -30%; } to { left: 100%; } }
+@media (prefers-reduced-motion: reduce) { .dar-prog > span { animation: none; width: 100%; opacity: .4; } }
+.dar-sum { display: flex; align-items: baseline; gap: 16px; flex-wrap: wrap; }
+.dar-num { margin: 0; font-size: 14px; }
+.dar-num strong { font-size: 28px; font-weight: 700; font-variant-numeric: tabular-nums; margin-right: 4px; }
+.dar-range { padding: 12px; border: 1px solid var(--dx-line); border-radius: var(--dx-r); min-width: 0; }
+.dar-range p { margin: 0 0 4px; font-size: 14px; overflow-wrap: anywhere; }
+.dar-range--ok { border-left: 3px solid var(--dx-ok); }
+.dar-range--ng { border-left: 3px solid var(--dx-warn); }
+.dar-list { display: grid; gap: 12px; min-width: 0; }
+@media (max-width: 1100px) { .dar-grid, .dar-cols { grid-template-columns: minmax(0, 1fr); } }
+.dar > h3 { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.dar-sub { margin: -4px 0 0; font-size: 13px; color: var(--dx-text-2); }
+.dar .dap-body > h3, .dar .dap-group > h4 { margin: 0; }
+.dar-kv dt { font-size: 13px; }
+.dar-kv .dax-badge { border: 1px solid var(--dx-line); border-style: solid; background: var(--dx-sunk); color: var(--dx-text); }
+.dar-grid { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 24px; }
+.dar-big { margin: 0 0 4px !important; font-size: 24px !important; font-weight: 700; line-height: 1.2; font-variant-numeric: tabular-nums; }
+.dar-big > span { font-size: 13px; font-weight: 500; color: var(--dx-text-2); }
+.dar-range { padding: 10px 12px; }
+.dar { max-width: 1000px; }
+.dar-role { margin: 0; font-size: 12px; color: var(--dx-text-3); }
+.dar-card--done { border-color: transparent; }
+.dar-card--idle { border-color: var(--dx-line); }
+.dar-card--plain h5 { margin-bottom: 4px; }
+.dar-views { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 8px 16px; }
+.dar-views li { display: grid; gap: 2px; font-size: 13px; color: var(--dx-text-2); word-break: keep-all; overflow-wrap: anywhere; }
+.dar-views strong { font-size: 14px; color: var(--dx-text); font-weight: 600; }
+.dar-kv dd { word-break: keep-all; }
+.dar-ask { font-size: 13px; }
+.dar-ask summary { cursor: pointer; list-style: none; }
+.dar-ask summary::-webkit-details-marker { display: none; }
+.dar-ask[open] p { margin: 6px 0 0; padding: 8px 10px; border: 1px solid var(--dx-line); border-radius: var(--dx-r); background: var(--dx-sunk); max-width: 360px; }
+.dar-tag { display: inline-flex; align-items: center; height: 20px; padding: 0 6px; border-radius: 4px; border: 1px solid var(--dx-line); background: var(--dx-sunk); font-size: 12px; font-weight: 500; color: var(--dx-text-2); }
+.dar-fgrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.dar-fgrid > .dap-item { margin: 0; min-width: 0; }
+@media (max-width: 1100px) { .dar-fgrid { grid-template-columns: minmax(0, 1fr); } }
+.dar { max-width: none; }
+.dar-no { font-size: 12px; font-weight: 600; color: var(--dx-text-3); margin-right: 2px; }
+.dar-more summary { list-style: none; cursor: pointer; margin-top: 8px; }
+.dar-more summary::-webkit-details-marker { display: none; }
+.dar-more[open] > ul { margin-top: 8px; }
+.dar-ask summary.dax-btn { display: inline-flex; }
+.dar-act { align-items: flex-start; }
+.dar-check { margin: 0; padding-left: 20px; display: grid; gap: 4px; font-size: 14px; }
+.dar-card > .dar-warn:first-of-type { width: 100%; }
+.dar-fgrid { grid-template-columns: minmax(0, 1fr) !important; }
+.dar-truth { margin: 0; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.dar-pill { display: inline-flex; align-items: center; height: 24px; padding: 0 10px; border-radius: 999px; border: 1px solid var(--dx-primary-line); background: var(--dx-primary-soft); color: var(--dx-primary-dark); font-size: 12px; font-weight: 600; }
+.dar-idle { display: grid; grid-template-columns: minmax(0, 1fr) 260px; gap: 24px; }
+.dar-idle__main { display: grid; gap: 12px; min-width: 0; align-content: start; }
+.dar-idle__side { padding-left: 20px; border-left: 1px solid var(--dx-line); min-width: 0; }
+.dar-idle__side .dar-views { grid-template-columns: minmax(0, 1fr); }
+.dar-idle .dar-grid { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+.dar-flow { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.dar-flow li { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border: 1px solid var(--dx-line); border-radius: var(--dx-r); background: var(--dx-sunk); font-size: 13px; min-width: 0; }
+.dar-ico { flex: none; display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; background: var(--dx-primary-soft); color: var(--dx-primary-dark); font-size: 13px; }
+@media (max-width: 1100px) { .dar-idle { grid-template-columns: minmax(0, 1fr) 220px; } .dar-idle .dar-grid { grid-template-columns: minmax(0, 1fr); } }
+.dar-chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0 8px; }
+.dar-chip { display: inline-flex; align-items: center; gap: 6px; height: 22px; padding: 0 8px; border-radius: 4px; border: 1px solid var(--dx-line); background: var(--dx-sunk); font-size: 12px; color: var(--dx-text-2); }
+.dar-chip--cand { border-color: var(--dx-primary-line); background: var(--dx-primary-soft); color: var(--dx-primary-dark); font-weight: 600; }
+.dar-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--dx-text-3); }
+.dar-dot--critical, .dar-dot--high { background: var(--dx-err); }
+.dar-dot--medium { background: var(--dx-warn); }
+.dar-dot--low { background: var(--dx-ok); }
+.dar-pill--rule { border-color: var(--dx-line-strong); background: var(--dx-sunk); color: var(--dx-text-2); }
+.dar .dap-item > p { margin: 4px 0; }
+.dar .dap-item > h5 { margin: 10px 0 4px; }

@@ -167,7 +167,7 @@
     const crumb = $('#topbar-breadcrumb');
     if (crumb) {
       const r = DV.state.review;
-      crumb.innerHTML = `<span>WebSpec2Doc</span><span class="sep">/</span><span>ドキュメント検証</span>`
+      crumb.innerHTML = `<span>Document Assurance</span>`
         + (r && REVIEW_VIEWS.includes(view) ? `<span class="sep">/</span><span>${esc(r.name)}</span>` : '');
     }
     DV.current = view;

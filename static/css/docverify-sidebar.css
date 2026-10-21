@@ -74,3 +74,68 @@
   .dv-sb .dv-sb__group--admin .dv-sb__item,.dv-sb .dv-sb__foot .dv-sb__item{font-size:13px}
   .dv-sb .dv-sb__heading{padding:4px 8px 6px}
 }
+/* 件数はバッジ・1024 でも製品名の副題を出す */
+.dv-sb .dv-sb__count{background:var(--color-surface);box-shadow:inset 0 0 0 1px var(--color-border);color:var(--color-text);font-weight:600}
+@media (max-width:1279px) and (min-width:861px){.dv-sb .dv-sb__names small{display:block}}
+.dv-sb .dv-sb__switch{display:none}
+/* 共通シェル Owner: 1100px 以下は 60px のアイコンレール（全項目にアイコンあり・名前は title と視覚非表示ラベルで保持）。1440 は不変 */
+@media (max-width:1100px){
+  .dv-page .app-shell:not(.sidebar-collapsed){--sidebar-w:60px}
+  .dv-page .app-sidebar.dv-sb{padding:12px 10px;align-items:center;overflow-x:hidden}
+  .dv-sb .dv-sb__brand{width:60px;margin:-12px -10px 12px;padding:0;justify-content:center}
+  .dv-sb .dv-sb__product{flex:0 0 auto;justify-content:center;padding:4px}
+  .dv-sb .dv-sb__names,.dv-sb .dv-sb__names small,.dv-sb .dv-sb__switch,.dv-sb .dv-sb__heading{display:none}
+  .dv-sb .app-nav.dv-sidenav,.dv-sb .dv-sb__group,.dv-sb .dv-sb__foot{align-items:center;width:40px}
+  .dv-sb .dv-sb__label{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+  .dv-sb .dv-sb__item,.dv-sb .dv-sb__group--admin .dv-sb__item,.dv-sb .dv-sb__foot .dv-sb__item,.dv-sb .dv-sb__group--admin .dv-sb__item.dv-sb__item--sub{justify-content:center;width:40px;height:40px;padding:0;gap:0}
+  .dv-sb .dv-sb__more .dv-sec{padding-left:0}
+  .dv-sb .dv-sb__more .dv-sec svg{display:block}
+  .dv-sb .dv-sb__sep{width:32px;margin:10px auto}
+  .dv-sb .dv-sb__count{position:absolute;top:3px;right:1px;height:15px;min-width:15px;padding:0 4px;font-size:10px;margin:0}
+  .dv-page .dv-sb .dv-sb__item[aria-current="page"]::before{left:-6px}
+}
+/* 共通シェル Owner 追加: レールの件数バッジは外側右上・CSS ツールチップ・区切り線・選択面 */
+@media (max-width:1100px){
+  .dv-page .app-sidebar.dv-sb{overflow:visible}
+  .dv-sb .dv-sb__count{top:1px;right:-11px;left:auto;box-shadow:0 0 0 2px var(--color-surface-alt),inset 0 0 0 1px var(--color-border)}
+  .dv-sb .dv-sb__sep{display:block;width:36px;border-top:1px solid var(--color-border-strong,var(--color-border));margin:12px auto}
+  .dv-sb .dv-sb__foot{width:40px;padding-top:12px;border-top:1px solid var(--color-border-strong,var(--color-border))}
+  .dv-sb .dv-sb__item:hover .dv-sb__label,.dv-sb .dv-sb__item:focus-visible .dv-sb__label{clip:auto;width:auto;height:auto;overflow:visible;left:calc(100% + 12px);top:50%;transform:translateY(-50%);z-index:60;padding:6px 10px;border-radius:var(--radius-sm);background:var(--color-text);color:var(--color-surface);font-size:12px;font-weight:500;line-height:1.2;box-shadow:0 4px 12px rgba(0,0,0,.18);pointer-events:none}
+  .dv-page .dv-sb .dv-sb__item[aria-current="page"]{background:color-mix(in srgb,var(--color-primary) 18%,var(--color-surface)) !important}
+}
+@media (max-width:1100px){
+  .dv-sb .app-nav.dv-sidenav,.dv-sb .dv-sb__group,.dv-sb .dv-sb__foot,.dv-sb .dv-sb__item{overflow:visible}
+  .dv-sb .dv-sb__count{right:-9px;padding:0 3px}
+}
+/* 共通シェル Owner 方式変更: 1100px 以下は 76px のレール。アイコンの下に 11px ラベル（最大 2 行）を縦積み。ツールチップは廃止 */
+@media (max-width:1100px){
+  .dv-page .app-shell:not(.sidebar-collapsed){--sidebar-w:76px}
+  .dv-page .app-sidebar.dv-sb{padding:12px 6px}
+  .dv-sb .dv-sb__brand{width:76px;margin:-12px -6px 12px}
+  .dv-sb .app-nav.dv-sidenav,.dv-sb .dv-sb__group,.dv-sb .dv-sb__foot{width:64px}
+  .dv-sb .dv-sb__item,.dv-sb .dv-sb__group--admin .dv-sb__item,.dv-sb .dv-sb__foot .dv-sb__item,.dv-sb .dv-sb__group--admin .dv-sb__item.dv-sb__item--sub{flex-direction:column;justify-content:flex-start;width:64px;height:auto;min-height:48px;padding:7px 2px 5px;gap:3px;white-space:normal}
+  .dv-sb .dv-sb__item .dv-sb__label,.dv-sb .dv-sb__item:hover .dv-sb__label,.dv-sb .dv-sb__item:focus-visible .dv-sb__label{position:static;clip:auto;width:auto;height:auto;overflow:hidden;transform:none;flex:0 0 auto;max-width:60px;max-height:2.5em;padding:0;margin:0;background:none;box-shadow:none;border-radius:0;color:inherit;font-size:11px;font-weight:500;line-height:1.2;text-align:center;white-space:normal;word-break:break-all;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;pointer-events:auto}
+  .dv-page .dv-sb .dv-sb__item[aria-current="page"] .dv-sb__label{font-weight:600}
+  .dv-sb .dv-sb__count{top:2px;left:calc(50% + 9px);right:auto}
+  .dv-sb .dv-sb__sep,.dv-sb .dv-sb__foot{width:48px}
+  .dv-sb .dv-sb__foot{width:64px}
+  .dv-page .dv-sb .dv-sb__item[aria-current="page"]::before{left:-6px;top:10px;bottom:10px}
+}
+/* 共通シェル Owner: レール 88px・ラベル 1 行（語の途中で折り返さない） */
+@media (max-width:1100px){
+  .dv-page .app-shell:not(.sidebar-collapsed){--sidebar-w:88px}
+  .dv-page .app-sidebar.dv-sb{padding:12px 4px}
+  .dv-sb .dv-sb__brand{width:88px;margin:-12px -4px 12px}
+  .dv-sb .app-nav.dv-sidenav,.dv-sb .dv-sb__group,.dv-sb .dv-sb__foot{width:80px}
+  .dv-sb .dv-sb__item,.dv-sb .dv-sb__group--admin .dv-sb__item,.dv-sb .dv-sb__foot .dv-sb__item,.dv-sb .dv-sb__group--admin .dv-sb__item.dv-sb__item--sub{width:80px;padding:7px 0 6px}
+  .dv-sb .dv-sb__item .dv-sb__label,.dv-sb .dv-sb__item:hover .dv-sb__label,.dv-sb .dv-sb__item:focus-visible .dv-sb__label{display:block;max-width:80px;max-height:none;font-size:10px;letter-spacing:-.02em;white-space:nowrap;word-break:normal;overflow:visible;-webkit-line-clamp:unset}
+  .dv-page .dv-sb .dv-sb__item[aria-current="page"]::before{left:-4px}
+}
+/* 共通 Owner 最終: レール 96px・ラベル 11px 1 行 */
+@media (max-width:1100px){
+  .dv-page .app-shell:not(.sidebar-collapsed){--sidebar-w:96px}
+  .dv-sb .dv-sb__brand{width:96px}
+  .dv-sb .app-nav.dv-sidenav,.dv-sb .dv-sb__group,.dv-sb .dv-sb__foot{width:88px}
+  .dv-sb .dv-sb__item,.dv-sb .dv-sb__group--admin .dv-sb__item,.dv-sb .dv-sb__foot .dv-sb__item,.dv-sb .dv-sb__group--admin .dv-sb__item.dv-sb__item--sub{width:88px}
+  .dv-sb .dv-sb__item .dv-sb__label,.dv-sb .dv-sb__item:hover .dv-sb__label,.dv-sb .dv-sb__item:focus-visible .dv-sb__label{max-width:88px;font-size:11px;letter-spacing:-.03em}
+}

@@ -244,3 +244,134 @@ def test_no_client_degrades_for_none_and_keyless_openai(monkeypatch):
         r = rb.run(UNITS, DOCS, cl)
         assert r["mode"] == "DEGRADED" and r["findings"] == []
     assert _strip(before.get("findings")) == _strip(pipeline.analyze(DOCS).get("findings"))
+
+
+# ---- ネットワークに出ない契約（urlopen・名前解決を捕捉。実送信 0） ----
+import io
+import re
+import urllib.request
+from pathlib import Path
+from urllib.parse import urlsplit
+
+
+class _Resp(io.BytesIO):
+    status = 200
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *a):
+        return False
+
+
+@pytest.fixture
+def wire(monkeypatch):
+    """urlopen を捕捉して偽応答を返す。名前解決・接続の宛先も記録し、実接続は全て拒否する。"""
+    rec = {"reqs": [], "resolved": [], "connected": []}
+
+    def fake_urlopen(req, timeout=None, **kw):
+        rec["reqs"].append({"url": req.full_url, "headers": {k.lower(): v for k, v in req.header_items()},
+                            "json": json.loads(req.data.decode())})
+        content = json.dumps({"findings": []})
+        return _Resp(json.dumps({"choices": [{"message": {"content": content}}]}).encode())
+
+    def no_resolve(host, *a, **k):
+        rec["resolved"].append(host)
+        raise AssertionError(f"実名前解決が起きた: {host}")
+
+    def no_connect(addr, *a, **k):
+        rec["connected"].append(addr)
+        raise AssertionError(f"実接続が起きた: {addr}")
+
+    monkeypatch.setattr(urllib.request, "urlopen", fake_urlopen)
+    monkeypatch.setattr(socket, "getaddrinfo", no_resolve)
+    monkeypatch.setattr(socket, "create_connection", no_connect)
+    return rec
+
+
+def _run(client):
+    return rb.run(UNITS, DOCS, client, reviewers=["Security"])
+
+
+def test_openai_destination_wire_contract(wire, monkeypatch):
+    monkeypatch.setenv("WEBSPEC2DOC_LLM_API_KEY", "sk-test-dummy-0000")
+    client = llm_settings.client_for({"destination": "openai", "openai_model": "gpt-contract"})
+    _run(client)
+    assert wire["reqs"], "リクエストが構築されていない"
+    for r in wire["reqs"]:
+        u = urlsplit(r["url"])
+        assert (u.scheme, u.hostname) == ("https", "api.openai.com")
+        assert u.path == "/v1/chat/completions"
+        assert r["headers"]["authorization"] == "Bearer sk-test-dummy-0000"
+        assert r["json"]["model"] == "gpt-contract"
+    assert wire["resolved"] == [] and wire["connected"] == []
+
+
+def test_ollama_destination_never_touches_openai(wire, monkeypatch):
+    monkeypatch.setenv("OPENAI_API_KEY", "sk-must-not-leak-1111")
+    monkeypatch.setenv("WEBSPEC2DOC_LLM_API_KEY", "sk-must-not-leak-2222")
+    client = llm_settings.client_for({"destination": "ollama", "ollama_url": "http://192.168.1.50:11434",
+                                      "ollama_model": "qwen-contract"})
+    _run(client)
+    assert wire["reqs"]
+    for r in wire["reqs"]:
+        u = urlsplit(r["url"])
+        assert (u.scheme, u.hostname, u.port) == ("http", "192.168.1.50", 11434)
+        assert u.path == "/v1/chat/completions"
+        assert r["json"]["model"] == "qwen-contract"
+        assert "sk-must-not-leak" not in json.dumps(r["headers"]) + json.dumps(r["json"])
+    assert not any("openai" in h for h in map(str, wire["resolved"] + wire["connected"]))
+    assert wire["resolved"] == [] and wire["connected"] == []
+
+
+@pytest.mark.parametrize("url", [
+    "https://api.openai.com", "http://evil.example.com:11434", "http://8.8.8.8:11434",
+    "http://169.254.169.254", "http://169.254.169.254/latest/meta-data", "http://[::1]:11434",
+    "ftp://127.0.0.1:11434", "file:///etc/passwd", "gopher://127.0.0.1:11434", "javascript:alert(1)",
+    "http://user:pw@127.0.0.1:11434", "http://127.0.0.1:8765", "", "127.0.0.1:11434",
+    "http://127.0.0.1.evil.com:11434", "http://100.64.0.1:11434"])
+def test_validate_ollama_url_rejects(url):
+    with pytest.raises(ValueError):
+        llm_settings.validate_ollama_url(url)
+    with pytest.raises(ValueError):
+        llm_settings.client_for({"destination": "ollama", "ollama_url": url})
+
+
+@pytest.mark.parametrize("url", ["http://127.0.0.1:11434", "http://localhost:11434",
+                                 "http://10.1.2.3:11434", "http://172.16.0.5", "http://192.168.0.9:11434"])
+def test_validate_ollama_url_accepts_internal(url):
+    assert llm_settings.validate_ollama_url(url).startswith("http://")
+
+
+def test_none_and_keyless_openai_degrade_without_any_request(wire):
+    before = pipeline.analyze(DOCS)
+    for cfg in ({"destination": "none"}, {"destination": "openai"}):
+        cl = llm_settings.client_for(cfg)
+        assert cl is None
+        r = rb.run(UNITS, DOCS, cl)
+        assert r["mode"] == "DEGRADED"
+    assert wire["reqs"] == [] and wire["resolved"] == [] and wire["connected"] == []
+    assert _strip(before.get("findings")) == _strip(pipeline.analyze(DOCS).get("findings"))
+
+
+@pytest.mark.parametrize("dest", ["openai", "ollama"])
+def test_payload_masks_pii_on_wire(dest, wire, monkeypatch):
+    monkeypatch.setenv("WEBSPEC2DOC_LLM_API_KEY", "sk-test-dummy-0000")
+    cfg = {"destination": dest, "ollama_url": "http://127.0.0.1:11434"}
+    _run(llm_settings.client_for(cfg))
+    sent = "\n".join(json.dumps(r["json"], ensure_ascii=False) + r["url"] for r in wire["reqs"])
+    assert wire["reqs"]
+    for secret in (EMAIL, PHONE, KEY, "ABCDEFGHIJKLMNOP1234567890"):
+        assert secret not in sent, f"生値が送信された: {secret}"
+    assert "［メール］" in sent and "［電話］" in sent
+    assert OUTSIDE not in sent
+
+
+def test_system06_code_has_no_direct_openai():
+    root = Path(__file__).resolve().parent.parent
+    files = list((root / "web/services/docassure").rglob("*.py")) + list((root / "web/routes").glob("doc_assure*.py"))
+    assert files
+    pat = re.compile(r"api\.openai\.com|^\s*(import|from)\s+openai\b|OPENAI_API_KEY", re.M | re.I)
+    bad = [f"{f.relative_to(root)}: {m.group(0).strip()}" for f in files
+           for m in pat.finditer(f.read_text(encoding="utf-8"))]
+    assert not bad, bad

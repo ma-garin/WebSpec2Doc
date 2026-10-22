@@ -1,0 +1,89 @@
+/* Document Assurance: requirements 画面専用スタイル（この画面の Owner だけが編集する） */
+/* ツールバー: 1 行・件数は右端 */
+.dax-reqbar { flex-wrap: nowrap; }
+.dax-reqbar .dax-search { flex: 1 1 160px; min-width: 120px; max-width: 260px; }
+.dax-reqbar .dax-chips { flex-wrap: nowrap; flex: 0 1 auto; min-width: 0; }
+.dax-reqbar .dax-chip { white-space: nowrap; flex: none; }
+.dax-reqbar__cnt { margin-left: auto; white-space: nowrap; }
+.dax-reqhelp { margin: 6px 0 0; }
+/* セグメント型フィルタ */
+.dax-reqseg { gap: 0; border: 1px solid var(--dx-line-strong); border-radius: 8px; overflow: hidden; background: var(--dx-surface); }
+.dax-reqseg .dax-chip { height: 30px; border: 0; border-radius: 0; border-right: 1px solid var(--dx-line); background: transparent; }
+.dax-reqseg .dax-chip:last-child { border-right: 0; }
+.dax-reqseg .dax-chip:hover { background: var(--dx-sunk); }
+.dax-reqseg .dax-chip[aria-pressed="true"] { background: var(--dx-primary, #2563eb); color: #fff; font-weight: 600; }
+.dax-reqseg .dax-chip[aria-pressed="true"] .dax-segc__n { color: #fff; }
+.dax-reqseg .dax-chip:focus-visible { outline: 2px solid var(--dx-primary, #2563eb); outline-offset: -2px; }
+/* 表: 行高 44px 固定 */
+.dax-reqtable th:nth-child(1), .dax-reqtable td.dax-reqidc { width: 132px; }
+.dax-reqtable th:nth-child(2) { width: auto; }
+.dax-reqtable th:nth-child(3) { width: 104px; }
+.dax-reqtable th:nth-child(4) { width: 120px; }
+.dax-reqtable th:nth-child(5) { width: 112px; }
+.dax-reqtable th:nth-child(n+6) { width: 104px; }
+.dax-reqtable th.dax-reqgo, .dax-reqtable td.dax-reqgo { width: 36px; padding-left: 0; padding-right: 12px; text-align: right; color: var(--dx-text-2); font-size: 18px; }
+.dax-reqtable tbody td { height: 44px; padding-top: 0; padding-bottom: 0; vertical-align: middle; white-space: nowrap; overflow: hidden; }
+.dax-reqtxt { text-overflow: ellipsis; }
+.dax-reqtxt__t { overflow: hidden; text-overflow: ellipsis; }
+.dax-reqtxt { display: table-cell; }
+.dax-reqsort { all: unset; cursor: pointer; font: inherit; color: inherit; }
+.dax-reqsort:hover { color: var(--dx-text); }
+.dax-reqsort:focus-visible { outline: 2px solid var(--dx-primary, #2563eb); outline-offset: 2px; border-radius: 2px; }
+.dax-reqid { font-weight: 600; color: var(--dx-primary-dark, #1d4ed8); font-variant-numeric: tabular-nums; }
+.dax-reqdoc { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; margin-left: 8px; border-radius: 4px; background: var(--dx-sunk); border: 1px solid var(--dx-line); font-size: 11px; font-weight: 600; color: var(--dx-text-2); vertical-align: 1px; }
+.dax-reqtag { display: inline-flex; align-items: center; height: 18px; margin-left: 6px; padding: 0 6px; border-radius: 4px; border: 1px solid var(--dx-line); background: var(--dx-surface); font-size: 11px; color: var(--dx-text-2); white-space: nowrap; vertical-align: 1px; }
+.dax-reqtag--cf { border-color: var(--dx-warn-line); color: var(--dx-warn-tx); background: var(--dx-warn-bg); }
+/* 状態: 3 値・中立 */
+.dax-reqst { display: inline-flex; align-items: center; gap: 4px; height: 22px; padding: 0 8px; border-radius: 999px; border: 1px solid var(--dx-line-strong); background: var(--dx-surface); color: var(--dx-text-2); font-size: 12px; white-space: nowrap; }
+.dax-reqst--attention { color: var(--dx-text); font-weight: 600; }
+/* 重大度バッジ（赤は高のみ） */
+.dax-reqsev { display: inline-flex; align-items: center; justify-content: center; min-width: 28px; height: 20px; padding: 0 6px; margin-right: 6px; border-radius: 4px; font-size: 12px; font-weight: 600; background: var(--dx-sunk); color: var(--dx-text-2); }
+.dax-reqsev--critical, .dax-reqsev--high { background: var(--dx-err-bg, #fef3f2); color: var(--color-critical-tx, #b42318); }
+.dax-reqsev--medium { background: var(--dx-warn-bg, #fffaeb); color: var(--color-medium-tx, #b54708); }
+.dax-reqsev--none { background: transparent; font-weight: 400; }
+.dax-reqq__n { font-variant-numeric: tabular-nums; }
+.dax-reqrow--hi td.dax-reqidc { box-shadow: inset 3px 0 0 var(--color-critical-tx, #b42318); }
+/* 行の操作 */
+.dax-reqtable tbody tr[tabindex]:hover .dax-reqgo { color: var(--dx-primary-dark, #1d4ed8); }
+.dax-reqtable tbody tr[tabindex]:hover .dax-reqid { text-decoration: underline; }
+.dax-reqtable tbody tr[tabindex]:focus-visible { outline: 2px solid var(--dx-primary, #2563eb); outline-offset: -2px; background: var(--dx-sunk); }
+.dax-reqtable tbody tr[aria-current="true"] td { background: var(--dx-primary-soft); }
+@media (max-width: 1180px) {
+  .dax-reqtable th, .dax-reqtable td { padding-left: 8px; padding-right: 8px; }
+  .dax-reqtable th:nth-child(1), .dax-reqtable td.dax-reqidc { width: 116px; padding-left: 12px; }
+  .dax-reqtable th:nth-child(3) { width: 96px; }
+  .dax-reqtable th:nth-child(4) { width: 96px; }
+  .dax-reqtable th:nth-child(5) { width: 96px; }
+  .dax-reqtable th.dax-reqgo, .dax-reqtable td.dax-reqgo { width: 28px; padding-right: 10px; }
+  .dax-reqsev { margin-right: 4px; }
+}
+/* 最終パス */
+.dax-reqdiff { display: inline-block; margin-right: 8px; font-size: 11px; color: var(--dx-text-2); vertical-align: 1px; }
+.dax-reqst { height: auto; padding: 0; border: 0; border-radius: 0; background: none; gap: 6px; font-size: 13px; }
+.dax-reqst::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--dx-line-strong); flex: none; }
+.dax-reqst--attention::before { background: var(--color-medium-tx, #b54708); }
+.dax-reqst--done::before { background: var(--dx-ok-tx, #067647); }
+.dax-reqst--ok { color: var(--dx-text-2); }
+@media (max-width: 1180px) {
+  .dax-reqtable th:nth-child(1), .dax-reqtable td.dax-reqidc { width: 104px; }
+  .dax-reqtable th:nth-child(3) { width: 80px; }
+  .dax-reqtable th:nth-child(4) { width: 84px; }
+  .dax-reqtable th:nth-child(5) { width: 84px; }
+}
+@media (max-width: 1180px) {
+  .dax-reqtable th:nth-child(1), .dax-reqtable td.dax-reqidc { width: 116px; }
+  .dax-reqtable th:nth-child(3) { width: 84px; }
+  .dax-reqtable th:nth-child(4) { width: 108px; }
+  .dax-reqtable th:nth-child(5) { width: 100px; }
+}
+/* 1024: 状態・判断待ち・テスト可能性は切らない。本文だけ 2 行まで折り返して省略 */
+@media (max-width: 1180px) {
+  .dax-reqtable th:nth-child(1), .dax-reqtable td.dax-reqidc { width: 112px; }
+  .dax-reqtable th:nth-child(3) { width: 112px; }
+  .dax-reqtable th:nth-child(4) { width: 120px; }
+  .dax-reqtable th:nth-child(5) { width: 100px; }
+  .dax-reqtable th { white-space: nowrap; overflow: visible; }
+  .dax-reqtable tbody td.dax-reqtxt { white-space: normal; line-height: 1.4; padding-top: 4px; padding-bottom: 4px; }
+  .dax-reqtxt__t { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
+  .dax-reqtxt .dax-reqdiff, .dax-reqtxt .dax-reqtag { display: inline-block; }
+}

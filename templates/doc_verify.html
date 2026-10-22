@@ -21,30 +21,66 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='css/docassure-trace-panel.css') }}?v={{ dv_ver }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/docassure-panels.css') }}?v={{ dv_ver }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/docassure-links-panel.css') }}?v={{ dv_ver }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/docassure-s-conflicts.css') }}?v={{ dv_ver }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/docassure-s-changes.css') }}?v={{ dv_ver }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/docassure-s-review.css') }}?v={{ dv_ver }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/docassure-s-requirements.css') }}?v={{ dv_ver }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/docassure-s-shared.css') }}?v={{ dv_ver }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/c-hybrid.css') }}?v={{ _ver }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/c-shell.css') }}?v={{ _ver }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/docverify-sidebar.css') }}?v={{ dv_ver }}">
 </head>
 <body class="app-page dv-page">
 <a href="#app-content" class="skip-link">本文へスキップ</a>
 <div class="app-shell">
-  {# ドキュメント検証（System 06）。サイドは レビュー／トレーサビリティ／指摘／根拠／履歴／観点／設定 の 7 項目（指摘=指摘の検討、根拠=実画面との照合に対応付け）。 #}
-  <aside class="app-sidebar">
-    <a href="/systems" class="app-brand"><span class="app-brand-mark">W</span><span class="app-brand-text"><strong>WebSpec2Doc</strong><span>ドキュメント検証</span></span></a>
-    <a href="/systems" class="sys-switcher" title="システムを切り替える"><span class="sys-switcher-label">システム</span><span class="sys-switcher-cur">ドキュメント検証</span><span class="sys-switcher-swap">切替</span></a>
+  {# ドキュメント検証（System 06）。管理群は レビュー一覧・観点・履歴 の 3 つ＋設定。根拠（実画面との照合）は「履歴」画面の中のタブ。 #}
+  <aside class="app-sidebar dv-sb" aria-label="ドキュメント検証のナビゲーション">
+    <div class="dv-sb__brand">
+      <a href="/systems" class="dv-sb__product" title="WebSpec2Doc のシステム一覧"><span class="app-brand-mark" aria-hidden="true">W</span><span class="dv-sb__names"><strong>Document Assurance</strong></span></a>
+      <a href="/systems" class="dv-sb__switch" title="システムを切り替える" aria-label="システムを切り替える（現在: ドキュメント検証）"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></a>
+    </div>
     <nav class="app-nav dv-sidenav" aria-label="メインナビゲーション">
-      <a class="app-nav-item dv-sec" href="#reviews" data-sec="doc" data-go="reviews"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="m9 15 2 2 4-4"/></svg><span class="nav-label">レビュー<small>レビューを作って進める</small></span></a>
-      <a class="app-nav-item dv-sec" href="#assure" data-sec="qa" data-go="assure"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 4 6v6c0 4.5 3.2 8 8 9 4.8-1 8-4.5 8-9V6z"/><path d="m9 12 2 2 4-4"/></svg><span class="nav-label">ドキュメント品質保証<small>準備状態・スコア・指摘・矛盾</small></span></a>
-      <a class="app-nav-item dv-sec" href="#trace" data-sec="trace" data-go="trace"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="6" cy="6" r="2.5"/><circle cx="18" cy="12" r="2.5"/><circle cx="6" cy="18" r="2.5"/><path d="M8.5 6H12a3 3 0 0 1 3 3v.5M8.5 18H12a3 3 0 0 0 3-3v-.5"/></svg><span class="nav-label">トレーサビリティ<small>要件と設計・テストのつながり</small></span></a>
-      <a class="app-nav-item dv-sec" href="#triage" data-sec="find" data-go="triage"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 21V4"/><path d="M5 4h11l-2 4 2 4H5"/></svg><span class="nav-label">指摘<small>見つかった指摘を検討する</small></span></a>
-      <a class="app-nav-item dv-sec" href="#screen" data-sec="evid" data-go="screen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="6"/><path d="m20 20-4.2-4.2"/></svg><span class="nav-label">根拠<small>文書・推論・未確認の区別</small></span></a>
-      <a class="app-nav-item dv-sec" href="#metrics" data-sec="hist" data-go="metrics"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l3 2"/></svg><span class="nav-label">履歴<small>過去の判定と記録</small></span></a>
-      <a class="app-nav-item dv-sec" href="#checklists" data-sec="vp" data-go="checklists"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6h11M9 12h11M9 18h11"/><path d="m3 6 1.5 1.5L7 5M3 12l1.5 1.5L7 11M3 18l1.5 1.5L7 17"/></svg><span class="nav-label">観点<small>チェックする観点</small></span></a>
-      <a class="app-nav-item dv-sec" href="#settings" data-sec="set" data-go="settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1 7 17M17 7l2.1-2.1"/></svg><span class="nav-label">設定<small>用語・AI の送信先</small></span></a>
+      <div class="dv-sb__group">
+        <a class="dv-sb__item" href="#assure" data-da-tab="overview"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg><span class="dv-sb__label">概要</span></a>
+        <a class="dv-sb__item" href="#assure" data-da-tab="req"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M9 13h6M9 17h4"/></svg><span class="dv-sb__label">要件</span></a>
+        <a class="dv-sb__item" href="#assure" data-da-tab="issues"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 21V4"/><path d="M5 4h11l-2 4 2 4H5"/></svg><span class="dv-sb__label">指摘</span><span class="dv-sb__count" data-count="issues" hidden></span></a>
+        <a class="dv-sb__item" href="#assure" data-da-tab="conf"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 2 20h20z"/><path d="M12 10v4M12 17h.01"/></svg><span class="dv-sb__label">矛盾</span><span class="dv-sb__count" data-count="conf" hidden></span></a>
+        <a class="dv-sb__item" href="#assure" data-da-tab="trace"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="6" cy="6" r="2.5"/><circle cx="18" cy="12" r="2.5"/><circle cx="6" cy="18" r="2.5"/><path d="M8.5 6H12a3 3 0 0 1 3 3v.5M8.5 18H12a3 3 0 0 0 3-3v-.5"/></svg><span class="dv-sb__label">トレーサビリティ</span></a>
+        <a class="dv-sb__item" href="#assure" data-da-tab="changes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v18"/><path d="M4 8h5M6.5 5.5v5M15 16h5"/></svg><span class="dv-sb__label">変更</span></a>
+        <a class="dv-sb__item" href="#assure" data-da-tab="review"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="m8 12 3 3 5-6"/></svg><span class="dv-sb__label">AI レビュー</span></a>
+      </div>
+      <hr class="dv-sb__sep">
+      <div class="dv-sb__group dv-sb__group--admin">
+        <div class="dv-sb__heading" aria-hidden="true">管理</div>
+        <a class="dv-sb__item dv-sec" href="#reviews" data-sec="doc" data-go="reviews" title="レビューを作って進める"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg><span class="dv-sb__label">レビュー一覧</span></a>
+        <a class="dv-sb__item dv-sec" href="#checklists" data-sec="vp" data-go="checklists" title="チェックする観点"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6h11M9 12h11M9 18h11"/><path d="M4 6h.01M4 12h.01M4 18h.01"/></svg><span class="dv-sb__label">観点</span></a>
+        <a class="dv-sb__item dv-sec" href="#metrics" data-sec="hist" data-go="metrics" title="過去の判定と記録"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l3 2"/></svg><span class="dv-sb__label">履歴</span></a>
+      </div>
+      <div class="dv-sb__foot"><a class="dv-sb__item dv-sec" href="#settings" data-sec="set" data-go="settings" title="用語・AI の送信先"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1 7 17M17 7l2.1-2.1"/></svg><span class="dv-sb__label">設定</span></a></div>
     </nav>
+    <script>(function(){var n=document.querySelector('.dv-sb .dv-sidenav');if(!n)return;var ob;
+      function sync(){var h=location.hash||'',m=h.match(/^#assure(?:\/[^\/]*\/([\w-]+))?/),tab=m?(m[1]||'overview'):null;
+        if(ob)ob.disconnect();
+        n.querySelectorAll('[data-da-tab]').forEach(function(a){var on=a.dataset.daTab===tab;a.classList.toggle('active',on);if(on)a.setAttribute('aria-current','page');else a.removeAttribute('aria-current');});
+        n.querySelectorAll('.dv-sec').forEach(function(a){var on=!tab&&a.classList.contains('active');if(on)a.setAttribute('aria-current','page');else a.removeAttribute('aria-current');if(tab)a.classList.remove('active');});
+        var cur=n.querySelector('.dv-sb__more [aria-current]');if(cur)cur.closest('details').open=true;
+        if(ob)ob.observe(n,{subtree:true,attributes:true,attributeFilter:['class']});}
+      n.addEventListener('click',function(e){var a=e.target.closest('[data-da-tab]');if(!a)return;e.preventDefault();var t=a.dataset.daTab;location.hash=window.DAX_IID?('#assure/'+window.DAX_IID+'/'+t):(t==='overview'?'#assure':'#assure');});
+      n.querySelectorAll('.dv-sb__item').forEach(function(it){var l=it.querySelector('.dv-sb__label');if(l&&!it.title)it.title=l.textContent.trim();});
+      window.addEventListener('dax:counts',function(e){var d=e.detail||{};n.querySelectorAll('.dv-sb__count').forEach(function(c){var v=d[c.dataset.count];if(v==null||v===''||+v===0){c.hidden=true;return;}c.textContent=v;var L=(window.DAM||{}).LABEL,k=c.dataset.count,lb=L?(k==='conf'?L.confOf(d.issues,v):k==='req'?L.reqOpen(v):L.issues(v)):(k==='conf'?'判断待ち '+d.issues+' 件のうち矛盾 ':'判断待ち ')+v+' 件';c.title=lb;c.setAttribute('aria-label',lb);c.hidden=false;});});
+      function crumb(){var bc=document.getElementById('topbar-breadcrumb');if(!bc)return;var cur=n.querySelector('[aria-current="page"] .dv-sb__label');var isDA=/^#assure/.test(location.hash||'');var r=window.DV&&DV.state&&DV.state.review&&DV.state.review.name;var parts=['Document Assurance'];if(isDA){if(r&&cur){parts.push(r,cur.textContent.trim());}else parts.push('ドキュメント品質保証');}else if(cur){parts.push(cur.textContent.trim());}
+        var h=parts.map(function(t,i){var e=document.createElement('span');e.textContent=t;if(i===parts.length-1)e.setAttribute('aria-current','page');return e.outerHTML;}).join('<span class="sep">/</span>');var f=bc.firstElementChild;if(f&&f.textContent.trim()==='WebSpec2Doc'){f.hidden=true;if(f.nextElementSibling)f.nextElementSibling.hidden=true;var rest=Array.prototype.slice.call(bc.children,2).map(function(e){return e.outerHTML;}).join('');if(rest===h)return;}if(bc.innerHTML!==h)bc.innerHTML=h;}
+      var bcEl=document.getElementById('topbar-breadcrumb');if(bcEl)new MutationObserver(function(){setTimeout(crumb,0);}).observe(bcEl,{childList:true,subtree:true,characterData:true});
+      window.addEventListener('dax:counts',function(){setTimeout(sync,0);setTimeout(crumb,0);});
+      window.addEventListener('hashchange',function(){setTimeout(sync,0);setTimeout(crumb,60);});
+      ob=new MutationObserver(function(){setTimeout(sync,0);});sync();setTimeout(crumb,300);
+      /* 上部バーの内側を本文コンテナの左右端にそろえる（本文側の幅指定に追従） */
+      function align(){var tb=document.querySelector('.dv-page .app-topbar');if(!tb)return;var t=document.querySelector('.dv-view:not([hidden]) .dax-page')||document.querySelector('.dv-view:not([hidden]) .dax-header__row');if(!t||!t.offsetParent){tb.style.paddingLeft=tb.style.paddingRight='';return;}var r=t.getBoundingClientRect(),c=getComputedStyle(t),b=tb.getBoundingClientRect();var l=Math.max(24,Math.round(r.left+parseFloat(c.paddingLeft)-b.left)),rr=Math.max(24,Math.round(b.right-(r.right-parseFloat(c.paddingRight))));tb.style.paddingLeft=l+'px';tb.style.paddingRight=rr+'px';}
+      window.addEventListener('resize',align);window.addEventListener('hashchange',function(){setTimeout(align,80);});window.addEventListener('dax:counts',function(){setTimeout(align,0);});setTimeout(align,300);})();</script>
   </aside>
 
   <div class="app-main">
-    {% set topbar_crumb = 'ドキュメント検証' %}{% set topbar_title = 'レビュー一覧' %}
+    {% set topbar_crumb = 'Document Assurance' %}{% set topbar_title = 'レビュー一覧' %}
     {% include 'partials/topbar.html' %}
     <main class="app-content dv-content" id="app-content">
       <header class="c-page-head dv-pagehead" id="dv-pagehead"><div class="c-page-head__main"><h1 class="c-page-head__title" id="dv-ph-title">レビュー</h1><p class="c-page-head__desc" id="dv-ph-desc"></p><div class="c-page-head__state" id="dv-ph-state"></div></div></header>
@@ -75,6 +111,7 @@
 <script src="{{ url_for('static', filename='js/docverify-trace-report.js') }}?v={{ dv_ver }}"></script>
 <script src="{{ url_for('static', filename='js/docverify-process.js') }}?v={{ dv_ver }}"></script>
 <script src="{{ url_for('static', filename='js/docverify-accuracy.js') }}?v={{ dv_ver }}"></script>
+<script src="{{ url_for('static', filename='js/docassure-vocab.js') }}?v={{ dv_ver }}"></script>
 <script src="{{ url_for('static', filename='js/docassure.js') }}?v={{ dv_ver }}"></script>
 <script src="{{ url_for('static', filename='js/docassure-trace-panel.js') }}?v={{ dv_ver }}"></script>
 <script src="{{ url_for('static', filename='js/docassure-diff-panel.js') }}?v={{ dv_ver }}"></script>

@@ -1,31 +1,246 @@
-.dat-root{max-width:100%;overflow-x:hidden;font-size:14px;line-height:1.6}
-.dat-sec{margin:0 0 20px;min-width:0}
-.dat-sec h3{font-size:15px;margin:0 0 8px}
-.dat-note,.dat-sub{color:var(--color-text-secondary,#5b6472);font-size:13px;margin:4px 0}
-.dat-na{color:var(--color-text-secondary,#5b6472)}
-.dat-err{color:var(--color-error-tx,#b42318)}
-.dat-cov-row{display:grid;grid-template-columns:minmax(160px,260px) 1fr;gap:8px 12px;align-items:center;padding:4px 0;border-bottom:1px solid var(--color-border,#d9dde3)}
-.dat-bar{display:inline-block;width:120px;height:8px;background:var(--color-border,#d9dde3);border-radius:4px;vertical-align:middle;margin-right:8px}
-.dat-bar i{display:block;height:100%;background:var(--color-primary,#2f5fd0);border-radius:4px}
-.dat-filter{display:flex;flex-wrap:wrap;gap:8px 16px;margin:8px 0}
-.dat-chk{display:inline-flex;align-items:center;gap:4px;cursor:pointer}
-.dat-legend{display:flex;flex-wrap:wrap;gap:6px 16px;list-style:none;margin:0 0 8px;padding:0;font-size:12px}
-.dat-legend li{display:inline-flex;align-items:center;gap:4px}
-.dat-main{display:grid;grid-template-columns:minmax(0,3fr) minmax(220px,1fr);gap:12px}
-.dat-graph{min-width:0;max-height:560px;overflow-y:auto;border:1px solid var(--color-border,#d9dde3);border-radius:6px;background:var(--color-surface,#fff)}
-.dat-svg{display:block;width:100%;height:auto}
-.dat-detail{min-width:0;overflow-wrap:anywhere;border:1px solid var(--color-border,#d9dde3);border-radius:6px;padding:10px;max-height:560px;overflow-y:auto}
-.dat-detail h4{margin:0 0 4px;font-size:14px}
-.dat-rel,.dat-orph{padding-left:18px;margin:6px 0}
-.dat-orph li{margin-bottom:6px;overflow-wrap:anywhere}
-.dat-shape,.dat-shape rect,.dat-shape polygon,.dat-shape ellipse{fill:var(--color-surface-2,#eef2fb);stroke:var(--color-text,#1f2937);stroke-width:1.5}
+/* トレーサビリティ: 部品は docassure.css を再利用し、ここには SVG の描き分けと 2 ペインの高さだけを置く */
+.dat-root{display:flex;flex-direction:column;gap:var(--dx-gap-5,20px);min-width:0}
+.dax-page--trace .dax-cov__row{grid-template-columns:minmax(0,1.6fr) minmax(40px,1fr) auto}
+.dax-page--trace .dax-segc{flex-wrap:wrap;max-width:100%}
+.dat-md{height:640px;min-height:0}
+.dat-search{padding:12px 14px 0}
+.dat-search .dax-search{width:100%}
+.dat-legend{display:flex;flex-wrap:wrap;gap:6px 16px;list-style:none;margin:0;padding:0;font-size:12px;color:var(--dx-text-2)}
+.dat-legend li{display:inline-flex;align-items:center;gap:6px}
+.dat-graph{overflow-x:auto;overflow-y:hidden;min-width:0;min-height:max-content}
+.dat-svg{display:block}
+.dat-colh{font-size:12px;font-weight:600;fill:var(--dx-text-2,#5b6472)}
+.dat-box{fill:var(--dx-surface,#fff);stroke:var(--dx-line-strong,#9aa3af);stroke-width:1.2}
+.dat-center .dat-box{stroke:var(--dx-text,#1f2937);stroke-width:2}
 .dat-node{cursor:pointer;outline:none}
-.dat-node text{font-size:12px;fill:var(--color-text,#1f2937);pointer-events:none}
-.dat-node:focus-visible .dat-shape *,.dat-node:focus .dat-shape *{stroke:var(--color-primary,#2f5fd0);stroke-width:3}
-.dat-sel .dat-shape *{fill:var(--color-primary-bg,#cfdcfb);stroke-width:3}
-.dat-edge{stroke:var(--color-text-secondary,#5b6472);stroke-width:1.4}
-.dat-infer{stroke-dasharray:5 4}
-.dat-dim{opacity:.18}
-@media (max-width:900px){.dat-main{grid-template-columns:minmax(0,1fr)}.dat-cov-row{grid-template-columns:1fr}}
-@media (prefers-reduced-motion:reduce){.dat-root *{transition:none!important}}
-.dat-cov-v{display:inline-flex;align-items:center;gap:8px;min-width:0}
+.dat-node text{font-size:12px;fill:var(--dx-text,#1f2937);pointer-events:none}
+.dat-node .dat-type{font-size:11px;fill:var(--dx-text-2,#5b6472)}
+.dat-node:hover .dat-box{fill:var(--dx-sunk,#f4f6f9)}
+.dat-node:focus-visible .dat-box{stroke:var(--dx-primary,#2f5fd0);stroke-width:3}
+.dat-sel .dat-box{fill:var(--dx-primary-soft,#e8eefc);stroke:var(--dx-primary,#2f5fd0);stroke-width:2}
+.dat-edge{fill:none;stroke:var(--dx-text-3,#8a93a0);stroke-width:1.4}
+.dat-hot{stroke:var(--dx-primary,#2f5fd0);stroke-width:2}
+.dat-derived{stroke-dasharray:7 4}
+.dat-infer{stroke-dasharray:2 4}
+.dat-rel{padding-left:18px;margin:8px 0 0;display:grid;gap:6px;overflow-wrap:anywhere}
+.dat-table td:first-child{width:72px}
+.dat-table th:nth-child(3){width:64px}
+.dat-table th:nth-child(4){width:180px}
+.dat-md .dax-md__body{display:block}
+.dat-md .dax-md__body>*+*{margin-top:16px}
+/* 第 8 版: 被覆 KPI 帯（6 段・常時表示）／状態 3 段／凡例 1 行 */
+.dat-kpis{position:relative;display:grid;grid-template-columns:repeat(6,minmax(0,1fr));border:1px solid var(--dx-line);border-radius:var(--dx-r-lg,8px);background:var(--dx-surface)}
+.dat-kpi{display:grid;align-content:start;gap:4px;min-width:0;padding:10px 12px;border-right:1px solid var(--dx-line)}
+.dat-kpi:last-of-type{border-right:0}
+.dat-kpi__l{font-size:12px;font-weight:600;color:var(--dx-text-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dat-kpi__v{font-size:22px;font-weight:700;line-height:1.2;font-variant-numeric:tabular-nums;font-family:var(--font-mono,ui-monospace,monospace);white-space:nowrap}
+.dat-kpi__v small{font-size:12px;font-weight:500;color:var(--dx-text-2)}
+.dat-kpi--na .dat-kpi__v{font-size:16px;color:var(--dx-text-2);font-family:inherit}
+.dat-kpi__why{font-size:12px;color:var(--dx-text-2);line-height:1.4}
+.dat-cta{font-size:12px;justify-self:start;padding:0;text-align:left}
+.dat-kpis__tip{position:absolute;top:6px;right:8px}
+.dat-gap{padding:12px 14px 0}
+.dat-gap .dax-segc{flex-wrap:wrap}
+.dat-st{display:inline-flex;align-items:center;gap:4px;height:22px;padding:0 8px;border-radius:4px;font-size:12px;white-space:nowrap;border:1px solid var(--dx-line);background:var(--dx-sunk);color:var(--dx-text-2)}
+.dat-st i{font-style:normal;font-weight:700}
+.dat-st--ok{background:var(--dx-ok-bg);color:var(--dx-ok-tx);border-color:transparent}
+.dat-st--no{background:var(--dx-warn-bg);color:var(--dx-warn-tx);border-color:var(--dx-warn-line)}
+.dat-legend{flex-wrap:nowrap;white-space:nowrap;overflow:hidden}
+.dax-page--trace .dax-item__meta{flex-wrap:wrap;gap:4px}
+@media (max-width:1199px){.dat-kpi{padding:8px}.dat-kpi__v{font-size:18px}.dat-md{height:560px}}
+.dax-page--trace .dax-item__title{-webkit-line-clamp:2;display:-webkit-box;white-space:normal}
+.dax-page--trace .dax-item__title .dax-item__req{display:inline}
+.dat-table th:nth-child(1){width:72px}
+@media (max-width:1199px){.dat-table th:nth-child(1){width:56px}.dat-table th:nth-child(3){width:48px}.dat-table th:nth-child(4){width:108px}}
+/* 第 10 版 */
+.dat-kpis{grid-template-columns:repeat(3,minmax(0,1fr)) minmax(0,1.6fr)}
+.dat-kpi--late{border-right:0;background:var(--dx-sunk)}
+.dat-kpis__note{grid-column:1/-1;margin:0;padding:6px 12px;border-top:1px solid var(--dx-line);font-size:12px;color:var(--dx-text-2)}
+.dat-table td:nth-child(2){overflow-wrap:anywhere;word-break:normal}
+@media (max-width:1199px){.dat-table th:nth-child(1),.dat-table td:nth-child(1),.dat-table th:nth-child(3),.dat-table td:nth-child(3){display:none}.dat-table th:nth-child(4){width:72px}}
+.dat-table td:nth-child(4){white-space:nowrap}@media (max-width:1199px){.dat-table th:nth-child(4){width:96px}}
+/* 第 4 版 */
+.dat-kpis{grid-template-columns:repeat(6,minmax(0,1fr))}
+.dat-kpi__v{font-family:inherit}
+.dat-cta2{justify-self:start;height:24px;padding:0 8px;font-size:12px}
+.dat-table td .dax-kt{white-space:nowrap}
+.dat-rh{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.dat-md .dax-md__hmeta{flex-wrap:nowrap;overflow-x:auto;gap:6px}
+.dat-gap .dax-segc{flex-wrap:nowrap;overflow-x:auto}
+.dat-gap .dax-segc__opt{white-space:nowrap;padding-left:8px;padding-right:8px;font-size:12px}
+.dat-table th:nth-child(1){width:104px}.dat-table th:nth-child(3){width:104px}.dat-gap .dax-segc__opt{padding-left:6px;padding-right:6px}
+.dat-gap .dax-segc{width:100%;display:flex}.dat-gap .dax-segc__opt{flex:1 1 auto;min-width:0;font-size:11px;padding:0 4px}.dat-gap .dax-segc__n{margin-left:2px}
+/* 第 11 版: 経路ドット／帯の見出し・切断件数／フィルタ 12px＋ドロップダウン／詳細ツールバー 2 段 */
+.dat-kpis{grid-template-columns:repeat(6,minmax(0,1fr))}
+.dat-kpis__h{grid-column:1/-1;display:flex;align-items:center;gap:8px;margin:0;padding:8px 12px;border-bottom:1px solid var(--dx-line);font-size:13px;font-weight:600;color:var(--dx-text)}
+.dat-kpis__h .dat-kpis__tip{position:static;margin-left:auto}
+.dat-kpi--na{background:transparent}
+.dat-kpi--na .dat-kpi__v{font-size:16px;font-weight:600;color:var(--dx-text-3,#8a93a0)}
+.dat-kpi__cut{font-size:12px;color:var(--dx-text-2)}
+.dat-kpi__cut.is-on{color:var(--dx-warn-tx);font-weight:600}
+.dat-cta2{white-space:normal;height:auto;min-height:24px;line-height:1.3;padding:3px 8px;text-align:left}
+.dat-gap{padding:10px 14px 0}
+.dat-need{margin:0 0 8px;font-size:13px;font-weight:600;color:var(--dx-warn-tx)}
+.dat-gap__row{display:flex;gap:8px;align-items:center;min-width:0}
+.dat-gap .dax-segc{width:auto;flex:0 0 auto;flex-wrap:nowrap;overflow:visible}
+.dat-gap .dax-segc__opt{flex:0 0 auto;font-size:12px;padding:0 8px;white-space:nowrap}
+.dat-badge{display:inline-block;margin-left:4px;min-width:18px;padding:0 5px;border-radius:9px;background:var(--dx-sunk);font-size:11px;line-height:16px;text-align:center;font-variant-numeric:tabular-nums}
+.dat-gapsel{flex:1 1 auto;min-width:0;height:30px;font-size:12px;border:1px solid var(--dx-line);border-radius:6px;background:var(--dx-surface);color:var(--dx-text);padding:0 6px}
+.dat-path{display:inline-flex;gap:4px;align-items:center}
+.dat-dot{display:inline-block;width:8px;height:8px;border-radius:50%;border:1px solid var(--dx-line-strong,#9aa3af);background:transparent}
+.dat-dot--ok{background:var(--dx-text-2,#5b6472);border-color:var(--dx-text-2,#5b6472)}
+.dat-dot--brk{background:var(--dx-warn,#c58a00);border-color:var(--dx-warn,#c58a00);width:10px;height:10px}
+.dat-dot--na{border-style:dashed}
+.dat-dot--off{background:var(--dx-line,#e3e6eb);border-color:var(--dx-line,#e3e6eb)}
+.dat-brk{margin-left:6px;font-size:12px;color:var(--dx-text-2)}
+.dax-page--trace .dax-item__meta{align-items:center}
+.dat-md .dax-item[aria-selected="true"]{background:var(--dx-sunk,#f4f6f9);box-shadow:inset 3px 0 0 var(--dx-text,#1f2937)}
+.dat-md .dax-md__head{flex-wrap:wrap;row-gap:8px}
+.dat-md .dax-md__hmeta{flex-wrap:wrap;overflow:visible}
+.dat-tools{display:flex;flex-wrap:wrap;gap:6px 8px;align-items:center;width:100%}
+.dat-tools .dax-segc{flex-wrap:nowrap}
+.dat-table th{font-size:12px;letter-spacing:.04em}
+.dat-table td{padding-top:6px;padding-bottom:6px}
+.dat-table th:nth-child(1),.dat-table td:nth-child(1){width:auto;display:table-cell}
+.dat-table th:nth-child(2){width:84px}.dat-table td:nth-child(2){white-space:nowrap}
+.dat-table td:nth-child(1){overflow-wrap:anywhere}
+.dat-sub{margin-top:2px;font-size:12px;color:var(--dx-text-2);display:flex;gap:6px;align-items:center}
+.dat-note{margin:6px 0 0;font-size:12px;color:var(--dx-text-2)}
+.dat-next{border-top:1px solid var(--dx-line);padding-top:12px}
+.dat-next__h{margin:0 0 6px;font-size:13px;font-weight:600}
+.dat-next ul{margin:0;padding-left:18px;display:grid;gap:4px;font-size:13px}
+/* 第 12 版: 帯 1 行・未接続の灰帯・詳細の先頭に不足・表示切替は表の見出し右 */
+.dat-kpis{display:block}
+.dat-kpis__h{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 12px;font-size:14px;font-weight:600}
+.dat-kpis__t{font-size:14px;font-weight:600}
+.dat-kpis__s{font-size:14px;font-weight:500;color:var(--dx-warn-tx)}
+.dat-kpis__ex{font-size:14px;font-weight:500;padding:0}
+.dat-kpis__row{display:grid;grid-template-columns:repeat(3,minmax(0,1fr)) minmax(0,1.3fr)}
+.dat-kpi{gap:6px;padding:8px 12px}
+.dat-kpi__top{display:flex;align-items:baseline;gap:8px;min-width:0;white-space:nowrap}
+.dat-kpi__l{font-size:14px;font-weight:600;color:var(--dx-text)}
+.dat-kpi__v{font-size:16px;font-weight:600}
+.dat-kpi__cut{margin-left:auto;font-size:12px;color:var(--dx-text-2)}
+.dat-kpi__cut.is-on{color:var(--dx-warn-tx)}
+.dat-cta2{white-space:nowrap;height:24px;min-height:0;padding:0 8px;font-size:12px}
+.dat-late{display:grid;align-content:start;gap:4px;padding:8px 12px;margin:8px;border-radius:6px;background:var(--dx-sunk,#f4f6f9);color:var(--dx-text-2);font-size:12px}
+.dat-late__l{font-size:14px;font-weight:600;color:var(--dx-text-2)}
+.dat-late__v{font-size:12px}
+.dat-late .dat-cta{color:var(--dx-text-2);text-decoration:underline}
+.dat-need{color:var(--dx-warn-tx);font-size:14px}
+.dat-md .dax-sec__title.dat-rh{font-size:16px;font-weight:600}
+.dat-next{border-top:0;padding-top:0}
+.dat-next__h,.dat-tools__h{margin:0 0 6px;font-size:14px;font-weight:600}
+.dat-next ul{font-size:14px;list-style:none;padding:0}
+.dat-next__row{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 10px;border-left:3px solid var(--dx-warn,#c58a00);background:var(--dx-surface)}
+.dat-next__na{margin:6px 0 0;font-size:12px}
+.dat-tools{display:flex;flex-wrap:nowrap;align-items:center;gap:8px;width:100%;margin-top:16px}
+.dat-tools__h{margin:0 auto 0 0}
+.dat-hop{display:inline-flex;align-items:center;gap:4px;font-size:12px;color:var(--dx-text-2);white-space:nowrap}
+.dat-table th:nth-child(1),.dat-table td:nth-child(1){width:auto}
+.dat-table th:nth-child(2),.dat-table td:nth-child(2){width:88px;white-space:nowrap}
+.dat-table th:nth-child(3),.dat-table td:nth-child(3){width:80px;min-width:72px;white-space:nowrap;display:table-cell}
+.dat-table td{font-size:14px}
+@media (max-width:1199px){.dat-md{grid-template-columns:280px minmax(0,1fr)}.dat-table th:nth-child(2),.dat-table td:nth-child(2){width:72px}.dat-kpis__row{grid-template-columns:repeat(3,minmax(0,1fr)) minmax(0,1fr)}.dat-kpi{padding:6px 8px}.dat-kpi__l{font-size:13px}}
+.dat-gapsel{min-width:72px}
+@media (max-width:1199px){.dat-table th:nth-child(2),.dat-table td:nth-child(2){width:84px;padding-right:12px}.dat-gap .dax-segc__opt{padding:0 6px}}
+/* 第 13 版 */
+.dat-kpi__f{font-size:12px;color:var(--dx-text-2);display:flex;flex-wrap:wrap;gap:2px 6px}
+.dat-kpi__f b{font-weight:500}.dat-kpi__f b.is-cut{color:var(--dx-warn-tx);font-weight:600}
+.dat-wait{color:var(--dx-text-3,#8a93a0)}
+.dat-kpis__s{color:var(--dx-text-2);font-weight:500}
+.dat-dleg{display:flex;flex-wrap:wrap;gap:2px 4px;margin:8px 14px 0;font-size:12px;color:var(--dx-text-2)}
+.dat-md .dax-item__title{word-break:normal;overflow-wrap:anywhere;-webkit-line-clamp:2;display:-webkit-box;-webkit-box-orient:vertical;white-space:normal;line-break:auto}
+.dat-excl{opacity:.75;cursor:default}
+.dat-md .dat-rh{white-space:normal;overflow:visible;text-overflow:clip;word-break:normal;overflow-wrap:anywhere;font-size:16px;line-height:1.4}
+.dat-dleg{margin:8px 14px 0;gap:0 4px;font-size:11px}
+.dat-md .dat-dleg{padding:0 14px;margin:8px 0 0;font-size:12px}
+/* 第 14 版: 到達=青灰／切れ=アンバー／絞り込みはカード内リンクに一本化 */
+.dat-bar>span{background:var(--dx-text-3,#8a93a0)}
+.dat-kpi--cut .dat-bar>span{background:var(--dx-text-3,#8a93a0)}
+.dat-kpi--cut .dat-bar{background:var(--dx-warn-bg);box-shadow:inset 0 0 0 1px var(--dx-warn-line)}
+.dat-kpi__f b{font-weight:400;color:var(--dx-text-2)}
+.dat-kpi__f b.is-cut{font-weight:700;color:var(--dx-warn-tx)}
+.dat-kpi__f{align-items:baseline;gap:4px 10px}
+.dat-pill{display:inline-block;margin-left:6px;padding:0 8px;border-radius:10px;font-size:12px;line-height:20px;background:var(--dx-warn-bg);color:var(--dx-warn-tx);border:1px solid var(--dx-warn-line)}
+.dat-chip{flex:0 0 auto;height:28px;padding:0 10px;border-radius:14px;border:1px solid var(--dx-warn-line);background:var(--dx-warn-bg);color:var(--dx-warn-tx);font-size:12px;cursor:pointer;white-space:nowrap}
+.dat-ex{display:inline-block;margin-right:4px;padding:0 6px;border-radius:4px;font-size:12px;line-height:20px;background:var(--dx-warn-bg);color:var(--dx-warn-tx);white-space:nowrap}
+.dat-table th:nth-child(2),.dat-table td:nth-child(2){width:120px;white-space:nowrap}
+.dat-md .dax-md__head{padding-bottom:10px}
+.dat-md .dax-md__body{padding-top:12px}
+.dat-md .dax-md__body>.dat-next{margin-top:0}
+/* 第 15 版: ファネル帯／1 行の一覧／詳細ヘッダ右上の主操作 */
+.dat-kpis__row{grid-template-columns:repeat(6,minmax(0,1fr))}
+.dat-kpi{display:grid;gap:4px;padding:8px 12px;border-right:1px solid var(--dx-line)}
+.dat-kpi:last-child{border-right:0}
+.dat-kpi .dat-kpi__l{font-size:13px;font-weight:600;color:var(--dx-text-2)}
+.dat-kpi .dat-kpi__v{font-size:22px;font-weight:700}
+.dat-kpi--na{background:repeating-linear-gradient(135deg,var(--dx-sunk,#f4f6f9) 0 6px,transparent 6px 10px)}
+.dat-kpi--na .dat-kpi__v{font-size:16px;font-weight:600;color:var(--dx-text-3,#8a93a0)}
+.dat-lost{justify-self:start;padding:0;font-size:14px;font-weight:700;color:var(--dx-warn-tx);text-decoration:underline}
+.dat-lost--z{font-weight:500;color:var(--dx-text-3,#8a93a0);text-decoration:none;font-size:12px}
+.dat-kpis__foot{margin:0;padding:6px 12px;border-top:1px solid var(--dx-line);font-size:13px;color:var(--dx-warn-tx)}
+.dat-dleg{display:flex;align-items:center;gap:4px 6px;padding:0 14px;margin:8px 0 4px;font-size:12px;color:var(--dx-text-2)}
+.dat-dleg .dat-dot{margin-left:6px}
+.dat-row{display:grid;grid-template-columns:62px minmax(0,1fr) auto;align-items:center;column-gap:8px;width:100%;height:40px;padding:0 12px;border:0;border-bottom:1px solid var(--dx-line);background:var(--dx-surface);text-align:left;font:inherit;font-size:13px;color:var(--dx-text);cursor:pointer}
+.dat-row:hover{background:var(--dx-sunk)}
+.dat-row[aria-selected="true"]{background:var(--dx-sunk);box-shadow:inset 3px 0 0 var(--dx-text)}
+.dat-row:focus-visible{outline:2px solid var(--dx-primary);outline-offset:-2px}
+.dat-row__id{font-size:12px;color:var(--dx-text-2);font-variant-numeric:tabular-nums;white-space:nowrap}
+.dat-row__t{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:600}
+.dat-row .dat-pill{margin-left:6px;line-height:18px;padding:0 6px}
+.dat-row .dat-path{white-space:nowrap}
+.dat-pill--n{background:var(--dx-sunk);color:var(--dx-text-2);border-color:var(--dx-line)}
+.dat-dot--na{background:repeating-linear-gradient(135deg,var(--dx-text-3,#8a93a0) 0 1px,transparent 1px 3px);border:1px solid var(--dx-text-3,#8a93a0);border-style:solid}
+.dat-dot--off{background:transparent;border-color:var(--dx-line-strong,#9aa3af)}
+.dat-md .dax-md__head{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:start;column-gap:12px}
+.dat-md .dax-md__head>.dax-md__hmeta{grid-column:1}
+.dat-hcta{grid-column:2;grid-row:1/span 2;align-self:start;white-space:nowrap}
+@media (max-width:1199px){.dat-row{grid-template-columns:58px minmax(0,1fr) auto;padding:0 8px}.dat-row .dat-pill{display:none}.dat-kpi{padding:6px 8px}.dat-kpi .dat-kpi__v{font-size:18px}}
+.dat-row{grid-template-columns:62px minmax(0,1fr) auto auto}
+.dat-row .dat-pill{white-space:nowrap;margin-left:0}
+@media (max-width:1199px){.dat-row{grid-template-columns:58px minmax(0,1fr) auto}}
+.dat-row .dat-path{gap:3px}.dat-row .dat-pill{font-size:11px;padding:0 5px}
+/* 第 16 版 */
+.dat-kpis__row{grid-template-columns:repeat(3,minmax(0,1fr)) minmax(0,1.4fr)}
+.dat-late2{display:grid;align-content:start;gap:6px;padding:8px 12px;background:repeating-linear-gradient(135deg,var(--dx-sunk,#f4f6f9) 0 6px,transparent 6px 10px)}
+.dat-late2 .dat-kpi__v{font-size:16px;font-weight:600;color:var(--dx-text-3,#8a93a0)}
+.dat-late2 .dax-btn{justify-self:start;white-space:nowrap}
+.dat-lost{text-decoration:none}
+.dat-row{grid-template-columns:62px minmax(0,1fr) 76px auto}
+.dat-row .dat-pill{font-size:12px;padding:0 6px;justify-self:start;margin:0}
+.dat-mini .dat-path{gap:2px}.dat-mini .dat-dot{width:5px;height:5px}.dat-mini .dat-dot--brk{width:6px;height:6px}
+@media (max-width:1199px){.dat-row{grid-template-columns:54px minmax(0,1fr) 70px}.dat-row .dat-pill{display:inline-block}.dat-mini{display:none}}
+.dat-stgt th{width:110px;font-size:13px;font-weight:600;text-align:left;white-space:nowrap}
+.dat-stgt td,.dat-stgt th{padding:6px 10px}
+.dat-stgt tr.is-gap{background:var(--dx-warn-bg)}
+.dat-gapcell{color:var(--dx-warn-tx);font-weight:600}
+.dat-na{color:var(--dx-text-3,#8a93a0)}
+.dat-tag{display:inline-block;margin:1px 4px 1px 0;padding:0 6px;border:1px solid var(--dx-line);border-radius:4px;font-size:12px;line-height:20px}
+@media (max-width:1199px){.dat-dleg{display:none}}
+/* 最終: ドット廃止・ID は青リンク色・本文は通常太さ */
+.dat-row{grid-template-columns:62px minmax(0,1fr) auto 64px}
+.dat-row__id{color:var(--dx-primary,#2f5fd0)}
+.dat-row__t{font-weight:400}
+.dat-reach{font-size:12px;color:var(--dx-text-2);white-space:nowrap;font-variant-numeric:tabular-nums}
+.dat-row .dat-pill{display:inline-block}
+.dax-md__hmeta .dat-reach{margin-left:8px}
+@media (max-width:1199px){.dat-row{grid-template-columns:54px minmax(0,1fr) auto}.dat-row .dat-reach{display:none}}
+/* 一覧 2 段: 1 行目 ID＋途切れ段＋到達、2 行目 題名（最大 2 行） */
+.dat-row{grid-template-columns:auto auto minmax(0,1fr);grid-template-areas:"id pill reach" "t t t";height:auto;min-height:0;padding:8px 12px;row-gap:2px;align-items:center}
+.dat-row__id{grid-area:id}
+.dat-row .dat-pill{grid-area:pill}
+.dat-row .dat-reach{grid-area:reach;justify-self:end;display:inline}
+.dat-row__t{grid-area:t;white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;word-break:normal;overflow-wrap:anywhere;line-height:1.45}
+.dat-excl>span:last-child{display:none}
+@media (max-width:1199px){.dat-row{grid-template-columns:auto auto minmax(0,1fr);padding:6px 8px}.dat-row .dat-reach{display:none}}
+.dat-kpis__sub{margin:0;padding:4px 12px;border-bottom:1px solid var(--dx-line);font-size:13px;color:var(--dx-text-2)}
+/* 第 7 回ゲート: 主導線は最大の「未達 n 件 ›」1 つ／バー 1 色／注記は灰 1 行 */
+.dat-kpi--cut .dat-bar{background:var(--dx-sunk,#eef0f3);box-shadow:none}
+.dat-bar>span{background:var(--dx-text-3,#8a93a0)}
+.dat-lost{font-weight:500;font-size:13px}
+.dat-lost--main{font-weight:700;font-size:14px;text-decoration:underline}
+.dat-kpis__foot{color:var(--dx-text-2);background:var(--dx-sunk,#f4f6f9);font-size:12px}
+.dat-late2{align-content:center}
+.dat-late2__t{font-size:13px;color:var(--dx-text-2);font-weight:500}
+.dat-kpis__t{font-size:14px;font-weight:600}

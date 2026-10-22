@@ -70,11 +70,11 @@
     set('adopted', f.filter((x) => x.status === 'adopted').length);
   }
 
-  // サイドは固定の 7 項目（レビュー／トレーサビリティ／指摘／根拠／履歴／観点／設定）。
+  // サイドの管理群は レビュー一覧・観点・履歴 の 3 つ＋設定。根拠（screen）は履歴の中のタブ。
   // 指摘=「指摘の検討」、根拠=「実画面との照合」の既存画面に対応付ける（新画面は作らない）。
   const SECTIONS = {
     doc: ['home', 'mine', 'reviews', 'findings', 'plan', 'read', 'questions', 'followup', 'gate'],
-    qa: ['assure'], trace: ['trace'], find: ['triage'], evid: ['screen'], hist: ['metrics'], vp: ['checklists', 'accuracy'], set: ['settings'],
+    qa: ['assure'], trace: ['trace'], find: ['triage'], hist: ['metrics', 'screen'], vp: ['checklists', 'accuracy'], set: ['settings'],
   };
   // ドキュメント検証はレビュー一覧 1 画面。ホーム・自分の担当・指摘一覧は廃止（タブ不要・2026-10-18）。
   const DOC_GONE = ['home', 'mine', 'findings'];
@@ -93,7 +93,10 @@
     if (!nav) return;
     const r = DV.state.review;
     let html = '';
-    if (STEPS.includes(view) && r) {
+    if (sectionOf(view) === 'hist') {
+      // 根拠は「履歴」画面の中のタブ（ナビには出さない）
+      html = [['metrics', '履歴'], ['screen', '根拠']].map(([v, l]) => `<a href="#${v}" data-nav="${v}" class="${v === view ? 'active' : ''}"${v === view ? ' aria-current="page"' : ''}>${l}</a>`).join('');
+    } else if (STEPS.includes(view) && r) {
       html = `<a href="#reviews" data-nav="reviews" class="dv-back">← レビュー一覧</a><span class="dv-subtabs-name">${esc(r.name)}</span>`
         + STEPS.map((v) => tab(v, view)).join('');
     } else if (sectionOf(view) === 'doc') {
@@ -129,6 +132,9 @@
     const info = PAGE[view];
     const ws = window.WS2D;
     if (!info) return;
+    const own = view === 'assure';  // System06 は自前のヘッダ 1 段だけを出す
+    ['#dv-pagehead', '#dv-reason'].forEach((q) => { const n = $(q); if (n) n.hidden = own; });
+    if (own) return;
     const t = $('#dv-ph-title'), d = $('#dv-ph-desc'), st = $('#dv-ph-state'), rs = $('#dv-reason');
     if (t) t.textContent = info[0];
     if (d) d.textContent = info[1];
@@ -149,6 +155,7 @@
   }
 
   function show(view) {
+    view = String(view || '').split('/')[0];   // #assure/<iid>/<tab> の深いリンクは先頭だけで画面を決める
     if (!TITLES[view] || DOC_GONE.includes(view)) view = 'reviews';
     const needReview = REVIEW_VIEWS.includes(view) && !DV.state.review;
     if (needReview) view = 'reviews';
@@ -156,15 +163,15 @@
     const sec = needReview && location.hash.slice(1) === 'setcheck' ? 'trace' : sectionOf(view);
     document.querySelectorAll('.dv-sec').forEach((a) => a.classList.toggle('active', a.dataset.sec === sec));
     const title = $('#topbar-title');
-    if (title) title.textContent = TITLES[view];
+    if (title) { title.textContent = TITLES[view]; title.hidden = view === 'assure'; }
     const crumb = $('#topbar-breadcrumb');
     if (crumb) {
       const r = DV.state.review;
-      crumb.innerHTML = `<span>WebSpec2Doc</span><span class="sep">/</span><span>ドキュメント検証</span>`
+      crumb.innerHTML = `<span>Document Assurance</span>`
         + (r && REVIEW_VIEWS.includes(view) ? `<span class="sep">/</span><span>${esc(r.name)}</span>` : '');
     }
     DV.current = view;
-    if (location.hash.slice(1) !== view) history.replaceState(null, '', `#${view}`);
+    if (location.hash.slice(1).split('/')[0] !== view) history.replaceState(null, '', `#${view}`);
     banner(needReview ? 'この画面はレビューを開いてから使えます。一覧からレビューを選んでください。' : '');
     renderSubtabs(view);
     renderPageHead(view);
@@ -196,12 +203,18 @@
       if (location.hash.slice(1) !== v) history.pushState(null, '', `#${v}`);   // 戻る・進むで辿れるように履歴へ積む
       show(v);
     });
-    const sync = () => { const h = location.hash.slice(1); if (h && h !== DV.current) show(h); };
+    const sync = () => {
+      const d = location.hash.slice(1).split('/'), h = d[0];
+      if (h === 'assure' && d[1] && (!DV.state.review || DV.state.review.id !== decodeURIComponent(d[1]))) { openReview(decodeURIComponent(d[1]), 'assure').catch(() => show('reviews')); return; }
+      if (h && h !== DV.current) show(h);
+    };
     window.addEventListener('hashchange', sync);
     window.addEventListener('popstate', sync);
     let saved = null;
     try { saved = sessionStorage.getItem('dv-review'); } catch (e) { saved = null; }
-    if (saved) { try { await openReview(saved, location.hash.slice(1) || 'read'); return; } catch (e) { banner(''); } }
+    const deep = location.hash.slice(1).split('/');
+    if (deep[0] === 'assure' && deep[1]) saved = decodeURIComponent(deep[1]);   // #assure/<iid> からレビューを復元する
+    if (saved) { try { await openReview(saved, deep[0] || 'read'); return; } catch (e) { banner(''); } }
     show(location.hash.slice(1) || 'reviews');
   }
 

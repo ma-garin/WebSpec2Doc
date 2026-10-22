@@ -1,0 +1,96 @@
+/* Document Assurance: 画面間で共通の部品（絞り込み・重大度・選択状態・小見出し）の統一。最後に読み込む（共通 Owner だけが編集する） */
+/* C1 絞り込みは「セグメント」1 種類（要件/指摘/矛盾/トレース/変更） */
+.dv-page main .dax-segc,.dv-page main .dax-chips,.dv-page main .dac-chips{display:inline-flex !important;flex-wrap:wrap;align-items:center;gap:4px !important;padding:0 !important;background:transparent !important;border:0 !important;box-shadow:none !important}
+.dv-page main .dax-segc__opt,.dv-page main .dax-chip,.dv-page main .dac-chip{display:inline-flex !important;align-items:center;gap:6px;height:32px !important;min-height:32px !important;padding:0 12px !important;border:1px solid var(--color-border,#d9dde3) !important;border-radius:6px !important;background:#fff !important;color:var(--color-text-secondary,#5b6472) !important;font-size:13px !important;font-weight:500 !important;box-shadow:none !important;line-height:1 !important;white-space:nowrap}
+.dv-page main .dax-segc__opt:hover,.dv-page main .dax-chip:hover,.dv-page main .dac-chip:hover{background:var(--color-surface-muted,#f5f6f8) !important;color:var(--color-text,#1f2430) !important}
+.dv-page main .dax-segc__opt:is([aria-pressed="true"],[aria-selected="true"],[aria-checked="true"]),.dv-page main .dax-chip:is([aria-pressed="true"],[aria-selected="true"]),.dv-page main .dac-chip:is([aria-pressed="true"],[aria-selected="true"]){background:#e8efff !important;border-color:#b9cbff !important;color:#1d4ed8 !important;font-weight:600 !important}
+.dv-page main .dax-segc__n,.dv-page main .dac-chip__n,.dv-page main .dax-chip>span{display:inline-flex !important;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 6px !important;border-radius:9px !important;background:#eef0f3 !important;color:#5b6472 !important;font-size:11px !important;font-weight:600 !important;box-shadow:none !important;border:0 !important}
+.dv-page main .dax-segc__opt:focus-visible,.dv-page main .dax-chip:focus-visible,.dv-page main .dac-chip:focus-visible{outline:2px solid #1d4ed8 !important;outline-offset:1px}
+/* M1 重大度は「点＋文字」（高=赤・中=琥珀・低/情報=グレー） */
+.dv-page main :is(.dax-sd,.dax-reqsev,.dax-cf__sev){display:inline-flex !important;align-items:center;gap:5px;padding:0 !important;border:0 !important;border-radius:0 !important;background:transparent !important;box-shadow:none !important;font-size:12px !important;font-weight:600 !important;width:auto !important;height:auto !important;min-width:0 !important}
+.dv-page main :is(.dax-reqsev,.dax-cf__sev)::before{content:"";flex:0 0 8px;width:8px;height:8px;border-radius:50%;background:currentColor}
+.dv-page main :is(.dax-sd--high,.dax-reqsev--high,.dax-cf__sev--high){color:#d92d20 !important}
+.dv-page main :is(.dax-sd--medium,.dax-sd--mid,.dax-reqsev--medium,.dax-cf__sev--medium){color:#b54708 !important}
+.dv-page main :is(.dax-sd--low,.dax-sd--info,.dax-reqsev--low,.dax-reqsev--info,.dax-cf__sev--low,.dax-cf__sev--info){color:#667085 !important}
+/* M2 判断の選択中は青塗り＋白太字（免除も同じ。橙・琥珀の塗りは廃止） */
+.dv-page main :is(.dax-seg__opt,.dax-choice)[aria-pressed="true"],.dv-page main .dax-cf__radio:is([aria-checked="true"],[aria-pressed="true"]){background:#1d4ed8 !important;border-color:#1d4ed8 !important;color:#fff !important;font-weight:700 !important;box-shadow:none !important}
+.dv-page main :is(.dax-seg__opt,.dax-choice)[aria-pressed="true"] *,.dv-page main .dax-cf__radio:is([aria-checked="true"],[aria-pressed="true"]) *{color:#fff !important;border-color:rgba(255,255,255,.6) !important}
+/* M3 小見出しの共通様式 */
+.dv-page main :is(.dax-h3,.dat-next__h,.dat-tools__h){font-size:12px !important;font-weight:600 !important;letter-spacing:.04em !important;color:var(--color-text-secondary,#5b6472) !important;line-height:1.4 !important}
+.dv-page main .dax-cf__tabs{flex-wrap:nowrap !important}
+.dv-page main .dax-cf__tabs .dax-segc__opt{padding:0 8px !important;gap:4px;font-size:12px !important}
+.dv-page main .dax-chips .dax-chip{padding:0 10px !important}
+/* ===== 部品の正本値（component-audit 対応・クラス名は変えず上書き） ===== */
+.dv-page{--da-amber:#b54708;--da-amber-bg:#fef6e7;--da-amber-bd:#f5d9a8;--da-red:#d92d20;--da-red-bg:#fef3f2;--da-green:#067647;--da-green-bg:#ecfdf3;--da-gray:#5b6472;--da-gray-bg:#f2f4f7;--da-blue:#1d4ed8}
+/* ボタン: 通常 36/r6/14/500・sm 32/r6/13/500 */
+.dv-page main .dax-btn:not(.dax-btn--sm):not(.dax-btn--icon){height:36px !important;min-height:36px !important;border-radius:6px !important;font-size:14px !important;font-weight:500 !important}
+.dv-page main .dax-btn.dax-btn--sm,.dv-page main a.dax-btn--sm{height:32px !important;min-height:32px !important;border-radius:6px !important;font-size:13px !important;font-weight:500 !important}
+/* 三次リンク: 13/500 青 */
+.dv-page main :is(.dax-link,.dat-lost,.dax-fsib,.dax-reqlink){font-size:13px !important;font-weight:500 !important;color:var(--da-blue) !important}
+/* 選択肢・行ボタンの角丸 6、ドロップダウン 36 */
+.dv-page main :is(.dax-choice,.dax-seg__opt,.dax-cf__radio,.dat-row,.dax-bc,.dax-item,.dax-disc__btn){border-radius:6px !important}
+.dv-page main .dax-dd,.dv-page main .dax-dd>button{min-height:36px !important;height:36px !important;border-radius:6px !important}
+/* 入力欄: 検索 36・textarea r6/14 */
+.dv-page main :is(.dax-search,.dax-fsearch){height:36px !important;min-height:36px !important;border-radius:6px !important;font-size:14px !important;box-sizing:border-box !important}
+.dv-page main :is(.dax-search,.dax-fsearch) input{height:34px !important;min-height:0 !important}
+.dv-page main textarea,.dv-page main .dax-input{border-radius:6px !important;font-size:14px !important}
+/* ピル（状態）22/r11/12/500 */
+.dv-page main .dat-pill{display:inline-flex !important;align-items:center;height:22px !important;padding:0 8px !important;border-radius:11px !important;font-size:12px !important;font-weight:500 !important;line-height:1 !important}
+/* タグ（種類・分類）22/r4/12/500 */
+.dv-page main :is(.dat-tag,.dax-tag:not(.dax-cf__sev),.dax-cf__tier,.dax-reqtag--cf,.dax-badge){display:inline-flex !important;align-items:center;height:22px !important;padding:0 6px !important;border-radius:4px !important;font-size:12px !important;font-weight:500 !important;line-height:1 !important}
+.dv-page main .dat-tag{background:var(--da-gray-bg) !important;color:var(--da-gray) !important}
+/* 件数バッジ 18/r9/11/600 灰 */
+.dv-page main .dat-badge{display:inline-flex !important;align-items:center;justify-content:center;min-width:18px;height:18px !important;padding:0 6px !important;border-radius:9px !important;background:#eef0f3 !important;color:var(--da-gray) !important;font-size:11px !important;font-weight:600 !important}
+/* 琥珀・橙の茶色は 1 トークンへ（判断待ち・推定・条件付き） */
+.dv-page main :is(.dat-pill,.dax-tag,.dax-reqtag--cf)[class*="warn"],.dv-page main :is(.dat-pill,.dax-reqtag--cf),.dv-page main .dax-tag:not(.dax-cf__sev):not([class*="ok"]):not([class*="ng"]){background:var(--da-amber-bg) !important;color:var(--da-amber) !important;border-color:var(--da-amber-bd) !important}
+.dv-page main :is(.dax-sd--medium,.dax-sd--mid,.dax-reqsev--medium,.dax-cf__sev--medium){color:var(--da-amber) !important}
+/* 表: 見出し 12/600/灰・行高 44（概要は 48 まで） */
+.dv-page main table th{font-size:12px !important;font-weight:600 !important;color:rgb(97,104,117) !important}
+.dv-page main table th .dax-reqgo{font-size:12px !important}
+.dv-page main :is(.dat-table,.dat-stgt) tbody tr>td{height:44px;box-sizing:border-box;padding-top:6px !important;padding-bottom:6px !important}
+/* 小見出し: 12/600/灰97/.04em（レビューの h5・h3、サイド見出し） */
+.dv-page main h5,.dv-page main :is(#dap-rv-h,#dal-h){font-size:12px !important;font-weight:600 !important;letter-spacing:.04em !important;color:rgb(97,104,117) !important}
+.dv-page main :is(.dax-h3,.dat-next__h,.dat-tools__h){color:rgb(97,104,117) !important}
+/* 空状態: dax-state を変更画面の箱（白・r8・枠・中央）に */
+.dv-page main .dax-state{background:#fff !important;border:1px solid var(--color-border,#e4e7ec) !important;border-radius:8px !important;padding:32px !important;text-align:center;justify-items:center}
+.dv-page main .dax-md__hmeta .dax-item__sub{flex:0 0 auto !important;overflow:visible !important;text-overflow:clip !important}
+/* 絞り込みセグメントの寸法を全画面で同一に（折り返さず、足りなければ横スクロール） */
+.dv-page main :is(.dax-segc,.dax-chips,.dac-chips,.dax-cf__tabs){display:flex !important;flex-wrap:nowrap !important;gap:4px !important;max-width:100% !important;width:auto !important;overflow-x:auto !important;overflow-y:hidden !important;scrollbar-width:thin}
+.dv-page main :is(.dax-segc__opt,.dax-chip,.dac-chip),.dv-page main .dax-cf__tabs .dax-segc__opt,.dv-page main .dax-chips .dax-chip{flex:0 0 auto !important;width:auto !important;height:32px !important;min-height:32px !important;padding:0 12px !important;gap:6px !important;border-radius:6px !important;font-size:13px !important;font-weight:500 !important;white-space:nowrap !important}
+.dv-page main :is(.dax-segc__opt,.dax-chip,.dac-chip):is([aria-pressed="true"],[aria-selected="true"],[aria-checked="true"]){font-weight:600 !important}
+.dv-page main :is(.dax-segc__n,.dac-chip__n),.dv-page main .dax-chip>span{min-width:18px !important;height:18px !important;padding:0 6px !important;font-size:11px !important;border-radius:9px !important}
+/* ① 矛盾の状態タブ: 3 つとも文字と件数が見える幅にする（左ペインを 300px に） */
+.dv-page main .dax-md.dax-cf,.dv-page main .dax-md.dax-cf.dax-cf--one{grid-template-columns:300px minmax(0,1fr) !important}
+.dv-page main .dax-cf__tabs{overflow:visible !important;width:100% !important;gap:4px !important}
+.dv-page main .dax-cf__tabs .dax-segc__opt{flex:1 1 auto !important;min-width:0 !important;padding:0 8px !important;gap:4px !important;font-size:13px !important;justify-content:center;white-space:nowrap !important}
+.dv-page main .dax-cf__tabs .dax-segc__n{min-width:16px !important;height:16px !important;padding:0 4px !important;font-size:11px !important}
+/* ② 変更画面のチップは 2 行目へ折り返して全ラベルを見せる */
+.dv-page main .dac-chips{flex-wrap:wrap !important;overflow:visible !important;row-gap:6px !important}
+/* ③ 種類タグの配色表（概要 .dax-kt を正本）: 矛盾=赤・未決事項=琥珀・テスト不可=青・規則/曖昧語=灰 */
+.dv-page main .dax-reqtag--cf,.dv-page main .dax-kt--c{background:#fee4e2 !important;color:#b42318 !important;border-color:#fecdca !important}
+.dv-page main .dax-kt--tbd{background:#fef0c7 !important;color:var(--da-amber) !important}
+.dv-page main .dax-kt--t{background:#eff4ff !important;color:#1d4ed8 !important}
+.dv-page main .dax-kt--r{background:#f1f4f8 !important;color:var(--da-gray) !important}
+/* ④ ロゴマークは製品名の頭文字 D */
+.dv-sb .app-brand-mark{font-size:0 !important}
+.dv-sb .app-brand-mark::before{content:"D";font-size:13px;font-weight:700;line-height:1}
+.dv-page main .dax-cf__tier{background:#f1f4f8 !important;color:#4b5563 !important;border-color:transparent !important;height:22px !important;border-radius:4px !important;font-size:12px !important}
+.dv-page main .dax-tag.dax-cf__tier.dax-cf__tier.dax-cf__tier{background:#f1f4f8 !important;color:#4b5563 !important;border-color:transparent !important}
+.dv-page main .dax-badge.dax-badge--na.dax-badge--na{background:#f1f4f8 !important;color:#4b5563 !important;border-color:transparent !important}
+/* 未評価・未取り込みは斜線ハッチをやめ、無地の淡い背景＋1px 枠 */
+.dv-page main .dax-bc.dax-bc--na,.dv-page main .dat-late2{background:#f7f8fa !important;background-image:none !important;border:1px solid #e5e7eb !important}
+/* 変更画面のチップ: 1 行（nowrap）。入りきらない幅だけ横スクロール（バーは隠す） */
+.dv-page main .dac-chips{flex-wrap:nowrap !important;overflow-x:auto !important;overflow-y:hidden !important;scrollbar-width:none;max-width:100% !important}
+.dv-page main .dac-chips::-webkit-scrollbar{display:none}
+.dv-page main .dac>.dax-md{grid-template-columns:minmax(300px,420px) minmax(0,1fr) !important}
+.dv-page main .dac-chips{gap:4px !important}
+.dv-page main .dac-chips .dac-chip{padding:0 8px !important;gap:4px !important}
+/* 第 7 回: 補足・メタ・注記は 12px 以上・#4b5563 以上の濃さ */
+.dv-page main :is(.dax-reqdoc,.dax-reqdiff,.dax-info,.dax-kbd){font-size:12px !important}
+.dv-page main :is(.dax-reqdoc,.dax-reqdiff,.dax-info,.dax-item__sub,.dax-item__meta,.dat-sub,.dar-sub,.dax-props__row>dt,.dax-cf__note){color:#4b5563 !important}
+/* テスト不可タグは中立の灰（青は操作専用） */
+.dv-page main .dax-kt--t{background:#eef0f3 !important;color:#374151 !important;border-color:transparent !important}
+/* 一覧の選択行の左線は全画面で青 */
+.dv-page main .dat-row:is([aria-selected="true"],[aria-current="true"]){box-shadow:inset 3px 0 0 0 #1d4ed8 !important}
+.dv-page main .dax-item:is([aria-selected="true"],[aria-current="true"]),.dv-page main .dax-item.is-selected{border-left-color:#1d4ed8 !important}
+.dv-page main .dax-reqst--attention::before{background:#b54708 !important}

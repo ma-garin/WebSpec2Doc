@@ -1,0 +1,20 @@
+{
+ "id": "am2-03",
+ "category": "ambiguity",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 宿泊予約の取消\n\n## 1 機能\n\nREQ-301 予約の取消時は、宿泊日までの日数など状況に応じてキャンセル料を請求する。\nREQ-302 取消が完了したとき、システムは確認メールを送信する。送信に失敗した場合は画面にエラーを表示する。\n"
+  }
+ ],
+ "expected": [
+  {
+   "kind": "finding",
+   "rule_or_kind": "AMB-001",
+   "document_id": "A",
+   "line": 5,
+   "severity": "medium"
+  }
+ ],
+ "must_not": []
+}

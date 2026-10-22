@@ -1,0 +1,24 @@
+{
+ "id": "pi2-02",
+ "category": "permission_inconsistency",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 成績の入力\n\n## 1 機能\n\nREQ-281 成績の入力は、担当教員のみが実施できる。\nREQ-282 入力内容は保存時に検証する。\n"
+  },
+  {
+   "id": "B",
+   "text": "# 成績の入力\n\n## 1 機能\n\nREQ-281 成績の入力は、教務課の事務職員も実施できる。\n"
+  }
+ ],
+ "expected": [
+  {
+   "kind": "conflict",
+   "rule_or_kind": "permission",
+   "document_id": "A",
+   "line": 5,
+   "severity": "high"
+  }
+ ],
+ "must_not": []
+}

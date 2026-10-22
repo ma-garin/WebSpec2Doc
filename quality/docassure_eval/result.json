@@ -1,0 +1,348 @@
+{
+ "fixtures": {
+  "total_cases": 63,
+  "per_category": {
+   "ambiguity": 5,
+   "boundary_gap": 4,
+   "broken_reference": 4,
+   "contradiction": 4,
+   "false_positive_trap": 16,
+   "missing_condition": 5,
+   "numeric_conflict": 5,
+   "permission_inconsistency": 4,
+   "state_gap": 4,
+   "trace_orphan": 4,
+   "undefined_term": 4,
+   "untestable": 4
+  },
+  "expected_items": 47,
+  "trap_cases": 16
+ },
+ "overall": {
+  "precision": 1.0,
+  "recall": 1.0,
+  "f1": 1.0,
+  "tp": 47,
+  "fp": 0,
+  "fn": 0,
+  "cases": 63,
+  "critical_recall": 1.0,
+  "critical_expected": 28,
+  "false_positive_case_rate": 0.0,
+  "issue_density_per_100_lines": 18.88,
+  "must_not_hits": 0
+ },
+ "by_category": {
+  "ambiguity": {
+   "precision": 1.0,
+   "recall": 1.0,
+   "f1": 1.0,
+   "tp": 5,
+   "fp": 0,
+   "fn": 0,
+   "cases": 5,
+   "critical_recall": null,
+   "critical_expected": 0,
+   "false_positive_case_rate": 0.0,
+   "issue_density_per_100_lines": 31.25,
+   "must_not_hits": 0
+  },
+  "boundary_gap": {
+   "precision": 1.0,
+   "recall": 1.0,
+   "f1": 1.0,
+   "tp": 4,
+   "fp": 0,
+   "fn": 0,
+   "cases": 4,
+   "critical_recall": 1.0,
+   "critical_expected": 3,
+   "false_positive_case_rate": 0.0,
+   "issue_density_per_100_lines": 33.33,
+   "must_not_hits": 0
+  },
+  "broken_reference": {
+   "precision": 1.0,
+   "recall": 1.0,
+   "f1": 1.0,
+   "tp": 4,
+   "fp": 0,
+   "fn": 0,
+   "cases": 4,
+   "critical_recall": 1.0,
+   "critical_expected": 4,
+   "false_positive_case_rate": 0.0,
+   "issue_density_per_100_lines": 30.77,
+   "must_not_hits": 0
+  },
+  "contradiction": {
+   "precision": 1.0,
+   "recall": 1.0,
+   "f1": 1.0,
+   "tp": 4,
+   "fp": 0,
+   "fn": 0,
+   "cases": 4,
+   "critical_recall": 1.0,
+   "critical_expected": 1,
+   "false_positive_case_rate": 0.0,
+   "issue_density_per_100_lines": 18.18,
+   "must_not_hits": 0
+  },
+  "false_positive_trap": {
+   "precision": null,
+   "recall": null,
+   "f1": null,
+   "tp": 0,
+   "fp": 0,
+   "fn": 0,
+   "cases": 16,
+   "critical_recall": null,
+   "critical_expected": 0,
+   "false_positive_case_rate": 0.0,
+   "issue_density_per_100_lines": 0.0,
+   "must_not_hits": 0
+  },
+  "missing_condition": {
+   "precision": 1.0,
+   "recall": 1.0,
+   "f1": 1.0,
+   "tp": 5,
+   "fp": 0,
+   "fn": 0,
+   "cases": 5,
+   "critical_recall": 1.0,
+   "critical_expected": 5,
+   "false_positive_case_rate": 0.0,
+   "issue_density_per_100_lines": 33.33,
+   "must_not_hits": 0
+  },
+  "numeric_conflict": {
+   "precision": 1.0,
+   "recall": 1.0,
+   "f1": 1.0,
+   "tp": 5,
+   "fp": 0,
+   "fn": 0,
+   "cases": 5,
+   "critical_recall": 1.0,
+   "critical_expected": 5,
+   "false_positive_case_rate": 0.0,
+   "issue_density_per_100_lines": 19.23,
+   "must_not_hits": 0
+  },
+  "permission_inconsistency": {
+   "precision": 1.0,
+   "recall": 1.0,
+   "f1": 1.0,
+   "tp": 4,
+   "fp": 0,
+   "fn": 0,
+   "cases": 4,
+   "critical_recall": 1.0,
+   "critical_expected": 4,
+   "false_positive_case_rate": 0.0,
+   "issue_density_per_100_lines": 20.0,
+   "must_not_hits": 0
+  },
+  "state_gap": {
+   "precision": 1.0,
+   "recall": 1.0,
+   "f1": 1.0,
+   "tp": 4,
+   "fp": 0,
+   "fn": 0,
+   "cases": 4,
+   "critical_recall": null,
+   "critical_expected": 0,
+   "false_positive_case_rate": 0.0,
+   "issue_density_per_100_lines": 33.33,
+   "must_not_hits": 0
+  },
+  "trace_orphan": {
+   "precision": 1.0,
+   "recall": 1.0,
+   "f1": 1.0,
+   "tp": 4,
+   "fp": 0,
+   "fn": 0,
+   "cases": 4,
+   "critical_recall": 1.0,
+   "critical_expected": 2,
+   "false_positive_case_rate": 0.0,
+   "issue_density_per_100_lines": 22.22,
+   "must_not_hits": 0
+  },
+  "undefined_term": {
+   "precision": 1.0,
+   "recall": 1.0,
+   "f1": 1.0,
+   "tp": 4,
+   "fp": 0,
+   "fn": 0,
+   "cases": 4,
+   "critical_recall": null,
+   "critical_expected": 0,
+   "false_positive_case_rate": 0.0,
+   "issue_density_per_100_lines": 26.67,
+   "must_not_hits": 0
+  },
+  "untestable": {
+   "precision": 1.0,
+   "recall": 1.0,
+   "f1": 1.0,
+   "tp": 4,
+   "fp": 0,
+   "fn": 0,
+   "cases": 4,
+   "critical_recall": 1.0,
+   "critical_expected": 4,
+   "false_positive_case_rate": 0.0,
+   "issue_density_per_100_lines": 33.33,
+   "must_not_hits": 0
+  }
+ },
+ "adversarial_traps": {
+  "cases": 16,
+  "false_positives": 0,
+  "must_not_hits": 0,
+  "fp_detail": []
+ },
+ "mutation": {
+  "total": 12,
+  "detected": 6,
+  "detection_rate": 0.5,
+  "by_type": {
+   "timeout_value_change": {
+    "n": 3,
+    "detected": 3,
+    "rate": 1.0
+   },
+   "condition_deleted": {
+    "n": 3,
+    "detected": 0,
+    "rate": 0.0
+   },
+   "permission_changed": {
+    "n": 3,
+    "detected": 3,
+    "rate": 1.0
+   },
+   "error_path_deleted": {
+    "n": 3,
+    "detected": 0,
+    "rate": 0.0
+   }
+  },
+  "baseline_clean": true,
+  "rows": [
+   {
+    "id": "timeout_value_change:セッション",
+    "type": "timeout_value_change",
+    "baseline_detections": 0,
+    "detected": true,
+    "new_detections": [
+     "conflict:numeric"
+    ]
+   },
+   {
+    "id": "condition_deleted:セッション",
+    "type": "condition_deleted",
+    "baseline_detections": 0,
+    "detected": false,
+    "new_detections": []
+   },
+   {
+    "id": "permission_changed:セッション",
+    "type": "permission_changed",
+    "baseline_detections": 0,
+    "detected": true,
+    "new_detections": [
+     "conflict:permission"
+    ]
+   },
+   {
+    "id": "error_path_deleted:セッション",
+    "type": "error_path_deleted",
+    "baseline_detections": 0,
+    "detected": false,
+    "new_detections": []
+   },
+   {
+    "id": "timeout_value_change:ログイン試行",
+    "type": "timeout_value_change",
+    "baseline_detections": 0,
+    "detected": true,
+    "new_detections": [
+     "conflict:numeric"
+    ]
+   },
+   {
+    "id": "condition_deleted:ログイン試行",
+    "type": "condition_deleted",
+    "baseline_detections": 0,
+    "detected": false,
+    "new_detections": []
+   },
+   {
+    "id": "permission_changed:ログイン試行",
+    "type": "permission_changed",
+    "baseline_detections": 0,
+    "detected": true,
+    "new_detections": [
+     "conflict:permission"
+    ]
+   },
+   {
+    "id": "error_path_deleted:ログイン試行",
+    "type": "error_path_deleted",
+    "baseline_detections": 0,
+    "detected": false,
+    "new_detections": []
+   },
+   {
+    "id": "timeout_value_change:一覧表示",
+    "type": "timeout_value_change",
+    "baseline_detections": 0,
+    "detected": true,
+    "new_detections": [
+     "conflict:numeric"
+    ]
+   },
+   {
+    "id": "condition_deleted:一覧表示",
+    "type": "condition_deleted",
+    "baseline_detections": 0,
+    "detected": false,
+    "new_detections": []
+   },
+   {
+    "id": "permission_changed:一覧表示",
+    "type": "permission_changed",
+    "baseline_detections": 0,
+    "detected": true,
+    "new_detections": [
+     "conflict:permission"
+    ]
+   },
+   {
+    "id": "error_path_deleted:一覧表示",
+    "type": "error_path_deleted",
+    "baseline_detections": 0,
+    "detected": false,
+    "new_detections": []
+   }
+  ]
+ },
+ "targets": {
+  "precision": 0.98,
+  "critical_recall": 0.95,
+  "met": {
+   "precision": true,
+   "critical_recall": true
+  }
+ },
+ "misses": [],
+ "false_positives": [],
+ "caveat": "自作 fixture での測定値。fixture 件数が少なく、実文書への一般化や他製品との優劣を示すものではない。"
+}

@@ -1,0 +1,20 @@
+{
+ "id": "h-amb-01",
+ "category": "ambiguity",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 勤怠管理 要件\n\n## 1 機能要件\n\nREQ-001 打刻データは速やかに集計サーバへ反映すること。\nREQ-002 ログインに連続5回失敗した場合、システムはアカウントを30分間ロックし、エラーメッセージを表示する。\n"
+  }
+ ],
+ "expected": [
+  {
+   "kind": "finding",
+   "rule_or_kind": "AMB-001",
+   "document_id": "A",
+   "line": 5,
+   "severity": "medium"
+  }
+ ],
+ "must_not": []
+}

@@ -1,0 +1,61 @@
+{
+ "id": "adv-073",
+ "category": "false_positive_trap",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 業務仕様書\n\n## 1.1 受付\n\n窓口で申請書を受け取ります。不備がある場合は、その場で差し戻す。\n\nREQ-120 受付時に受付番号を発行する。失敗した場合はエラーを表示する。\n\n## 1.2 審査\n\n審査は受付の翌営業日までに完了する。\n"
+  },
+  {
+   "id": "B",
+   "text": "# 業務仕様書\n\n## 1.1 受付\n\n窓口で申請書を受け取ります。不備がある場合は、その場で差し戻す。\n\nREQ-120 受付時に受付番号を発行する。失敗した場合はエラーを表示する。\n"
+  }
+ ],
+ "expected": [],
+ "must_not": [
+  {
+   "kind": "finding",
+   "rule_or_kind": "ambiguity"
+  },
+  {
+   "kind": "finding",
+   "rule_or_kind": "boundary_gap"
+  },
+  {
+   "kind": "finding",
+   "rule_or_kind": "broken_reference"
+  },
+  {
+   "kind": "finding",
+   "rule_or_kind": "contradiction"
+  },
+  {
+   "kind": "finding",
+   "rule_or_kind": "missing_condition"
+  },
+  {
+   "kind": "finding",
+   "rule_or_kind": "numeric_conflict"
+  },
+  {
+   "kind": "finding",
+   "rule_or_kind": "permission_inconsistency"
+  },
+  {
+   "kind": "finding",
+   "rule_or_kind": "state_gap"
+  },
+  {
+   "kind": "finding",
+   "rule_or_kind": "trace_orphan"
+  },
+  {
+   "kind": "finding",
+   "rule_or_kind": "undefined_term"
+  },
+  {
+   "kind": "finding",
+   "rule_or_kind": "untestable"
+  }
+ ]
+}

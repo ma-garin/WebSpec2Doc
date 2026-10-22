@@ -1,0 +1,12 @@
+{
+ "id": "fp2-03",
+ "category": "false_positive_trap",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 住民票の電子申請\n\n## 1 機能\n\n## 用語\nREQ-720 PKI: 公開鍵基盤をいう。\nREQ-721 申請者は、PKIによる電子署名を付して申請する。署名の検証に失敗した場合は受付を拒否する。\n"
+  }
+ ],
+ "expected": [],
+ "must_not": []
+}

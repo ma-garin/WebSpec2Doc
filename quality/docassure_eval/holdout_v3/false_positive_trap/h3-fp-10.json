@@ -1,0 +1,19 @@
+{
+ "id": "h3-fp-10",
+ "category": "false_positive_trap",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 農産物出荷\n\nSR-901 出荷の遅延が一定期間（3営業日）を超えた場合は生産者へ連絡する。\n"
+  }
+ ],
+ "expected": [],
+ "must_not": [
+  {
+   "kind": "finding",
+   "rule_or_kind": "AMB-001",
+   "document_id": "A",
+   "line": 3
+  }
+ ]
+}

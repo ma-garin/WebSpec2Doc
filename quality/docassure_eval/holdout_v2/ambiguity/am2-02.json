@@ -1,0 +1,20 @@
+{
+ "id": "am2-02",
+ "category": "ambiguity",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 成績の確定処理\n\n## 1 機能\n\nREQ-201 教員は、成績入力画面で科目ごとの素点を入力する。未入力の科目がある場合は確定できない。\nREQ-202 学年主任は、素点を適宜修正できる。\nREQ-203 確定後の成績は、教務課のみが変更できる。\n"
+  }
+ ],
+ "expected": [
+  {
+   "kind": "finding",
+   "rule_or_kind": "AMB-001",
+   "document_id": "A",
+   "line": 6,
+   "severity": "medium"
+  }
+ ],
+ "must_not": []
+}

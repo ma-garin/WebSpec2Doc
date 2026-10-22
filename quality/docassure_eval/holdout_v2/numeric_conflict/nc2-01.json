@@ -1,0 +1,24 @@
+{
+ "id": "nc2-01",
+ "category": "numeric_conflict",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 住民票の手数料\n\n## 1 機能\n\nREQ-141 住民票の写しの交付手数料は、1通につき300円とする。\nREQ-142 郵送請求の返信用封筒は、請求者が用意する。\n"
+  },
+  {
+   "id": "B",
+   "text": "# 住民票の手数料\n\n## 1 機能\n\nREQ-141 住民票の写しの交付手数料は、1通につき400円とする。\n"
+  }
+ ],
+ "expected": [
+  {
+   "kind": "conflict",
+   "rule_or_kind": "numeric",
+   "document_id": "A",
+   "line": 6,
+   "severity": "high"
+  }
+ ],
+ "must_not": []
+}

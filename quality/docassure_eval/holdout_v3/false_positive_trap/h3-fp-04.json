@@ -1,0 +1,25 @@
+{
+ "id": "h3-fp-04",
+ "category": "false_positive_trap",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 農産物出荷\n\n## 1 用語\n\nJA: 農業協同組合\nGAP: 農業生産工程管理\n\n## 2 要件\n\nSR-401 JAへの出荷時にGAP認証番号を記載する。\n"
+  }
+ ],
+ "expected": [],
+ "must_not": [
+  {
+   "kind": "finding",
+   "rule_or_kind": "TERM-001",
+   "document_id": "A",
+   "line": 5
+  },
+  {
+   "kind": "finding",
+   "rule_or_kind": "TERM-001",
+   "document_id": "A",
+   "line": 6
+  }
+ ]
+}

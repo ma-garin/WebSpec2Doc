@@ -1,0 +1,20 @@
+{
+ "id": "h3-amb-04",
+ "category": "ambiguity",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 農産物出荷管理\n\n| ID | 要件 |\n|---|---|\n| SR-301 | 出荷伝票は必要に応じて再発行できること |\n| SR-302 | 出荷単位はコンテナ（最大20箱）とする |\n"
+  }
+ ],
+ "expected": [
+  {
+   "kind": "finding",
+   "rule_or_kind": "AMB-001",
+   "document_id": "A",
+   "line": 5,
+   "severity": "medium"
+  }
+ ],
+ "must_not": []
+}

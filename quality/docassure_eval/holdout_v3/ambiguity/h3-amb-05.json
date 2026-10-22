@@ -1,0 +1,20 @@
+{
+ "id": "h3-amb-05",
+ "category": "ambiguity",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 求人応募管理\n\n## 4 通知\n\nREQ-401 応募受付後、応募者へ受付完了メールを送信すること。\nREQ-402 書類選考の結果は、しかるべきタイミングで通知する。\n"
+  }
+ ],
+ "expected": [
+  {
+   "kind": "finding",
+   "rule_or_kind": "AMB-001",
+   "document_id": "A",
+   "line": 6,
+   "severity": "medium"
+  }
+ ],
+ "must_not": []
+}

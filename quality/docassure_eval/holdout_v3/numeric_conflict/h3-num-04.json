@@ -1,0 +1,20 @@
+{
+ "id": "h3-num-04",
+ "category": "numeric_conflict",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 求人応募管理\n\n## 4\n\nREQ-401 応募書類のファイル上限は5MBとする。\nREQ-402 履歴書はPDF形式とする。\nREQ-403 応募書類のファイル上限は10MBとする。\n"
+  }
+ ],
+ "expected": [
+  {
+   "kind": "conflict",
+   "rule_or_kind": "numeric",
+   "document_id": "A",
+   "line": 7,
+   "severity": "high"
+  }
+ ],
+ "must_not": []
+}

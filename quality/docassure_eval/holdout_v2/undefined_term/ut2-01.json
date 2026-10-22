@@ -1,0 +1,20 @@
+{
+ "id": "ut2-01",
+ "category": "undefined_term",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 住民票の電子交付\n\n## 1 機能\n\nREQ-161 申請者は、マイナンバーカードのICチップを用いてPKI認証を行う。\nREQ-162 認証に失敗した場合はエラーを表示する。\n"
+  }
+ ],
+ "expected": [
+  {
+   "kind": "finding",
+   "rule_or_kind": "TERM-001",
+   "document_id": "A",
+   "line": 5,
+   "severity": "low"
+  }
+ ],
+ "must_not": []
+}

@@ -1,0 +1,20 @@
+{
+ "id": "h-trc-01",
+ "category": "trace_orphan",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 請求管理 要件\n\n## 1 機能要件\n\nREQ-100 請求書は月次で発行する。\nREQ-100 請求書は税込金額で表示する。\n"
+  }
+ ],
+ "expected": [
+  {
+   "kind": "finding",
+   "rule_or_kind": "ID-001",
+   "document_id": "A",
+   "line": 6,
+   "severity": "high"
+  }
+ ],
+ "must_not": []
+}

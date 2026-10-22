@@ -1,0 +1,20 @@
+{
+ "id": "h3-mc-04",
+ "category": "missing_condition",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 空港手荷物\n\n## 4 搬送\n\nFR-801 特殊手荷物は規定の方法で処理すること。\nFR-802 搬送の遅延が発生した場合は旅客に通知する。\n"
+  }
+ ],
+ "expected": [
+  {
+   "kind": "testability",
+   "rule_or_kind": "NOT_TESTABLE",
+   "document_id": "A",
+   "line": 5,
+   "severity": "high"
+  }
+ ],
+ "must_not": []
+}

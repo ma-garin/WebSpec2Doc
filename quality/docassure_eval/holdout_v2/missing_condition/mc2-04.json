@@ -1,0 +1,20 @@
+{
+ "id": "mc2-04",
+ "category": "missing_condition",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 経費精算の申請\n\n## 1 機能\n\nREQ-521 申請者が領収書を添付して申請したとき、システムは申請番号を表示する。領収書が添付されていない場合は申請できない。\nREQ-522 上長が申請を承認したとき、システムは経理へ仕訳依頼を送る。\n"
+  }
+ ],
+ "expected": [
+  {
+   "kind": "testability",
+   "rule_or_kind": "NOT_TESTABLE",
+   "document_id": "A",
+   "line": 6,
+   "severity": "high"
+  }
+ ],
+ "must_not": []
+}

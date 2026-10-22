@@ -1,0 +1,25 @@
+{
+ "id": "h3-fp-20",
+ "category": "false_positive_trap",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 求人応募\n\nNFR-1901 応募フォームの表示は2秒以内（95パーセンタイル）とする。\nNFR-1902 応募の受付は24時間365日可能とする。ただし月次メンテナンス（第1日曜2時〜4時）を除く。\n"
+  }
+ ],
+ "expected": [],
+ "must_not": [
+  {
+   "kind": "conflict",
+   "rule_or_kind": "temporal",
+   "document_id": "A",
+   "line": 4
+  },
+  {
+   "kind": "finding",
+   "rule_or_kind": "NOT_TESTABLE",
+   "document_id": "A",
+   "line": 4
+  }
+ ]
+}

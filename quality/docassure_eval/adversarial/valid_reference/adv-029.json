@@ -1,0 +1,57 @@
+{
+ "id": "adv-029",
+ "category": "false_positive_trap",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 仕様書\n\n## 4 帳票\n\nREQ-041 出力形式は別紙1に定める。失敗した場合はエラーを表示する。\n\n## 別紙1 帳票一覧\n\n納品書、請求書、検品票\n"
+  }
+ ],
+ "expected": [],
+ "must_not": [
+  {
+   "kind": "finding",
+   "rule_or_kind": "ambiguity"
+  },
+  {
+   "kind": "finding",
+   "rule_or_kind": "boundary_gap"
+  },
+  {
+   "kind": "finding",
+   "rule_or_kind": "broken_reference"
+  },
+  {
+   "kind": "finding",
+   "rule_or_kind": "contradiction"
+  },
+  {
+   "kind": "finding",
+   "rule_or_kind": "missing_condition"
+  },
+  {
+   "kind": "finding",
+   "rule_or_kind": "numeric_conflict"
+  },
+  {
+   "kind": "finding",
+   "rule_or_kind": "permission_inconsistency"
+  },
+  {
+   "kind": "finding",
+   "rule_or_kind": "state_gap"
+  },
+  {
+   "kind": "finding",
+   "rule_or_kind": "trace_orphan"
+  },
+  {
+   "kind": "finding",
+   "rule_or_kind": "undefined_term"
+  },
+  {
+   "kind": "finding",
+   "rule_or_kind": "untestable"
+  }
+ ]
+}

@@ -1,0 +1,57 @@
+{
+ "id": "adv-070",
+ "category": "false_positive_trap",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 仕様書\n\n## 目次\n\n- 1 はじめに\n- 2 業務フロー\n- 3 画面\n\n## 1 はじめに\n\n対象読者：市民課職員\n適用範囲：住民票の写し交付業務\n\nREQ-112 住民票の写しは窓口で即時交付する。失敗した場合はエラーを表示する。\n"
+  }
+ ],
+ "expected": [],
+ "must_not": [
+  {
+   "kind": "finding",
+   "rule_or_kind": "ambiguity"
+  },
+  {
+   "kind": "finding",
+   "rule_or_kind": "boundary_gap"
+  },
+  {
+   "kind": "finding",
+   "rule_or_kind": "broken_reference"
+  },
+  {
+   "kind": "finding",
+   "rule_or_kind": "contradiction"
+  },
+  {
+   "kind": "finding",
+   "rule_or_kind": "missing_condition"
+  },
+  {
+   "kind": "finding",
+   "rule_or_kind": "numeric_conflict"
+  },
+  {
+   "kind": "finding",
+   "rule_or_kind": "permission_inconsistency"
+  },
+  {
+   "kind": "finding",
+   "rule_or_kind": "state_gap"
+  },
+  {
+   "kind": "finding",
+   "rule_or_kind": "trace_orphan"
+  },
+  {
+   "kind": "finding",
+   "rule_or_kind": "undefined_term"
+  },
+  {
+   "kind": "finding",
+   "rule_or_kind": "untestable"
+  }
+ ]
+}

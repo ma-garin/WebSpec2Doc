@@ -1,0 +1,20 @@
+{
+ "id": "h-con-03",
+ "category": "contradiction",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 請求管理 要件\n\n## 1 機能要件\n\nREQ-034 請求書は、請求を確定した後に発行する。\nREQ-035 請求書を発行した後に、請求を確定する。\n"
+  }
+ ],
+ "expected": [
+  {
+   "kind": "conflict",
+   "rule_or_kind": "temporal",
+   "document_id": "A",
+   "line": 5,
+   "severity": "medium"
+  }
+ ],
+ "must_not": []
+}

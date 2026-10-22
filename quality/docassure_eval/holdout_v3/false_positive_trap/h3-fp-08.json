@@ -1,0 +1,25 @@
+{
+ "id": "h3-fp-08",
+ "category": "false_positive_trap",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# ゲーム課金\n\nREQ-801 未成年（16歳未満）の月間課金上限は5,000円とする。\nREQ-802 未成年（16歳以上20歳未満）の月間課金上限は10,000円とする。\n"
+  }
+ ],
+ "expected": [],
+ "must_not": [
+  {
+   "kind": "finding",
+   "rule_or_kind": "NUM-001",
+   "document_id": "A",
+   "line": 4
+  },
+  {
+   "kind": "finding",
+   "rule_or_kind": "NUM-002",
+   "document_id": "A",
+   "line": 3
+  }
+ ]
+}

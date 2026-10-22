@@ -1,0 +1,19 @@
+{
+ "id": "h3-fp-12",
+ "category": "false_positive_trap",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 求人応募管理\n\nREQ-1101 応募者は自分の応募状況を閲覧できる。\nREQ-1102 採用担当者は全応募者の応募状況を閲覧できる。\n"
+  }
+ ],
+ "expected": [],
+ "must_not": [
+  {
+   "kind": "conflict",
+   "rule_or_kind": "permission",
+   "document_id": "A",
+   "line": 3
+  }
+ ]
+}

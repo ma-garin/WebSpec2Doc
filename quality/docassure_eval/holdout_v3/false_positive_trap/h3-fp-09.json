@@ -1,0 +1,25 @@
+{
+ "id": "h3-fp-09",
+ "category": "false_positive_trap",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 外来受付\n\n| 待ち時間 | 表示 |\n|---|---|\n| 0分以上10分未満 | 緑 |\n| 10分以上30分未満 | 黄 |\n| 30分以上 | 赤 |\n"
+  }
+ ],
+ "expected": [],
+ "must_not": [
+  {
+   "kind": "finding",
+   "rule_or_kind": "NUM-002",
+   "document_id": "A",
+   "line": 6
+  },
+  {
+   "kind": "finding",
+   "rule_or_kind": "NUM-002",
+   "document_id": "A",
+   "line": 7
+  }
+ ]
+}

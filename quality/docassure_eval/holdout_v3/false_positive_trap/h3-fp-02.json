@@ -1,0 +1,19 @@
+{
+ "id": "h3-fp-02",
+ "category": "false_positive_trap",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 賃貸契約\n\nSR-201 更新通知は満了の60日前に送付する。\nSR-202 更新通知は満了の約2か月（60日）前を指す。\n"
+  }
+ ],
+ "expected": [],
+ "must_not": [
+  {
+   "kind": "finding",
+   "rule_or_kind": "NUM-001",
+   "document_id": "A",
+   "line": 4
+  }
+ ]
+}

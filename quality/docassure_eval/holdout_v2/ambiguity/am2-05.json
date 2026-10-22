@@ -1,0 +1,20 @@
+{
+ "id": "am2-05",
+ "category": "ambiguity",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 電力量の検針\n\n## 1 機能\n\nREQ-501 検針員は、携帯端末で指示値を入力する。入力値が前回値を下回る場合は警告を表示する。\nREQ-502 前回値を下回った場合は、場合によっては再検針の対象とする。\n"
+  }
+ ],
+ "expected": [
+  {
+   "kind": "finding",
+   "rule_or_kind": "AMB-001",
+   "document_id": "A",
+   "line": 6,
+   "severity": "medium"
+  }
+ ],
+ "must_not": []
+}

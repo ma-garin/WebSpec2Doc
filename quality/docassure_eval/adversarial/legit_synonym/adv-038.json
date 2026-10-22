@@ -1,0 +1,57 @@
+{
+ "id": "adv-038",
+ "category": "false_positive_trap",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 仕様書\n\n## 1 用語\n\n住民は区内に住所を有する者、申請者は手続を行う者（代理人を含む）をいう。\n\nREQ-058 申請者は窓口で本人確認書類を提示する。失敗した場合はエラーを表示する。\nREQ-059 住民は転入届を提出できる。失敗した場合はエラーを表示する。\n"
+  }
+ ],
+ "expected": [],
+ "must_not": [
+  {
+   "kind": "finding",
+   "rule_or_kind": "ambiguity"
+  },
+  {
+   "kind": "finding",
+   "rule_or_kind": "boundary_gap"
+  },
+  {
+   "kind": "finding",
+   "rule_or_kind": "broken_reference"
+  },
+  {
+   "kind": "finding",
+   "rule_or_kind": "contradiction"
+  },
+  {
+   "kind": "finding",
+   "rule_or_kind": "missing_condition"
+  },
+  {
+   "kind": "finding",
+   "rule_or_kind": "numeric_conflict"
+  },
+  {
+   "kind": "finding",
+   "rule_or_kind": "permission_inconsistency"
+  },
+  {
+   "kind": "finding",
+   "rule_or_kind": "state_gap"
+  },
+  {
+   "kind": "finding",
+   "rule_or_kind": "trace_orphan"
+  },
+  {
+   "kind": "finding",
+   "rule_or_kind": "undefined_term"
+  },
+  {
+   "kind": "finding",
+   "rule_or_kind": "untestable"
+  }
+ ]
+}

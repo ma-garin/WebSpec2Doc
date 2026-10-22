@@ -1,0 +1,61 @@
+{
+ "id": "adv-058",
+ "category": "false_positive_trap",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 仕様書\n\n## 5 権限\n\nREQ-090 一般職員は参照のみとする。課長は承認と編集ができる。失敗した場合はエラーを表示する。\n"
+  },
+  {
+   "id": "B",
+   "text": "# 基本設計書\n\n## 5 権限\n\nDES-090 REQ-090 に対応。一般職員は参照のみとし、課長は承認と編集ができる。失敗した場合はエラーを表示する。\n"
+  }
+ ],
+ "expected": [],
+ "must_not": [
+  {
+   "kind": "finding",
+   "rule_or_kind": "ambiguity"
+  },
+  {
+   "kind": "finding",
+   "rule_or_kind": "boundary_gap"
+  },
+  {
+   "kind": "finding",
+   "rule_or_kind": "broken_reference"
+  },
+  {
+   "kind": "finding",
+   "rule_or_kind": "contradiction"
+  },
+  {
+   "kind": "finding",
+   "rule_or_kind": "missing_condition"
+  },
+  {
+   "kind": "finding",
+   "rule_or_kind": "numeric_conflict"
+  },
+  {
+   "kind": "finding",
+   "rule_or_kind": "permission_inconsistency"
+  },
+  {
+   "kind": "finding",
+   "rule_or_kind": "state_gap"
+  },
+  {
+   "kind": "finding",
+   "rule_or_kind": "trace_orphan"
+  },
+  {
+   "kind": "finding",
+   "rule_or_kind": "undefined_term"
+  },
+  {
+   "kind": "finding",
+   "rule_or_kind": "untestable"
+  }
+ ]
+}

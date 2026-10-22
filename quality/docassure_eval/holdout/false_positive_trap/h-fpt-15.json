@@ -1,0 +1,12 @@
+{
+ "id": "h-fpt-15",
+ "category": "false_positive_trap",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 物流 要件\n\n## 1 機能要件\n\nREQ-223 配送先住所は都道府県から番地まで必須入力とする。\nREQ-224 住所が未入力の場合、システムは「配送先を入力してください」と表示し、登録を拒否する。\n"
+  }
+ ],
+ "expected": [],
+ "must_not": []
+}

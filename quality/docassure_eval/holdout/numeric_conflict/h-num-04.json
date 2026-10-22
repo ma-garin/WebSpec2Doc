@@ -1,0 +1,20 @@
+{
+ "id": "h-num-04",
+ "category": "numeric_conflict",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 医療事務 要件\n\n## 1 機能要件\n\nREQ-045 診察券の有効期間は12か月とする。\nREQ-046 診察券の有効期間は6か月とする。\n"
+  }
+ ],
+ "expected": [
+  {
+   "kind": "conflict",
+   "rule_or_kind": "numeric",
+   "document_id": "A",
+   "line": 5,
+   "severity": "high"
+  }
+ ],
+ "must_not": []
+}

@@ -1,0 +1,24 @@
+{
+ "id": "pi2-03",
+ "category": "permission_inconsistency",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 保険請求の削除\n\n## 1 機能\n\nREQ-381 請求データの削除は、システム管理者のみが実施できる。\nREQ-382 削除を実施するときは理由の入力を必須とする。\n"
+  },
+  {
+   "id": "B",
+   "text": "# 保険請求の削除\n\n## 1 機能\n\nREQ-381 請求データの削除は、査定担当者が実施できる。\n"
+  }
+ ],
+ "expected": [
+  {
+   "kind": "conflict",
+   "rule_or_kind": "permission",
+   "document_id": "A",
+   "line": 6,
+   "severity": "high"
+  }
+ ],
+ "must_not": []
+}

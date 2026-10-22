@@ -1,0 +1,20 @@
+{
+ "id": "ut-02",
+ "category": "undefined_term",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 仕様書\n\n## 1 機能\n\nREQ-001 ユーザーが送信ボタンを押したとき、システムはサインイン結果を表示する。失敗した場合はエラーを表示する。\nREQ-002 ユーザーがログインしたとき、システムはホームを表示する。失敗した場合はエラーを表示する。\n"
+  }
+ ],
+ "expected": [
+  {
+   "kind": "finding",
+   "rule_or_kind": "TERM-001",
+   "document_id": "A",
+   "line": 6,
+   "severity": "low"
+  }
+ ],
+ "must_not": []
+}

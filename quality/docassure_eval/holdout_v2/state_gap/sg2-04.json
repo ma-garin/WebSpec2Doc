@@ -1,0 +1,20 @@
+{
+ "id": "sg2-04",
+ "category": "state_gap",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 経費申請の状態\n\n## 1 機能\n\nREQ-491 経費申請の状態は「下書き」「申請中」「承認」「差戻し」とする。下書きから申請中へ、申請中から承認へ遷移する。差戻しからの遷移は定めない。\n"
+  }
+ ],
+ "expected": [
+  {
+   "kind": "testability",
+   "rule_or_kind": "NOT_TESTABLE",
+   "document_id": "A",
+   "line": 5,
+   "severity": "medium"
+  }
+ ],
+ "must_not": []
+}

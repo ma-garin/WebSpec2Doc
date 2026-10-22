@@ -1,0 +1,20 @@
+{
+ "id": "h-ref-03",
+ "category": "broken_reference",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 医療事務 要件\n\n## 1 機能要件\n\nREQ-054 保険証の確認を受付時に行う。\nREQ-055 未収金の扱いは別紙3による。\n"
+  }
+ ],
+ "expected": [
+  {
+   "kind": "finding",
+   "rule_or_kind": "REF-001",
+   "document_id": "A",
+   "line": 6,
+   "severity": "high"
+  }
+ ],
+ "must_not": []
+}

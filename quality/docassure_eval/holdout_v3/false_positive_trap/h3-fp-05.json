@@ -1,0 +1,19 @@
+{
+ "id": "h3-fp-05",
+ "category": "false_positive_trap",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 求人応募管理\n\nREQ-501 応募書類は別紙1の様式で提出する。\n\n別紙1 応募書類様式\n\n- 履歴書\n- 職務経歴書\n"
+  }
+ ],
+ "expected": [],
+ "must_not": [
+  {
+   "kind": "finding",
+   "rule_or_kind": "REF-001",
+   "document_id": "A",
+   "line": 3
+  }
+ ]
+}

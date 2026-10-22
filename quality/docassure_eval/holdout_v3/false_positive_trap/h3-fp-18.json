@@ -1,0 +1,19 @@
+{
+ "id": "h3-fp-18",
+ "category": "false_positive_trap",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 農産物出荷\n\nSR-1701 出荷伝票の状態は「登録」「出荷済」「キャンセル」とする。\nSR-1702 登録から出荷済またはキャンセルへ遷移する。\nSR-1703 出荷済およびキャンセルは終端状態とし、遷移しない。\n"
+  }
+ ],
+ "expected": [],
+ "must_not": [
+  {
+   "kind": "finding",
+   "rule_or_kind": "REQ-ITEMS",
+   "document_id": "A",
+   "line": 5
+  }
+ ]
+}

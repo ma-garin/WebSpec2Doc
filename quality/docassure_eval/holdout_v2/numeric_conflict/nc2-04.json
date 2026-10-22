@@ -1,0 +1,24 @@
+{
+ "id": "nc2-04",
+ "category": "numeric_conflict",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 検査の抜取数\n\n## 1 機能\n\nREQ-441 ロットごとの抜取検査数は、50個とする。\nREQ-442 不良が1個でもあった場合はロット全数検査へ移行する。\n"
+  },
+  {
+   "id": "B",
+   "text": "# 検査の抜取数\n\n## 1 機能\n\nREQ-441 ロットごとの抜取検査数は、80個とする。\n"
+  }
+ ],
+ "expected": [
+  {
+   "kind": "conflict",
+   "rule_or_kind": "numeric",
+   "document_id": "A",
+   "line": 5,
+   "severity": "high"
+  }
+ ],
+ "must_not": []
+}

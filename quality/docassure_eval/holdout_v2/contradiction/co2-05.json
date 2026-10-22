@@ -1,0 +1,24 @@
+{
+ "id": "co2-05",
+ "category": "contradiction",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 電力の検針値\n\n## 1 機能\n\nREQ-531 検針値は、検針員の入力後に自動で確定する。\nREQ-532 異常値が検出された場合は警告を表示する。\n"
+  },
+  {
+   "id": "B",
+   "text": "# 電力の検針値\n\n## 1 機能\n\nREQ-531 検針値は、検針員の入力後に管理者が承認して確定する。承認されない場合は再検針とする。\n"
+  }
+ ],
+ "expected": [
+  {
+   "kind": "conflict",
+   "rule_or_kind": "semantic_candidate",
+   "document_id": "A",
+   "line": 5,
+   "severity": "high"
+  }
+ ],
+ "must_not": []
+}

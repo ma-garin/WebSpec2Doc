@@ -1,0 +1,20 @@
+{
+ "id": "h-bnd-02",
+ "category": "boundary_gap",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 勤怠管理 要件\n\n## 1 機能要件\n\nREQ-071 勤続年数に応じて付与日数を定める。\n\n| 勤続年数 | 付与日数 |\n| 1年未満 | 10日 |\n| 3年以上 | 14日 |\n"
+  }
+ ],
+ "expected": [
+  {
+   "kind": "finding",
+   "rule_or_kind": "NUM-002",
+   "document_id": "A",
+   "line": 9,
+   "severity": "high"
+  }
+ ],
+ "must_not": []
+}

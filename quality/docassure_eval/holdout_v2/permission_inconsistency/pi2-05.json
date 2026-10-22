@@ -1,0 +1,24 @@
+{
+ "id": "pi2-05",
+ "category": "permission_inconsistency",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 貸出履歴の出力\n\n## 1 機能\n\nREQ-581 利用者の貸出履歴の出力は、館長のみが実施できる。\nREQ-582 出力時は出力者と日時を記録する。\n"
+  },
+  {
+   "id": "B",
+   "text": "# 貸出履歴の出力\n\n## 1 機能\n\nREQ-581 利用者の貸出履歴の出力は、司書が実施できる。\n"
+  }
+ ],
+ "expected": [
+  {
+   "kind": "conflict",
+   "rule_or_kind": "permission",
+   "document_id": "A",
+   "line": 5,
+   "severity": "high"
+  }
+ ],
+ "must_not": []
+}

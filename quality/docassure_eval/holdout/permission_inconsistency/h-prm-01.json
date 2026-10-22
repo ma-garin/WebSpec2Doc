@@ -1,0 +1,24 @@
+{
+ "id": "h-prm-01",
+ "category": "permission_inconsistency",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 請求管理 要件\n\n## 1 機能要件\n\nREQ-080 請求データの削除は経理責任者のみ可能とする。\n"
+  },
+  {
+   "id": "B",
+   "text": "# 請求管理 基本設計\n\n## 1 機能要件\n\nREQ-080 請求データは経理担当者が削除できる。\n"
+  }
+ ],
+ "expected": [
+  {
+   "kind": "conflict",
+   "rule_or_kind": "permission",
+   "document_id": "A",
+   "line": 5,
+   "severity": "high"
+  }
+ ],
+ "must_not": []
+}

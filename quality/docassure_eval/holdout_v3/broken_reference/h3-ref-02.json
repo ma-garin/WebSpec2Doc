@@ -1,0 +1,20 @@
+{
+ "id": "h3-ref-02",
+ "category": "broken_reference",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 農産物出荷\n\nSR-201 出荷検査はSR-299の手順に従う。\nSR-202 検査結果は保存すること。\n"
+  }
+ ],
+ "expected": [
+  {
+   "kind": "finding",
+   "rule_or_kind": "REF-001",
+   "document_id": "A",
+   "line": 3,
+   "severity": "high"
+  }
+ ],
+ "must_not": []
+}

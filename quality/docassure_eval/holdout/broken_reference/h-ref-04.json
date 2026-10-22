@@ -1,0 +1,20 @@
+{
+ "id": "h-ref-04",
+ "category": "broken_reference",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 予約 要件\n\n## 1 機能要件\n\nREQ-056 予約枠は30分単位とする。\nREQ-057 枠の追加は REQ-077 の承認フローを経ること。\n"
+  }
+ ],
+ "expected": [
+  {
+   "kind": "finding",
+   "rule_or_kind": "REF-001",
+   "document_id": "A",
+   "line": 6,
+   "severity": "high"
+  }
+ ],
+ "must_not": []
+}

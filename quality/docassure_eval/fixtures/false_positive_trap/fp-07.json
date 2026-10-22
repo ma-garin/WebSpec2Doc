@@ -1,0 +1,12 @@
+{
+ "id": "fp-07",
+ "category": "false_positive_trap",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 仕様書\n\n## 1 機能\n\nREQ-001 管理者のみが設定を変更できる。\nREQ-002 管理者は設定画面を開いたとき、現在値を表示する。失敗した場合はエラーを表示する。\n"
+  }
+ ],
+ "expected": [],
+ "must_not": []
+}

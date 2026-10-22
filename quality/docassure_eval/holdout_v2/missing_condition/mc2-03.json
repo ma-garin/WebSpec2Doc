@@ -1,0 +1,20 @@
+{
+ "id": "mc2-03",
+ "category": "missing_condition",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 保険金の請求受付\n\n## 1 機能\n\nREQ-421 請求者が請求書を送信したとき、システムは受付番号を表示する。添付ファイルが10MBを超える場合は受け付けず、エラーを表示する。\nREQ-422 査定担当者が支払可否を入力したとき、システムは請求者へ結果を通知する。\n"
+  }
+ ],
+ "expected": [
+  {
+   "kind": "testability",
+   "rule_or_kind": "NOT_TESTABLE",
+   "document_id": "A",
+   "line": 6,
+   "severity": "high"
+  }
+ ],
+ "must_not": []
+}

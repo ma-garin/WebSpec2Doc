@@ -1,0 +1,20 @@
+{
+ "id": "h3-ref-04",
+ "category": "broken_reference",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 求人\n\nREQ-101 応募者は個人情報の取扱いに同意すること（REQ-150参照）。\nREQ-102 同意日時を保存する。\n"
+  }
+ ],
+ "expected": [
+  {
+   "kind": "finding",
+   "rule_or_kind": "REF-001",
+   "document_id": "A",
+   "line": 3,
+   "severity": "high"
+  }
+ ],
+ "must_not": []
+}

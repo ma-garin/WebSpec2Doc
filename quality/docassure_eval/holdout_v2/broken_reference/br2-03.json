@@ -1,0 +1,20 @@
+{
+ "id": "br2-03",
+ "category": "broken_reference",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 宿泊の料金表\n\n## 1 機能\n\nREQ-351 宿泊料金は、料金表に従って算出する。料金表は別紙5を参照。\nREQ-352 料金表に該当がない場合はエラーを表示する。\n"
+  }
+ ],
+ "expected": [
+  {
+   "kind": "finding",
+   "rule_or_kind": "REF-001",
+   "document_id": "A",
+   "line": 5,
+   "severity": "high"
+  }
+ ],
+ "must_not": []
+}

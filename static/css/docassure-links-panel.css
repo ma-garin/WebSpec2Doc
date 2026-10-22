@@ -1,0 +1,32 @@
+/* Document Assurance 連携パネル。横スクロールを出さない（816〜1920）。 */
+.dal { max-width: 100%; overflow-wrap: anywhere; }
+.dal h3 { margin: 0 0 8px; font-size: 16px; }
+.dal h4 { margin: 0 0 6px; font-size: 14px; }
+.dal h5 { margin: 10px 0 4px; font-size: 12px; color: var(--color-text-secondary, #555); }
+.dal-sec { border: 1px solid var(--color-border, #d0d5dd); border-radius: 8px; padding: 12px; margin: 10px 0; background: var(--color-surface, #fff); }
+.dal-muted, .dal-meta { color: var(--color-text-secondary, #555); font-size: 12px; margin: 4px 0; }
+.dal-note { padding: 8px 10px; border-left: 4px solid var(--color-warning, #b54708); background: var(--color-surface-2, #f6f7f9); margin: 8px 0; }
+.dal-error { color: var(--color-error-tx, #b42318); }
+.dal-okmsg { color: var(--color-success-tx, #067647); }
+.dal-empty { padding: 12px; text-align: center; color: var(--color-text-secondary, #555); }
+.dal-item { border-top: 1px solid var(--color-border, #d0d5dd); padding: 8px 0; }
+.dal-sub { margin: 6px 0 6px 8px; }
+.dal-badge { display: inline-block; padding: 1px 8px; border-radius: 10px; font-size: 12px; border: 1px solid var(--color-border, #d0d5dd); background: var(--color-surface-2, #f6f7f9); }
+.dal-ok { border-color: var(--color-success-tx, #067647); }
+.dal-warn { border-color: var(--color-warning, #b54708); }
+.dal-info { border-style: dashed; }
+.dal-rel { margin: 4px 0; font-weight: 600; }
+.dal-ev { margin: 4px 0; padding-left: 18px; }
+.dal-label { display: block; font-size: 12px; margin: 4px 0; }
+.dal-sel { max-width: 100%; box-sizing: border-box; min-height: 36px; font: inherit; }
+.dal-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin: 8px 0; }
+.dal-btn { min-height: 36px; padding: 6px 14px; border-radius: 6px; border: 1px solid var(--color-primary, #175cd3); background: var(--color-primary, #175cd3); color: #fff; font: inherit; cursor: pointer; }
+.dal-btn-sub { background: transparent; color: var(--color-primary, #175cd3); }
+.dal-btn:disabled { opacity: .5; cursor: not-allowed; }
+.dal-btn:focus-visible, .dal-sel:focus-visible, .dal-det summary:focus-visible, .dal-dialog:focus-visible { outline: 3px solid var(--color-primary, #1570ef); outline-offset: 2px; }
+.dal-det summary { cursor: pointer; font-size: 12px; }
+.dal-tw { max-width: 100%; overflow-x: auto; }
+.dal-tbl { width: 100%; border-collapse: collapse; font-size: 13px; }
+.dal-tbl th, .dal-tbl td { border: 1px solid var(--color-border, #d0d5dd); padding: 4px 8px; text-align: left; }
+.dal-dialog { max-width: min(480px, calc(100vw - 32px)); border: 1px solid var(--color-border, #d0d5dd); border-radius: 10px; padding: 16px; }
+.dal-dialog::backdrop { background: rgba(0, 0, 0, .4); }

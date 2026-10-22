@@ -1,0 +1,20 @@
+{
+ "id": "h-con-02",
+ "category": "contradiction",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 勤怠管理 要件\n\n## 1 機能要件\n\nREQ-032 勤怠の承認は所属長のみが行える。\nREQ-033 一般社員も勤怠を承認できる。\n"
+  }
+ ],
+ "expected": [
+  {
+   "kind": "conflict",
+   "rule_or_kind": "permission",
+   "document_id": "A",
+   "line": 5,
+   "severity": "high"
+  }
+ ],
+ "must_not": []
+}

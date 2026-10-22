@@ -1,0 +1,20 @@
+{
+ "id": "ut2-05",
+ "category": "undefined_term",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 保険の査定\n\n## 1 機能\n\nREQ-561 査定担当者は、請求内容を査定する。\nREQ-562 査定結果がSIU対象の場合は、調査部へ回付する。回付できない場合は査定担当者へ通知する。\n"
+  }
+ ],
+ "expected": [
+  {
+   "kind": "finding",
+   "rule_or_kind": "TERM-001",
+   "document_id": "A",
+   "line": 6,
+   "severity": "low"
+  }
+ ],
+ "must_not": []
+}

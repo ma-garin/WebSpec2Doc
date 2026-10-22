@@ -1,0 +1,19 @@
+{
+ "id": "h3-fp-11",
+ "category": "false_positive_trap",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 空港手荷物\n\nFR-1001 搬送は速やかに（受付後10分以内に）開始すること。\n"
+  }
+ ],
+ "expected": [],
+ "must_not": [
+  {
+   "kind": "finding",
+   "rule_or_kind": "AMB-001",
+   "document_id": "A",
+   "line": 3
+  }
+ ]
+}

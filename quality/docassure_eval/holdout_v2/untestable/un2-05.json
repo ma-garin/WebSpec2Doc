@@ -1,0 +1,20 @@
+{
+ "id": "un2-05",
+ "category": "untestable",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 工程の品質検査\n\n## 1 機能\n\nREQ-511 検査結果の一覧は、高速に表示すること。\nREQ-512 検査結果は検査日の降順に並べる。\n"
+  }
+ ],
+ "expected": [
+  {
+   "kind": "testability",
+   "rule_or_kind": "NOT_TESTABLE",
+   "document_id": "A",
+   "line": 5,
+   "severity": "high"
+  }
+ ],
+ "must_not": []
+}

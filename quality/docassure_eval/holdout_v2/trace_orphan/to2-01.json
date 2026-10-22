@@ -1,0 +1,20 @@
+{
+ "id": "to2-01",
+ "category": "trace_orphan",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 住民票の受付\n\n## 1 機能\n\nREQ-101 窓口職員が申請書を受け付けたとき、システムは受付番号を表示する。失敗した場合はエラーを表示する。\nREQ-101 窓口職員が手数料を受領したとき、システムは領収書を出力する。失敗した場合はエラーを表示する。\n"
+  }
+ ],
+ "expected": [
+  {
+   "kind": "finding",
+   "rule_or_kind": "ID-001",
+   "document_id": "A",
+   "line": 6,
+   "severity": "high"
+  }
+ ],
+ "must_not": []
+}

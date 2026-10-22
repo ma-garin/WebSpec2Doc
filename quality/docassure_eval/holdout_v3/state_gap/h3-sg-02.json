@@ -1,0 +1,20 @@
+{
+ "id": "h3-sg-02",
+ "category": "state_gap",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 農産物出荷\n\nSR-201 出荷の状態は「登録」「出荷済」「キャンセル」とする。\nSR-202 登録から出荷済へ遷移する。\nSR-203 出荷済の伝票は返品済として管理する。\n"
+  }
+ ],
+ "expected": [
+  {
+   "kind": "finding",
+   "rule_or_kind": "REQ-ITEMS",
+   "document_id": "A",
+   "line": 5,
+   "severity": "medium"
+  }
+ ],
+ "must_not": []
+}

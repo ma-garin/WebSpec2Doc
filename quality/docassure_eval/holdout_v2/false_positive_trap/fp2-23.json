@@ -1,0 +1,12 @@
+{
+ "id": "fp2-23",
+ "category": "false_positive_trap",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 住民票のFAQ\n\n## 1 機能\n\nREQ-921 申請者は、窓口でOCR読取機を使って申請書を読み取る。\nREQ-922 読取に失敗した場合は、手入力へ切り替える。\n\n## 用語\nREQ-923 OCR: 光学文字認識をいう。\n"
+  }
+ ],
+ "expected": [],
+ "must_not": []
+}

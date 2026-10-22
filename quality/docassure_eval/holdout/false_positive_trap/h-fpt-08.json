@@ -1,0 +1,12 @@
+{
+ "id": "h-fpt-08",
+ "category": "false_positive_trap",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 勤怠管理 要件\n\n## 1 機能要件\n\nREQ-212 所属長は部下の勤怠申請を承認できる。\nREQ-213 一般社員は自分の勤怠を閲覧できる。\n"
+  }
+ ],
+ "expected": [],
+ "must_not": []
+}

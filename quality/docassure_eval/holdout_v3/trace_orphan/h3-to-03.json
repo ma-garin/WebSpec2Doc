@@ -1,0 +1,24 @@
+{
+ "id": "h3-to-03",
+ "category": "trace_orphan",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 外来受付 要件\n\nFR-101 受付を行うこと。\nFR-102 結果を保存すること。\n"
+  },
+  {
+   "id": "B",
+   "text": "# 外来受付 基本設計\n\nDD-001 受付処理（FR-101）\nDD-002 保存処理（FR-102）\nDD-003 追加処理（FR-777）\n"
+  }
+ ],
+ "expected": [
+  {
+   "kind": "finding",
+   "rule_or_kind": "ID-001",
+   "document_id": "B",
+   "line": 5,
+   "severity": "high"
+  }
+ ],
+ "must_not": []
+}

@@ -1,0 +1,12 @@
+{
+ "id": "h-fpt-12",
+ "category": "false_positive_trap",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 在庫管理 要件\n\n## 1 機能要件\n\nREQ-219 発注点を下回った場合、システムは当日17時までに発注書を作成し、担当者へメールで通知する。\n"
+  }
+ ],
+ "expected": [],
+ "must_not": []
+}

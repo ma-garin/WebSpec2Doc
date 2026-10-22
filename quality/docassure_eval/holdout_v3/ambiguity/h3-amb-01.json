@@ -1,0 +1,20 @@
+{
+ "id": "h3-amb-01",
+ "category": "ambiguity",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 空港手荷物 要件\n\n## 1 受付\n\nFR-101 手荷物は適宜カウンターで預かること。\nFR-102 重量が23kgを超える場合、超過料金1,500円を請求する。\n"
+  }
+ ],
+ "expected": [
+  {
+   "kind": "finding",
+   "rule_or_kind": "AMB-001",
+   "document_id": "A",
+   "line": 5,
+   "severity": "medium"
+  }
+ ],
+ "must_not": []
+}

@@ -1,0 +1,16 @@
+{
+ "id": "fp-03",
+ "category": "false_positive_trap",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 仕様書\n\n## 1 機能\n\nREQ-001 添付ファイルは1MBまで保存できる。超えたときはエラーを表示する。\n"
+  },
+  {
+   "id": "B",
+   "text": "# 仕様書\n\n## 1 機能\n\nREQ-001 添付ファイルは1024KBまで保存できる。超えたときはエラーを表示する。\n"
+  }
+ ],
+ "expected": [],
+ "must_not": []
+}

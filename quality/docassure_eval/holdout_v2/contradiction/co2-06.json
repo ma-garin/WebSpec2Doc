@@ -1,0 +1,24 @@
+{
+ "id": "co2-06",
+ "category": "contradiction",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 経費の支払\n\n## 1 機能\n\nREQ-631 経理は、承認済みの経費を月末に支払う。\nREQ-632 支払は、領収書の原本を受領する前に実施する。\n"
+  },
+  {
+   "id": "B",
+   "text": "# 経費の支払\n\n## 1 機能\n\nREQ-632 支払は、領収書の原本を受領した後に実施する。受領できない場合は支払を保留する。\n"
+  }
+ ],
+ "expected": [
+  {
+   "kind": "conflict",
+   "rule_or_kind": "temporal",
+   "document_id": "A",
+   "line": 6,
+   "severity": "high"
+  }
+ ],
+ "must_not": []
+}

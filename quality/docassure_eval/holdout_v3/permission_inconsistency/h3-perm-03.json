@@ -1,0 +1,20 @@
+{
+ "id": "h3-perm-03",
+ "category": "permission_inconsistency",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 賃貸契約管理\n\nREQ-301 入居者は契約書をダウンロードできる。\nREQ-302 入居者は契約書を閲覧できない。\n"
+  }
+ ],
+ "expected": [
+  {
+   "kind": "conflict",
+   "rule_or_kind": "permission",
+   "document_id": "A",
+   "line": 4,
+   "severity": "high"
+  }
+ ],
+ "must_not": []
+}

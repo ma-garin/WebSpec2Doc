@@ -1,0 +1,20 @@
+{
+ "id": "un2-06",
+ "category": "untestable",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 成績照会\n\n## 1 機能\n\nREQ-611 保護者は、ログイン後に児童の成績を閲覧できる。\nREQ-612 成績照会画面は、快適に操作できること。\n"
+  }
+ ],
+ "expected": [
+  {
+   "kind": "testability",
+   "rule_or_kind": "NOT_TESTABLE",
+   "document_id": "A",
+   "line": 6,
+   "severity": "high"
+  }
+ ],
+ "must_not": []
+}

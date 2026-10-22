@@ -1,0 +1,20 @@
+{
+ "id": "h-ref-01",
+ "category": "broken_reference",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 請求管理 要件\n\n## 1 機能要件\n\nREQ-050 請求書の発行条件は定義済みとする。\nREQ-051 割引の適用条件は REQ-099 に従う。\n"
+  }
+ ],
+ "expected": [
+  {
+   "kind": "finding",
+   "rule_or_kind": "REF-001",
+   "document_id": "A",
+   "line": 6,
+   "severity": "high"
+  }
+ ],
+ "must_not": []
+}

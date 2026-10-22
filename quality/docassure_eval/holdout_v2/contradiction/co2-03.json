@@ -1,0 +1,24 @@
+{
+ "id": "co2-03",
+ "category": "contradiction",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 宿泊の予約確定\n\n## 1 機能\n\nREQ-331 予約は、前払金の入金を確認した後に確定する。\nREQ-332 入金が確認できない場合は、予約を仮予約のままとする。\n"
+  },
+  {
+   "id": "B",
+   "text": "# 宿泊の予約確定\n\n## 1 機能\n\nREQ-331 予約は、入金の確認を待たずに申込の受付時点で確定する。\n"
+  }
+ ],
+ "expected": [
+  {
+   "kind": "conflict",
+   "rule_or_kind": "temporal",
+   "document_id": "A",
+   "line": 5,
+   "severity": "high"
+  }
+ ],
+ "must_not": []
+}

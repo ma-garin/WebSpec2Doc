@@ -1,0 +1,25 @@
+{
+ "id": "h3-fp-24",
+ "category": "false_positive_trap",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# ゲーム課金\n\n| 項目 | 値 |\n|---|---|\n| 1回の購入上限 | 10,000円 |\n| 1日の購入上限 | 30,000円 |\n| 1か月の購入上限 | 100,000円 |\n"
+  }
+ ],
+ "expected": [],
+ "must_not": [
+  {
+   "kind": "conflict",
+   "rule_or_kind": "numeric",
+   "document_id": "A",
+   "line": 6
+  },
+  {
+   "kind": "conflict",
+   "rule_or_kind": "numeric",
+   "document_id": "A",
+   "line": 7
+  }
+ ]
+}

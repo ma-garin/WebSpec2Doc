@@ -1,0 +1,20 @@
+{
+ "id": "h3-ut-05",
+ "category": "untestable",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 自治体補助金\n\nNFR-501 申請画面は誰でも簡単に入力できること。\nNFR-502 入力内容は自動保存する。\n"
+  }
+ ],
+ "expected": [
+  {
+   "kind": "testability",
+   "rule_or_kind": "NOT_TESTABLE",
+   "document_id": "A",
+   "line": 3,
+   "severity": "high"
+  }
+ ],
+ "must_not": []
+}

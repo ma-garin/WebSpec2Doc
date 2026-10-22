@@ -36,6 +36,11 @@ def create_app() -> Flask:
         doc_verify_ai,
         doc_verify_process,
         doc_verify_trace,
+        doc_assure,
+        doc_assure_extra,
+        doc_assure_sys01,
+        doc_assure_sys02,
+        doc_assure_sys09,
         history,
         integrations,
         llm_chat,
@@ -159,6 +164,11 @@ def create_app() -> Flask:
     app.register_blueprint(doc_verify_ai.bp)
     app.register_blueprint(doc_verify_process.bp)
     app.register_blueprint(doc_verify_trace.bp)
+    app.register_blueprint(doc_assure.bp)
+    app.register_blueprint(doc_assure_extra.bp)
+    app.register_blueprint(doc_assure_sys01.bp)
+    app.register_blueprint(doc_assure_sys02.bp)
+    app.register_blueprint(doc_assure_sys09.bp)
     # バッチ・スクリプトのテスト（System 07）。独立した入口 /batch-test を持つ。
     app.register_blueprint(batch_test.bp)
     # バッチ・バックエンドのテスト（System 08）。独立した入口 /backend-test を持つ。

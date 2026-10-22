@@ -1,0 +1,20 @@
+{
+ "id": "h3-sg-03",
+ "category": "state_gap",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 求人応募\n\nREQ-301 応募の状態は「応募」「書類選考」「面接」「内定」とする。\nREQ-302 書類選考通過者は面接へ遷移する。\nREQ-303 面接で不合格の場合は不採用とする。\n"
+  }
+ ],
+ "expected": [
+  {
+   "kind": "finding",
+   "rule_or_kind": "REQ-ITEMS",
+   "document_id": "A",
+   "line": 5,
+   "severity": "medium"
+  }
+ ],
+ "must_not": []
+}

@@ -1,0 +1,20 @@
+{
+ "id": "mc2-02",
+ "category": "missing_condition",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 宿泊予約の登録\n\n## 1 機能\n\nREQ-321 フロント係が予約情報を入力して登録したとき、システムは予約番号を表示する。必須項目が未入力の場合は登録せず、エラーを表示する。\nREQ-322 フロント係が部屋を割り当てたとき、システムは予約台帳へ反映する。\n"
+  }
+ ],
+ "expected": [
+  {
+   "kind": "testability",
+   "rule_or_kind": "NOT_TESTABLE",
+   "document_id": "A",
+   "line": 6,
+   "severity": "high"
+  }
+ ],
+ "must_not": []
+}

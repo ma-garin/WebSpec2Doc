@@ -1,0 +1,19 @@
+{
+ "id": "h3-fp-15",
+ "category": "false_positive_trap",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 倉庫\n\nSR-1401 保管棚の最大積載は1段あたり500kg（0.5t）とする。\n"
+  }
+ ],
+ "expected": [],
+ "must_not": [
+  {
+   "kind": "finding",
+   "rule_or_kind": "NUM-001",
+   "document_id": "A",
+   "line": 3
+  }
+ ]
+}

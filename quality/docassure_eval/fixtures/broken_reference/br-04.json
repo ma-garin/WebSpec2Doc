@@ -1,0 +1,20 @@
+{
+ "id": "br-04",
+ "category": "broken_reference",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 仕様書\n\n## 1 機能\n\nREQ-001 ユーザーが送信ボタンを押したとき、システムは結果を表示する。失敗した場合はエラーを表示する。 計算式は5章を参照。\n"
+  }
+ ],
+ "expected": [
+  {
+   "kind": "finding",
+   "rule_or_kind": "REF-001",
+   "document_id": "A",
+   "line": 5,
+   "severity": "high"
+  }
+ ],
+ "must_not": []
+}

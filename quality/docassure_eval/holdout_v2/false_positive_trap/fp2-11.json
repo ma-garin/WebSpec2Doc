@@ -1,0 +1,12 @@
+{
+ "id": "fp2-11",
+ "category": "false_positive_trap",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 成績の書類\n\n## 1 機能\n\nREQ-801 申請者は、別紙1に記載の必要書類を提出する。\nREQ-802 不足がある場合は受理しない。\n\n## 別紙1 必要書類一覧\nREQ-803 成績証明書と本人確認書類を必須とする。\n"
+  }
+ ],
+ "expected": [],
+ "must_not": []
+}

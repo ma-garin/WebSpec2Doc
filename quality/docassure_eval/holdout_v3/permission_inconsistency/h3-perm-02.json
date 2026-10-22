@@ -1,0 +1,20 @@
+{
+ "id": "h3-perm-02",
+ "category": "permission_inconsistency",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 倉庫ピッキング\n\nSR-201 作業者は在庫数を更新できる。\nSR-202 在庫数の更新は管理者のみ可能とする。\n"
+  }
+ ],
+ "expected": [
+  {
+   "kind": "conflict",
+   "rule_or_kind": "permission",
+   "document_id": "A",
+   "line": 4,
+   "severity": "high"
+  }
+ ],
+ "must_not": []
+}

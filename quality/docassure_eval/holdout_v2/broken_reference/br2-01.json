@@ -1,0 +1,20 @@
+{
+ "id": "br2-01",
+ "category": "broken_reference",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 住民票の手続\n\n## 1 機能\n\nREQ-151 窓口職員は、代理人からの請求を受け付ける。詳細は7.4章を参照。\nREQ-152 代理人が委任状を持参しない場合は交付しない。\n"
+  }
+ ],
+ "expected": [
+  {
+   "kind": "finding",
+   "rule_or_kind": "REF-001",
+   "document_id": "A",
+   "line": 5,
+   "severity": "high"
+  }
+ ],
+ "must_not": []
+}

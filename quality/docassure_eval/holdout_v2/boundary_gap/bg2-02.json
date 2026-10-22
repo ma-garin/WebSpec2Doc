@@ -1,0 +1,20 @@
+{
+ "id": "bg2-02",
+ "category": "boundary_gap",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 宿泊の料金区分\n\n## 1 機能\n\nREQ-371 宿泊料金の小児区分は、0歳以上5歳以下は無料、7歳以上12歳以下は大人料金の半額とする。\n"
+  }
+ ],
+ "expected": [
+  {
+   "kind": "finding",
+   "rule_or_kind": "NUM-002",
+   "document_id": "A",
+   "line": 5,
+   "severity": "high"
+  }
+ ],
+ "must_not": []
+}

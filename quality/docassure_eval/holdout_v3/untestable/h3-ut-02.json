@@ -1,0 +1,20 @@
+{
+ "id": "h3-ut-02",
+ "category": "untestable",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 倉庫ピッキング\n\nNFR-201 ピッキング端末は十分な性能を有すること。\nNFR-202 端末は防滴仕様（IP54）とする。\n"
+  }
+ ],
+ "expected": [
+  {
+   "kind": "testability",
+   "rule_or_kind": "NOT_TESTABLE",
+   "document_id": "A",
+   "line": 3,
+   "severity": "high"
+  }
+ ],
+ "must_not": []
+}

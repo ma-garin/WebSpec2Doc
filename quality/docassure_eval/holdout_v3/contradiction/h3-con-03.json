@@ -1,0 +1,20 @@
+{
+ "id": "h3-con-03",
+ "category": "contradiction",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 求人応募管理\n\n## 3 応募\n\nREQ-301 応募の受付は24時間いつでも可能とする。\nREQ-302 応募の受付は平日9時から18時までとする。\n"
+  }
+ ],
+ "expected": [
+  {
+   "kind": "conflict",
+   "rule_or_kind": "temporal",
+   "document_id": "A",
+   "line": 6,
+   "severity": "medium"
+  }
+ ],
+ "must_not": []
+}

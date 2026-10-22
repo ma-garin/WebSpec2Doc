@@ -1,0 +1,24 @@
+{
+ "id": "nc2-05",
+ "category": "numeric_conflict",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 請求の保管期間\n\n## 1 機能\n\nREQ-541 保険金請求書類の保管期間は、支払完了日から7年とする。\nREQ-542 保管期間を過ぎた書類は廃棄する。\n"
+  },
+  {
+   "id": "B",
+   "text": "# 請求の保管期間\n\n## 1 機能\n\nREQ-541 保険金請求書類の保管期間は、支払完了日から5年とする。\n"
+  }
+ ],
+ "expected": [
+  {
+   "kind": "conflict",
+   "rule_or_kind": "numeric",
+   "document_id": "A",
+   "line": 6,
+   "severity": "high"
+  }
+ ],
+ "must_not": []
+}

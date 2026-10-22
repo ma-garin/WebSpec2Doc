@@ -1,0 +1,19 @@
+{
+ "id": "h3-fp-16",
+ "category": "false_positive_trap",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# ゲーム課金\n\nREQ-1501 購入が完了した場合、購入履歴へ記録する。購入が失敗した場合、エラーを表示し履歴には記録しない。\n"
+  }
+ ],
+ "expected": [],
+ "must_not": [
+  {
+   "kind": "finding",
+   "rule_or_kind": "NOT_TESTABLE",
+   "document_id": "A",
+   "line": 3
+  }
+ ]
+}

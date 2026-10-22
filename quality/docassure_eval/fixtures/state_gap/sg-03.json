@@ -1,0 +1,20 @@
+{
+ "id": "sg-03",
+ "category": "state_gap",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 仕様書\n\n## 1 機能\n\nREQ-001 契約は「有効」から「解約」へ遷移する。「解約」からの復帰は未記載。\n"
+  }
+ ],
+ "expected": [
+  {
+   "kind": "testability",
+   "rule_or_kind": "NOT_TESTABLE",
+   "document_id": "A",
+   "line": 5,
+   "severity": "medium"
+  }
+ ],
+ "must_not": []
+}

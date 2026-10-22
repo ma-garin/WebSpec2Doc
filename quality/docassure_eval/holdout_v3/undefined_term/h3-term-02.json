@@ -1,0 +1,20 @@
+{
+ "id": "h3-term-02",
+ "category": "undefined_term",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 農産物出荷\n\nSR-201 GAP認証の有無を出荷伝票に記載する。\nSR-202 伝票は出荷日ごとに管理する。\n"
+  }
+ ],
+ "expected": [
+  {
+   "kind": "finding",
+   "rule_or_kind": "TERM-001",
+   "document_id": "A",
+   "line": 3,
+   "severity": "low"
+  }
+ ],
+ "must_not": []
+}

@@ -1,0 +1,20 @@
+{
+ "id": "h-con-04",
+ "category": "contradiction",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 宿泊予約 要件\n\n## 1 機能要件\n\nREQ-036 キャンセルは宿泊日の前日までであれば無料とする。\nREQ-037 宿泊日前のキャンセルには、時期を問わず常にキャンセル料を請求する。\n"
+  }
+ ],
+ "expected": [
+  {
+   "kind": "conflict",
+   "rule_or_kind": "semantic_candidate",
+   "document_id": "A",
+   "line": 5,
+   "severity": "medium"
+  }
+ ],
+ "must_not": []
+}

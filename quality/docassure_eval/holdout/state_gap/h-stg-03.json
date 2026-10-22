@@ -1,0 +1,20 @@
+{
+ "id": "h-stg-03",
+ "category": "state_gap",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 勤怠管理 要件\n\n## 1 機能要件\n\nREQ-094 勤怠申請の状態は「申請中」「承認済」とする。\nREQ-095 却下された申請は「却下」へ遷移し、申請者へ通知する。\n"
+  }
+ ],
+ "expected": [
+  {
+   "kind": "finding",
+   "rule_or_kind": "REQ-ITEMS",
+   "document_id": "A",
+   "line": 5,
+   "severity": "medium"
+  }
+ ],
+ "must_not": []
+}

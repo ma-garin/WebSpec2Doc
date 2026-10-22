@@ -1,0 +1,20 @@
+{
+ "id": "h-stg-02",
+ "category": "state_gap",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 予約 要件\n\n## 1 機能要件\n\nREQ-092 予約は「仮予約」「確定」の状態を持つ。\nREQ-093 「確定」の予約は、利用後に「利用済」へ遷移する。\n"
+  }
+ ],
+ "expected": [
+  {
+   "kind": "finding",
+   "rule_or_kind": "REQ-ITEMS",
+   "document_id": "A",
+   "line": 5,
+   "severity": "medium"
+  }
+ ],
+ "must_not": []
+}

@@ -1,0 +1,20 @@
+{
+ "id": "sg-04",
+ "category": "state_gap",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 仕様書\n\n## 1 機能\n\nREQ-001 ユーザーは「仮登録」から「本登録」へ遷移する。仮登録の期限切れ時の状態は未記載。\n"
+  }
+ ],
+ "expected": [
+  {
+   "kind": "finding",
+   "rule_or_kind": "REQ-ITEMS",
+   "document_id": "A",
+   "line": 5,
+   "severity": "medium"
+  }
+ ],
+ "must_not": []
+}

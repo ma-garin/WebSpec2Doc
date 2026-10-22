@@ -1,0 +1,24 @@
+{
+ "id": "h3-to-05",
+ "category": "trace_orphan",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 求人応募 要件\n\nREQ-101 受付を行うこと。\nREQ-102 結果を保存すること。\n"
+  },
+  {
+   "id": "B",
+   "text": "# 求人応募 基本設計\n\nDD-001 受付処理（REQ-101）\nDD-002 保存処理（REQ-102）\nDD-003 追加処理（REQ-480）\n"
+  }
+ ],
+ "expected": [
+  {
+   "kind": "finding",
+   "rule_or_kind": "ID-001",
+   "document_id": "B",
+   "line": 5,
+   "severity": "high"
+  }
+ ],
+ "must_not": []
+}

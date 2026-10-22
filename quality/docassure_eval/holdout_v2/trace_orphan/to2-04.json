@@ -1,0 +1,20 @@
+{
+ "id": "to2-04",
+ "category": "trace_orphan",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 検査の記録\n\n## 1 機能\n\nREQ-411 検査員が結果を入力したとき、システムは検査記録を保存する。失敗した場合はエラーを表示する。\nREQ-412 保存した記録は、品質保証部が参照できる。\nREQ-413 記録の保管期間は5年とする。\nREQ-412 保存した記録は、製造部も参照できる。\n"
+  }
+ ],
+ "expected": [
+  {
+   "kind": "finding",
+   "rule_or_kind": "ID-001",
+   "document_id": "A",
+   "line": 8,
+   "severity": "high"
+  }
+ ],
+ "must_not": []
+}

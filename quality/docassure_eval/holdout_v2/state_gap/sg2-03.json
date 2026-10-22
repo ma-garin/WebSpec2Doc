@@ -1,0 +1,20 @@
+{
+ "id": "sg2-03",
+ "category": "state_gap",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 請求の状態\n\n## 1 機能\n\nREQ-391 請求の状態は「受付」「審査中」「支払済」「却下」とする。受付から審査中へ遷移する。審査中からの遷移は定めない。\n"
+  }
+ ],
+ "expected": [
+  {
+   "kind": "testability",
+   "rule_or_kind": "NOT_TESTABLE",
+   "document_id": "A",
+   "line": 5,
+   "severity": "medium"
+  }
+ ],
+ "must_not": []
+}

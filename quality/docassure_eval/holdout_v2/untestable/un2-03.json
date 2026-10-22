@@ -1,0 +1,20 @@
+{
+ "id": "un2-03",
+ "category": "untestable",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# フードデリバリー注文\n\n## 1 機能\n\nREQ-311 注文確定後、システムは店舗へ迅速に通知を送る。\nREQ-312 店舗が通知を受理しない場合は、注文者へ受理不可を表示する。\n"
+  }
+ ],
+ "expected": [
+  {
+   "kind": "testability",
+   "rule_or_kind": "NOT_TESTABLE",
+   "document_id": "A",
+   "line": 5,
+   "severity": "high"
+  }
+ ],
+ "must_not": []
+}

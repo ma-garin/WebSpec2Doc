@@ -1,0 +1,12 @@
+{
+ "id": "fp2-06",
+ "category": "false_positive_trap",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 操作画面\n\n## 1 機能\n\nREQ-751 検査員は、メニューから「通常」画面を開く。「通常」画面では当日のロット一覧を表示する。\nREQ-752 一覧の取得に失敗した場合は、エラーを表示する。\n"
+  }
+ ],
+ "expected": [],
+ "must_not": []
+}

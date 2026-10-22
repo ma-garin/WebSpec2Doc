@@ -1,0 +1,20 @@
+{
+ "id": "sg2-01",
+ "category": "state_gap",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 注文の状態\n\n## 1 機能\n\nREQ-191 注文の状態は「受付」「調理中」「配達中」「配達完了」「取消」とする。受付から調理中へ、調理中から配達中へ、配達中から配達完了へ遷移する。「取消」からの遷移および「取消」への遷移は定めない。\n"
+  }
+ ],
+ "expected": [
+  {
+   "kind": "testability",
+   "rule_or_kind": "NOT_TESTABLE",
+   "document_id": "A",
+   "line": 5,
+   "severity": "medium"
+  }
+ ],
+ "must_not": []
+}

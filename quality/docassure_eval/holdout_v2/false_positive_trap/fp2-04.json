@@ -1,0 +1,12 @@
+{
+ "id": "fp2-04",
+ "category": "false_positive_trap",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 成績管理\n\n## 1 機能\n\nREQ-731 評価基準は3.2章を参照すること。\nREQ-732 基準に該当しない場合は教員へ確認を求める。\n\n## 3.2 評価基準\nREQ-733 評価は、S・A・B・Cの4段階とする。\n"
+  }
+ ],
+ "expected": [],
+ "must_not": []
+}

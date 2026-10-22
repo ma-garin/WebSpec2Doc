@@ -1,0 +1,65 @@
+{
+ "id": "adv-052",
+ "category": "false_positive_trap",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 基本設計書\n\n## 4 手順\n\nREQ-080 申請、承認、通知の順に処理する。失敗した場合はエラーを表示する。\n"
+  },
+  {
+   "id": "B",
+   "text": "# 詳細設計書\n\n## 2 処理\n\nDES-080 REQ-080 に基づき、申請、承認、通知の順に処理する。失敗した場合はエラーを表示する。\n"
+  },
+  {
+   "id": "C",
+   "text": "# 運用手順書\n\n## 1 流れ\n\n1. 申請\n2. 承認\n3. 通知\n\n失敗した場合はエラーを表示する。\n"
+  }
+ ],
+ "expected": [],
+ "must_not": [
+  {
+   "kind": "finding",
+   "rule_or_kind": "ambiguity"
+  },
+  {
+   "kind": "finding",
+   "rule_or_kind": "boundary_gap"
+  },
+  {
+   "kind": "finding",
+   "rule_or_kind": "broken_reference"
+  },
+  {
+   "kind": "finding",
+   "rule_or_kind": "contradiction"
+  },
+  {
+   "kind": "finding",
+   "rule_or_kind": "missing_condition"
+  },
+  {
+   "kind": "finding",
+   "rule_or_kind": "numeric_conflict"
+  },
+  {
+   "kind": "finding",
+   "rule_or_kind": "permission_inconsistency"
+  },
+  {
+   "kind": "finding",
+   "rule_or_kind": "state_gap"
+  },
+  {
+   "kind": "finding",
+   "rule_or_kind": "trace_orphan"
+  },
+  {
+   "kind": "finding",
+   "rule_or_kind": "undefined_term"
+  },
+  {
+   "kind": "finding",
+   "rule_or_kind": "untestable"
+  }
+ ]
+}

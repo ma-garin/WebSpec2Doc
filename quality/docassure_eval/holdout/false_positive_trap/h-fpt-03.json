@@ -1,0 +1,12 @@
+{
+ "id": "h-fpt-03",
+ "category": "false_positive_trap",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 物流 要件\n\n## 1 機能要件\n\nREQ-203 EDI（電子データ交換）で受信した出荷指示を取り込む。\nREQ-204 EDI の受信間隔は10分とする。\n"
+  }
+ ],
+ "expected": [],
+ "must_not": []
+}

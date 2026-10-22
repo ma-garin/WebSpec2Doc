@@ -1,0 +1,12 @@
+{
+ "id": "h-fpt-11",
+ "category": "false_positive_trap",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 医療事務 要件\n\n## 1 機能要件\n\nREQ-218 年齢に応じて自己負担割合を定める。\n\n| 年齢 | 負担割合 |\n| 69歳以下 | 3割 |\n| 70歳以上 | 2割 |\n"
+  }
+ ],
+ "expected": [],
+ "must_not": []
+}

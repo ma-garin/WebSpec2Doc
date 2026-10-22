@@ -1,0 +1,19 @@
+{
+ "id": "h3-fp-13",
+ "category": "false_positive_trap",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 賃貸契約管理\n\nSR-1201 管理者は契約を削除できる。\nSR-1202 一般ユーザーは契約を削除できない。\n"
+  }
+ ],
+ "expected": [],
+ "must_not": [
+  {
+   "kind": "conflict",
+   "rule_or_kind": "permission",
+   "document_id": "A",
+   "line": 4
+  }
+ ]
+}

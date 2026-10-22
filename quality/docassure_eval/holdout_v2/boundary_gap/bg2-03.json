@@ -1,0 +1,20 @@
+{
+ "id": "bg2-03",
+ "category": "boundary_gap",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 検針の割引\n\n## 1 機能\n\nREQ-471 月間使用量が0kWh以上120kWh以下は第1段階、121kWh以上300kWh以下は第2段階、350kWh以上は第3段階の単価を適用する。\n"
+  }
+ ],
+ "expected": [
+  {
+   "kind": "finding",
+   "rule_or_kind": "NUM-002",
+   "document_id": "A",
+   "line": 5,
+   "severity": "high"
+  }
+ ],
+ "must_not": []
+}

@@ -1,0 +1,20 @@
+{
+ "id": "h3-ut-01",
+ "category": "untestable",
+ "documents": [
+  {
+   "id": "A",
+   "text": "# 外来受付\n\nNFR-101 受付画面は使いやすいこと。\nNFR-102 受付処理は3秒以内に完了すること。\n"
+  }
+ ],
+ "expected": [
+  {
+   "kind": "testability",
+   "rule_or_kind": "NOT_TESTABLE",
+   "document_id": "A",
+   "line": 3,
+   "severity": "high"
+  }
+ ],
+ "must_not": []
+}

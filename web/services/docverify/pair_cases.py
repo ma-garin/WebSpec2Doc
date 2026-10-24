@@ -36,6 +36,8 @@ def _stage(findings: list[dict], gate: dict, trail: list[dict]) -> str:
 
 def verdict(findings: list[dict], gate: dict) -> str:
     """合格・不合格・判定不能。1 件も採否が決まっていない（全件未判定）なら判定不能。"""
+    if gate["overall"].get("verdict"):
+        return gate["overall"]["verdict"]
     if findings and not any(f.get("status") for f in findings):
         return "判定不能"
     return "合格" if gate["overall"]["pass"] else "不合格"
@@ -47,6 +49,11 @@ def summary(iid: str) -> dict:
     g = pr.gate(iid)
     who = pr.creator(d)
     return {"iid": iid, "inspection_id": meta.get("inspection_id"), "name": _name(d, meta, iid),
+            "baseline_name": meta.get("baseline_name", "基準文書"), "target_name": meta.get("target_name", "確認文書"),
+            "baseline_role": meta.get("baseline_role", "baseline"), "target_role": meta.get("target_role", "target"),
+            "baseline_role_label": {"baseline": "基準", "target": "確認対象", "reference": "参照"}.get(meta.get("baseline_role", "baseline"), "基準"),
+            "target_role_label": {"baseline": "基準", "target": "確認対象", "reference": "参照"}.get(meta.get("target_role", "target"), "確認対象"),
+            "purpose": meta.get("purpose", "legacy_requirement_design"), "assessment": meta.get("assessment"),
             "req_version": meta.get("req_version", 1), "design_version": meta.get("design_version", 1),
             "stage": _stage(findings, g, trail), "stages": list(STAGES), "due": meta.get("due") or "",
             "critical_open": len(g["overall"]["unresolved_critical"]),
@@ -79,24 +86,38 @@ def _decode(raw: bytes, label: str) -> str:
         raise pr.PairError(400, "not_utf8", f"{label}を文字として読めません。UTF-8 の Markdown かテキストを選んでください。")
 
 
-def create(name: str, req: bytes, design: bytes, due: str, by: str) -> dict:
+def create(name: str, req: bytes, design: bytes, due: str, by: str, **options) -> dict:
     name = (name or "").strip()
     if not name or len(name) > 100:
         raise pr.PairError(400, "name_required", "レビュー名を 1〜100 文字で入力してください。")
     if due and not re.match(r"^\d{4}-\d{2}-\d{2}$", due):
         raise pr.PairError(400, "bad_due", "期限は日付で選んでください。")
-    req_t, design_t = _decode(req, "要件定義書"), _decode(design, "基本設計書")
+    purpose = options.get("purpose") or "legacy_requirement_design"
+    if purpose not in ("legacy_requirement_design", "consistency", "coverage"):
+        raise pr.PairError(400, "unsupported_purpose", "この検査目的には対応していません。対応する目的を選び直してください。")
+    fields = {"purpose": purpose}
+    for prefix, default in (("baseline", "baseline"), ("target", "target")):
+        role = options.get(prefix + "_role") or default
+        if role not in ("baseline", "target", "reference"):
+            raise pr.PairError(400, "invalid_role", "文書の役割を選び直してください。")
+        fields[prefix + "_role"] = role
+        for suffix, limit in (("name", 100), ("version", 40)):
+            value = str(options.get(prefix + "_" + suffix) or "").strip()
+            if len(value) > limit:
+                raise pr.PairError(400, "invalid_metadata", f"文書の{suffix}は{limit}文字以内で入力してください。")
+            fields[prefix + "_" + suffix] = value
+    req_t, design_t = _decode(req, "基準文書"), _decode(design, "確認文書")
     iid = "r-" + secrets.token_hex(5)
     d = pr.pair_dir(iid)
     meta = pr._write_docs(d, req_t, design_t, None, None)
-    pr._write(d / "docs" / "meta.json", {**meta, "name": name, "due": due or ""})
+    pr._write(d / "docs" / "meta.json", {**meta, **fields, "name": name, "due": due or ""})
     pr._write(d / "findings.json", [])
     pr._write(d / "decisions.json", [])
     pr._write(d / "trail.json", [])
-    pr._trail(d, "_seed", "review_started", iid, "要件定義書と基本設計書を取り込み")
+    pr._trail(d, "_seed", "review_started", iid, "基準文書と確認文書を取り込み")
     res = pr.analyze(iid, by if by not in pr.SYSTEM_USERS else "_seed")
     insp = pr.register_inspection(iid)
-    return {"iid": iid, "inspection_id": insp, "added": res["added"], "errors": res["errors"]}
+    return {"iid": iid, "inspection_id": insp, "added": res["added"], "errors": res["errors"], "assessment": res["assessment"]}
 
 
 def _q(ref: dict | None, doc: str) -> str:
@@ -116,8 +137,11 @@ def report_md(iid: str) -> str:
         if not dec.get("revoke"):
             last[dec["finding_id"]] = dec
     L = [f"# 指摘書: {s['name']}", "",
-         f"- 対象: 要件定義書 第 {s['req_version']} 版 ⇔ 基本設計書 第 {s['design_version']} 版",
-         f"- 工程: {s['stage']} ／ 判定（全体）: {s['verdict']} ／ 今回の変更分: {'合格' if g['changed']['pass'] else '不合格'}",
+         f"- 対象: {s['baseline_name']} 第 {s['req_version']} 版 ⇔ {s['target_name']} 第 {s['design_version']} 版",
+         f"- 検査目的: {s['purpose']}",
+         f"- 検査範囲: {(s.get('assessment') or {}).get('baseline_units', 0)} 要素 ⇔ {(s.get('assessment') or {}).get('target_units', 0)} 要素・比較 {(s.get('assessment') or {}).get('compared_pairs', 0)} 組",
+         *([f"- {g['overall']['ai_scope']}"] if g["overall"].get("ai_scope") else []),
+         f"- 工程: {s['stage']} ／ 判定（全体）: {s['verdict']} ／ 今回の変更分: {g['changed'].get('verdict', '判定不能')}",
          f"- 指摘: {len(findings)} 件（重大の未解消 {s['critical_open']} 件・未解消 {s['unresolved']} 件）",
          f"- 判定の根拠: {' '.join(g['reasons'])}", "",
          "区分の読み方: 「仕様に書いてある事実」は文書からの引用、「観測」は検査で見つかったこと、「推論」は指摘者の解釈です。", ""]
@@ -127,12 +151,12 @@ def report_md(iid: str) -> str:
         L += [f"## {f['id']} {f.get('title') or ''}", "",
               f"- 種別: {f.get('type')} ／ 重大度: {f.get('severity')} ／ 状態: {f.get('status') or '未判定'}"
               + ("（今回の変更分）" if f.get("changed_in_current") else ""), "",
-              "**仕様に書いてある事実**", _q(f.get("req_ref"), "要件定義書"), _q(f.get("design_ref"), "基本設計書"), "",
+              "**仕様に書いてある事実**", _q(f.get("req_ref"), s["baseline_name"]), _q(f.get("design_ref"), s["target_name"]), "",
               "**観測**", f"- {src}が「{f.get('type')}」として検出。", "",
               "**推論**", f"- {f.get('description') or '未確認'}", "",
               "**確認手順**",
-              f"1. 要件定義書 §{(f.get('req_ref') or {}).get('section') or '未確認'} を開き、上の引用を読む。",
-              f"2. 基本設計書 §{(f.get('design_ref') or {}).get('section') or '未確認'} を開き、同じ事柄の記述と比べる。",
+              f"1. {s['baseline_name']} §{(f.get('req_ref') or {}).get('section') or '未確認'} を開き、上の引用を読む。",
+              f"2. {s['target_name']} §{(f.get('design_ref') or {}).get('section') or '未確認'} を開き、同じ事柄の記述と比べる。",
               f"3. 「{f.get('type')}」に当たるかを判断し、対検査画面で採否（採用／不採用／要確認）を記録する。", "",
               "**証跡**",
               (f"- {dec['status']}: {dec.get('by')} が {dec.get('at')} に記録。理由: {dec.get('reason') or '未記入'}"

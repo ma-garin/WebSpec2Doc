@@ -10,12 +10,12 @@
     const btn = document.createElement('button');
     btn.type = 'button';
     btn.className = 'p1-btn dv-file-btn';
-    btn.textContent = word ? word + 'を選ぶ' : 'ファイルを選ぶ';
+    btn.textContent = inp.multiple ? '文書を選ぶ' : word ? (/選ぶ$/.test(word) ? word : word + 'を選ぶ') : 'ファイルを選ぶ';
     const name = document.createElement('span');
     name.className = 'dv-file-name';
     name.textContent = '未選択';
     btn.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); inp.click(); });
-    const show = () => { name.textContent = inp.files && inp.files[0] ? inp.files[0].name : '未選択'; };
+    const show = () => { const files = Array.from(inp.files || []); name.textContent = files.length > 1 ? files.length + ' 件の文書を選択' : files.length ? files[0].name : '未選択'; name.title = files.map((file) => file.name).join('、'); };
     inp.addEventListener('change', show);
     if (inp.form) inp.form.addEventListener('reset', () => setTimeout(show, 0));
     inp.classList.add('dv-file-native');

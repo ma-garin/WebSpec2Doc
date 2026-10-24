@@ -1,4 +1,4 @@
-/* 案件一覧（cases）と判定と記録（gate）。API は対検査（/api/docverify/pair/cases・/<iid>/pair/*）だけを使う。
+/* 案件一覧（cases）と判定と記録（gate）。一般レビューは inspection/tier、対検査は pair API を使う。
  * 状態: 読込中・0 件・検索 0 件・失敗・通常・作成中・作成失敗・権限なし（403）・競合（409）。
  * 共通の UIStates があればそれで描き、無ければ同じ文言で自前の枠に描く。 */
 (function () {
@@ -7,10 +7,13 @@
   const VCLS = { 合格: 'ok', 不合格: 'ng', 判定不能: 'na' };
   const MSG = { 0: 'サーバに接続できませんでした。少し待ってから再読み込みしてください。', 403: 'この操作の権限がありません。ログインし直すか、管理者に依頼してください。',
     409: '他の人が先に更新しました。再読み込みしてから操作してください。', 500: '処理に失敗しました。時間をおいて再読み込みしてください。' };
-  const C = { list: [], q: '' };
+  const C = { list: [], q: '', pending: null, busy: false };
+  try { C.pending = JSON.parse(sessionStorage.getItem('dv-cases-pending') || 'null'); } catch (e) { /* 保存できない環境 */ }
+  function savePending(value) { C.pending = value; try { if (value) sessionStorage.setItem('dv-cases-pending', JSON.stringify(value)); else sessionStorage.removeItem('dv-cases-pending'); } catch (e) { /* 同じ画面内では保持 */ } }
   const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const sec = (v) => document.querySelector(`section.dv-view[data-view="${v}"]`);
   const ACT = { review_started: 'レビュー開始', finding_decided: '採否を記録', finding_revoked: '採否を取り消し', approved: '承認', rejected: '差し戻し' };
+  const roleLabel = (role, fallback) => ({ baseline: '基準', target: '確認対象', reference: '参照' }[role] || fallback);
   const who = (u) => ({ _none: '未ログインの利用者', _seed: '取り込み' }[u] || u);
   const when = (v) => window.DV.fmtJst(v);   // 対検査と同じ日本時間の整形（docverify-core.js）
 
@@ -18,7 +21,7 @@
     let res;
     try { res = await fetch(url, Object.assign({ headers: { Accept: 'application/json' } }, opts)); } catch (e) { throw Object.assign(new Error(MSG[0]), { status: 0 }); }
     const data = await res.json().catch(() => null);
-    if (!res.ok) throw Object.assign(new Error((data && data.error && data.error.message) || MSG[res.status] || MSG[500]), { status: res.status });
+    if (!res.ok) throw Object.assign(new Error((data && (typeof data.error === 'string' ? data.error : data.error && data.error.message)) || MSG[res.status] || MSG[500]), { status: res.status });
     if (data === null) throw Object.assign(new Error(MSG[500]), { status: 500 });
     return data;
   }
@@ -37,17 +40,23 @@
 
   /* ---- 案件一覧 ---- */
   function steps(cur) {
-    const k = STAGES.indexOf(cur);
-    return '<span class="dvc-steps" aria-label="工程 ' + esc(cur) + '">' + STAGES.map((s, i) =>
-      `<i class="${i < k ? 'is-done' : i === k ? 'is-cur' : ''}"${i === k ? ' aria-current="step"' : ''}>${esc(s)}</i>`).join('') + '</span>';
+    return '<span class="dvc-stage" aria-label="現在の工程">' + esc(cur || '計画') + '</span>';
+  }
+  function openCreate() {
+    const root = sec('cases'), dialog = root.querySelector('[data-cases-dialog]');
+    msg(root, '[data-cases-msg]', '');
+    syncPurpose(root.querySelector('[data-cases-form]'));
+    if (!dialog.open) dialog.showModal();
+    root.querySelector('[name=name]').focus();
   }
   function row(c) {
     const open = c.inspection_id || c.iid;
-    return `<tr tabindex="0" data-open="${esc(open)}"><td class="c-name" title="${esc(c.name)}">${esc(c.name)}</td>`
-      + `<td class="c-doc" title="要件定義書 第 ${c.req_version} 版 ⇔ 基本設計書 第 ${c.design_version} 版">要件 v${esc(c.req_version)} ⇔ 設計 v${esc(c.design_version)}</td>`
+    if (c.general) return `<tr tabindex="0" data-open="${esc(open)}" data-general="1"><td class="c-name"><a class="dvc-case-link" href="?iid=${encodeURIComponent(open)}#trace">${esc(c.name)}</a></td><td class="c-doc">文書 ${esc(c.documents)} 件</td><td class="c-stage">文書の確認</td><td class="c-due">${esc(c.due || '未設定')}</td><td class="c-f">関係を確認</td><td class="c-v">未判定</td><td class="c-who">—</td></tr>`;
+    return `<tr tabindex="0" data-open="${esc(open)}"><td class="c-name" title="${esc(c.name)}"><a class="dvc-case-link" href="?iid=${encodeURIComponent(open)}#pair">${esc(c.name)}</a></td>`
+      + `<td class="c-doc" title="${esc(c.baseline_name || '要件定義書')} ⇔ ${esc(c.target_name || '基本設計書')}">${esc(c.baseline_name || '要件定義書')}（${esc(roleLabel(c.baseline_role, '基準'))}） ⇔ ${esc(c.target_name || '基本設計書')}（${esc(roleLabel(c.target_role, '確認対象'))}）<span class="dvc-case-purpose">${esc(c.purpose === 'coverage' ? '基準への対応' : c.purpose === 'consistency' ? '記述の整合性' : '対検査')}</span></td>`
       + `<td class="c-stage">${steps(c.stage)}</td><td class="c-due">${esc(c.due || '未設定')}</td>`
       + `<td class="c-f"><span class="${c.critical_open ? 'dvc-crit' : ''}">重大 ${esc(c.critical_open)}</span>／未解消 ${esc(c.unresolved)}</td>`
-      + `<td class="c-v"><span class="dvc-chip ${VCLS[c.verdict] || 'na'}">${esc(c.verdict)}</span></td>`
+      + `<td class="c-v"><span class="dvc-chip ${VCLS[c.verdict] || 'na'}">${esc(c.verdict)}</span>${c.assessment && c.assessment.scope && c.assessment.scope.ai === 'out_of_scope' ? '<small class="dvc-sub" style="display:block">AI 検査は範囲外</small>' : ''}${c.verdict === '判定不能' && !(c.assessment && c.assessment.status === 'complete') ? `<button type="button" class="p1-btn dvc-run" style="display:block;margin-top:4px" data-cases-run="${esc(open)}" title="検査が未実行のため判定できません">検査を実行</button>` : ''}</td>`
       + `<td class="c-who" title="${esc(c.assignee)}">${esc(c.assignee ? who(c.assignee) : '未着手')}</td></tr>`;
   }
   function renderCases() {
@@ -55,67 +64,135 @@
     const q = C.q.trim().toLowerCase();
     const list = q ? C.list.filter((c) => String(c.name).toLowerCase().includes(q)) : C.list;
     root.querySelector('[data-cases-count]').textContent = C.list.length ? `${C.list.length} 件` + (q ? `（表示 ${list.length} 件）` : '') : '';
-    if (!C.list.length) return state(root, body, 'empty', 'レビューはまだありません。上のフォームで名前と 2 つの文書を選んで作成してください。');
+    if (!C.list.length) return state(root, body, 'empty', 'レビューはまだありません。確認したい資料から、最初のレビューを作成できます。', { label: '新しいレビュー', fn: openCreate });
     if (!list.length) return state(root, body, 'search-empty', `「${C.q}」に一致するレビューはありません。`, { label: '絞り込みを解除', fn: () => { C.q = ''; root.querySelector('[data-cases-q]').value = ''; renderCases(); } });
     root.dataset.state = 'normal';
-    body.innerHTML = '<table class="dvc-t"><thead><tr><th class="c-name">レビュー名</th><th class="c-doc">対象文書と版</th><th class="c-stage">工程</th>'
+    body.innerHTML = '<table class="dvc-t" aria-label="レビュー一覧"><thead><tr><th class="c-name">レビュー名</th><th class="c-doc">対象文書と版</th><th class="c-stage">工程</th>'
       + '<th class="c-due">期限</th><th class="c-f">指摘</th><th class="c-v">判定</th><th class="c-who">担当</th></tr></thead><tbody>'
       + list.map(row).join('') + '</tbody></table>';
+    body.querySelectorAll('[data-cases-run]').forEach((b) => b.addEventListener('click', async (e) => {
+      e.stopPropagation(); e.preventDefault();
+      b.disabled = true; b.textContent = '検査中…';
+      try { await call(`/api/docverify/${encodeURIComponent(b.dataset.casesRun)}/pair/analyze`, { method: 'POST', headers: { Accept: 'application/json', 'Content-Type': 'application/json' }, body: '{}' }); await loadCases(); }
+      catch (err) { b.disabled = false; b.textContent = '検査を実行'; msg(root, '[data-cases-msg]', err.message || MSG[500], true); }
+    }));
     body.querySelectorAll('tr[data-open]').forEach((tr) => {
-      const go = () => DV.openReview(tr.dataset.open, 'pair').catch((e) => msg(root, '[data-cases-msg]', e.message || MSG[500], true));
-      tr.addEventListener('click', go);
+      const go = () => (tr.dataset.general ? openDocuments(tr.dataset.open, tr.querySelector('.dvc-case-link').textContent) : DV.openReview(tr.dataset.open, 'pair')).catch((e) => msg(root, '[data-cases-msg]', e.message || MSG[500], true));
+      tr.addEventListener('click', (e) => { if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return; e.preventDefault(); go(); });
       tr.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); go(); } });
     });
   }
-  function msg(root, sel, text, err) { const m = root.querySelector(sel); m.textContent = text || ''; m.classList.toggle('is-err', !!err); }
+  function msg(root, sel, text, err) { root.querySelectorAll(sel).forEach((m) => { m.textContent = text || ''; m.classList.toggle('is-err', !!err); }); }
   async function loadCases() {
     const root = sec('cases'), body = root.querySelector('[data-cases-body]');
     state(root, body, 'loading', 'レビューの一覧を読み込んでいます。');
-    try { C.list = (await call('/api/docverify/pair/cases')).cases || []; renderCases(); }
+    try {
+      const [pairs, inspections] = await Promise.all([call('/api/docverify/pair/cases'), call('/api/docverify/inspections')]);
+      const list = pairs.cases || [], pairIds = new Set(list.map((c) => c.inspection_id));
+      C.list = list.concat((inspections.inspections || []).filter((i) => !pairIds.has(i.id)).map((i) => ({ general: true, iid: i.id, name: i.name, due: i.due, documents: ((i.tier || {}).documents || []).length })));
+      renderCases();
+    }
     catch (e) { state(root, body, e.status === 403 ? 'forbidden' : 'error', e.message, { label: 'もう一度読み込む', fn: loadCases }); }
+  }
+  async function openDocuments(iid, name) {
+    if (!window.DVT || !window.DVT.open) throw new Error('文書の確認画面を読み込めませんでした。ページを再読み込みしてください。');
+    await DV.openReview(iid, 'trace');
+    DVT.open(iid, name);
+  }
+  function syncPurpose(form) {
+    const pending = C.pending, multi = pending || form.elements.purpose.value === 'multi';
+    if (pending) form.elements.purpose.value = 'multi';
+    form.querySelectorAll('[data-cases-multi]').forEach((el) => { el.hidden = !multi; });
+    form.querySelectorAll('[data-cases-pair]').forEach((el) => { el.hidden = !!multi; });
+    form.querySelectorAll('[name=purpose]').forEach((el) => { el.disabled = !!pending || C.busy; });
+    ['requirements', 'design', 'baseline_role', 'target_role', 'baseline_version', 'target_version'].forEach((name) => { form.elements[name].disabled = !!multi; });
+    form.elements.documents.disabled = !multi;
+    form.elements.name.readOnly = !!pending;
+    if (pending) { form.elements.name.value = pending.name; form.elements.due.value = pending.due || ''; }
+    form.querySelector('[data-cases-recovery]').hidden = !pending;
+    form.querySelector('[data-cases-recovery-message]').textContent = pending ? 'レビューは作成済みです。文書を選び直して再送できます。同じ名前の文書は置き換わります。確認画面で登録済み文書を確かめてください。' : '';
+    form.querySelectorAll('[data-cases-files]').forEach((el) => {
+      const files = Array.from(form.elements[el.dataset.casesFiles].files);
+      el.textContent = files.length ? files.map((f) => f.name).join('、') : '文書が選択されていません。';
+      el.dataset.state = files.length ? 'normal' : 'empty';
+    });
+    form.querySelector('[data-cases-submit]').textContent = pending ? '同じレビューへ文書を再送' : multi ? '作成して文書の確認へ' : '作成して比較へ';
   }
   async function create(ev) {
     ev.preventDefault();
+    if (C.busy) return;
     const root = sec('cases'), form = ev.currentTarget, btn = form.querySelector('[data-cases-submit]');
+    const name = form.elements.name.value.trim(), multi = C.pending || form.elements.purpose.value === 'multi';
+    if (!name) return msg(root, '[data-cases-msg]', 'レビュー名を入力してください。', true);
+    if (!form.reportValidity()) return;
+    const files = Array.from(form.elements.documents.files);
+    if (multi) {
+      if (!files.length) return msg(root, '[data-cases-msg]', '確認する文書を選んでください。', true);
+      if (files.some((f) => !/\.(md|docx|xlsx)$/i.test(f.name))) return msg(root, '[data-cases-msg]', 'Markdown・Word・Excelの文書を選んでください。', true);
+      if (new Set(files.map((f) => f.name)).size !== files.length) return msg(root, '[data-cases-msg]', '同じ名前の文書があります。別の名前にして選び直してください。', true);
+    } else {
+      if (!form.elements.requirements.files.length || !form.elements.design.files.length) return msg(root, '[data-cases-msg]', '比較する基準文書と確認対象を選んでください。', true);
+      if ([form.elements.requirements.files[0], form.elements.design.files[0]].some((f) => !/\.(md|txt)$/i.test(f.name))) return msg(root, '[data-cases-msg]', '比較する文書はMarkdown・テキストを選んでください。Word・Excelは文書セットのレビューで登録できます。', true);
+    }
+    if (C.pending) savePending({ ...C.pending, due: form.elements.due.value });
     const fd = new FormData(form);
-    if (!String(fd.get('name') || '').trim()) return msg(root, '[data-cases-msg]', 'レビュー名を入力してください。', true);
-    if (!form.requirements.files.length || !form.design.files.length) return msg(root, '[data-cases-msg]', '要件定義書と基本設計書の 2 つのファイルを選んでください。', true);
-    btn.disabled = true; msg(root, '[data-cases-msg]', '取り込んで自動検査しています…');
+    C.busy = true; btn.disabled = true; form.dataset.state = 'loading'; syncPurpose(form);
+    msg(root, '[data-cases-msg]', '文書を取り込んでいます…');
     try {
-      const r = await call('/api/docverify/pair/cases', { method: 'POST', body: fd });
-      form.reset();
-      const skipped = (r.errors || []).length ? `（未実行の検査 ${r.errors.length} 件）` : '';
-      msg(root, '[data-cases-msg]', `作成しました。自動検査の指摘 ${r.added} 件${skipped}。`);
-      await DV.openReview(r.inspection_id || r.iid, 'pair');
-    } catch (e) { msg(root, '[data-cases-msg]', e.message, true); } finally { btn.disabled = false; }
+      if (multi) {
+        if (!C.pending) {
+          const r = await call('/api/docverify/inspections', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name }) });
+          savePending({ id: r.inspection.id, name, due: form.elements.due.value });
+          syncPurpose(form);
+        }
+        const pending = C.pending;
+        await call('/api/docverify/inspections/' + encodeURIComponent(pending.id), { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ due: form.elements.due.value || null }) });
+        const upload = new FormData(); files.forEach((f) => upload.append('file', f));
+        const result = await call('/api/docverify/inspections/' + encodeURIComponent(pending.id) + '/tier/documents', { method: 'POST', body: upload });
+        const rejected = ((result.upload_report || {}).rejected || []);
+        if (rejected.length) throw new Error('一部の文書を登録できませんでした。' + rejected.map((r) => r.name + ': ' + r.reason).join('／') + ' 登録済みレビューを開くか、失敗した文書だけを選び直して再送してください。');
+        await openDocuments(pending.id, pending.name);
+        savePending(null);
+      } else {
+        const r = await call('/api/docverify/pair/cases', { method: 'POST', body: fd });
+        await DV.openReview(r.inspection_id || r.iid, 'pair');
+      }
+      form.dataset.state = 'normal'; form.reset(); root.querySelector('[data-cases-dialog]').close();
+    } catch (e) { form.dataset.state = 'error'; msg(root, '[data-cases-msg]', (C.pending ? 'レビューは作成済みです。' : '') + e.message, true); }
+    finally { C.busy = false; btn.disabled = false; syncPurpose(form); }
   }
 
   /* ---- 判定と記録 ---- */
-  const G = { iid: null, rev: null };
+  const G = { iid: null, rev: null, trail: [], filter: 'all' };
+  const FILT = { all: 'すべて', decide: '採否', approve: '承認・差し戻し' };
+  const fkind = (a) => (a === 'approved' || a === 'rejected' ? 'approve' : a === 'review_started' ? 'other' : 'decide');
+  function trailItems() {
+    const t = G.trail.filter((x) => G.filter === 'all' || fkind(x.action) === G.filter);
+    return t.slice().reverse().map((x) =>
+      `<li>${esc(when(x.at))} ${esc(who(x.user))} ・ ${esc(ACT[x.action] || x.action)} ${esc(x.target)}${x.reason ? ' ・ ' + esc(x.reason) : ''}</li>`).join('') || '<li>該当する記録はありません。</li>';
+  }
   const ids = (a) => (a && a.length ? a.map(esc).join('、') : 'なし');
   function card(title, o) {
-    const ok = o.pass;
-    return `<div class="dvg-card ${ok ? 'ok' : 'ng'}"><h3>${esc(title)} <span class="dvc-chip ${ok ? 'ok' : 'ng'}">${ok ? '合格' : '不合格'}</span></h3><dl>`
+    const verdict = DV.verdict(o), cls = DV.gateClass(o);
+    return `<div class="dvg-card ${cls}"><h3>${esc(title)} <span class="dvc-chip ${cls}">${esc(verdict)}</span></h3><dl>`
       + `<dt>未解消の重大</dt><dd>${o.unresolved_critical.length} 件: ${ids(o.unresolved_critical)}</dd>`
       + `<dt>欠落リンク</dt><dd>${o.missing_links.length} 件: ${ids(o.missing_links.map((m) => m.req_id))}</dd>`
       + `<dt>要確認</dt><dd>${o.needs_review.length} 件: ${ids(o.needs_review)}</dd>`
-      + `<dt>未検証</dt><dd>${o.unverified.length} 件: ${ids(o.unverified)}</dd></dl></div>`;
+      + `<dt>未検証</dt><dd>${o.unverified.length} 件: ${ids(o.unverified)}</dd><dt>未確認の理由</dt><dd>${ids(o.unverified_reasons)}</dd>${o.ai_scope ? `<dt>AI 検査</dt><dd>${esc(o.ai_scope)}</dd>` : ''}</dl></div>`;
   }
   function renderGate(f, trail) {
     const root = sec('gate'), body = root.querySelector('[data-gate-body]'), g = f.gate, m = f.meta || {};
-    G.rev = m.rev;
-    root.querySelector('[data-gate-ver]').textContent = `要件定義書 第 ${m.req_version || 1} 版 ⇔ 基本設計書 第 ${m.design_version || 1} 版 ・ 指摘 ${f.findings.length} 件`;
-    if (!f.findings.length) return state(root, body, 'empty', '指摘がまだありません。対検査で指摘を確かめてから判定してください。', { label: '対検査へ', fn: () => DV.show('pair') });
+    G.rev = m.rev; G.trail = trail; G.filter = 'all';
+    root.querySelector('[data-gate-ver]').textContent = `${m.baseline_name || '要件定義書'}（${roleLabel(m.baseline_role, '基準')}・${m.baseline_version || '第 ' + (m.req_version || 1) + ' 版'}） ⇔ ${m.target_name || '基本設計書'}（${roleLabel(m.target_role, '確認対象')}・${m.target_version || '第 ' + (m.design_version || 1) + ' 版'}） ・ 指摘 ${f.findings.length} 件`;
     root.dataset.state = 'normal';
     const approved = trail.find((t) => t.action === 'approved');
-    const hint = approved ? `${approved.user} が ${when(approved.at)} に承認済みです。` : g.overall.pass ? '全体が合格です。理由を書いて承認できます（起票者は承認できません）。' : '全体が不合格のため承認できません。';
+    const hint = approved ? `${approved.user} が ${when(approved.at)} に承認済みです。` : DV.verdict(g.overall) === '判定不能' ? '判定不能です。未確認の理由を読み、対象と比較条件を確かめて再検査してください。' : g.overall.pass ? '全体が合格です。理由を書いて承認できます（起票者は承認できません）。' : '全体が不合格のため承認できません。';
     body.innerHTML = `<div class="dvg-grid"><div><div class="dvg-cards">${card('全体', g.overall)}${card('今回の変更分', g.changed)}</div>`
       + `<p class="dvg-why"><b>判定の根拠</b><br>${g.reasons.map(esc).join('<br>')}</p></div>`
       + `<div class="dvg-side"><div class="dvg-box"><h3>承認</h3><p class="dvg-hint">${esc(hint)}</p>`
       + `<textarea rows="2" maxlength="500" aria-label="承認の理由" data-gate-reason placeholder="例: 重大な指摘はすべて解消済み。"></textarea>`
       + `<div class="dvg-row"><span class="dvg-err" role="alert" data-gate-err></span><button type="button" class="p1-btn is-primary" data-gate-act="approve"${g.overall.pass && !approved ? '' : ' disabled'}>承認する</button></div></div>`
-      + `<div class="dvg-box"><h3>証跡（新しい順）</h3><ol class="dvg-log">${trail.slice().reverse().map((t) =>
-        `<li>${esc(when(t.at))} ${esc(who(t.user))} ・ ${esc(ACT[t.action] || t.action)} ${esc(t.target)}${t.reason ? ' ・ ' + esc(t.reason) : ''}</li>`).join('') || '<li>記録はまだありません。</li>'}</ol></div></div></div>`;
+      + `<div class="dvg-box"><h3>証跡（新しい順）</h3><div class="dvg-filter" role="group" aria-label="証跡の絞り込み">${Object.keys(FILT).map((k) => `<button type="button" class="dvc-chip ${k === 'all' ? 'ok' : 'na'}" data-gate-filter="${k}" aria-pressed="${k === 'all'}">${FILT[k]}</button>`).join('')}</div><ol class="dvg-log" data-gate-log>${trailItems()}</ol></div></div></div>`;
   }
   const pbase = () => `/api/docverify/${encodeURIComponent(G.iid)}/pair`;
   async function loadGate() {
@@ -168,15 +245,37 @@
     const cs = sec('cases'), gs = sec('gate');
     if (cs) {
       DV.on('cases', loadCases);
-      cs.querySelector('[data-cases-form]').addEventListener('submit', create);
+      const form = cs.querySelector('[data-cases-form]');
+      form.addEventListener('submit', create);
+      form.addEventListener('change', () => { if (!C.busy) { form.dataset.state = 'normal'; msg(cs, '[data-cases-msg]', ''); syncPurpose(form); } });
+      form.querySelector('[data-cases-resume]').addEventListener('click', async () => {
+        if (!C.pending || C.busy) return;
+        try { await openDocuments(C.pending.id, C.pending.name); savePending(null); cs.querySelector('[data-cases-dialog]').close(); form.reset(); syncPurpose(form); }
+        catch (e) { msg(cs, '[data-cases-msg]', e.message, true); }
+      });
+      syncPurpose(form);
       cs.querySelector('[data-cases-q]').addEventListener('input', (e) => { C.q = e.target.value; if (C.list.length) renderCases(); });
       cs.querySelector('[data-cases-act="reload"]').addEventListener('click', loadCases);
       const nb = document.getElementById('dv-new-review');   // サイドバーの「新しいレビュー」は案件一覧の作成フォームへ
-      if (nb) nb.addEventListener('click', (e) => { e.stopImmediatePropagation(); e.preventDefault(); DV.show('cases'); const n = cs.querySelector('[name=name]'); if (n) n.focus(); }, true);
+      if (nb) nb.addEventListener('click', (e) => { e.stopImmediatePropagation(); e.preventDefault(); openCreate(); }, true);
+      const dialog = cs.querySelector('[data-cases-dialog]');
+      cs.querySelectorAll('[data-cases-close]').forEach((b) => b.addEventListener('click', () => dialog.close()));
+      dialog.addEventListener('click', (e) => {
+        const r = dialog.getBoundingClientRect();
+        if (e.target === dialog && (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom)) dialog.close();
+      });
+      dialog.addEventListener('close', () => nb.focus());
     }
     if (gs) {
       DV.on('gate', loadGate);
       gs.addEventListener('click', (e) => {
+        const fb = e.target.closest('[data-gate-filter]');
+        if (fb) {
+          G.filter = fb.dataset.gateFilter;
+          gs.querySelectorAll('[data-gate-filter]').forEach((x) => { const on = x.dataset.gateFilter === G.filter; x.setAttribute('aria-pressed', on); x.classList.toggle('ok', on); x.classList.toggle('na', !on); });
+          gs.querySelector('[data-gate-log]').innerHTML = trailItems();
+          return;
+        }
         const b = e.target.closest('[data-gate-act]');
         if (!b) return;
         if (b.dataset.gateAct === 'reload') loadGate();

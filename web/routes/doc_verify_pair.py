@@ -86,9 +86,12 @@ def cases_create():
     fs = request.files
     req, design = fs.get("requirements"), fs.get("design")
     if not req or not design:
-        return _err(400, "files_required", "要件定義書と基本設計書の 2 つのファイルを選んでください。")
+        return _err(400, "files_required", "基準文書と確認文書を選んでください。")
     f = request.form
-    return _call(lambda: pc.create(f.get("name", ""), req.read(), design.read(), f.get("due", ""), pr.current_user()), status=201)
+    return _call(lambda: pc.create(f.get("name", ""), req.read(), design.read(), f.get("due", ""), pr.current_user(),
+        purpose=f.get("purpose"), baseline_role=f.get("baseline_role"), target_role=f.get("target_role"),
+        baseline_name=f.get("baseline_name") or req.filename, target_name=f.get("target_name") or design.filename,
+        baseline_version=f.get("baseline_version"), target_version=f.get("target_version")), status=201)
 
 
 def versions(iid):

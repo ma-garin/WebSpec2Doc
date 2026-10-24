@@ -10,8 +10,9 @@
     ['reviewer', 'レビュアー', '文書を読み、指摘を出します。'], ['approver', '承認者', '出口基準を満たしたかを判断し、承認します。本人承認は禁止（既定）: 起票者は自分のレビューを承認できません。']];
   var PRESETS = [['strict', '厳格', '重大 0・警告 0・要確認 0', { critical: 0, major: 0, minor: null }],
     ['standard', '標準', '重大 0・警告 5 まで', { critical: 0, major: 5, minor: null }],
-    ['loose', '緩め', '重大 0 のみ', { critical: 0, major: null, minor: null }]];
+    ['loose', '重大を優先', '重大 0・警告と提案は上限なし', { critical: 0, major: null, minor: null }]];
   var STATE = { pass: '合格', fail: '不合格', unknown: '判定不能' };
+  var activeSection = 'exit';
   var S = null, dirty = false, keyInput = '', pvTimer = 0, pvSeq = 0;
   async function req(path, method, body) {
     var init = { method: method || 'GET', headers: {} };
@@ -56,23 +57,24 @@
   function render() {
     var v = S.values, ap = S.approval_policy || {}, us = S.users || { enabled: false, list: [] };
     var presets = '<div class="dvs-presets" role="group" aria-label="プリセット">' + PRESETS.map(function (p) {
-      return '<button type="button" class="dvs-preset" data-preset="' + p[0] + '">' + p[1] + '<small>' + p[2] + '</small></button>';
+      return '<button type="button" class="dvs-preset" data-preset="' + p[0] + '">' + '<strong>' + p[1] + '</strong><small>' + p[2] + '</small></button>';
     }).join('') + '</div>';
-    var lim = SEV.map(function (s) {
+    var lim = '<div class="dvs-limits">' + SEV.map(function (s) {
       var val = v.exit.max_open[s[0]];
-      return row('<label for="dvs-lim-' + s[0] + '">未対応の' + s[1] + 'の上限</label>',
-        '<input type="number" min="0" max="999" step="1" id="dvs-lim-' + s[0] + '" data-k="lim" data-s="' + s[0] + '" value="' + (val == null ? '' : val) + '" placeholder="上限なし"> 件',
-        'exit.max_open.' + s[0]);
-    }).join('');
+      return '<div class="dvs-limit"><label for="dvs-lim-' + s[0] + '"><span class="dvs-severity is-' + s[0] + '"></span>未対応の' + s[1] + '</label>' +
+        '<div class="dvs-limit-input"><input type="number" min="0" max="999" step="1" id="dvs-lim-' + s[0] + '" aria-label="未対応の' + s[1] + 'の上限" data-k="lim" data-s="' + s[0] + '" value="' + (val == null ? '' : val) + '" placeholder="上限なし"><span>件まで</span></div>' +
+        '<span class="dvs-delta" data-delta="exit.max_open.' + s[0] + '" hidden></span></div>';
+    }).join('') + '</div>';
     var types = '<div class="dvs-types">' + TYPES.map(function (t) {
       return '<label><input type="checkbox" data-k="type" data-t="' + esc(t) + '"' + (v.types[t] !== false ? ' checked' : '') + '> ' + esc(t) + '</label>';
     }).join('') + '</div>';
     var opts = '<option value="">（未割当）</option>' + us.list.map(function (u) { return '<option value="' + esc(u.id) + '">' + esc(u.name) + '</option>'; }).join('');
     var roles = ROLES.map(function (r) {
       var ctrl = us.enabled ? '<select id="dvs-role-' + r[0] + '" data-k="role" data-r="' + r[0] + '">' + opts + '</select>'
-        : '<span class="dvs-off">ログインすると割り当てられます</span>';
+        : '<span class="dvs-off">ログインが必要</span>';
       return row(us.enabled ? '<label for="dvs-role-' + r[0] + '">' + r[1] + '</label>' : r[1], ctrl, us.enabled ? 'roles.' + r[0] : '', esc(r[2]));
     }).join('');
+    if (!us.enabled) roles = '<p class="dvs-policy-note">利用者の割り当てにはログインが必要です。各役割の責任範囲を以下で確認できます。</p><dl class="dvs-role-summary">' + ROLES.map(function (r) { return '<div><dt>' + esc(r[1]) + '</dt><dd>' + esc(r[2]) + '</dd></div>'; }).join('') + '</dl>';
     var pol = '<ul class="dvs-policy"><li>本人承認: ' + (ap.forbid_self_approval !== false ? '禁止（既定。起票者は自分のレビューを承認できません）' : '許可') + '</li>' +
       '<li>例外: ' + (ap.exception ? ('あり（担当 ' + esc(ap.max_members) + ' 名以下のテナント）。理由: ' + esc(ap.reason || '未記入')) : 'なし') + '</li></ul>' +
       '<p class="dvs-fixed">本人承認の規則と例外は監査の設定で変更します。 <a href="/settings/audit">承認規則を開く</a></p>';
@@ -85,35 +87,44 @@
         'OpenAI のときだけ使います。保存後は末尾 4 文字だけ表示します。') +
       '<div class="dvs-row"><span></span><span><button type="button" class="p1-btn" id="dvsAiCheck">接続を確認</button> <span id="dvsAiResult" class="dvs-fixed" role="status" aria-live="polite"></span></span><span></span></div>';
     $('dvsForm').innerHTML =
-      '<section class="dvs-sec" id="dvs-exit"><h3>出口基準</h3><p>レビューを合格にできる条件です。変えると上の帯に、現在のレビューの判定がどう変わるかを表示します。</p>' + presets + lim +
-      row('要確認・未検証', '<span class="dvs-fixed">要確認が 1 件でもあれば不合格。未検証は解消に数えない（固定）</span>', '') +
-      row('<label for="dvs-chg">今回の変更分</label>', '<select id="dvs-chg" data-k="chg"><option value="same">全体と同じ上限</option><option value="zero">変更分は未対応 0 件</option></select>', 'exit.changed_rule',
-        '前版から変わった節に付いた指摘だけで判定します。') + '</section>' +
+      '<section class="dvs-sec" id="dvs-exit"><h3>出口基準</h3><p>レビューを合格とするための、未対応の指摘の上限を設定します。</p><h4 class="dvs-field-heading">基準のプリセット</h4>' + presets + '<h4 class="dvs-field-heading">許容する未対応の指摘</h4>' + lim +
+      '<p class="dvs-policy-note"><b>共通ルール</b> 要確認が 1 件でもあれば不合格。未検証は解消に数えません。</p>' +
+      row('<label for="dvs-chg">変更箇所の判定</label>', '<select id="dvs-chg" data-k="chg"><option value="same">上の出口基準と同じ</option><option value="zero">変更分は未対応 0 件</option></select>', 'exit.changed_rule',
+        '前版から変わった節の指摘に、この上限を適用します。') + '</section>' +
       '<section class="dvs-sec" id="dvs-vocab"><h3>重大度と種別</h3><p>重大度の名前は、対検査画面・判定・指摘書と同じ 3 段階です（変更できません）。</p>' +
       row('重大度', '<span class="dvs-sevs">' + SEV.map(function (s) { return '<span class="dvs-sev">' + s[1] + '</span>'; }).join('') + '</span>', '') +
       row('判定に数える種別', types, '', '外した種別の指摘は判定に数えません。1 つ以上は残してください。') + '</section>' +
       '<section class="dvs-sec" id="dvs-roles"><h3>役割の割当</h3><p>レビューに関わる人の役割です。' + (us.enabled ? '利用者一覧から選びます。' : '') + '</p>' + roles +
-      '<h3 style="margin-top:10px">承認の規則（読み取りのみ）</h3>' + pol + '</section>' +
+      '<h4 class="dvs-field-heading">承認の規則 <span class="dvs-readonly">変更不可</span></h4>' + pol + '</section>' +
       '<section class="dvs-sec" id="dvs-ai"><h3>AI 送信先</h3><p>指摘の候補づくりに使う AI です。</p>' + aiRows + '</section>';
     $('dvs-chg').value = v.exit.changed_rule; $('dvs-ai-p').value = ai.provider;
     if (us.enabled) ROLES.forEach(function (r) { $('dvs-role-' + r[0]).value = v.roles[r[0]] || ''; });
-    $('dvsMeta').textContent = S.updated_at ? '最終保存 ' + who(S.updated_by) + '・' + when(S.updated_at) : 'まだ保存されていません（すべて既定値）';
+    $('dvsMeta').textContent = S.updated_at ? '最終保存 ' + who(S.updated_by) + '・' + when(S.updated_at) : '既定の設定を使用中';
     keyInput = '';
     renderHist();
+    selectSection(activeSection);
     requestAnimationFrame(fit);
   }
-  function fit() {  // 区分ナビ・フォーム・履歴を画面の高さに収め、保存帯を常に画面下端に見せる（内側だけスクロール）
-    var b = document.querySelector('.dvs-body'), bar = document.querySelector('.dvs-savebar');
-    if (!b || !bar || !b.offsetParent) return;
-    var top = b.getBoundingClientRect().top + (document.scrollingElement || document.documentElement).scrollTop;
-    b.style.setProperty('--dvs-body-h', Math.max(260, window.innerHeight - top - bar.offsetHeight - 20) + 'px');
+  function selectSection(name, focus) {
+    activeSection = name;
+    document.querySelectorAll('.dvs-nav [data-sec]').forEach(function (tab) {
+      var on = tab.dataset.sec === name;
+      tab.classList.toggle('is-on', on); tab.setAttribute('aria-selected', String(on)); tab.tabIndex = on ? 0 : -1;
+      if (on && focus) tab.focus();
+    });
+    document.querySelectorAll('#dvsForm > .dvs-sec').forEach(function (panel) {
+      var key = panel.id.replace('dvs-', '');
+      panel.hidden = key !== name; panel.setAttribute('role', 'tabpanel'); panel.setAttribute('aria-labelledby', 'dvs-tab-' + key);
+    });
+    $('dvsForm').scrollTop = 0;
   }
+  function fit() { /* The workspace grid owns the height; no pixel heights to keep in sync. */ }
   function renderHist() {
     var h = S.history || [];
     $('dvsHist').innerHTML = h.length ? h.map(function (e) {
       return '<li><div class="h-who">' + esc(who(e.by)) + '・' + esc(when(e.at)) + '</div><div class="h-why">理由: ' + esc(e.reason) + '</div><ul>' +
         (e.changes || []).map(function (c) { return '<li>' + esc(c.label) + ': ' + esc(c.before) + ' → ' + esc(c.after) + '</li>'; }).join('') + '</ul></li>';
-    }).join('') : '<li class="mut">まだ変更はありません。保存すると、誰が・いつ・何を・なぜ変えたかがここに残ります。</li>';
+    }).join('') : '<li class="dvs-history-empty"><strong>変更履歴はまだありません</strong><p>設定を保存すると、変更した内容と理由がここに記録されます。</p></li>';
   }
   function collect() {
     var f = $('dvsForm'), v = { exit: { max_open: {} }, types: {}, roles: {}, ai: {} }, err = '';
@@ -128,20 +139,33 @@
     return { v: v, err: err };
   }
   function refresh() {
-    var c = collect(), a = flat(S.values), b = flat(c.v), n = 0;
+    var c = collect(), a = flat(S.values), b = flat(c.v), n = 0, changes = [];
+    var labels = { 'exit.changed_rule': '今回の変更分', 'ai.provider': 'AI 送信先', 'ai.endpoint': 'AI 接続先', 'ai.model': 'モデル名' };
+    SEV.forEach(function (s) { labels['exit.max_open.' + s[0]] = '未対応の' + s[1]; });
+    ROLES.forEach(function (r) { labels['roles.' + r[0]] = r[1]; });
     Object.keys(a).forEach(function (k) {
       var d = document.querySelector('[data-delta="' + k + '"]'), ch = a[k] !== b[k];
-      if (ch) n++;
+      if (ch) { n++; changes.push('<li><strong>' + esc(labels[k] || k.replace('types.', '種別: ')) + '</strong><span>' + esc(fmt(k, a[k])) + ' <span aria-label="から">→</span> <b>' + esc(fmt(k, b[k])) + '</b></span></li>'); }
       if (d) { d.hidden = !ch; d.textContent = ch ? fmt(k, a[k]) + ' → ' + fmt(k, b[k]) : ''; }
     });
-    if (keyInput) n++;
+    if (keyInput) { n++; changes.push('<li><strong>API キー</strong><span>新しいキーに更新</span></li>'); }
     var mo = c.v.exit.max_open;
     document.querySelectorAll('.dvs-preset').forEach(function (p) {
       var x = PRESETS.filter(function (q) { return q[0] === p.dataset.preset; })[0][3];
-      p.classList.toggle('is-on', SEV.every(function (s) { return x[s[0]] === mo[s[0]]; }));
+      var on = SEV.every(function (s) { return x[s[0]] === mo[s[0]]; });
+      p.classList.toggle('is-on', on); p.setAttribute('aria-pressed', String(on));
     });
+    var aiEnabled = c.v.ai.provider !== 'none';
+    ['dvs-ai-e', 'dvs-ai-m', 'dvs-ai-k'].forEach(function (id) { $(id).closest('.dvs-row').hidden = !aiEnabled; });
+    $('dvsAiCheck').closest('.dvs-row').hidden = !aiEnabled;
     dirty = n > 0; $('dvsSave').disabled = !dirty;
-    var cnt = $('dvsCount'); cnt.textContent = dirty ? '未保存の変更 ' + n + ' 項目' : '未保存の変更はありません'; cnt.classList.toggle('is-dirty', dirty);
+    if (!dirty) {
+      $('dvsReason').removeAttribute('aria-invalid');
+      if ($('dvsBanner').classList.contains('b-error')) banner('ok', '');
+    }
+    var cnt = $('dvsCount'); cnt.textContent = dirty ? n + ' 項目の変更があります' : 'すべての変更を保存済み'; cnt.classList.toggle('is-dirty', dirty);
+    $('dvsReasonField').hidden = !dirty; $('dvsReload').disabled = !dirty;
+    $('dvsChanges').innerHTML = changes.length ? changes.join('') : '<li class="dvs-no-change">変更はありません。<br>編集すると、保存前に内容を比較できます。</li>';
     clearTimeout(pvTimer); pvTimer = setTimeout(function () { preview(c); }, 250);
   }
   async function preview(c) {
@@ -150,13 +174,12 @@
     try {
       var r = await req('/api/docverify/settings/preview', 'POST', { values: c.v });
       if (seq !== pvSeq) return;
-      var cnt = function (o) { return '合格 <span class="n-pass">' + o.pass + '</span>／不合格 <span class="n-fail">' + o.fail + '</span>／判定不能 <span class="n-unk">' + o.unknown + '</span>'; };
+      var counts = function (o) { return '<div class="dvs-impact-metrics"><div><strong class="n-pass">' + o.pass + '</strong><span>合格</span></div><div><strong class="n-fail">' + o.fail + '</strong><span>不合格</span></div><div><strong class="n-unk">' + o.unknown + '</strong><span>判定不能</span></div></div>'; };
       box.className = 'dvs-impact' + (r.changed_count ? ' is-changed' : '');
-      box.innerHTML = r.total ? '<b>' + (dirty ? 'この基準なら' : '現在の基準で') + '、現在のレビュー ' + r.total + ' 件の判定は</b><span>' + cnt(r.new) + '</span>' +
-        (dirty ? '<span class="dvs-was">保存済みの基準では ' + cnt(r.now) + '</span>' : '') +
-        (r.changed_count ? '<span>判定が変わるレビュー ' + r.changed_count + ' 件' + (r.changed_count > 5 ? '（先頭 5 件）' : '') + '</span><ul>' + r.changed.map(function (x) {
-          return '<li>' + esc(x.name) + ': ' + STATE[x.now] + ' → <b>' + STATE[x.new] + '</b></li>'; }).join('') + '</ul>' : (dirty ? '<span>判定が変わるレビューはありません。</span>' : ''))
-        : '<b>影響プレビュー</b><span>レビューがまだありません。基準を変えても判定に影響するものはありません。</span>';
+      box.innerHTML = r.total ? '<p class="dvs-impact-label">' + (dirty ? '変更後の基準' : '現在の基準') + ' · 対象 ' + r.total + ' 件</p>' + counts(r.new) +
+        (dirty ? '<p class="dvs-impact-note">判定が変わるレビュー <b>' + r.changed_count + ' 件</b></p>' : '<p class="dvs-impact-note">現在のレビューに適用した結果です。</p>') +
+        (r.changed_count ? '<ul>' + r.changed.map(function (x) { return '<li>' + esc(x.name) + ': ' + STATE[x.now] + ' → <b>' + STATE[x.new] + '</b></li>'; }).join('') + '</ul>' : '')
+        : '<p class="dvs-impact-note">レビューはまだありません。作成後に判定への影響を確認できます。</p>';
       requestAnimationFrame(fit);
     } catch (e) { if (seq === pvSeq) { box.className = 'dvs-impact is-error'; box.innerHTML = '<b>影響を計算できませんでした。</b><span>' + esc(e.message) + '</span>'; } }
   }
@@ -168,7 +191,7 @@
   async function save(rev) {
     var c = collect(), rs = $('dvsReason'), reason = rs.value.trim();
     if (c.err) { banner('error', '<b>保存できません。</b><span>次の行動: ' + esc(c.err) + '</span>'); return; }
-    if (!reason) { rs.setAttribute('aria-invalid', 'true'); rs.focus(); banner('error', '<b>変更の理由が未入力です。</b><span>次の行動: 下の「変更の理由」に、なぜ変えるかを書いてから保存してください。</span>'); return; }
+    if (!reason) { rs.setAttribute('aria-invalid', 'true'); rs.focus(); banner('error', '<b>変更の理由が未入力です。</b><span>次の行動: 下の「変更理由」に、なぜ変えるかを書いてから保存してください。</span>'); return; }
     rs.removeAttribute('aria-invalid');
     var body = { rev: rev == null ? S.rev : rev, values: c.v, reason: reason };
     if (keyInput) body.api_key = keyInput;
@@ -183,7 +206,7 @@
           '<button type="button" class="p1-btn" data-act="reload">最新を読み直す</button><button type="button" class="p1-btn is-primary" data-act="keep">自分の変更を保持して保存</button>');
       } else banner('error', '<b>保存できませんでした。</b><span>次の行動: ' + esc(e.message) + '</span>');
       $('dvsSave').disabled = !dirty;
-    } finally { btn.textContent = '保存'; }
+    } finally { btn.textContent = '変更を保存'; }
   }
   async function aiCheck() {
     var c = collect(), out = $('dvsAiResult'), b = $('dvsAiCheck');
@@ -197,6 +220,8 @@
   }
   function bind() {
     var f = $('dvsForm');
+    var pageActions = $('topbar-actions');
+    if (pageActions) pageActions.appendChild($('dvsHistoryOpen'));
     f.addEventListener('input', function (e) { if (e.target.dataset.k === 'key') keyInput = e.target.value.trim(); refresh(); });
     f.addEventListener('change', refresh);
     f.addEventListener('submit', function (e) { e.preventDefault(); });
@@ -217,10 +242,23 @@
       if (a.dataset.act === 'reload') load(); else save(S._latestRev);
     });
     document.querySelector('.dvs-nav').addEventListener('click', function (e) {
-      var a = e.target.closest('a[data-sec]'); if (!a) return; e.preventDefault();
-      document.querySelectorAll('.dvs-nav a').forEach(function (x) { x.classList.toggle('is-on', x === a); });
-      var t = $('dvs-' + a.dataset.sec); if (t) f.scrollTo({ top: t.offsetTop, behavior: 'smooth' });  // 外側のページは動かさない
+      var a = e.target.closest('[data-sec]'); if (!a) return; e.preventDefault(); selectSection(a.dataset.sec);
     });
+    document.querySelector('.dvs-nav').addEventListener('keydown', function (e) {
+      var tabs = Array.from(this.querySelectorAll('[data-sec]')), i = tabs.indexOf(document.activeElement), next;
+      if (i < 0) return;
+      if (e.key === 'ArrowRight') next = (i + 1) % tabs.length;
+      else if (e.key === 'ArrowLeft') next = (i + tabs.length - 1) % tabs.length;
+      else if (e.key === 'Home') next = 0;
+      else if (e.key === 'End') next = tabs.length - 1;
+      else return;
+      e.preventDefault(); selectSection(tabs[next].dataset.sec, true);
+    });
+    var hd = $('dvsHistoryDialog');
+    $('dvsHistoryOpen').addEventListener('click', function () { hd.showModal(); });
+    $('dvsHistoryClose').addEventListener('click', function () { hd.close(); });
+    hd.addEventListener('close', function () { $('dvsHistoryOpen').focus(); });
+    hd.addEventListener('click', function (e) { var r = hd.getBoundingClientRect(); if (e.target === hd && (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom)) hd.close(); });
     window.addEventListener('resize', fit);
     window.addEventListener('beforeunload', function (e) { if (dirty) { e.preventDefault(); e.returnValue = ''; } });
     var LEAVE = '保存していない設定の変更があります。破棄して移動しますか？';

@@ -1,20 +1,43 @@
-{# 案件一覧（対検査レビュー）。描画は static/js/docverify-cases.js。状態は data-state で切り替える #}
-<section class="dv-view dvc" data-view="cases" data-state="loading" hidden aria-labelledby="dvc-title">
-  <div class="p1-head">
-    <h2 id="dvc-title" class="dvc-title">案件一覧</h2>
-    <span class="dvc-sub" data-cases-count></span>
+{# 案件一覧。新規作成は作業を分離したモーダルで行う。 #}
+<section class="dv-view dvc" data-view="cases" data-state="loading" hidden aria-label="案件一覧">
+  <div class="dvc-toolbar">
+    <div class="dvc-list-label">レビュー <span class="dvc-sub" data-cases-count></span></div>
     <span class="sp"></span>
-    <input type="search" class="dvc-search" data-cases-q aria-label="レビュー名で絞り込む" placeholder="レビュー名で絞り込む">
+    <input type="search" class="dvc-search" data-cases-q aria-label="レビュー名で絞り込む" placeholder="レビューを検索">
     <button type="button" class="p1-btn" data-cases-act="reload">再読み込み</button>
-    <button type="button" class="p1-btn is-primary" id="dv-new-review">新しいレビュー</button>
+    <button type="button" class="p1-btn is-primary" id="dv-new-review" aria-haspopup="dialog">新しいレビュー</button>
   </div>
-  <form class="dvc-new" data-cases-form novalidate aria-label="新しいレビュー">
-    <input class="dvc-in dvc-name" name="name" required maxlength="100" aria-label="レビュー名" placeholder="レビュー名（例: 会員登録 第 1.2 版）">
-    <label class="dvc-file"><span>要件定義書</span><input name="requirements" type="file" accept=".md,.txt,text/markdown,text/plain" required></label>
-    <label class="dvc-file"><span>基本設計書</span><input name="design" type="file" accept=".md,.txt,text/markdown,text/plain" required></label>
-    <label class="dvc-file"><span>期限</span><input class="dvc-in" name="due" type="date"></label>
-    <button class="p1-btn" type="submit" data-cases-submit>作成して対検査へ</button>
-  </form>
   <p class="dvc-msg" role="status" aria-live="polite" data-cases-msg></p>
   <div class="dvc-body" data-cases-body></div>
+  <dialog class="dvc-create-dialog" aria-labelledby="dvc-create-title" aria-describedby="dvc-create-help" data-cases-dialog>
+    <header class="dvc-dialog-head"><div><h2 id="dvc-create-title">新しいレビュー</h2><p id="dvc-create-help">目的を選び、確認する資料を登録します。</p></div><button type="button" class="p1-btn" data-cases-close aria-label="新しいレビューを閉じる">閉じる</button></header>
+    <form class="dvc-new" data-cases-form novalidate aria-label="新しいレビュー">
+      <fieldset class="dvc-purpose"><legend>確認する目的</legend>
+        <label><input type="radio" name="purpose" value="multi" checked> <strong>文書セットのレビュー</strong><span>資料をまとめて登録し、文書の分類と関係を確認します。</span></label>
+        <label><input type="radio" name="purpose" value="consistency"> <strong>記述の整合性を比較</strong><span>選んだ文書の記述を比較し、食い違いの候補を確認します。</span></label>
+        <label><input type="radio" name="purpose" value="coverage"> <strong>基準への対応を確認</strong><span>基準と確認対象の対応を調べます。自動で判断できない範囲は未検証として示します。</span></label>
+      </fieldset>
+      <label class="dvc-field" for="dvc-create-name">レビュー名 <span class="dvc-required">必須</span><input id="dvc-create-name" class="dvc-in dvc-name" name="name" required maxlength="100" placeholder="例: 会員登録 第 1.2 版" autofocus></label>
+      <div class="dvc-upload" data-cases-multi><strong>確認する文書 <span class="dvc-required">必須</span></strong><p>Markdown・Word・Excelを複数選べます。登録後に文書の分類を確認してください。同じ名前のファイルはまとめず、別の名前にしてください。</p><label class="dvc-file"><span>文書を選ぶ</span><input name="documents" type="file" multiple accept=".md,.docx,.xlsx" aria-label="確認する文書"></label><p class="dvc-selected-files" data-cases-files="documents" aria-live="polite">文書が選択されていません。</p></div>
+      <p class="dvc-format" data-cases-pair hidden>文書の種類は問いません。比較する組を選びます。</p>
+      <div class="dvc-doc-fields" data-cases-pair hidden>
+        <div class="dvc-upload"><strong>基準文書 <span class="dvc-required">必須</span></strong><p>比較の起点にする文書を選びます。</p>
+          <label class="dvc-file"><span>基準文書を選ぶ</span><input name="requirements" aria-label="基準文書" type="file" accept=".md,.txt,text/markdown,text/plain" required></label>
+          <p class="dvc-selected-files" data-cases-files="requirements" aria-live="polite">文書が選択されていません。</p>
+          <label class="dvc-field">この比較での役割<select class="dvc-in" name="baseline_role"><option value="baseline">基準</option><option value="target">確認対象</option><option value="reference">参照</option></select></label>
+          <label class="dvc-field">版・改訂名<input class="dvc-in" name="baseline_version" maxlength="40" placeholder="例: 第3版・2026年10月改訂"></label>
+        </div>
+        <div class="dvc-upload"><strong>確認対象 <span class="dvc-required">必須</span></strong><p>基準文書と比較する文書を選びます。</p>
+          <label class="dvc-file"><span>確認対象を選ぶ</span><input name="design" aria-label="確認対象" type="file" accept=".md,.txt,text/markdown,text/plain" required></label>
+          <p class="dvc-selected-files" data-cases-files="design" aria-live="polite">文書が選択されていません。</p>
+          <label class="dvc-field">この比較での役割<select class="dvc-in" name="target_role"><option value="baseline">基準</option><option value="target" selected>確認対象</option><option value="reference">参照</option></select></label>
+          <label class="dvc-field">版・改訂名<input class="dvc-in" name="target_version" maxlength="40" placeholder="例: レビュー前・2026-10-24"></label>
+        </div>
+      </div>
+      <p class="dvc-format" data-cases-pair hidden>比較の対応形式: Markdown・テキスト。Word・Excelの資料は「文書セットのレビュー」で登録できます。役割は文書の種類を表すものではありません。版・改訂名は空欄でも進められます。</p>
+      <div class="dvc-recovery" data-cases-recovery hidden><p data-cases-recovery-message></p><button type="button" class="p1-btn" data-cases-resume>作成済みレビューを開く</button></div>
+      <p class="dvc-msg" role="status" aria-live="polite" data-cases-msg></p>
+      <footer class="dvc-dialog-footer"><label class="dvc-field" for="dvc-create-due">期限<input id="dvc-create-due" class="dvc-in" name="due" type="date"></label><span class="sp"></span><button class="p1-btn" type="button" data-cases-close>キャンセル</button><button class="p1-btn is-primary" type="submit" data-cases-submit>作成して文書の確認へ</button></footer>
+    </form>
+  </dialog>
 </section>

@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import fcntl
 import json
+from hashlib import sha256
 import os
 import re
 import tempfile
@@ -136,14 +137,18 @@ def same_user(row: dict | None, uid: str | None) -> bool:
 def parse_sections(md: str) -> list[dict]:
     sections, cur = [], None
     for line in md.splitlines():
-        if line.startswith("## "):
-            heading = line[3:].strip()
+        if re.match(r"^#{1,6}\s+", line):
+            heading = re.sub(r"^#{1,6}\s+", "", line).strip()
             m = re.match(r"(\d+)\.", heading)
             cur = {"id": f"s{m.group(1)}" if m else f"s{len(sections) + 1}", "heading": heading, "text": ""}
             sections.append(cur)
-        elif cur is not None:
-            cur["text"] += line + "\n"
-    return [{**s, "text": s["text"].strip()} for s in sections]
+        else:
+            if cur is None and line.strip():
+                cur = {"id": "s1", "heading": "本文", "text": ""}
+                sections.append(cur)
+            if cur is not None:
+                cur["text"] += line + "\n"
+    return [{**s, "text": s["text"].strip()} for s in sections if s["text"].strip()]
 
 
 def _doc_text(d: Path, name: str) -> str:
@@ -154,8 +159,17 @@ def _doc_text(d: Path, name: str) -> str:
 def docs(iid: str) -> dict:
     d = _existing(iid)
     meta = _read(d / "docs" / "meta.json", {})
-    return {"requirements": {"version": meta.get("req_version"), "sections": parse_sections(_doc_text(d, "requirements.md"))},
-            "design": {"version": meta.get("design_version"), "sections": parse_sections(_doc_text(d, "design.md"))}}
+    out = {}
+    for key, prefix, default in (("requirements", "baseline", "基準文書"), ("design", "target", "確認文書")):
+        role = meta.get(prefix + "_role", "baseline" if prefix == "baseline" else "target")
+        label = {"baseline": "基準", "target": "確認対象", "reference": "参照"}.get(role, role)
+        out[key] = {"version": meta.get("req_version" if prefix == "baseline" else "design_version"),
+                    "name": meta.get(prefix + "_name") or default, "label": label,
+                    "revision_label": meta.get(prefix + "_version", ""),
+                    "sections": parse_sections(_doc_text(d, "requirements.md" if prefix == "baseline" else "design.md"))}
+    out["purpose"] = meta.get("purpose", "legacy_requirement_design")
+    out["assessment"] = meta.get("assessment")
+    return out
 
 
 def _ref(sections: list[dict], label: str) -> dict:
@@ -289,7 +303,7 @@ def _missing_links(d: Path, changed_req: set | None) -> list[dict]:
     return uniq
 
 
-def _judge(findings: list[dict], missing: list[dict], scope: str = "overall") -> dict:
+def _judge(findings: list[dict], missing: list[dict], scope: str = "overall", assessment: dict | None = None) -> dict:
     """出口基準は設定（settings_store）の上限に従う。未検証（status None）は解消に数えない（固定）。"""
     from web.services.docverify import settings_store as ss
     cfg = ss.effective()
@@ -302,14 +316,33 @@ def _judge(findings: list[dict], missing: list[dict], scope: str = "overall") ->
     crit = open_by["critical"]
     review = [f["id"] for f in on if f.get("status") == "要確認"]
     unverified = [f["id"] for f in on if f.get("status") is None]
-    return {"pass": not over and not review and not missing, "unresolved_critical": crit,
+    unknown = list((assessment or {}).get("reasons") or [])
+    if not assessment:
+        unknown.append("検査の適合性と実行範囲が未確認です。検査を実行し直してください。")
+    elif assessment.get("status") != "complete" and not unknown:
+        unknown.append("検査が完了していません。")
+    elif not all(isinstance(assessment.get(k), int) and assessment[k] > 0 for k in ("baseline_units", "target_units", "compared_pairs")):
+        unknown.append("比較対象または比較実行数が0件で、検査できたことを確認できません。")
+    if unverified:
+        unknown.append("採否が未判定の指摘が残っています。")
+    passed = not over and not review and not missing and not unknown
+    return {"pass": passed, "verdict": "判定不能" if unknown else "合格" if passed else "不合格",
+            "unverified_reasons": unknown, "unresolved_critical": crit,
             "missing_links": missing, "unverified": unverified, "needs_review": review,
-            "over_limit": over, "limits": limits, "labels": cfg["labels"]}
+            "over_limit": over, "limits": limits, "labels": cfg["labels"],
+            "ai_scope": ss.AI_SCOPE_NOTE if ((assessment or {}).get("scope") or {}).get("ai") == "out_of_scope" else None}
 
 
 def _reasons(o: dict) -> list[str]:
+    out = _reasons_core(o)
+    return [*out, o["ai_scope"]] if o.get("ai_scope") else out
+
+
+def _reasons_core(o: dict) -> list[str]:
+    if o.get("unverified_reasons"):
+        return [*o["unverified_reasons"], "検査範囲を確認し、検査が完了するまで承認できません。"]
     if o["pass"]:
-        tail = f"未判定の指摘が {len(o['unverified'])} 件残っていますが、合否には影響しません。" if o["unverified"] else "未判定の指摘はありません。"
+        tail = "未判定の指摘はありません。"
         return ["重大な未解決の指摘・要確認・対応の抜けはありません。", tail, "承認できます。"]
     parts = []
     lab = o.get("labels") or {}
@@ -326,9 +359,21 @@ def gate(iid: str) -> dict:
     d = _existing(iid)
     findings = _findings(d)
     meta = _read(d / "docs" / "meta.json", {})
-    overall = _judge(findings, _missing_links(d, None))
+    assessment = meta.get("assessment")
+    if assessment:
+        assessment = dict(assessment)
+        for key, filename in (("baseline_sha256", "requirements.md"), ("target_sha256", "design.md")):
+            if assessment.get(key) != sha256(_doc_text(d, filename).encode()).hexdigest():
+                assessment["status"] = "unverified"
+                assessment["reasons"] = ["文書が検査後に変更されています。最新の文書で検査を実行し直してください。"]
+                break
+    legacy = meta.get("purpose", "legacy_requirement_design") == "legacy_requirement_design"
+    coverage = meta.get("purpose") == "coverage"
+    coverage_missing = [{"req_id": f["id"], "reason": f.get("description", "対応不足")}
+                        for f in findings if f.get("detector_type") == "MISSING_IN_DESIGN" and f.get("status") not in RESOLVED] if coverage else []
+    overall = _judge(findings, _missing_links(d, None) if legacy else coverage_missing, assessment=assessment)
     changed_req = set((meta.get("changed_sections") or {}).get("requirements") or [])
-    changed = _judge([f for f in findings if f.get("changed_in_current")], _missing_links(d, changed_req), "changed")
+    changed = _judge([f for f in findings if f.get("changed_in_current")], _missing_links(d, changed_req) if legacy else coverage_missing, "changed", assessment)
     return {"overall": overall, "changed": changed, "reasons": _reasons(overall)}
 
 
@@ -359,7 +404,7 @@ def approve(iid: str, reason: str, user: str, rev=None) -> dict:
         _check_rev(d, rev)
         g = gate(iid)
         if not g["overall"]["pass"]:
-            raise PairError(403, "gate_not_passed", "判定が不合格のため承認できません。" + g["reasons"][-1])
+            raise PairError(403, "gate_not_passed", f"判定が{g['overall'].get('verdict', '判定不能')}のため承認できません。" + " ".join(g["reasons"]))
         started, uid = creator(d), current_user_id()
         if started is None:
             raise PairError(403, "no_author", "起票者が記録されていません。起票者がレビューを開いてから承認してください。")
@@ -472,13 +517,18 @@ def register_inspection(iid: str) -> str:
 
 
 def _section_of_line(md: str, line_no: int) -> str | None:
-    sid = None
+    sid, count = None, 0
     for i, line in enumerate(md.splitlines(), 1):
         if i > line_no:
             break
-        m = re.match(r"## (\d+)\.", line)
-        if m:
-            sid = f"s{m.group(1)}"
+        heading = re.match(r"^#{1,6}\s+(.*)$", line)
+        if heading:
+            count += 1
+            number = re.match(r"(\d+)\.", heading.group(1))
+            sid = f"s{number.group(1)}" if number else f"s{count}"
+        elif sid is None and line.strip():
+            count += 1
+            sid = f"s{count}"
     return sid
 
 
@@ -487,8 +537,8 @@ def analyze(iid: str, user: str) -> dict:
     from web.services.docverify.pair import engine
     d = _existing(iid)
     req, design = _doc_text(d, "requirements.md"), _doc_text(d, "design.md")
-    result = engine.inspect(req, design)
     meta = _read(d / "docs" / "meta.json", {"changed_sections": {"requirements": [], "design": []}})
+    result = engine.inspect(req, design, meta.get("purpose", "legacy_requirement_design"))
     rl, dl = req.splitlines(), design.splitlines()
     with _lock(d):
         findings = _findings(d)
@@ -496,12 +546,13 @@ def analyze(iid: str, user: str) -> dict:
         for i, df in enumerate(result["defects"], 1):
             r, s = (df.get("req_lines") or [None])[0], (df.get("design_lines") or [None])[0]
             f = {"id": f"AI-{i:02d}", "type": _ENGINE_TYPE.get(df.get("type"), "曖昧"), "severity": "警告", "source": "ai",
-                 "title": df.get("reason", "")[:40], "description": df.get("reason", ""),
+                 "detector_type": df.get("type"), "title": df.get("reason", "")[:40], "description": df.get("reason", ""),
                  "req_ref": {"section": _section_of_line(req, r) if r else None, "quote": rl[r - 1].strip() if r and r <= len(rl) else ""},
                  "design_ref": {"section": _section_of_line(design, s) if s else None, "quote": dl[s - 1].strip() if s and s <= len(dl) else ""},
                  "status": None, "decided_by": None, "decided_at": None}
             if all(x["id"] != f["id"] for x in findings):
                 added.append({**f, "changed_in_current": _is_changed(f, meta)})
         _write(d / "findings.json", [*findings, *added])
+        _write(d / "docs" / "meta.json", {**meta, "assessment": result["assessment"]})
         _trail(d, user, "finding_decided", iid, f"自動検査で {len(added)} 件追加")
-    return {"added": len(added), "errors": result["errors"]}
+    return {"added": len(added), "errors": result["errors"], "assessment": result["assessment"]}

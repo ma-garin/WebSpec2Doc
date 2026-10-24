@@ -111,8 +111,12 @@ def _table(doc, header, rows):
 def _summary_section(doc, c) -> None:
     doc.add_heading("1. 判定の要約", 1)
     g = c["g"]
+    assessment = c["s"].get("assessment") or {}
+    doc.add_paragraph(f"検査範囲: 基準 {assessment.get('baseline_units', 0)} 要素・確認対象 {assessment.get('target_units', 0)} 要素・比較 {assessment.get('compared_pairs', 0)} 組")
+    if g["overall"].get("ai_scope"):
+        doc.add_paragraph(g["overall"]["ai_scope"])
     for label, scope, verdict in (("全体", g["overall"], c["s"]["verdict"]),
-                                  ("今回の変更分", g["changed"], "合格" if g["changed"]["pass"] else "不合格")):
+                                  ("今回の変更分", g["changed"], g["changed"].get("verdict", "判定不能"))):
         doc.add_heading(f"{label}: {verdict}", 2)
         _table(doc, ("項目", "件数", "該当の指摘"), [(n, f"{len(ids)} 件", _names(ids)) for n, ids in _counts(scope)])
     doc.add_heading("判定の根拠", 2)
@@ -127,13 +131,13 @@ def _detail_section(doc, c) -> None:
         doc.add_heading(f"{r['id']} {r['title']}".strip(), 2)
         doc.add_paragraph(f"種別: {r['type']} ／ 重大度: {r['severity']} ／ 状態: {r['status']} ／ 区分: {r['kind']}")
         doc.add_paragraph("本文の引用", style="Heading 3")
-        doc.add_paragraph(f"要件定義書 {r['req']}: {_quote(f.get('req_ref'))}", style="Intense Quote")
-        doc.add_paragraph(f"基本設計書 {r['design']}: {_quote(f.get('design_ref'))}", style="Intense Quote")
+        doc.add_paragraph(f"{c['s']['baseline_name']} {r['req']}: {_quote(f.get('req_ref'))}", style="Intense Quote")
+        doc.add_paragraph(f"{c['s']['target_name']} {r['design']}: {_quote(f.get('design_ref'))}", style="Intense Quote")
         doc.add_paragraph("説明", style="Heading 3")
         doc.add_paragraph(f.get("description") or "未確認")
         doc.add_paragraph("確認手順", style="Heading 3")
-        for step in (f"要件定義書 {r['req']} を開き、上の引用を読む。",
-                     f"基本設計書 {r['design']} を開き、同じ事柄の記述と比べる。",
+        for step in (f"{c['s']['baseline_name']} {r['req']} を開き、上の引用を読む。",
+                     f"{c['s']['target_name']} {r['design']} を開き、同じ事柄の記述と比べる。",
                      f"「{r['type']}」に当たるかを判断し、対検査画面で採否を記録する。"):
             doc.add_paragraph(step, style="List Number")
         doc.add_paragraph("証跡", style="Heading 3")
@@ -149,7 +153,7 @@ def to_docx(iid: str) -> bytes:
     _font(doc)
     doc.add_paragraph("対検査レビュー 指摘書", style="Title")
     _table(doc, ("項目", "内容"), [
-        ("レビュー名", s["name"]), ("対象文書と版", f"要件定義書 第 {s['req_version']} 版 ⇔ 基本設計書 第 {s['design_version']} 版"),
+        ("レビュー名", s["name"]), ("対象文書と版", f"{s['baseline_name']} 第 {s['req_version']} 版 ⇔ {s['target_name']} 第 {s['design_version']} 版"),
         ("実施日", c["today"]), ("作成者", s["assignee"] or "未記録"),
         ("承認者", c["approver"] + (f"（{c['approved_at']}）" if c["approved_at"] else "")), ("判定", s["verdict"])])
     doc.add_page_break()
@@ -175,7 +179,7 @@ def _sheet(wb, title, header, rows, freeze=True):
     ws = wb.create_sheet(title)
     ws.append(list(header))
     for r in rows:
-        ws.append(list(r))
+        ws.append([("'" + value if isinstance(value, str) and value.startswith(("=", "+", "-", "@")) else value) for value in r])
     thin = Side(style="thin")
     for row in ws.iter_rows():
         for cell in row:
@@ -201,11 +205,15 @@ def to_xlsx(iid: str) -> bytes:
            [(t.get("at", ""), _who(t.get("user")), _ACTIONS.get(t.get("action"), t.get("action", "")),
              t.get("target", ""), t.get("reason", "")) for t in c["trail"]])
     s, g = c["s"], c["g"]
-    rows = [("レビュー名", s["name"], ""), ("対象文書と版", f"要件 第 {s['req_version']} 版 ⇔ 設計 第 {s['design_version']} 版", ""),
-            ("判定（全体）", s["verdict"], ""), ("判定（今回の変更分）", "合格" if g["changed"]["pass"] else "不合格", ""),
+    rows = [("レビュー名", s["name"], ""), ("対象文書と版", f"{s['baseline_name']} 第 {s['req_version']} 版 ⇔ {s['target_name']} 第 {s['design_version']} 版", ""),
+            ("判定（全体）", s["verdict"], ""), ("判定（今回の変更分）", g["changed"].get("verdict", "判定不能"), ""),
             ("作成者", s["assignee"] or "未記録", ""), ("承認者", c["approver"], c["approved_at"])]
     for label, scope in (("全体", g["overall"]), ("今回の変更分", g["changed"])):
         rows += [(f"{label}: {n}", f"{len(ids)} 件", _names(ids)) for n, ids in _counts(scope)]
+    assessment = s.get("assessment") or {}
+    rows += [("検査目的", s.get("purpose", ""), ""), ("比較実行数", assessment.get("compared_pairs", 0), "")]
+    if g["overall"].get("ai_scope"):
+        rows += [("AI 検査", g["overall"]["ai_scope"], "")]
     rows += [("判定の根拠", " ".join(g["reasons"]), "")] + [(k, v, "") for k, v in _criteria(c)]
     _sheet(wb, "判定", ("項目", "値", "該当"), rows, freeze=False)
     buf = io.BytesIO()

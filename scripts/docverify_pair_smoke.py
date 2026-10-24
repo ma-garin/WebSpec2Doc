@@ -1,6 +1,6 @@
 """System 06 対検査レビュー API の通し確認（実サーバに対して叩く）。
 
-順序: GET findings → decide 3 件 → revoke 1 件 → gate → approve（未合格で 403 を期待）
+順序: 検査前の判定 → analyze → GET findings → decide 3 件 → revoke 1 件 → gate → approve（未合格で 403 を期待）
       → 重大は不採用・他は採用 → gate → approve（合格で 200 を期待）→ trail。
 結果を Markdown の表で標準出力へ出す。期待と違う行が 1 つでもあれば exit 1。
 
@@ -48,6 +48,12 @@ def _gate_pass(obj) -> bool | None:
     return overall.get("pass") if isinstance(overall, dict) else None
 
 
+def _verdict(obj) -> str:
+    gate = obj.get("gate", obj) if isinstance(obj, dict) else {}
+    overall = gate.get("overall") if isinstance(gate, dict) else None
+    return overall.get("verdict", "") if isinstance(overall, dict) else ""
+
+
 def _err_note(obj) -> str:
     if not isinstance(obj, dict) or "error" not in obj:
         return ""
@@ -71,8 +77,13 @@ def run(base: str, iid: str, decider: str, approver: str) -> list[tuple]:
         rows.append((name, f"{method} {path}", expect, code, "OK" if ok else "NG", _err_note(obj)))
         return obj
 
+    # 検査（assessment）が無いレビューは判定不能。合格には検査の実行が要る（pair_review._judge）
+    step("判定（検査前は判定不能）", "GET", "/gate", None, 200, decider,
+         lambda o: _gate_pass(o) is False or _verdict(o) == "判定不能")
+    step("検査を実行", "POST", "/analyze", {}, 200, decider,
+         lambda o: isinstance(o, dict) and (o.get("assessment") or {}).get("status") == "complete")
     obj = step("指摘の取得", "GET", "/findings", None, 200, decider,
-               lambda o: isinstance(o, dict) and len(o.get("findings", [])) == 12)
+               lambda o: isinstance(o, dict) and len(o.get("findings", [])) >= 12)
     items = obj.get("findings", []) if isinstance(obj, dict) else []
     fids = [f["id"] for f in items]
     critical = {f["id"] for f in items if f.get("severity") == "重大"}
@@ -88,6 +99,8 @@ def run(base: str, iid: str, decider: str, approver: str) -> list[tuple]:
     for fid in fids:
         st = "不採用" if fid in critical else "採用"
         step(f"{st} {fid}", "POST", f"/findings/{fid}/decide", {"status": st, "reason": "通し確認"}, 200, decider)
+        if st == "採用":  # 採用は「直す」の意味で未解消のまま残る。出口基準の上限に依らず通すため解消済みまで進める
+            step(f"解消済み {fid}", "POST", f"/findings/{fid}/decide", {"status": "解消済み", "reason": "通し確認で修正済みとした"}, 200, decider)
     step("判定（合格）", "GET", "/gate", None, 200, decider, lambda o: _gate_pass(o) is True)
     if auth_on:
         step("承認（同一人物）", "POST", "/approve", {"reason": "通し確認"}, 403, decider)

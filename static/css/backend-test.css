@@ -372,3 +372,12 @@ body { --text-subtle: var(--color-text-secondary, var(--color-text-secondary)); 
 .s8-hero-form .c-btn--primary { height: 40px; }
 .c-page-head .dash-hero-steps { margin-top: var(--space-3); flex-wrap: wrap; }
 .bs-none .c-state { padding: var(--space-4); }
+
+/* 判定帯（全体／今回の変更分） */
+.s8-gate { display: grid; gap: 8px; margin-bottom: 14px; padding: 12px 14px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-md); min-width: 0; }
+.s8-gate[data-state="normal"] .s8-gate-empty { display: none; }
+.s8-gate-row { min-width: 0; }
+.s8-gate-h { display: flex; flex-wrap: wrap; align-items: baseline; gap: 10px; }
+.s8-gate-v { font-weight: 700; padding: 1px 8px; border-radius: var(--radius-sm); border: 1px solid var(--border); }
+.s8-gate-v.ok { color: var(--success, #15803d); } .s8-gate-v.ng { color: var(--danger, #b91c1c); } .s8-gate-v.wa { color: var(--warning, #b45309); }
+.s8-gate-named { margin: 6px 0 0; padding-left: 18px; max-height: 120px; overflow: auto; font-size: 13px; overflow-wrap: anywhere; }

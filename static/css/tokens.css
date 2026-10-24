@@ -1,0 +1,24 @@
+/* C0 共通スケール（2026-10-24）。色の正本は static/tokens.css、ta2 短縮名（--bg/--sf/--line/--tx/--ac/--ok/--ng/--wa）は
+   static/css/ta2.css。ここはそのどちらとも名前が重ならない「段階」だけを持つ。値の追加は C0 担当のみ。 */
+:root{
+  /* 色（役割名。値は static/tokens.css を参照するだけ） */
+  --ui-bg: var(--color-bg);
+  --ui-surface: var(--color-surface);
+  --ui-surface-alt: var(--color-surface-2);
+  --ui-line: var(--color-border);
+  --ui-line-strong: var(--color-border-strong);
+  --ui-text: var(--color-text);
+  --ui-text-muted: var(--color-text-secondary);
+  --ui-accent: var(--color-primary);
+  --ui-accent-bg: var(--color-primary-light);
+  /* 文字 7 段 */
+  --fs-11: 11px; --fs-13: 13px; --fs-14: 14px; --fs-16: 16px; --fs-18: 18px; --fs-22: 22px; --fs-28: 28px;
+  /* 余白 5 段 */
+  --sp-8: 8px; --sp-12: 12px; --sp-16: 16px; --sp-24: 24px; --sp-32: 32px;
+  /* 状態色 3 値（合格／不合格／保留・判定不能）。未判定は --ui-text-muted を使う */
+  --state-ok: var(--color-success); --state-ok-bg: var(--color-success-bg); --state-ok-tx: var(--color-success-tx); --state-ok-border: var(--color-success-border);
+  --state-ng: var(--color-error); --state-ng-bg: var(--color-error-bg); --state-ng-tx: var(--color-error-tx); --state-ng-border: var(--color-error-border);
+  --state-hold: var(--color-warning); --state-hold-bg: var(--color-warning-bg); --state-hold-tx: var(--color-warning-tx); --state-hold-border: var(--color-warning-border);
+  /* 殻の寸法 */
+  --rpanel-w: 320px; --rpanel-w-min: 260px; --rpanel-w-max: 480px;
+}

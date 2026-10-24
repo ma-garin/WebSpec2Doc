@@ -61,7 +61,7 @@ html.dv-page .dv-view>[data-dvr-gate]{order:9;display:grid;grid-template-columns
 html.dv-page [data-dvr-gate] .p5-gates{display:grid;grid-template-columns:1fr 1fr;gap:6px;min-width:0}
 html.dv-page [data-dvr-gate] .p5-gate{border:1px solid var(--color-border,#d8dee4);border-radius:6px;padding:4px 8px;min-width:0}
 html.dv-page [data-dvr-gate] .p5-gate .lbl{font-size:11.5px;color:var(--color-text-secondary,#57606a);overflow-wrap:anywhere}
-html.dv-page [data-dvr-gate] .p5-gate .val{font-size:16px;font-weight:700}
+html.dv-page [data-dvr-gate] .p5-gate .val{font-size:15px;font-weight:700}
 html.dv-page [data-dvr-gate] .p5-gate.ok{border-color:var(--color-success,#1a7f37);background:var(--color-success-light,#e8f5e9)}
 html.dv-page [data-dvr-gate] .p5-gate.ok .val{color:var(--color-success,#1a7f37)}
 html.dv-page [data-dvr-gate] .p5-gate.ng{border-color:var(--color-danger,#c62828);background:var(--color-danger-light,#fdecec)}
@@ -106,3 +106,11 @@ html.dv-page #dvR4PlanSave{display:none}
 /* D-24 本文へスキップは移った時に見える */
 html.dv-page .skip-link:focus{position:fixed;top:8px;left:8px;z-index:100}
 html.dv-page .dv-file-btn{width:auto!important;justify-self:start;align-self:start;flex:none}
+/* S06 polish: D-23 押せない理由 / D-26 章ごとの指摘ボタン / D-22 文字は 11・12.5・13・15 */
+.r2-need{font-size:11.5px;color:var(--color-text-secondary)}
+.r2-need[hidden]{display:none}
+.r2-pick{min-height:24px;margin-left:8px;font-size:11.5px;font-weight:400}
+/* S06 polish: D-23 押せない理由 / D-26 章ごとの指摘ボタン */
+.r2-need{font-size:11.5px;color:var(--color-text-secondary)}
+.r2-need[hidden]{display:none}
+.r2-pick{min-height:24px;margin-left:8px;font-size:11.5px;font-weight:400}

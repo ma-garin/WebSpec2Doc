@@ -103,9 +103,9 @@ def inspect(req_md: str, design_md: str, purpose: str = "legacy_requirement_desi
     if purpose not in ("legacy_requirement_design", "consistency", "coverage"):
         reasons.append("選択された検査目的に対応する検査器がありません。")
     if not targets:
-        reasons.append("基準側から検査対象を抽出できませんでした。")
+        reasons.append("判定不能（検査対象 0 件）: 基準側から検査対象を抽出できませんでした。")
     if not des_all:
-        reasons.append("確認対象から検査対象を抽出できませんでした。")
+        reasons.append("判定不能（検査対象 0 件）: 確認対象から検査対象を抽出できませんでした。")
     if not links:
         reasons.append("比較可能な記述の対応がなく、文書間の検査を実行できませんでした。")
     if errors:
@@ -113,6 +113,7 @@ def inspect(req_md: str, design_md: str, purpose: str = "legacy_requirement_desi
     assessment = {"purpose": purpose, "status": "unverified" if reasons else "complete",
                   "baseline_units": len(targets), "target_units": len(des_all),
                   "compared_pairs": len(links), "reasons": reasons,
+                  "unverified_reason": reasons[0] if reasons else None,
                   "detectors": ["contradiction", "table", "terms"] + (["missing"] if purpose == "coverage" else []),
                   "limits": ["意味全体の整合性や同義表現の網羅性は未検証です。"],
                   "baseline_sha256": sha256(req_md.encode()).hexdigest(),

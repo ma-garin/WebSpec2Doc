@@ -378,3 +378,59 @@ td.dvg-bl + td { width: 360px; }
 
 /* スコアは「自動検出の範囲」の値。点数と同じ大きさで前提を先に読ませる（候補 0 件＝問題なしではない） */
 .dv-score-cap{display:block;font-size:var(--text-xl);font-weight:700;line-height:1.3;color:var(--color-warning,var(--color-high))}
+
+/* r3: 対検査の部品を .dvr-view でも使う（docverify-pair.css から複製） */
+.dvr-view .p1-btn{font:inherit;font-size:12.5px;border:1px solid var(--color-border-strong,#c9ced6);background:var(--color-surface,#fff);
+  color:inherit;border-radius:6px;padding:4px 10px;cursor:pointer;white-space:nowrap}
+.dvr-view .p1-btn:hover{border-color:var(--color-primary,#2563eb)}
+.dvr-view .p1-btn.is-primary{background:var(--color-primary,#2563eb);border-color:var(--color-primary,#2563eb);color:var(--color-on-primary,#fff)}
+.dvr-view .p1-btn[disabled]{opacity:.45;cursor:not-allowed}
+/* 3 列の本体 */
+.dvr-view .p1-pair{position:relative;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) minmax(280px,360px);gap:8px;min-height:0;min-width:0}
+.dvr-view .p1-doc,.dvr-view .p1-side{display:grid;grid-template-rows:auto minmax(0,1fr);min-height:0;min-width:0;
+  border:1px solid var(--color-border,#d8dee4);border-radius:8px;background:var(--color-surface,#fff);overflow:hidden}
+.dvr-view .p1-doc-t{padding:6px 10px;font-weight:700;border-bottom:1px solid var(--color-border,#d8dee4);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dvr-view .p1-doc-v{font-weight:400;font-size:12px;color:var(--color-text-secondary,#57606a)}
+.dvr-view .p1-doc-s{overflow:auto;padding:8px 10px;min-height:0}
+.dvr-view .p1-sec{margin:0 0 10px}
+.dvr-view .p1-doc-h{font-size:13px;margin:0 0 4px}
+.dvr-view .p1-doc-b{white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.6;margin:0}
+.dvr-view .p1-sec.is-hit{background:var(--color-primary-light,#eef4ff);border-radius:4px}
+.dvr-view .p1-empty{padding:16px 8px;text-align:center;color:var(--color-text-secondary,#57606a)}
+.dvp[data-state="loading"] .p1-statebox .p1-btn,.dvp:not([data-state="error"]) .p1-statebox .p1-btn{display:none}
+/* ---------- r3: 計画・文書を読む・質問票・修正版の確認（対検査の部品を .dvr-view でも使う） ---------- */
+#dvR4-triage{display:none!important}
+.dvr-view .r2-state{flex:none;margin:0 0 8px;padding:6px 10px;border:1px solid var(--color-border,#d8dee4);border-radius:6px;font-size:12.5px;display:flex;align-items:center;gap:8px;min-width:0;overflow-wrap:anywhere}
+.dvr-view .r2-state[data-st="error"]{border-color:var(--color-danger,#c62828);background:var(--color-danger-light,#fdecec)}
+.dvr-view .r2-state[hidden]{display:none}
+.dvr-view .r2-gate{flex:none;margin-top:8px;padding:6px 8px;border-top:1px solid var(--color-border,#d8dee4);background:var(--color-surface,#fff)}
+.dvr-view .r2-gate:empty{display:none}
+.dvr-view .r2-card{border:1px solid var(--color-border,#d8dee4);border-radius:8px;background:var(--color-surface,#fff);padding:10px 12px;margin:0 0 10px;min-width:0}
+.dvr-view .r2-row{display:grid;grid-template-columns:120px minmax(0,1fr);gap:8px;align-items:start;margin:0 0 8px;min-width:0}
+.dvr-view .r2-k{font-size:12.5px;color:var(--color-text-secondary,#57606a);display:block;margin:4px 0 2px}
+.dvr-view .r2-v{min-width:0;overflow-wrap:anywhere}
+.dvr-view .r2-row input[type=text],.dvr-view .r2-side input,.dvr-view .r2-side select{width:100%;max-width:100%;box-sizing:border-box}
+.dvr-view .r2-roles{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;min-width:0}
+.dvr-view .r2-role{display:grid;grid-template-columns:80px minmax(0,1fr);gap:6px;align-items:center;min-width:0}
+.dvr-view .r2-role input{width:100%;box-sizing:border-box;min-width:0}
+.dvr-view .r2-docs,.dvr-view .r2-list{margin:0;padding-left:18px;min-width:0;overflow-wrap:anywhere}
+.dvr-view .r2-list li{margin:0 0 4px}
+.dvr-view .r2-list li .p1-btn{margin-left:8px}
+.dvr-view .r2-id{font-weight:700;margin-right:6px}
+.dvr-view .r2-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:8px;flex-wrap:wrap}
+.dvr-view .r2-sec-t{font-weight:700;font-size:13px;margin:0 0 6px}
+.dvr-view .r2-hint{font-size:12px;color:var(--color-text-secondary,#57606a);margin:4px 0;overflow-wrap:anywhere}
+.dvr-view .r2-quote{margin:0 0 8px;padding:6px 8px;border-left:3px solid var(--color-primary,#2563eb);background:var(--color-surface-alt,#f6f8fa);font-size:12.5px;max-height:8em;overflow:auto;overflow-wrap:anywhere}
+.dvr-view .r2-pair{height:min(64vh,620px);min-height:300px}
+.dvr-view .r2-side{overflow:auto;min-height:0;padding:8px;border:1px solid var(--color-border,#d8dee4);border-radius:8px;background:var(--color-surface,#fff)}
+.dvr-view .r2-tbl{overflow-x:auto;max-width:100%}
+.dvr-view .r2-q{width:100%;table-layout:fixed}
+.dvr-view .r2-q textarea,.dvr-view .r2-q input,.dvr-view .r2-q select{width:100%;box-sizing:border-box;min-width:0}
+.dvr-view .r2-q th:nth-child(1){width:72px}.dvr-view .r2-q th:nth-child(3){width:150px}.dvr-view .r2-q th:nth-child(5){width:110px}
+@media (max-width:1100px){
+  .dvr-view .r2-pair{grid-template-columns:minmax(0,1fr) minmax(0,1fr);height:auto}
+  .dvr-view .r2-pair .p1-doc{height:50vh}
+  .dvr-view .r2-side{grid-column:1/-1}
+  .dvr-view .r2-roles{grid-template-columns:minmax(0,1fr)}
+  .dvr-view .r2-row{grid-template-columns:minmax(0,1fr)}
+}

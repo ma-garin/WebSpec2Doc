@@ -114,6 +114,71 @@ _RULES = (
 )
 
 
+# ---- r3: 文書を読む（手で起こす指摘）・質問票 ----
+_QSTATES = ("未回答", "回答済み", "解消")
+
+
+def add_finding(iid):
+    b = _body()
+
+    def run():
+        d = pr._existing(iid)
+        quote, title = str(b.get("quote") or "").strip()[:300], str(b.get("title") or "").strip()[:80]
+        side = b.get("side")
+        if side not in ("req", "design") or not quote or not title:
+            raise pr.PairError(400, "invalid", "本文を選び、指摘の内容を書いてから保存してください。")
+        ref, none = {"section": str(b.get("section") or "") or None, "quote": quote}, {"section": None, "quote": ""}
+        with pr._lock(d):
+            fs = pr._findings(d)
+            meta = pr._read(d / "docs" / "meta.json", {})
+            meta = {**meta, "changed_sections": meta.get("changed_sections") or {"requirements": [], "design": []}}
+            n = sum(1 for x in fs if str(x.get("id", "")).startswith("M-")) + 1
+            f = {"id": f"M-{n:03d}", "type": b.get("type") if b.get("type") in pr.TYPES else "曖昧",
+                 "severity": b.get("severity") if b.get("severity") in pr.SEVERITIES else "警告", "source": "human",
+                 "title": title, "description": str(b.get("description") or title)[:1000],
+                 "req_ref": ref if side == "req" else none, "design_ref": ref if side == "design" else none,
+                 "status": None, "decided_by": None, "decided_at": None}
+            f["changed_in_current"] = pr._is_changed(f, meta)
+            pr._write(d / "findings.json", fs + [f])
+        pr._trail(d, pr.current_user(), "finding_added", f["id"], title)
+        return {"finding": f}
+    return _call(run, status=201)
+
+
+def questions(iid):
+    return _call(lambda: {"questions": pr._read(pr._existing(iid) / "questions.json", [])})
+
+
+def save_question(iid):
+    b = _body()
+
+    def run():
+        d = pr._existing(iid)
+        text = str(b.get("question") or "").strip()[:500]
+        if not text:
+            raise pr.PairError(400, "invalid", "質問の文を書いてから保存してください。")
+        with pr._lock(d):
+            qs = pr._read(d / "questions.json", [])
+            qid = str(b.get("id") or "")
+            known = any(q["id"] == qid for q in qs)
+            row = {"id": qid if known else f"Q-{len(qs) + 1:03d}", "finding_id": str(b.get("finding_id") or "")[:40],
+                   "question": text, "to": str(b.get("to") or "").strip()[:60], "due": str(b.get("due") or "")[:10],
+                   "answer": str(b.get("answer") or "").strip()[:1000],
+                   "state": b.get("state") if b.get("state") in _QSTATES else "未回答"}
+            qs = [row if q["id"] == qid else q for q in qs] if known else qs + [row]
+            pr._write(d / "questions.json", qs)
+        return {"questions": qs}
+    return _call(run)
+
+
+_RULES = _RULES + (
+    ("/findings", add_finding, ["POST"]),
+    ("/questions", questions, ["GET"]),
+    ("/questions", save_question, ["POST"]),
+)
+
+
+
 def register(target: Blueprint) -> None:
     for path, fn, methods in _RULES:
         target.add_url_rule(_P + path, f"pair_{fn.__name__}", fn, methods=methods)

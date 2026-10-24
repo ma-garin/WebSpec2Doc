@@ -21,7 +21,15 @@
   const SEV = { 重大: 'sev-c', 警告: 'sev-w', 提案: 'sev-i' };
   const ST = { 採用: 'st-ok', 不採用: 'st-ng', 要確認: 'st-q', 解消済み: 'st-done' };
   const base = () => `/api/docverify/${encodeURIComponent(S.iid)}/pair`;
-  const when = (v) => (v ? String(v).replace('T', ' ').slice(0, 16) : '');
+  // 保存は UTC。表示は日本時間「2026-10-24 18:17」
+  const JST = new Intl.DateTimeFormat('ja-JP', { timeZone: 'Asia/Tokyo', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
+  const when = (v) => {
+    if (!v) return '';
+    const t = String(v), d = new Date(/(Z|[+-]\d\d:?\d\d)$/i.test(t) ? t : `${t}Z`);
+    if (Number.isNaN(d.getTime())) return t.replace('T', ' ').slice(0, 16);
+    const p = Object.fromEntries(JST.formatToParts(d).map((x) => [x.type, x.value]));
+    return `${p.year}-${p.month}-${p.day} ${p.hour}:${p.minute}`;
+  };
 
   async function call(path, opts = {}) {
     const init = { method: opts.method || 'GET', headers: { Accept: 'application/json' } };
@@ -112,7 +120,10 @@
       return `<section class="p1-sec${on ? ' is-hit' : ''}" data-sec-id="${esc(s.id)}"><h4 class="p1-doc-h">${esc(s.heading || s.id)}</h4><p class="p1-doc-b">${body}</p></section>`;
     }).join('');
     const target = box.querySelector('mark.hl') || box.querySelector('.p1-sec.is-hit');
-    if (target) target.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    if (target) {  // ページ本体は動かさず、ビューアの内側だけをスクロールする
+      const br = box.getBoundingClientRect(), tr = target.getBoundingClientRect();
+      box.scrollTo({ top: box.scrollTop + tr.top - br.top - Math.max(0, (box.clientHeight - tr.height) / 2), behavior: 'smooth' });
+    }
   }
 
   function renderDocs() {
@@ -172,6 +183,19 @@
     q('[data-pair-approve-hint]').textContent = pass ? '全体が合格です。理由を書いて承認できます。起票した人は承認できません。'
       : '全体が不合格のため、まだ承認できません。採用のまま残る重大を直して「解消済み」にし、要確認を片付けてください。';
     syncApprove();
+    renderChip();
+  }
+
+  // 見出しの状態チップ: 採否 1 件以上=検討中／全体合格=判定可／承認済み
+  function renderChip() {
+    const el = q('[data-pair-chip]');
+    if (!el) return;
+    const approved = (S.trail || []).some((t) => t.action === 'approved');
+    const pass = !!(S.gate && S.gate.overall && S.gate.overall.pass);
+    const any = (S.findings || []).some((f) => f.status);
+    const [txt, cls] = approved ? ['承認済み', 'is-done'] : pass ? ['判定可', 'is-ok'] : any ? ['検討中', 'is-mid'] : ['準備中', ''];
+    el.textContent = txt;
+    el.className = `p1-chip ${cls}`.trim();
   }
 
   function syncApprove() {
@@ -180,6 +204,7 @@
   }
 
   function renderTrail() {
+    renderChip();
     const items = S.trail.slice().reverse();
     q('[data-pair-trail]').innerHTML = items.length ? items.map((t) => `<li class="ev"><span class="tm">${esc(when(t.at))}</span><span class="who">${esc(t.user === '_none' ? '未ログイン' : t.user)}</span>
       <span class="t">${esc(ACTION[t.action] || t.action)}</span> <span class="s">${esc(t.target || '')}</span>${t.reason ? `<span class="n">${esc(t.reason)}</span>` : ''}</li>`).join('')

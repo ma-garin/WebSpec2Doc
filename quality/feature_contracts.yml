@@ -49,7 +49,8 @@
         "happy_path",
         "error_path",
         "evidence"
-      ]
+      ],
+      "required_test_ids": {}
     },
     {
       "feature_id": "discover",
@@ -85,7 +86,8 @@
         "happy_path",
         "error_path",
         "evidence"
-      ]
+      ],
+      "required_test_ids": {}
     },
     {
       "feature_id": "crawl",
@@ -166,7 +168,8 @@
         "cancel_path",
         "checkpoint_path",
         "evidence"
-      ]
+      ],
+      "required_test_ids": {}
     },
     {
       "feature_id": "login",
@@ -219,7 +222,8 @@
         "evidence",
         "timeout_path",
         "cancel_path"
-      ]
+      ],
+      "required_test_ids": {}
     },
     {
       "feature_id": "account_auth",
@@ -272,7 +276,8 @@
         "lockout_path",
         "session_expiry_path",
         "evidence"
-      ]
+      ],
+      "required_test_ids": {}
     },
     {
       "feature_id": "tenant_membership",
@@ -327,7 +332,8 @@
         "happy_path",
         "error_path",
         "evidence"
-      ]
+      ],
+      "required_test_ids": {}
     },
     {
       "feature_id": "tenant_isolation",
@@ -371,7 +377,8 @@
         "isolation_path",
         "error_path",
         "evidence"
-      ]
+      ],
+      "required_test_ids": {}
     },
     {
       "feature_id": "autorun",
@@ -437,7 +444,8 @@
         "error_path",
         "timeout_path",
         "evidence"
-      ]
+      ],
+      "required_test_ids": {}
     },
     {
       "feature_id": "diff_history",
@@ -492,7 +500,8 @@
         "breaking_change_path",
         "error_path",
         "evidence"
-      ]
+      ],
+      "required_test_ids": {}
     },
     {
       "feature_id": "settings",
@@ -535,7 +544,8 @@
         "happy_path",
         "validation_path",
         "evidence"
-      ]
+      ],
+      "required_test_ids": {}
     },
     {
       "feature_id": "usage_roi",
@@ -575,7 +585,8 @@
         "happy_path",
         "empty_path",
         "evidence"
-      ]
+      ],
+      "required_test_ids": {}
     },
     {
       "feature_id": "coverage_gap_report",
@@ -612,7 +623,8 @@
         "happy_path",
         "empty_path",
         "evidence"
-      ]
+      ],
+      "required_test_ids": {}
     },
     {
       "feature_id": "doc_fusion",
@@ -706,7 +718,8 @@
         "error_path",
         "mismatch_detection",
         "evidence"
-      ]
+      ],
+      "required_test_ids": {}
     },
     {
       "feature_id": "exploration_capture",
@@ -757,7 +770,8 @@
         "error_path",
         "state_join_key",
         "evidence"
-      ]
+      ],
+      "required_test_ids": {}
     },
     {
       "feature_id": "reverse_assets",
@@ -791,7 +805,8 @@
         "error_path",
         "state_join_key",
         "evidence"
-      ]
+      ],
+      "required_test_ids": {}
     },
     {
       "feature_id": "field_definition_bva",
@@ -823,7 +838,8 @@
         "happy_path",
         "error_path",
         "evidence"
-      ]
+      ],
+      "required_test_ids": {}
     },
     {
       "feature_id": "finding_ticket",
@@ -860,7 +876,8 @@
         "error_path",
         "state_join_key",
         "evidence"
-      ]
+      ],
+      "required_test_ids": {}
     },
     {
       "feature_id": "test_plan",
@@ -907,7 +924,8 @@
         "happy_path",
         "error_path",
         "evidence"
-      ]
+      ],
+      "required_test_ids": {}
     },
     {
       "feature_id": "ci_warnings_cleanup",
@@ -936,7 +954,8 @@
         "parity",
         "collection_guard",
         "static_guard"
-      ]
+      ],
+      "required_test_ids": {}
     },
     {
       "feature_id": "old_new_comparison",
@@ -1007,7 +1026,8 @@
         "error_path",
         "evidence",
         "unclassified_fallback"
-      ]
+      ],
+      "required_test_ids": {}
     },
     {
       "feature_id": "ux_review",
@@ -1068,7 +1088,8 @@
         "happy_path",
         "error_path",
         "evidence"
-      ]
+      ],
+      "required_test_ids": {}
     },
     {
       "feature_id": "snapshot_retention",
@@ -1113,7 +1134,8 @@
         "tenant_isolation",
         "symlink_boundary",
         "evidence"
-      ]
+      ],
+      "required_test_ids": {}
     },
     {
       "feature_id": "admin_audit",
@@ -1162,7 +1184,8 @@
         "tenant_isolation",
         "authorization",
         "evidence"
-      ]
+      ],
+      "required_test_ids": {}
     },
     {
       "feature_id": "ci_drift_monitor",
@@ -1215,7 +1238,8 @@
         "no_change_path",
         "exit_code_contract",
         "evidence"
-      ]
+      ],
+      "required_test_ids": {}
     },
     {
       "feature_id": "document_mbt",
@@ -1278,7 +1302,8 @@
         "coverage_path",
         "no_submit_guarantee",
         "evidence"
-      ]
+      ],
+      "required_test_ids": {}
     },
     {
       "feature_id": "evidence_pack",
@@ -1320,7 +1345,8 @@
         "missing_input_path",
         "claim_scope",
         "evidence"
-      ]
+      ],
+      "required_test_ids": {}
     },
     {
       "feature_id": "diff_severity",
@@ -1359,7 +1385,8 @@
         "immutability",
         "exclusion_disclosure",
         "evidence"
-      ]
+      ],
+      "required_test_ids": {}
     },
     {
       "feature_id": "api_v1_openapi",
@@ -1399,7 +1426,8 @@
         "authorization_path",
         "implemented_paths_only",
         "evidence"
-      ]
+      ],
+      "required_test_ids": {}
     },
     {
       "feature_id": "multi_viewport",
@@ -1438,7 +1466,8 @@
         "happy_path",
         "error_path",
         "evidence"
-      ]
+      ],
+      "required_test_ids": {}
     },
     {
       "feature_id": "sso_oidc",
@@ -1482,7 +1511,8 @@
         "authorization_path",
         "token_validation",
         "evidence"
-      ]
+      ],
+      "required_test_ids": {}
     },
     {
       "feature_id": "observability",
@@ -1519,7 +1549,8 @@
         "happy_path",
         "failure_observable",
         "evidence"
-      ]
+      ],
+      "required_test_ids": {}
     },
     {
       "feature_id": "api_spec_recovery",
@@ -1549,7 +1580,8 @@
         "happy_path",
         "no_invention",
         "evidence"
-      ]
+      ],
+      "required_test_ids": {}
     },
     {
       "feature_id": "screen_coverage_map",
@@ -1582,7 +1614,8 @@
         "happy_path",
         "no_rate_claim",
         "evidence"
-      ]
+      ],
+      "required_test_ids": {}
     },
     {
       "feature_id": "wording_consistency",
@@ -1612,7 +1645,8 @@
       "required_tests": [
         "happy_path",
         "dictionary_scope"
-      ]
+      ],
+      "required_test_ids": {}
     },
     {
       "feature_id": "full_archive",
@@ -1648,7 +1682,8 @@
         "tamper_detection",
         "source_preserved",
         "evidence"
-      ]
+      ],
+      "required_test_ids": {}
     },
     {
       "feature_id": "qa_assistant_chat",
@@ -1683,7 +1718,8 @@
       "required_tests": [
         "happy_path",
         "error_path"
-      ]
+      ],
+      "required_test_ids": {}
     },
     {
       "feature_id": "autorun_stage_approval",
@@ -1741,7 +1777,8 @@
         "happy_path",
         "error_path",
         "persistence"
-      ]
+      ],
+      "required_test_ids": {}
     },
     {
       "feature_id": "autorun_result_report",
@@ -1783,7 +1820,8 @@
       "required_tests": [
         "happy_path",
         "error_path"
-      ]
+      ],
+      "required_test_ids": {}
     },
     {
       "feature_id": "autorun_security_kernel",
@@ -1824,7 +1862,8 @@
         "happy_path",
         "error_path",
         "evidence"
-      ]
+      ],
+      "required_test_ids": {}
     },
     {
       "feature_id": "autorun_self_check",
@@ -1860,7 +1899,8 @@
         "happy_path",
         "error_path",
         "evidence"
-      ]
+      ],
+      "required_test_ids": {}
     },
     {
       "feature_id": "autorun_nonfunctional_judge",
@@ -1902,7 +1942,8 @@
         "happy_path",
         "error_path",
         "evidence"
-      ]
+      ],
+      "required_test_ids": {}
     },
     {
       "feature_id": "ui_visual_complexity",
@@ -1932,7 +1973,8 @@
       "required_tests": [
         "happy_path",
         "error_path"
-      ]
+      ],
+      "required_test_ids": {}
     },
     {
       "feature_id": "autorun_failure_triage",
@@ -1972,7 +2014,8 @@
         "happy_path",
         "error_path",
         "evidence"
-      ]
+      ],
+      "required_test_ids": {}
     },
     {
       "feature_id": "technique_engine",
@@ -2012,7 +2055,8 @@
         "happy_path",
         "error_path",
         "evidence"
-      ]
+      ],
+      "required_test_ids": {}
     },
     {
       "feature_id": "autorun_extended_techniques",
@@ -2068,7 +2112,8 @@
         "happy_path",
         "error_path",
         "evidence"
-      ]
+      ],
+      "required_test_ids": {}
     },
     {
       "feature_id": "state_transition_table",
@@ -2112,7 +2157,8 @@
         "happy_path",
         "error_path",
         "evidence"
-      ]
+      ],
+      "required_test_ids": {}
     },
     {
       "feature_id": "testcase_table",
@@ -2172,7 +2218,8 @@
         "happy_path",
         "error_path",
         "evidence"
-      ]
+      ],
+      "required_test_ids": {}
     },
     {
       "feature_id": "zero_wait_sample_report",
@@ -2216,7 +2263,8 @@
         "happy_path",
         "error_path",
         "evidence"
-      ]
+      ],
+      "required_test_ids": {}
     },
     {
       "feature_id": "cli_mode",
@@ -2266,7 +2314,8 @@
         "error_path",
         "exit_code_path",
         "evidence"
-      ]
+      ],
+      "required_test_ids": {}
     },
     {
       "feature_id": "spec_xlsx_full_export",
@@ -2314,7 +2363,8 @@
         "happy_path",
         "error_path",
         "evidence"
-      ]
+      ],
+      "required_test_ids": {}
     },
     {
       "feature_id": "condition_to_testcase_link",
@@ -2360,7 +2410,8 @@
         "happy_path",
         "error_path",
         "evidence"
-      ]
+      ],
+      "required_test_ids": {}
     },
     {
       "feature_id": "condition_run_status",
@@ -2406,7 +2457,8 @@
         "happy_path",
         "error_path",
         "evidence"
-      ]
+      ],
+      "required_test_ids": {}
     },
     {
       "feature_id": "test_activity_support",
@@ -2480,7 +2532,8 @@
       "required_tests": [
         "tests/test_ta_process_gate.py",
         "tests/test_ta_defect_store.py"
-      ]
+      ],
+      "required_test_ids": {}
     },
     {
       "feature_id": "workspace_shell",
@@ -2530,7 +2583,8 @@
         "tests/test_ui_contract.py",
         "tests/test_pages_routes.py",
         "tests/e2e/test_workspace_shell_e2e.py"
-      ]
+      ],
+      "required_test_ids": {}
     },
     {
       "feature_id": "site_report_html",
@@ -2568,7 +2622,8 @@
       ],
       "required_tests": [
         "tests/test_site_report.py"
-      ]
+      ],
+      "required_test_ids": {}
     },
     {
       "feature_id": "external_integrations",
@@ -2606,7 +2661,8 @@
       "required_tests": [
         "happy_path",
         "error_path"
-      ]
+      ],
+      "required_test_ids": {}
     },
     {
       "feature_id": "auto_healing",
@@ -2696,7 +2752,8 @@
         "happy_path",
         "error_path",
         "evidence"
-      ]
+      ],
+      "required_test_ids": {}
     },
     {
       "feature_id": "conductor",
@@ -2763,7 +2820,8 @@
         "happy_path",
         "error_path",
         "evidence"
-      ]
+      ],
+      "required_test_ids": {}
     },
     {
       "feature_id": "doc_app_mock",
@@ -2790,7 +2848,8 @@
         "discover_sse",
         "run_stream"
       ],
-      "notes": "モック段階。/doc-app はドキュメント作成の画面（index.html）を共用し、対象を https://app.<package> として流す。web/services/app_mock.py が画面解析と実行を肩代わりし、demo/sample_report_app を成果物として置く。実装時は app_mock を uiautomator2 / WebDriverAgent のアダプタに差し替え、PageData を生成する。"
+      "notes": "モック段階。/doc-app はドキュメント作成の画面（index.html）を共用し、対象を https://app.<package> として流す。web/services/app_mock.py が画面解析と実行を肩代わりし、demo/sample_report_app を成果物として置く。実装時は app_mock を uiautomator2 / WebDriverAgent のアダプタに差し替え、PageData を生成する。",
+      "required_test_ids": {}
     },
     {
       "feature_id": "capture_replay",
@@ -2840,7 +2899,8 @@
         "error_path",
         "evidence"
       ],
-      "notes": "正本形式は Chrome DevTools Recorder の user-flow JSON（@puppeteer/replay Schema 互換、独自情報は ws2d キー）。Selenium IDE .side は取り込みのみ。記録は window バッファ + sessionStorage（同一オリジン遷移で欠落しない）。同一の JSONL を既存の coverage / findings が読む。"
+      "notes": "正本形式は Chrome DevTools Recorder の user-flow JSON（@puppeteer/replay Schema 互換、独自情報は ws2d キー）。Selenium IDE .side は取り込みのみ。記録は window バッファ + sessionStorage（同一オリジン遷移で欠落しない）。同一の JSONL を既存の coverage / findings が読む。",
+      "required_test_ids": {}
     },
     {
       "feature_id": "batch_script_test",
@@ -2895,7 +2955,8 @@
         "happy_path",
         "error_path",
         "evidence"
-      ]
+      ],
+      "required_test_ids": {}
     },
     {
       "feature_id": "s08-job-env",
@@ -2952,7 +3013,8 @@
         "tests/system08/test_dbconn.py::test_classify_production_by_any_signal",
         "tests/system08/test_dbconn.py::test_connect_failure_message_and_log_have_no_password"
       ],
-      "notes": "RD-008 付録 B に従い登録（FR は Must のみ）。required_tests は tests/system08 の node id（2026-10-15）。"
+      "notes": "RD-008 付録 B に従い登録（FR は Must のみ）。required_tests は tests/system08 の node id（2026-10-15）。",
+      "required_test_ids": {}
     },
     {
       "feature_id": "s08-write-guard",
@@ -2999,7 +3061,8 @@
         "tests/system08/test_dbconn.py::test_real_db_session_is_read_only",
         "tests/system08/test_api.py::test_end_to_end_stages_run_guards_and_report"
       ],
-      "notes": "RD-008 付録 B に従い登録（FR は Must のみ）。required_tests は tests/system08 の node id（2026-10-15）。"
+      "notes": "RD-008 付録 B に従い登録（FR は Must のみ）。required_tests は tests/system08 の node id（2026-10-15）。",
+      "required_test_ids": {}
     },
     {
       "feature_id": "s08-intake",
@@ -3043,7 +3106,8 @@
         "tests/system08/test_llm_gate.py::test_ollama_accepts_data_values_but_records_no_body",
         "tests/system08/test_llm_gate.py::test_entered_secret_blocks_even_for_ollama"
       ],
-      "notes": "RD-008 付録 B に従い登録（FR は Must のみ）。required_tests は tests/system08 の node id（2026-10-15）。"
+      "notes": "RD-008 付録 B に従い登録（FR は Must のみ）。required_tests は tests/system08 の node id（2026-10-15）。",
+      "required_test_ids": {}
     },
     {
       "feature_id": "s08-viewpoints-cases",
@@ -3091,7 +3155,8 @@
         "tests/system08/test_api.py::test_stage2_before_stage1_approval_is_409",
         "tests/system08/test_api.py::test_qa_member_cannot_approve_stage4_and_outsider_is_rejected"
       ],
-      "notes": "RD-008 付録 B に従い登録（FR は Must のみ）。required_tests は tests/system08 の node id（2026-10-15）。"
+      "notes": "RD-008 付録 B に従い登録（FR は Must のみ）。required_tests は tests/system08 の node id（2026-10-15）。",
+      "required_test_ids": {}
     },
     {
       "feature_id": "s08-oracle",
@@ -3140,7 +3205,8 @@
         "tests/system08/test_stages.py::test_stage4_approval_requires_senior_qa_even_if_configured_qa",
         "tests/system08/test_stages.py::test_case_expected_value_confirm_is_senior_only"
       ],
-      "notes": "RD-008 付録 B に従い登録（FR は Must のみ）。required_tests は tests/system08 の node id（2026-10-15）。"
+      "notes": "RD-008 付録 B に従い登録（FR は Must のみ）。required_tests は tests/system08 の node id（2026-10-15）。",
+      "required_test_ids": {}
     },
     {
       "feature_id": "s08-testdata-codegen",
@@ -3189,7 +3255,8 @@
         "tests/system08/test_codegen.py::test_gate_detects_hardcoded_password",
         "tests/system08/test_codegen.py::test_test_names_use_case_id_prefix"
       ],
-      "notes": "RD-008 付録 B に従い登録（FR は Must のみ）。required_tests は tests/system08 の node id（2026-10-15）。"
+      "notes": "RD-008 付録 B に従い登録（FR は Must のみ）。required_tests は tests/system08 の node id（2026-10-15）。",
+      "required_test_ids": {}
     },
     {
       "feature_id": "s08-run",
@@ -3241,7 +3308,8 @@
         "tests/system08/test_judge.py::test_unrun_rows_stay_unverified",
         "tests/system08/test_codegen.py::test_test_names_use_case_id_prefix"
       ],
-      "notes": "RD-008 付録 B に従い登録（FR は Must のみ）。required_tests は tests/system08 の node id（2026-10-15）。"
+      "notes": "RD-008 付録 B に従い登録（FR は Must のみ）。required_tests は tests/system08 の node id（2026-10-15）。",
+      "required_test_ids": {}
     },
     {
       "feature_id": "s08-judge-export",
@@ -3291,7 +3359,8 @@
         "tests/system08/test_judge.py::test_undetermined_and_unknown_states_are_not_counted_as_pass",
         "tests/system08/test_api.py::test_end_to_end_stages_run_guards_and_report"
       ],
-      "notes": "RD-008 付録 B に従い登録（FR は Must のみ）。required_tests は tests/system08 の node id（2026-10-15）。"
+      "notes": "RD-008 付録 B に従い登録（FR は Must のみ）。required_tests は tests/system08 の node id（2026-10-15）。",
+      "required_test_ids": {}
     },
     {
       "feature_id": "document_inspection",
@@ -3434,7 +3503,10 @@
         "報告 xlsx（検査した範囲／検査していないこと）"
       ],
       "persistence": [
-        "data/tenants/{slug}/docverify/{iid}.json"
+        "data/tenants/{slug}/docverify/{iid}/inspection.json（テナント無し: data/docverify/{iid}/inspection.json）",
+        "data/tenants/{slug}/docverify/{iid}/assurance.json（テナント無し: data/docverify/{iid}/assurance.json）",
+        "data/tenants/{slug}/docverify/{iid}/sys09_impact.json（テナント無し: data/docverify/{iid}/sys09_impact.json）",
+        "data/tenants/{slug}/docverify/_audit.jsonl・_r4_audit.jsonl（テナント無し: data/docverify/_audit.jsonl・_r4_audit.jsonl）"
       ],
       "failure_modes": [
         "oversized_or_corrupt_document_rejected_with_message",
@@ -3447,7 +3519,23 @@
         "happy_path",
         "error_path",
         "evidence"
-      ]
+      ],
+      "required_test_ids": {
+        "happy_path": [
+          "tests/test_docverify_api_integration.py::test_upload_reports_unread_quality_scope",
+          "tests/test_docverify_api_integration.py::test_second_upload_freezes_first_version"
+        ],
+        "error_path": [
+          "tests/test_docverify_api_integration.py::test_broken_docx_error_is_user_readable",
+          "tests/test_docverify_unit.py::test_docx_with_xml_entity_is_rejected",
+          "tests/test_docverify_api_integration.py::test_no_document_shows_dash_not_zero",
+          "tests/test_docverify_trace.py::test_state_of_new_inspection_and_unknown_id"
+        ],
+        "evidence": [
+          "tests/test_docverify_api_integration.py::test_report_contains_scope_sheet",
+          "tests/test_docverify_trace.py::test_r1_writes_follow_role_matrix_when_auth_is_on"
+        ]
+      }
     },
     {
       "feature_id": "reverse_analysis",
@@ -3520,7 +3608,8 @@
         "happy_path",
         "error_path",
         "evidence"
-      ]
+      ],
+      "required_test_ids": {}
     },
     {
       "feature_id": "impact_analysis",
@@ -3581,7 +3670,72 @@
         "tests/test_impact_engine.py",
         "tests/test_impact_repo.py",
         "tests/test_impact_system.py"
-      ]
+      ],
+      "required_test_ids": {}
+    },
+    {
+      "feature_id": "common_case",
+      "name": "共通 I/F v1（リスク・判断・承認・取消・証跡）",
+      "risk_level": "high",
+      "status": "partial",
+      "ui_files": [],
+      "route_files": [
+        "web/routes/common_decisions_api.py"
+      ],
+      "core_files": [
+        "web/services/common/evidence.py",
+        "web/services/common/decisions.py",
+        "web/services/common/risks.py"
+      ],
+      "symbols": [
+        "append",
+        "verify",
+        "current_actor",
+        "draft",
+        "approve",
+        "revoke",
+        "create",
+        "update"
+      ],
+      "outputs": [
+        "リスク（重大度・優先度は別欄・数値スコア無し）",
+        "判断（起票・承認・取消の事象列）",
+        "証跡（seq＋SHA-256 連鎖）"
+      ],
+      "persistence": [
+        "data/common/tenants/{slug}/risks/{rk}.json（テナント無し: data/common/_none/risks/{rk}.json）",
+        "data/common/tenants/{slug}/decisions.jsonl（テナント無し: data/common/_none/decisions.jsonl）",
+        "data/common/tenants/{slug}/audit.jsonl（テナント無し: data/common/_none/audit.jsonl）"
+      ],
+      "failure_modes": [
+        "approve_by_drafter_403",
+        "approve_by_guest_403",
+        "approve_not_passed_403",
+        "stale_rev_409",
+        "unknown_case_404",
+        "other_tenant_ref_404",
+        "numeric_risk_score_400",
+        "missing_idempotency_key_400",
+        "audit_chain_tamper_detected"
+      ],
+      "required_tests": [
+        "happy_path",
+        "error_path",
+        "evidence"
+      ],
+      "required_test_ids": {
+        "happy_path": [
+          "tests/test_common_decisions_api.py::test_draft_approve_revoke_is_recorded_in_chain",
+          "tests/test_common_decisions_api.py::test_risk_create_is_idempotent_and_rejects_score"
+        ],
+        "error_path": [
+          "tests/test_common_decisions_api.py::test_approve_forbidden_for_self_guest_and_not_passed",
+          "tests/test_common_decisions_api.py::test_stale_rev_conflict_and_unknown_case"
+        ],
+        "evidence": [
+          "tests/test_common_decisions_api.py::test_draft_approve_revoke_is_recorded_in_chain"
+        ]
+      }
     }
   ]
 }

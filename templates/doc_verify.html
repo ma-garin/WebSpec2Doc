@@ -15,7 +15,6 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='css/docverify-pair.css') }}?v={{ dv_ver }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/docverify-followup.css') }}?v={{ dv_ver }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/docverify-cases.css') }}?v={{ dv_ver }}">
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/docverify-settings.css') }}?v={{ dv_ver }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/docassure.css') }}?v={{ dv_ver }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/docassure-trace-panel.css') }}?v={{ dv_ver }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/docassure-panels.css') }}?v={{ dv_ver }}">
@@ -28,6 +27,8 @@
 {% endblock %}
 {% block head_css_late %}  <link rel="stylesheet" href="{{ url_for('static', filename='css/docverify-sidebar.css') }}?v={{ dv_ver }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/docverify-frame.css') }}?v={{ dv_ver }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/docverify-workspace.css') }}?v={{ dv_ver }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/docverify-settings.css') }}?v={{ dv_ver }}">
   {# 既存 CSS は .dv-page を祖先に取る（子孫セレクタのみ）。body の class は共通レイアウトが持つので html に付ける #}
   <script>document.documentElement.classList.add('dv-page');</script>
 {% endblock %}

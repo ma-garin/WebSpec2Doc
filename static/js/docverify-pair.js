@@ -5,12 +5,13 @@
   const DV = window.DV;
   if (!DV) return;
   const esc = DV.esc;
+  const roleLabel = (value, fallback) => ({baseline:'基準',target:'確認対象',reference:'参照'}[value] || value || fallback);
   const root = () => document.querySelector('.dv-view[data-view="pair"]');
   const q = (s) => root().querySelector(s);
   const S = { iid: null, findings: [], gate: null, meta: {}, docs: null, trail: [], filter: 'all', sel: null, pending: null, seq: 0 };
   const MSG = {
     net: 'サーバに接続できませんでした。通信を確かめてから「再読み込み」を押してください。',
-    404: 'この案件には対検査の文書がまだありません。要件定義書と基本設計書を取り込んでから、もう一度開いてください。',
+    404: 'この案件には対検査の文書がまだありません。基準文書と確認する文書を取り込んでから、もう一度開いてください。',
     403: 'この操作をする権限がありません。ログインし直すか、担当者に確認してください。',
     409: 'ほかの人が先に更新しました。「最新を読み込む」を押してから、もう一度操作してください。',
     server: 'サーバで問題が起きました。少し待ってから「再読み込み」を押してください。',
@@ -98,18 +99,52 @@
     return (quote && list.find((s) => String(s.text || '').includes(quote))) || named || null;
   }
 
+  // Escape before adding structural markup: source documents never supply HTML.
+  function documentBody(text, quote) {
+    const safe = esc(text || '');
+    const highlighted = quote && safe.includes(quote) ? safe.replace(quote, `<mark class="hl">${quote}</mark>`) : safe;
+    const lines = highlighted.split('\n');
+    const out = [];
+    let index = 0;
+    while (index < lines.length) {
+      const line = lines[index].trim();
+      if (!line) { index += 1; continue; }
+      if (line.startsWith('|') && lines[index + 1] && /^\s*\|[\s:|\-]+\|\s*$/.test(lines[index + 1])) {
+        const cells = (row) => row.trim().replace(/^\||\|$/g, '').split('|').map((cell) => cell.trim());
+        const head = cells(line);
+        const rows = [];
+        index += 2;
+        while (index < lines.length && lines[index].trim().startsWith('|')) rows.push(cells(lines[index++]));
+        out.push(`<table><thead><tr>${head.map((cell) => `<th scope="col">${cell}</th>`).join('')}</tr></thead><tbody>${rows.map((row) => `<tr>${head.map((_, col) => `<td>${row[col] || ''}</td>`).join('')}</tr>`).join('')}</tbody></table>`);
+      } else if (/^[-*] /.test(line)) {
+        const items = [];
+        while (index < lines.length && /^\s*[-*] /.test(lines[index])) items.push(lines[index++].trim().slice(2));
+        out.push(`<ul>${items.map((item) => `<li>${item}</li>`).join('')}</ul>`);
+      } else {
+        const para = [];
+        while (index < lines.length && lines[index].trim() && !/^\s*[-*|] /.test(lines[index])) para.push(lines[index++]);
+        // A non-table pipe line must also advance the cursor.
+        if (!para.length) para.push(lines[index++]);
+        out.push(`<p>${para.join('<br>')}</p>`);
+      }
+    }
+    return out.join('');
+  }
+
   function renderDoc(side, doc, ref) {
     const box = q(`[data-doc="${side}"]`);
-    q(`[data-ver="${side}"]`).textContent = doc && doc.version ? `第 ${doc.version} 版` : '';
+    const label = doc && (doc.label || doc.name) || (side === 'req' ? '基準文書' : '確認する文書');
+    q(`[data-doc-label="${side}"]`).textContent = doc && doc.name ? `${label} · ${doc.name}` : label;
+    q(`[data-doc="${side}"]`).closest('article').setAttribute('aria-label', label);
+    q(`[data-ver="${side}"]`).textContent = doc && doc.revision_label || (doc && doc.version ? `第 ${doc.version} 版` : '');
     const list = (doc && doc.sections) || [];
     if (!list.length) { box.innerHTML = '<p class="p1-empty">この文書には読める章がありません。文書を取り込み直してください。</p>'; return; }
     const hit = findSection(list, ref);
     const quote = ref && ref.quote ? esc(String(ref.quote).trim()) : '';
     box.innerHTML = list.map((s) => {
-      let body = esc(s.text);
       const on = hit === s;
-      if (on && quote && body.includes(quote)) body = body.replace(quote, `<mark class="hl">${quote}</mark>`);
-      return `<section class="p1-sec${on ? ' is-hit' : ''}" data-sec-id="${esc(s.id)}"><h4 class="p1-doc-h">${esc(s.heading || s.id)}</h4><p class="p1-doc-b">${body}</p></section>`;
+      const body = documentBody(s.text, on ? quote : '');
+      return `<section class="p1-sec${on ? ' is-hit' : ''}" data-sec-id="${esc(s.id)}"><h4 class="p1-doc-h">${esc(s.heading || s.id)}</h4><div class="p1-doc-b">${body}</div></section>`;
     }).join('');
     const target = box.querySelector('mark.hl') || box.querySelector('.p1-sec.is-hit');
     if (target) {  // ページ本体は動かさず、ビューアの内側だけをスクロールする
@@ -124,7 +159,7 @@
     renderDoc('req', d.requirements, f && f.req_ref);
     renderDoc('design', d.design, f && f.design_ref);
     const rv = d.requirements && d.requirements.version, dv = d.design && d.design.version;
-    q('[data-pair-ver]').textContent = rv || dv ? `要件定義書 第 ${rv || '—'} 版 ⇔ 基本設計書 第 ${dv || '—'} 版` : '';
+    q('[data-pair-ver]').textContent = rv || dv ? `${d.requirements && d.requirements.name || '基準文書'} ⇔ ${d.design && d.design.name || '確認する文書'}` : '';
   }
 
   const ref = (label, r) => (r && (r.section || r.quote) ? `${label} ${esc(r.section || '章不明')}` : `${label} 該当なし`);
@@ -137,9 +172,9 @@
       <div class="p1-card-h"><span class="p1-tag ${SEV[f.severity] || ''}">${esc(f.severity || '警告')}</span><span class="p1-tag">${esc(f.type)}</span>
         <span class="p1-tag ${ST[st] || ''}">${esc(st)}</span>${f.changed_in_current ? '<span class="p1-chg">今回の変更</span>' : ''}
         <span>${f.source === 'user' ? '利用者が追加' : 'AI 検出'}</span></div>
-      <p class="p1-card-t">${esc(f.id)} ${esc(f.title)}</p>
+      <p class="p1-card-t"><span class="p1-card-id">${esc(f.id)}</span>${esc(f.title)}</p>
       <p class="p1-card-d">${esc(f.description)}</p>
-      <div class="p1-links">${ref('要件', f.req_ref)} ／ ${ref('設計', f.design_ref)}</div>${by}
+      <div class="p1-links">${ref(roleLabel(S.meta.baseline_role, '基準'), f.req_ref)} ／ ${ref(roleLabel(S.meta.target_role, '確認対象'), f.design_ref)}</div>${by}
       ${on ? `<div class="p1-acts"><textarea class="dvp-reason" data-reason rows="2" maxlength="500" aria-label="採否の理由" placeholder="理由（例: 設計書 4.2 を修正すれば解消する）。解消済みは文書のどこを直したかを必ず書く"></textarea><span class="dvp-err" role="alert" data-reason-err></span>
         <button type="button" class="p1-btn" data-decide="採用">採用</button><button type="button" class="p1-btn" data-decide="不採用">不採用</button>
         <button type="button" class="p1-btn" data-decide="要確認">要確認</button><button type="button" class="p1-btn" data-decide="解消済み"${f.status === '採用' ? '' : ' disabled'} title="採用した指摘を文書で直したときに押します">解消済み</button><button type="button" class="p1-btn" data-pair-act="revoke"${f.decided_by ? '' : ' disabled'}>取消</button></div>` : ''}
@@ -156,13 +191,13 @@
     const box = q('[data-pair-list]');
     box.setAttribute('role', 'listbox'); box.setAttribute('aria-label', '指摘');
     box.innerHTML = list.length ? list.map(card).join('')
-      : `<p class="p1-empty">${S.findings.length ? 'この絞り込みに当てはまる指摘はありません。「全件」に戻すと全部見られます。' : '要件定義書と基本設計書の間に指摘はありません。判定帯で合否を確かめてください。'}</p>`;
+      : `<p class="p1-empty">${S.findings.length ? 'この絞り込みに当てはまる指摘はありません。「全件」に戻すと全部見られます。' : '指摘は0件です。検査の実行状況と判定理由を確認してください。'}</p>`;
   }
 
   function gateBox(label, g) {
     if (!g) return `<div class="p5-gate"><div class="lbl">${esc(label)}</div><div class="val">未判定</div><div class="lbl">判定の材料がまだありません。</div></div>`;
     const c = (k) => (g[k] || []).length;
-    return `<div class="p5-gate ${g.pass ? 'ok' : 'ng'}"><div class="lbl">${esc(label)}</div><div class="val">${g.pass ? '合格' : '不合格'}</div>
+    return `<div class="p5-gate ${DV.gateClass(g)}"><div class="lbl">${esc(label)}</div><div class="val">${DV.verdict(g)}</div>
       <div class="lbl">採用のまま残る重大 ${c('unresolved_critical')}・要確認 ${c('needs_review')}・対応の抜け ${c('missing_links')}・未検証 ${c('unverified')}</div></div>`;
   }
 
@@ -171,9 +206,14 @@
     const dv = S.docs && S.docs.design && S.docs.design.version;
     q('[data-pair-gates]').innerHTML = gateBox('全体', g.overall) + gateBox(dv ? `今回の変更分（第 ${dv} 版）` : '今回の変更分', g.changed);
     q('[data-pair-why]').textContent = (g.reasons || []).join(' ');
+    const a = S.meta.assessment || {};
+    const scope = q('[data-pair-assessment]');
+    const purposes = {consistency:'記述の整合性',coverage:'基準への対応',legacy_requirement_design:'要件の設計への反映'};
+    scope.classList.toggle('is-unverified', DV.verdict(g.overall) === '判定不能');
+    scope.innerHTML = `<b>${esc(purposes[S.meta.purpose] || '検査範囲')}</b><span>基準の要素 ${Number(a.baseline_units) || 0} · 対象の要素 ${Number(a.target_units) || 0} · 比較した組 ${Number(a.compared_pairs) || 0}</span><span>${esc((g.overall && g.overall.unverified_reasons || []).join(' '))}</span><small>数値・条件などの規則による候補検出です。意味の整合性全体は未検証です。</small>`;
     const pass = !!(g.overall && g.overall.pass);
     q('[data-pair-approve-hint]').textContent = pass ? '全体が合格です。理由を書いて承認できます。起票した人は承認できません。'
-      : '全体が不合格のため、まだ承認できません。採用のまま残る重大を直して「解消済み」にし、要確認を片付けてください。';
+      : DV.verdict(g.overall) === '判定不能' ? '検査範囲に未確認の項目があるため承認できません。判定理由を確認し、文書と目的を見直して再検査してください。' : '全体が不合格のため、まだ承認できません。未解消の指摘を確認してください。';
     syncApprove();
     renderChip();
   }

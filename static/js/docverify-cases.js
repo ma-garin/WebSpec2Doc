@@ -56,7 +56,7 @@
       + `<td class="c-doc" title="${esc(c.baseline_name || '要件定義書')} ⇔ ${esc(c.target_name || '基本設計書')}">${esc(c.baseline_name || '要件定義書')}（${esc(roleLabel(c.baseline_role, '基準'))}） ⇔ ${esc(c.target_name || '基本設計書')}（${esc(roleLabel(c.target_role, '確認対象'))}）<span class="dvc-case-purpose">${esc(c.purpose === 'coverage' ? '基準への対応' : c.purpose === 'consistency' ? '記述の整合性' : '対検査')}</span></td>`
       + `<td class="c-stage">${steps(c.stage)}</td><td class="c-due">${esc(c.due || '未設定')}</td>`
       + `<td class="c-f"><span class="${c.critical_open ? 'dvc-crit' : ''}">重大 ${esc(c.critical_open)}</span>／未解消 ${esc(c.unresolved)}</td>`
-      + `<td class="c-v"><span class="dvc-chip ${VCLS[c.verdict] || 'na'}">${esc(c.verdict)}</span>${c.verdict === '判定不能' && !(c.assessment && c.assessment.status === 'complete') ? `<button type="button" class="p1-btn dvc-run" style="display:block;margin-top:4px" data-cases-run="${esc(open)}" title="検査が未実行のため判定できません">検査を実行</button>` : ''}</td>`
+      + `<td class="c-v"><span class="dvc-chip ${VCLS[c.verdict] || 'na'}">${esc(c.verdict)}</span>${c.assessment && c.assessment.scope && c.assessment.scope.ai === 'out_of_scope' ? '<small class="dvc-sub" style="display:block">AI 検査は範囲外</small>' : ''}${c.verdict === '判定不能' && !(c.assessment && c.assessment.status === 'complete') ? `<button type="button" class="p1-btn dvc-run" style="display:block;margin-top:4px" data-cases-run="${esc(open)}" title="検査が未実行のため判定できません">検査を実行</button>` : ''}</td>`
       + `<td class="c-who" title="${esc(c.assignee)}">${esc(c.assignee ? who(c.assignee) : '未着手')}</td></tr>`;
   }
   function renderCases() {
@@ -163,7 +163,14 @@
   }
 
   /* ---- 判定と記録 ---- */
-  const G = { iid: null, rev: null };
+  const G = { iid: null, rev: null, trail: [], filter: 'all' };
+  const FILT = { all: 'すべて', decide: '採否', approve: '承認・差し戻し' };
+  const fkind = (a) => (a === 'approved' || a === 'rejected' ? 'approve' : a === 'review_started' ? 'other' : 'decide');
+  function trailItems() {
+    const t = G.trail.filter((x) => G.filter === 'all' || fkind(x.action) === G.filter);
+    return t.slice().reverse().map((x) =>
+      `<li>${esc(when(x.at))} ${esc(who(x.user))} ・ ${esc(ACT[x.action] || x.action)} ${esc(x.target)}${x.reason ? ' ・ ' + esc(x.reason) : ''}</li>`).join('') || '<li>該当する記録はありません。</li>';
+  }
   const ids = (a) => (a && a.length ? a.map(esc).join('、') : 'なし');
   function card(title, o) {
     const verdict = DV.verdict(o), cls = DV.gateClass(o);
@@ -171,11 +178,11 @@
       + `<dt>未解消の重大</dt><dd>${o.unresolved_critical.length} 件: ${ids(o.unresolved_critical)}</dd>`
       + `<dt>欠落リンク</dt><dd>${o.missing_links.length} 件: ${ids(o.missing_links.map((m) => m.req_id))}</dd>`
       + `<dt>要確認</dt><dd>${o.needs_review.length} 件: ${ids(o.needs_review)}</dd>`
-      + `<dt>未検証</dt><dd>${o.unverified.length} 件: ${ids(o.unverified)}</dd><dt>未確認の理由</dt><dd>${ids(o.unverified_reasons)}</dd></dl></div>`;
+      + `<dt>未検証</dt><dd>${o.unverified.length} 件: ${ids(o.unverified)}</dd><dt>未確認の理由</dt><dd>${ids(o.unverified_reasons)}</dd>${o.ai_scope ? `<dt>AI 検査</dt><dd>${esc(o.ai_scope)}</dd>` : ''}</dl></div>`;
   }
   function renderGate(f, trail) {
     const root = sec('gate'), body = root.querySelector('[data-gate-body]'), g = f.gate, m = f.meta || {};
-    G.rev = m.rev;
+    G.rev = m.rev; G.trail = trail; G.filter = 'all';
     root.querySelector('[data-gate-ver]').textContent = `${m.baseline_name || '要件定義書'}（${roleLabel(m.baseline_role, '基準')}・${m.baseline_version || '第 ' + (m.req_version || 1) + ' 版'}） ⇔ ${m.target_name || '基本設計書'}（${roleLabel(m.target_role, '確認対象')}・${m.target_version || '第 ' + (m.design_version || 1) + ' 版'}） ・ 指摘 ${f.findings.length} 件`;
     root.dataset.state = 'normal';
     const approved = trail.find((t) => t.action === 'approved');
@@ -185,8 +192,7 @@
       + `<div class="dvg-side"><div class="dvg-box"><h3>承認</h3><p class="dvg-hint">${esc(hint)}</p>`
       + `<textarea rows="2" maxlength="500" aria-label="承認の理由" data-gate-reason placeholder="例: 重大な指摘はすべて解消済み。"></textarea>`
       + `<div class="dvg-row"><span class="dvg-err" role="alert" data-gate-err></span><button type="button" class="p1-btn is-primary" data-gate-act="approve"${g.overall.pass && !approved ? '' : ' disabled'}>承認する</button></div></div>`
-      + `<div class="dvg-box"><h3>証跡（新しい順）</h3><ol class="dvg-log">${trail.slice().reverse().map((t) =>
-        `<li>${esc(when(t.at))} ${esc(who(t.user))} ・ ${esc(ACT[t.action] || t.action)} ${esc(t.target)}${t.reason ? ' ・ ' + esc(t.reason) : ''}</li>`).join('') || '<li>記録はまだありません。</li>'}</ol></div></div></div>`;
+      + `<div class="dvg-box"><h3>証跡（新しい順）</h3><div class="dvg-filter" role="group" aria-label="証跡の絞り込み">${Object.keys(FILT).map((k) => `<button type="button" class="dvc-chip ${k === 'all' ? 'ok' : 'na'}" data-gate-filter="${k}" aria-pressed="${k === 'all'}">${FILT[k]}</button>`).join('')}</div><ol class="dvg-log" data-gate-log>${trailItems()}</ol></div></div></div>`;
   }
   const pbase = () => `/api/docverify/${encodeURIComponent(G.iid)}/pair`;
   async function loadGate() {
@@ -263,6 +269,13 @@
     if (gs) {
       DV.on('gate', loadGate);
       gs.addEventListener('click', (e) => {
+        const fb = e.target.closest('[data-gate-filter]');
+        if (fb) {
+          G.filter = fb.dataset.gateFilter;
+          gs.querySelectorAll('[data-gate-filter]').forEach((x) => { const on = x.dataset.gateFilter === G.filter; x.setAttribute('aria-pressed', on); x.classList.toggle('ok', on); x.classList.toggle('na', !on); });
+          gs.querySelector('[data-gate-log]').innerHTML = trailItems();
+          return;
+        }
         const b = e.target.closest('[data-gate-act]');
         if (!b) return;
         if (b.dataset.gateAct === 'reload') loadGate();

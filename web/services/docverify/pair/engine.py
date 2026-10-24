@@ -44,8 +44,14 @@ def _dedupe(defects: list[dict]) -> list[dict]:
     return out
 
 
-def _semantic_on(errors: list[dict]) -> bool:
-    """二段目（埋め込み）を使うか。使えないときは errors に理由を足す（明示 off は足さない）。"""
+def _semantic_on(errors: list[dict], scope: dict | None = None) -> bool:
+    """二段目（埋め込み）を使うか。使えないときは errors に理由を足す（明示 off は足さない）。
+    AI 送信先が「使わない」なら範囲外（未検証ではない）として scope に記録する。"""
+    from web.services.docverify import settings_store
+    if settings_store.ai_provider() == "none":
+        if scope is not None:
+            scope["ai"] = "out_of_scope"
+        return False
     if semantic.disabled():
         return False
     if not semantic.available():
@@ -83,7 +89,8 @@ def inspect(req_md: str, design_md: str, purpose: str = "legacy_requirement_desi
         defects = [{"type": "MISSING_IN_DESIGN", "req_lines": _span(u), "design_lines": [],
                     "reason": "対応する記述が確認対象に見つからない"}
                    for u in _run("missing", link.missing, errors, targets, links)]
-    use_sem = _semantic_on(errors) if legacy else False
+    scope: dict = {}
+    use_sem = _semantic_on(errors, scope) if legacy else False
     if legacy:
         extra_fn, extra_name = (semantic.extra, "semantic_extra") if use_sem else (link.extra, "extra")
         defects += [{"type": "EXTRA_IN_DESIGN", "req_lines": [], "design_lines": _span(u),
@@ -115,6 +122,7 @@ def inspect(req_md: str, design_md: str, purpose: str = "legacy_requirement_desi
                   "compared_pairs": len(links), "reasons": reasons,
                   "unverified_reason": reasons[0] if reasons else None,
                   "detectors": ["contradiction", "table", "terms"] + (["missing"] if purpose == "coverage" else []),
+                  "scope": scope,
                   "limits": ["意味全体の整合性や同義表現の網羅性は未検証です。"],
                   "baseline_sha256": sha256(req_md.encode()).hexdigest(),
                   "target_sha256": sha256(design_md.encode()).hexdigest()}

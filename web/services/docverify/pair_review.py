@@ -329,10 +329,16 @@ def _judge(findings: list[dict], missing: list[dict], scope: str = "overall", as
     return {"pass": passed, "verdict": "判定不能" if unknown else "合格" if passed else "不合格",
             "unverified_reasons": unknown, "unresolved_critical": crit,
             "missing_links": missing, "unverified": unverified, "needs_review": review,
-            "over_limit": over, "limits": limits, "labels": cfg["labels"]}
+            "over_limit": over, "limits": limits, "labels": cfg["labels"],
+            "ai_scope": ss.AI_SCOPE_NOTE if ((assessment or {}).get("scope") or {}).get("ai") == "out_of_scope" else None}
 
 
 def _reasons(o: dict) -> list[str]:
+    out = _reasons_core(o)
+    return [*out, o["ai_scope"]] if o.get("ai_scope") else out
+
+
+def _reasons_core(o: dict) -> list[str]:
     if o.get("unverified_reasons"):
         return [*o["unverified_reasons"], "検査範囲を確認し、検査が完了するまで承認できません。"]
     if o["pass"]:

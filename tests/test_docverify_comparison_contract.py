@@ -24,6 +24,28 @@ class ComparisonContract(unittest.TestCase):
         self.cfg.stop()
         self.env.stop()
 
+    def test_ai_none_is_out_of_scope_and_passes(self):
+        cfg = {**CFG, 'ai': {'provider': 'none'}}
+        with patch.object(settings, 'effective', return_value=cfg):
+            result = engine.inspect('検索の応答は30秒以内。', '検索の応答は30秒以内。', 'legacy_requirement_design')
+            a = result['assessment']
+            self.assertEqual({'ai': 'out_of_scope'}, a['scope'])
+            self.assertFalse([e for e in result['errors'] if e['detector'].startswith('semantic')])
+            o = pr._judge([], [], assessment={**a, 'status': 'complete', 'baseline_units': 1, 'target_units': 1, 'compared_pairs': 1, 'reasons': []})
+        self.assertEqual('合格', o['verdict'])
+        self.assertIn('AI 検査は設定により範囲外（ルール検査のみで判定）', pr._reasons(o))
+
+    def test_ai_configured_failure_is_unverified(self):
+        cfg = {**CFG, 'ai': {'provider': 'openai'}}
+        env = {k: v for k, v in os.environ.items() if k != 'WEBSPEC2DOC_DOCVERIFY_SEMANTIC'}
+        with patch.object(settings, 'effective', return_value=cfg), patch.dict(os.environ, env, clear=True), \
+                patch.object(engine.semantic, 'available', return_value=True), \
+                patch.object(engine.semantic, 'extra', side_effect=RuntimeError('api down')):
+            result = engine.inspect('検索の応答は30秒以内。', '検索の応答は30秒以内。', 'legacy_requirement_design')
+        self.assertEqual('unverified', result['assessment']['status'])
+        self.assertEqual({}, result['assessment']['scope'])
+        self.assertEqual('判定不能', pr._judge([], [], assessment=result['assessment'])['verdict'])
+
     def test_api_specifications_need_no_req_ids(self):
         result = engine.inspect('# API\n## 検索\n- API-001 検索の応答は30秒以内。', '# API\n## 検索\n- API-001 検索の応答は60秒以内。', 'consistency')
         self.assertIn('CONTRADICTION', [d['type'] for d in result['defects']])

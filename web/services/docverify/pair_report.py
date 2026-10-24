@@ -113,6 +113,8 @@ def _summary_section(doc, c) -> None:
     g = c["g"]
     assessment = c["s"].get("assessment") or {}
     doc.add_paragraph(f"検査範囲: 基準 {assessment.get('baseline_units', 0)} 要素・確認対象 {assessment.get('target_units', 0)} 要素・比較 {assessment.get('compared_pairs', 0)} 組")
+    if g["overall"].get("ai_scope"):
+        doc.add_paragraph(g["overall"]["ai_scope"])
     for label, scope, verdict in (("全体", g["overall"], c["s"]["verdict"]),
                                   ("今回の変更分", g["changed"], g["changed"].get("verdict", "判定不能"))):
         doc.add_heading(f"{label}: {verdict}", 2)
@@ -210,6 +212,8 @@ def to_xlsx(iid: str) -> bytes:
         rows += [(f"{label}: {n}", f"{len(ids)} 件", _names(ids)) for n, ids in _counts(scope)]
     assessment = s.get("assessment") or {}
     rows += [("検査目的", s.get("purpose", ""), ""), ("比較実行数", assessment.get("compared_pairs", 0), "")]
+    if g["overall"].get("ai_scope"):
+        rows += [("AI 検査", g["overall"]["ai_scope"], "")]
     rows += [("判定の根拠", " ".join(g["reasons"]), "")] + [(k, v, "") for k, v in _criteria(c)]
     _sheet(wb, "判定", ("項目", "値", "該当"), rows, freeze=False)
     buf = io.BytesIO()

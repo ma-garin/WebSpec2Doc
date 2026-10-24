@@ -219,6 +219,20 @@ def api_home_summary():
         return {"error": "ホームの集計を読み込めませんでした。", "code": "summary_failed"}, 500
 
 
+@bp.get("/api/home/cases")
+def api_home_cases():
+    """指揮ホームの案件概況（読み取りのみ）。案件ごとに 6 段の状態と、未解消の重大・欠落・未検証を返す。"""
+    from web.services.orchestration import case_overview  # noqa: PLC0415
+
+    try:
+        return case_overview.build(_out())
+    except Exception:  # noqa: BLE001
+        logger.exception("orchestration: 案件概況の集計に失敗しました")
+        return {"error": {"code": "upstream_failed",
+                          "message": "案件の状況を読み込めませんでした。再読み込みしてください。",
+                          "retryable": True}}, 502
+
+
 @bp.get("/orchestration/<variant>")
 def orchestration_variant_page(variant: str):
     """画面を名指しで開く。d は ?site= でそのサイトの記録を開く。"""

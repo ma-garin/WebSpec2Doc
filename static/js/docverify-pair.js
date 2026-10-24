@@ -19,7 +19,7 @@
   const ACTION = { review_started: 'レビュー開始', finding_decided: '採否を記録', decision_revoked: '採否を取消', review_completed: 'レビュー完了',
     approval_requested: '承認を依頼', approved: '承認', rejected: '差し戻し' };
   const SEV = { 重大: 'sev-c', 警告: 'sev-w', 提案: 'sev-i' };
-  const ST = { 採用: 'st-ok', 不採用: 'st-ng', 要確認: 'st-q' };
+  const ST = { 採用: 'st-ok', 不採用: 'st-ng', 要確認: 'st-q', 解消済み: 'st-done' };
   const base = () => `/api/docverify/${encodeURIComponent(S.iid)}/pair`;
   const when = (v) => (v ? String(v).replace('T', ' ').slice(0, 16) : '');
 
@@ -137,9 +137,9 @@
       <p class="p1-card-t">${esc(f.id)} ${esc(f.title)}</p>
       <p class="p1-card-d">${esc(f.description)}</p>
       <div class="p1-links">${ref('要件', f.req_ref)} ／ ${ref('設計', f.design_ref)}</div>${by}
-      ${on ? `<div class="p1-acts"><textarea class="dvp-reason" data-reason rows="2" maxlength="500" aria-label="採否の理由" placeholder="理由（例: 設計書 4.2 を修正すれば解消する）"></textarea>
+      ${on ? `<div class="p1-acts"><textarea class="dvp-reason" data-reason rows="2" maxlength="500" aria-label="採否の理由" placeholder="理由（例: 設計書 4.2 を修正すれば解消する）。解消済みは文書のどこを直したかを必ず書く"></textarea><span class="dvp-err" role="alert" data-reason-err></span>
         <button type="button" class="p1-btn" data-decide="採用">採用</button><button type="button" class="p1-btn" data-decide="不採用">不採用</button>
-        <button type="button" class="p1-btn" data-decide="要確認">要確認</button><button type="button" class="p1-btn" data-pair-act="revoke"${f.decided_by ? '' : ' disabled'}>取消</button></div>` : ''}
+        <button type="button" class="p1-btn" data-decide="要確認">要確認</button><button type="button" class="p1-btn" data-decide="解消済み"${f.status === '採用' ? '' : ' disabled'} title="採用した指摘を文書で直したときに押します">解消済み</button><button type="button" class="p1-btn" data-pair-act="revoke"${f.decided_by ? '' : ' disabled'}>取消</button></div>` : ''}
     </article>`;
   }
 
@@ -160,7 +160,7 @@
     if (!g) return `<div class="p5-gate"><div class="lbl">${esc(label)}</div><div class="val">未判定</div><div class="lbl">判定の材料がまだありません。</div></div>`;
     const c = (k) => (g[k] || []).length;
     return `<div class="p5-gate ${g.pass ? 'ok' : 'ng'}"><div class="lbl">${esc(label)}</div><div class="val">${g.pass ? '合格' : '不合格'}</div>
-      <div class="lbl">重大の未解消 ${c('unresolved_critical')}・要確認 ${c('needs_review')}・対応の抜け ${c('missing_links')}・未検証 ${c('unverified')}</div></div>`;
+      <div class="lbl">採用のまま残る重大 ${c('unresolved_critical')}・要確認 ${c('needs_review')}・対応の抜け ${c('missing_links')}・未検証 ${c('unverified')}</div></div>`;
   }
 
   function renderGate() {
@@ -170,7 +170,7 @@
     q('[data-pair-why]').textContent = (g.reasons || []).join(' ');
     const pass = !!(g.overall && g.overall.pass);
     q('[data-pair-approve-hint]').textContent = pass ? '全体が合格です。理由を書いて承認できます。起票した人は承認できません。'
-      : '全体が不合格のため、まだ承認できません。重大と要確認の指摘を片付けてください。';
+      : '全体が不合格のため、まだ承認できません。採用のまま残る重大を直して「解消済み」にし、要確認を片付けてください。';
     syncApprove();
   }
 
@@ -227,7 +227,9 @@
       if (b && b.dataset.filter) { S.filter = b.dataset.filter; renderList(); return; }
       if (b && b.dataset.tab) { tab(b.dataset.tab); return; }
       if (b && b.dataset.decide) {
-        const c = b.closest('[data-fid]'), reason = (c.querySelector('[data-reason]') || {}).value || '';
+        const c = b.closest('[data-fid]'), box = c.querySelector('[data-reason]'), reason = (box || {}).value || '';
+        const er = c.querySelector('[data-reason-err]'); if (er) er.textContent = '';
+        if (b.dataset.decide === '解消済み' && !reason.trim()) { if (er) er.textContent = '文書のどこを直したかを理由に書いてから、もう一度「解消済み」を押してください。'; if (box) box.focus(); return; }
         DV.busy(b, () => write({ path: `/findings/${encodeURIComponent(c.dataset.fid)}/decide`, body: { status: b.dataset.decide, reason: reason.trim() } }, `${b.dataset.decide}として記録しました。`), '記録中…');
         return;
       }

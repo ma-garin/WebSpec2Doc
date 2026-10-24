@@ -24,9 +24,15 @@
 - 読込中・失敗・0 件・競合・未保存は page.route で API 応答を差し替えて発生させた（画面側の手動切替は無い）
 - 撮影: /private/tmp/claude-501/-Users-fujimagariyuki-dev-active-webspec2doc/453414cb-bd3f-477e-9dd9-f5147cdd8a4a/scratchpad/pair-1366.png ほか pair-*.png
 
+## 追加（指揮官の決定・2026-10-24）「解消済み」
+- 指摘カードに「解消済み」を追加。採用の指摘だけ押せる（実画面で確認: 採用=活性、要確認・不採用=無効）
+- 理由「文書のどこを直したか」は必須。空のまま押すと送信せず（decide 送信 0 件を確認）、案内を出して入力欄にフォーカスする
+- 送信は POST /findings/<fid>/decide に status=解消済み。成功時の実 API 応答は未検証（W2 実装中）
+- 判定帯の未解消は「採用のまま残る重大 n」と表示する（gate.unresolved_critical の件数）。1366 幅で横スクロール 0
+
 ## 未検証
 - 承認の成功（全体合格のデータが無い）・同一人物/認証オフの 403 文言の実表示
-- 取消（revoke）の実 API 応答
+- 取消（revoke）と「解消済み」の実 API 応答
 - サイドバー「レビュー一覧」の行クリックからの遷移（inspections に v1-a-order-payment が無く、検査では inspections API を差し替えて #pair 直指定で開いた）
 - 1024×660 では上部の画面見出しカードが高く、本体の高さが 300px 前後になる（判定帯は収まるが文書欄が狭い）
 - pytest / make verify-ui / check_clipping.py は未実行

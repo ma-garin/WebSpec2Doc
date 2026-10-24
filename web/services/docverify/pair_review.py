@@ -110,6 +110,28 @@ def current_user() -> str:
     return NONE_USER if name == "ゲスト" else name
 
 
+def current_user_id() -> str | None:
+    """認証主体の利用者 ID（本人判定に使う）。認証オフ・未ログイン・リクエスト外は None。"""
+    from web.auth import auth_enabled
+    try:
+        from flask import g, has_request_context
+        if not has_request_context() or not auth_enabled():
+            return None
+        u = getattr(g, "auth_user", None)
+    except RuntimeError:
+        return None
+    return str(u["id"]) if isinstance(u, dict) and u.get("id") else None
+
+
+def _uid(user: str) -> str | None:
+    return None if user in SYSTEM_USERS else current_user_id()
+
+
+def same_user(row: dict | None, uid: str | None) -> bool:
+    """利用者 ID で本人か。user_id の無い既存行・ID 不明は本人扱いしない。"""
+    return bool(row and uid and row.get("user_id") and row["user_id"] == uid)
+
+
 # ---- 文書 ----
 def parse_sections(md: str) -> list[dict]:
     sections, cur = [], None
@@ -188,7 +210,7 @@ def _active(d: Path, fid: str) -> bool:
 
 
 def _trail(d: Path, user: str, action: str, target: str, reason: str = "") -> dict:
-    entry = {"at": _now(), "user": user, "action": action, "target": target, "reason": reason}
+    entry = {"at": _now(), "user": user, "user_id": _uid(user), "action": action, "target": target, "reason": reason}
     _write(d / "trail.json", [*_read(d / "trail.json", []), entry])
     return entry
 
@@ -219,7 +241,7 @@ def decide(iid: str, fid: str, status: str, reason: str, user: str, rev=None) ->
         cur = next(f for f in _findings(d) if f["id"] == fid).get("status")
         if status == "解消済み" and cur != "採用":
             raise PairError(409, "bad_transition", f"「{cur or '未判定'}」から解消済みにはできません。先に採用してから解消済みにしてください。")
-        dec = {"finding_id": fid, "status": status, "by": user, "at": _now(), "reason": (reason or "").strip()}
+        dec = {"finding_id": fid, "status": status, "by": user, "by_id": _uid(user), "at": _now(), "reason": (reason or "").strip()}
         decisions = [*_decisions(d), dec]
         _write(d / "decisions.json", decisions)
         _write(d / "findings.json", _replay(_findings(d), decisions))
@@ -235,7 +257,7 @@ def revoke(iid: str, fid: str, user: str, reason: str = "", rev=None) -> dict:
         _target(d, fid)
         if not _active(d, fid):
             raise PairError(400, "nothing_to_revoke", "取り消す採否がありません。先に採否を選んでください。")
-        dec = {"finding_id": fid, "status": None, "by": user, "at": _now(), "reason": (reason or "").strip(), "revoke": True}
+        dec = {"finding_id": fid, "status": None, "by": user, "by_id": _uid(user), "at": _now(), "reason": (reason or "").strip(), "revoke": True}
         decisions = [*_decisions(d), dec]
         _write(d / "decisions.json", decisions)
         _write(d / "findings.json", _replay(_findings(d), decisions))
@@ -338,13 +360,15 @@ def approve(iid: str, reason: str, user: str, rev=None) -> dict:
         g = gate(iid)
         if not g["overall"]["pass"]:
             raise PairError(403, "gate_not_passed", "判定が不合格のため承認できません。" + g["reasons"][-1])
-        started = creator(d)
-        if started and started["user"] == user:
+        started, uid = creator(d), current_user_id()
+        if started is None:
+            raise PairError(403, "no_author", "起票者が記録されていません。起票者がレビューを開いてから承認してください。")
+        if not started.get("user_id") or not uid:
+            raise PairError(403, "author_unknown", "起票者を利用者として特定できないため承認できません。管理者に確認してください。")
+        if same_user(started, uid):
             from web.services.approval_policy import self_approval_note
             if self_approval_note() is None:
                 raise PairError(403, "same_person", "起票者は自分のレビューを承認できません。別の承認者に依頼してください。")
-        if started is None:
-            raise PairError(403, "no_author", "起票者が記録されていません。起票者がレビューを開いてから承認してください。")
         return _trail(d, user, "approved", iid, reason.strip())
 
 
@@ -371,7 +395,7 @@ def revoke_approval(iid: str, reason: str, user: str, rev=None) -> dict:
         cur = active_approval(_read(d / "trail.json", []))
         if cur is None:
             raise PairError(400, "not_approved", "取り消す承認がありません。一覧を再読み込みしてください。")
-        if cur["user"] != user:
+        if not same_user(cur, current_user_id()):
             raise PairError(403, "not_approver", "承認を取り消せるのは承認した本人だけです。承認者に依頼してください。")
         return _trail(d, user, "approval_revoked", iid, reason.strip())
 

@@ -20,6 +20,16 @@ sys.path.insert(0, str(ROOT))
 
 ROWS: list[tuple] = []
 A_NAME, B_NAME = "検証レビュアーA", "検証承認者B"
+B_RENAMED = "検証承認者B（改名）"
+
+
+def rename_user(email: str, name: str) -> None:
+    """表示名の変更 API が無いため、worktree の instance/auth.db を直接更新する（検証専用）。"""
+    import sqlite3
+    db = os.environ.get("WEBSPEC2DOC_AUTH_DB", str(ROOT / "instance" / "auth.db"))
+    with sqlite3.connect(db) as conn:
+        n = conn.execute("UPDATE users SET name = ? WHERE email = ?", (name, email)).rowcount
+    assert_row(f"表示名変更 {email}", n == 1, f"{n} 行")
 
 
 def check(step: str, resp, expect: int, code: str | None = None) -> dict:
@@ -76,10 +86,11 @@ def main() -> int:
     base, src, tag = a.base.rstrip("/"), Path(a.src), secrets.token_hex(3)
 
     admin, tenant = login(base, "admin", "password")
-    for email, name in ((f"a-{tag}@example.com", A_NAME), (f"b-{tag}@example.com", B_NAME)):
+    for email, name in ((f"a-{tag}@example.com", A_NAME), (f"b-{tag}@example.com", B_NAME), (f"c-{tag}@example.com", A_NAME)):
         check(f"利用者作成 {name}", admin.post(f"{base}/api/auth/users", json={"email": email, "name": name, "password": "pw-smoke", "role": "member"}), 200)
     sa, _ = login(base, f"a-{tag}@example.com", "pw-smoke")
     sb, _ = login(base, f"b-{tag}@example.com", "pw-smoke")
+    sc, _ = login(base, f"c-{tag}@example.com", "pw-smoke")
 
     iid = f"auth-smoke-{tag}"
     seed_in_tenant(iid, src, tenant["slug"])
@@ -107,9 +118,22 @@ def main() -> int:
     assert_row("証跡の承認者＝B の表示名", ap_row.get("user") == B_NAME, f"approved.user={ap_row.get('user')}")
     assert_row("証跡の起票者＝A の表示名", starter.get("user") == A_NAME, f"review_started.user={starter.get('user')}")
     check("A 承認取消（承認者でない）", sa.post(f"{p}/approve/revoke", json={"reason": "取消"}), 403, "not_approver")
+    rename_user(f"b-{tag}@example.com", B_RENAMED)
     check("B 承認取消（理由なし）", sb.post(f"{p}/approve/revoke", json={"reason": ""}), 400, "reason_required")
-    check("B 承認取消", sb.post(f"{p}/approve/revoke", json={"reason": "再確認のため取消"}), 200)
+    check("表示名を変えた B が承認取消", sb.post(f"{p}/approve/revoke", json={"reason": "再確認のため取消"}), 200)
     check("B 再取消（承認なし）", sb.post(f"{p}/approve/revoke", json={"reason": "再"}), 400, "not_approved")
+    check("A と同じ表示名の別利用者 C が承認", sc.post(f"{p}/approve", json={"reason": "C が確認"}), 200)
+    rows = check("証跡（C 承認後）", sc.get(f"{p}/trail"), 200).get("_", [])
+    ap_c = next((t for t in reversed(rows) if t.get("action") == "approved"), {})
+    assert_row("C 承認の user_id が A と異なる", bool(ap_c.get("user_id")) and ap_c.get("user_id") != starter.get("user_id"),
+               f"C={ap_c.get('user_id')} A={starter.get('user_id')}")
+    # 既存データ（user_id の無い行）は本人扱いしない: C の承認行から user_id を外して C が取消 → 403
+    import json
+    tpath = ROOT / "data" / "tenants" / tenant["slug"] / "docverify" / iid / "pair" / "trail.json"
+    legacy = json.loads(tpath.read_text(encoding="utf-8"))
+    legacy = [{k: v for k, v in t.items() if k != "user_id"} if t is legacy[-1] else t for t in legacy]
+    tpath.write_text(json.dumps(legacy, ensure_ascii=False), encoding="utf-8")
+    check("user_id 無しの承認を C が取消", sc.post(f"{p}/approve/revoke", json={"reason": "旧データ"}), 403, "not_approver")
 
     # 認証オフ: 実ルートを test_client で通す（保存先はテナント無しの data/docverify/）
     os.environ["WEBSPEC2DOC_AUTH_MODE"] = "off"

@@ -56,7 +56,7 @@
       + `<td class="c-doc" title="${esc(c.baseline_name || '要件定義書')} ⇔ ${esc(c.target_name || '基本設計書')}">${esc(c.baseline_name || '要件定義書')}（${esc(roleLabel(c.baseline_role, '基準'))}） ⇔ ${esc(c.target_name || '基本設計書')}（${esc(roleLabel(c.target_role, '確認対象'))}）<span class="dvc-case-purpose">${esc(c.purpose === 'coverage' ? '基準への対応' : c.purpose === 'consistency' ? '記述の整合性' : '対検査')}</span></td>`
       + `<td class="c-stage">${steps(c.stage)}</td><td class="c-due">${esc(c.due || '未設定')}</td>`
       + `<td class="c-f"><span class="${c.critical_open ? 'dvc-crit' : ''}">重大 ${esc(c.critical_open)}</span>／未解消 ${esc(c.unresolved)}</td>`
-      + `<td class="c-v"><span class="dvc-chip ${VCLS[c.verdict] || 'na'}">${esc(c.verdict)}</span></td>`
+      + `<td class="c-v"><span class="dvc-chip ${VCLS[c.verdict] || 'na'}">${esc(c.verdict)}</span>${c.verdict === '判定不能' && !(c.assessment && c.assessment.status === 'complete') ? `<button type="button" class="p1-btn dvc-run" style="display:block;margin-top:4px" data-cases-run="${esc(open)}" title="検査が未実行のため判定できません">検査を実行</button>` : ''}</td>`
       + `<td class="c-who" title="${esc(c.assignee)}">${esc(c.assignee ? who(c.assignee) : '未着手')}</td></tr>`;
   }
   function renderCases() {
@@ -70,6 +70,12 @@
     body.innerHTML = '<table class="dvc-t" aria-label="レビュー一覧"><thead><tr><th class="c-name">レビュー名</th><th class="c-doc">対象文書と版</th><th class="c-stage">工程</th>'
       + '<th class="c-due">期限</th><th class="c-f">指摘</th><th class="c-v">判定</th><th class="c-who">担当</th></tr></thead><tbody>'
       + list.map(row).join('') + '</tbody></table>';
+    body.querySelectorAll('[data-cases-run]').forEach((b) => b.addEventListener('click', async (e) => {
+      e.stopPropagation(); e.preventDefault();
+      b.disabled = true; b.textContent = '検査中…';
+      try { await call(`/api/docverify/${encodeURIComponent(b.dataset.casesRun)}/pair/analyze`, { method: 'POST', headers: { Accept: 'application/json', 'Content-Type': 'application/json' }, body: '{}' }); await loadCases(); }
+      catch (err) { b.disabled = false; b.textContent = '検査を実行'; msg(root, '[data-cases-msg]', err.message || MSG[500], true); }
+    }));
     body.querySelectorAll('tr[data-open]').forEach((tr) => {
       const go = () => (tr.dataset.general ? openDocuments(tr.dataset.open, tr.querySelector('.dvc-case-link').textContent) : DV.openReview(tr.dataset.open, 'pair')).catch((e) => msg(root, '[data-cases-msg]', e.message || MSG[500], true));
       tr.addEventListener('click', (e) => { if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return; e.preventDefault(); go(); });

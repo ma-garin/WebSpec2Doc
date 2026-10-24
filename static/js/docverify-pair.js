@@ -204,7 +204,9 @@
   function renderGate() {
     const g = S.gate || {};
     const dv = S.docs && S.docs.design && S.docs.design.version;
-    q('[data-pair-gates]').innerHTML = gateBox('全体', g.overall) + gateBox(dv ? `今回の変更分（第 ${dv} 版）` : '今回の変更分', g.changed);
+    const needRun = DV.verdict(g.overall) === '判定不能' && ((S.meta.assessment || {}).status !== 'complete');   // 検査未実行（副ボタン。主ボタンは「承認へ」）
+    q('[data-pair-gates]').innerHTML = gateBox('全体', g.overall) + gateBox(dv ? `今回の変更分（第 ${dv} 版）` : '今回の変更分', g.changed)
+      + (needRun ? '<button type="button" class="p1-btn" data-pair-act="analyze">検査を実行</button>' : '');
     q('[data-pair-why]').textContent = (g.reasons || []).join(' ');
     const a = S.meta.assessment || {};
     const scope = q('[data-pair-assessment]');
@@ -287,6 +289,7 @@
       if (act === 'reload') { load(); return; }
       if (act === 'retry' && S.pending) { DV.busy(b, () => write(S.pending, '保存しました。'), '保存中…'); return; }
       if (act === 'revoke') { const c = b.closest('[data-fid]'); DV.busy(b, () => write({ path: `/findings/${encodeURIComponent(c.dataset.fid)}/revoke`, body: {} }, '直前の採否を取り消しました。'), '取消中…'); return; }
+      if (act === 'analyze') { DV.busy(b, () => write({ path: '/analyze', body: {} }, '検査を実行しました。判定を更新しました。'), '検査中…'); return; }
       if (act === 'to-approve') { tab('trail'); q('#dvp-approve-reason').focus(); return; }
       if (act === 'approve') {
         const err = q('[data-pair-approve-err]'); err.textContent = '';

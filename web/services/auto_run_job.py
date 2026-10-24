@@ -260,6 +260,14 @@ class AutoRunJob:
             return
         self._notified = True
         try:
+            # 結果ページの判定・常時表示ログの素材として、終端時点の記録を残す。
+            from web.services.autorun_run_record import save_run_record
+
+            if getattr(self, "domain", ""):
+                save_run_record(self.to_dict(), _job_out(self) / self.domain / "qa_process")
+        except Exception:
+            logger.warning("autorun[%s] 実行記録の保存に失敗しました", self.job_id, exc_info=True)
+        try:
             # 遅延 import（web.services.notifier 経由の循環 import を避ける）。
             from web.services.run_notifier import notify_run_finished
 

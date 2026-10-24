@@ -17,8 +17,6 @@
     server: 'サーバで問題が起きました。少し待ってから「再読み込み」を押してください。',
     broken: '受け取った内容を読めませんでした。「再読み込み」を押してください。',
   };
-  const ACTION = { review_started: 'レビュー開始', finding_decided: '採否を記録', decision_revoked: '採否を取消', review_completed: 'レビュー完了',
-    approval_requested: '承認を依頼', approved: '承認', rejected: '差し戻し' };
   const SEV = { 重大: 'sev-c', 警告: 'sev-w', 提案: 'sev-i' };
   const ST = { 採用: 'st-ok', 不採用: 'st-ng', 要確認: 'st-q', 解消済み: 'st-done' };
   const base = () => `/api/docverify/${encodeURIComponent(S.iid)}/pair`;
@@ -194,25 +192,19 @@
       : `<p class="p1-empty">${S.findings.length ? 'この絞り込みに当てはまる指摘はありません。「全件」に戻すと全部見られます。' : '指摘は0件です。検査の実行状況と判定理由を確認してください。'}</p>`;
   }
 
-  function gateBox(label, g) {
-    if (!g) return `<div class="p5-gate"><div class="lbl">${esc(label)}</div><div class="val">未判定</div><div class="lbl">判定の材料がまだありません。</div></div>`;
-    const c = (k) => (g[k] || []).length;
-    return `<div class="p5-gate ${DV.gateClass(g)}"><div class="lbl">${esc(label)}</div><div class="val">${DV.verdict(g)}</div>
-      <div class="lbl">採用のまま残る重大 ${c('unresolved_critical')}・要確認 ${c('needs_review')}・対応の抜け ${c('missing_links')}・未検証 ${c('unverified')}</div></div>`;
-  }
-
   function renderGate() {
     const g = S.gate || {};
     const dv = S.docs && S.docs.design && S.docs.design.version;
     const needRun = DV.verdict(g.overall) === '判定不能' && ((S.meta.assessment || {}).status !== 'complete');   // 検査未実行（副ボタン。主ボタンは「承認へ」）
-    q('[data-pair-gates]').innerHTML = gateBox('全体', g.overall) + gateBox(dv ? `今回の変更分（第 ${dv} 版）` : '今回の変更分', g.changed)
-      + (needRun ? '<button type="button" class="p1-btn" data-pair-act="analyze">検査を実行</button>' : '');
-    q('[data-pair-why]').textContent = (g.reasons || []).join(' ');
+    const ttl = q('.dvp-title'); if (ttl) ttl.textContent = DV.title('pair');
+    DV.gatebar(q('[data-dv-gatebar]'), g, [needRun ? { label: '検査を実行', attr: 'data-pair-act="analyze"' } : null, { label: '承認へ', attr: 'data-pair-act="to-approve"', primary: true }]);
     const a = S.meta.assessment || {};
     const scope = q('[data-pair-assessment]');
     const purposes = {consistency:'記述の整合性',coverage:'基準への対応',legacy_requirement_design:'要件の設計への反映'};
-    scope.classList.toggle('is-unverified', DV.verdict(g.overall) === '判定不能');
-    scope.innerHTML = `<b>${esc(purposes[S.meta.purpose] || '検査範囲')}</b><span>基準の要素 ${Number(a.baseline_units) || 0} · 対象の要素 ${Number(a.target_units) || 0} · 比較した組 ${Number(a.compared_pairs) || 0}</span><span>${esc((g.overall && g.overall.unverified_reasons || []).join(' '))}</span>${g.overall && g.overall.ai_scope ? `<span>${esc(g.overall.ai_scope)}</span>` : ''}<small>数値・条件などの規則による候補検出です。意味の整合性全体は未検証です。</small>`;
+    const unver = DV.verdict(g.overall) === '判定不能';
+    scope.classList.toggle('is-unverified', unver);
+    const ai = g.overall && g.overall.ai_scope ? 'AI 検査あり' : 'AI 検査なし';
+    scope.innerHTML = `<span class="dvp-scope-line">検査範囲: 比較 ${Number(a.compared_pairs) || 0} 組・${ai}</span><details class="dvp-scope-more"${unver ? ' open' : ''}><summary>詳細</summary><b>${esc(purposes[S.meta.purpose] || '検査範囲')}</b><span>基準の要素 ${Number(a.baseline_units) || 0} · 対象の要素 ${Number(a.target_units) || 0} · 比較した組 ${Number(a.compared_pairs) || 0}</span><span>${esc((g.overall && g.overall.unverified_reasons || []).join(' '))}</span>${g.overall && g.overall.ai_scope ? `<span>${esc(g.overall.ai_scope)}</span>` : ''}<small>数値・条件などの規則による候補検出です。意味の整合性全体は未検証です。</small></details>`;
     const pass = !!(g.overall && g.overall.pass);
     q('[data-pair-approve-hint]').textContent = pass ? '全体が合格です。理由を書いて承認できます。起票した人は承認できません。'
       : DV.verdict(g.overall) === '判定不能' ? '検査範囲に未確認の項目があるため承認できません。判定理由を確認し、文書と目的を見直して再検査してください。' : '全体が不合格のため、まだ承認できません。未解消の指摘を確認してください。';
@@ -234,7 +226,7 @@
     renderChip();
     const items = S.trail.slice().reverse();
     q('[data-pair-trail]').innerHTML = items.length ? items.map((t) => `<li class="ev"><span class="tm">${esc(when(t.at))}</span><span class="who">${esc(t.user === '_none' ? '未ログイン' : t.user)}</span>
-      <span class="t">${esc(ACTION[t.action] || t.action)}</span> <span class="s">${esc(t.target || '')}</span>${t.reason ? `<span class="n">${esc(t.reason)}</span>` : ''}</li>`).join('')
+      <span class="t">${esc(DV.actionLabel(t.action))}</span> <span class="s">${esc(t.target || '')}</span>${t.reason ? `<span class="n">${esc(t.reason)}</span>` : ''}</li>`).join('')
       : '<li class="p1-empty">まだ記録はありません。指摘の採否を決めると、ここに残ります。</li>';
   }
 

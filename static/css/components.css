@@ -110,7 +110,7 @@
   border-radius: var(--radius-full);
   background: var(--surface);
   color: var(--text-muted);
-  font-size: 12px;
+  font-size: var(--text-xs);
   font-weight: 900;
 }
 
@@ -261,7 +261,7 @@
   border-radius: 4px;
   background: var(--surface-soft);
   color: var(--text-muted);
-  font-size: 10.5px;
+  font-size: var(--text-xs);
   line-height: 1.45;
 }
 
@@ -333,7 +333,7 @@
 .sys-switcher:hover { border-color: var(--color-primary); }
 .sys-switcher-label {
   font-weight: 700; letter-spacing: .06em; text-transform: uppercase;
-  color: var(--color-text-secondary); font-size: 10px;
+  color: var(--color-text-secondary); font-size: var(--text-xs);
 }
 .sys-switcher-cur { font-weight: 800; font-size: var(--text-sm); color: var(--color-text); }
 .sys-switcher-swap {
@@ -405,7 +405,7 @@
 .refs-link:hover { text-decoration: underline; }
 .refs-badge {
   flex: 0 0 auto;
-  font-size: 10px;
+  font-size: var(--text-xs);
   font-weight: 700;
   padding: 2px 8px;
   border-radius: var(--radius-full);
@@ -454,7 +454,7 @@
   border-radius: 50%;
   display: grid;
   place-items: center;
-  font-size: 10px;
+  font-size: var(--text-xs);
   font-weight: 800;
   background: var(--color-surface);
   border: 1px solid var(--color-border);
@@ -618,7 +618,7 @@
   max-width: 100%;
 }
 .autorun-stage-badge {
-  font-size: 10px;
+  font-size: var(--text-xs);
   font-weight: 700;
   padding: 1px 8px;
   border-radius: var(--radius-full);
@@ -627,12 +627,12 @@
 .autorun-stage-badge.is-assumed {
   background: var(--color-high-bg);
   border-color: var(--color-high-border);
-  color: var(--color-high);
+  color: var(--color-high-tx);
 }
 .autorun-stage-badge.is-edited {
   background: var(--color-info-bg);
   border-color: var(--color-info-border);
-  color: var(--color-info);
+  color: var(--color-info-tx);
 }
 .autorun-stage-item-actions { display: flex; gap: 6px; flex-wrap: wrap; }
 
@@ -846,7 +846,7 @@
 /* 押せない理由はボタンの手前に必ず出す */
 .autorun-leadbar-reason {
   font-size: var(--text-xs);
-  color: var(--color-critical);
+  color: var(--color-error-tx);
 }
 .autorun-leadbar.is-ready,
 .autorun-leadbar.is-blocked {
@@ -863,7 +863,7 @@
   background: var(--color-critical-bg);
   border-bottom-color: var(--color-critical);
 }
-.autorun-leadbar.is-stop .autorun-leadbar-title { color: var(--color-critical); }
+.autorun-leadbar.is-stop .autorun-leadbar-title { color: var(--color-error-tx); }
 .autorun-leadbar.is-done {
   background: var(--color-low-bg, #eef7f0);
   border-bottom-color: var(--color-low, #2f8f4e);
@@ -958,7 +958,7 @@
   border: 0;
   background: none;
   color: var(--color-text-secondary);
-  font-size: 18px;
+  font-size: var(--text-md);
   line-height: 1;
   cursor: pointer;
   padding: 2px 4px;
@@ -1082,7 +1082,7 @@
   outline-offset: -1px;
 }
 .autorun-chat-actions { display: flex; align-items: center; gap: 10px; }
-.autorun-chat-note { flex: 1; font-size: 10.5px; color: var(--color-text-secondary); line-height: 1.5; }
+.autorun-chat-note { flex: 1; font-size: var(--text-xs); color: var(--color-text-secondary); line-height: 1.5; }
 .autorun-chat-send { height: 32px; padding: 0 16px; font-size: var(--text-sm); white-space: nowrap; }
 
 /* 画面が狭い環境ではチャットを畳んで作業エリアを優先する（PC前提の下限対応） */
@@ -1214,7 +1214,7 @@
   background: var(--surface-subtle);
   border: 1px solid var(--border);
   color: var(--text-muted);
-  font-size: 11px;
+  font-size: var(--text-xs);
   font-weight: 700;
   transform: translateY(1px);
 }
@@ -1391,7 +1391,7 @@
 
 .autorun-step-meta {
   grid-column: 2;
-  font-size: 10.5px;
+  font-size: var(--text-xs);
   color: var(--text-muted);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1473,7 +1473,7 @@
   display: grid;
   place-items: center;
   border-radius: 50%;
-  font-size: 20px;
+  font-size: var(--text-xl);
   font-weight: 800;
 }
 
@@ -1524,13 +1524,13 @@
   white-space: nowrap;
 }
 
-.autorun-recent-status { font-size: 10.5px; color: var(--text-muted); }
+.autorun-recent-status { font-size: var(--text-xs); color: var(--text-muted); }
 .autorun-recent-status.is-complete { color: var(--ok); }
 .autorun-recent-status.is-failed { color: var(--critical); }
 
 .autorun-recent-note {
   margin: 8px 0 0;
-  font-size: 10.5px;
+  font-size: var(--text-xs);
   color: var(--text-muted);
   line-height: 1.6;
 }
@@ -1650,7 +1650,7 @@
   background: var(--color-primary);
   color: #fff;
   text-align: center;
-  font-size: 11px;
+  font-size: var(--text-xs);
 }
 .qa-output-bundle-when {
   font-weight: 400;
@@ -1685,7 +1685,7 @@
   color: var(--color-primary);
   white-space: nowrap;
 }
-.qa-output-item-num.is-alert { color: var(--color-critical); }
+.qa-output-item-num.is-alert { color: var(--color-error-tx); }
 
 .autorun-failure-body {
   display: grid;
@@ -1793,7 +1793,7 @@
   background: transparent;
   color: var(--text-muted);
   cursor: pointer;
-  font-size: 22px;
+  font-size: var(--text-xl);
   line-height: 1;
 }
 
@@ -1931,12 +1931,12 @@
 .autorun-case-row { cursor: pointer; }
 .autorun-case-row:hover { background: var(--surface-subtle); }
 .autorun-case-row:focus-visible { outline: 2px solid var(--primary); outline-offset: -2px; }
-.autorun-case-detail-toggle { font-size: 11px; color: var(--text-muted); margin-left: 6px; }
+.autorun-case-detail-toggle { font-size: var(--text-xs); color: var(--text-muted); margin-left: 6px; }
 .autorun-case-detail-row td { background: var(--surface-soft); padding: 12px 14px; }
 .autorun-case-detail-body { display: grid; gap: 10px; font-size: var(--text-sm); }
-.autorun-case-detail-body strong { display: block; margin-bottom: 4px; color: var(--text-muted); font-size: 12px; }
+.autorun-case-detail-body strong { display: block; margin-bottom: 4px; color: var(--text-muted); font-size: var(--text-xs); }
 .autorun-case-steps { margin: 0; padding-left: 20px; }
-.autorun-case-steps li { margin-bottom: 2px; font-family: ui-monospace, monospace; font-size: 12px; }
+.autorun-case-steps li { margin-bottom: 2px; font-family: ui-monospace, monospace; font-size: var(--text-xs); }
 
 .autorun-preview-spec {
   margin: 0;
@@ -1987,27 +1987,27 @@
 }
 
 /* ---- MBT 技法別設計（S3-1 D）＋ カバレッジヒートマップ（S3-4 D） ---- */
-.mbt-params { font-size: 12.5px; color: var(--text-muted); margin: 4px 0 12px; }
+.mbt-params { font-size: var(--text-sm); color: var(--text-muted); margin: 4px 0 12px; }
 .mbt-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
 .mbt-chip { border: 1px solid var(--border); background: var(--surface-2, #f0f3f7); color: inherit;
-  border-radius: 999px; padding: 5px 12px; font-size: 13px; cursor: pointer; }
+  border-radius: 999px; padding: 5px 12px; font-size: var(--text-sm); cursor: pointer; }
 .mbt-chip.is-active { background: var(--accent, #4c8dff); color: #fff; border-color: transparent; }
-.mbt-chip-n { opacity: .75; font-size: 11px; }
+.mbt-chip-n { opacity: .75; font-size: var(--text-xs); }
 .mbt-screen-list { display: flex; flex-direction: column; gap: 6px; }
 .mbt-screen-row { text-align: left; border: 1px solid var(--border); background: var(--surface, #fff);
-  color: inherit; border-radius: 8px; padding: 8px 12px; cursor: pointer; font-size: 13px; }
+  color: inherit; border-radius: 8px; padding: 8px 12px; cursor: pointer; font-size: var(--text-sm); }
 .mbt-screen-row:hover { border-color: var(--accent, #4c8dff); }
 .mbt-screen-row code { margin-right: 8px; color: var(--text-muted); }
-.mbt-table { width: 100%; margin: 6px 0 14px; font-size: 13px; }
-.mbt-h4 { margin: 12px 0 4px; font-size: 14px; }
-.mbt-note { font-size: 12.5px; color: var(--text-muted); }
-.mbt-seq { padding-left: 20px; font-size: 13px; }
-.mbt-badge { display: inline-block; border-radius: 6px; padding: 1px 7px; font-size: 11px; }
+.mbt-table { width: 100%; margin: 6px 0 14px; font-size: var(--text-sm); }
+.mbt-h4 { margin: 12px 0 4px; font-size: var(--text-base); }
+.mbt-note { font-size: var(--text-sm); color: var(--text-muted); }
+.mbt-seq { padding-left: 20px; font-size: var(--text-sm); }
+.mbt-badge { display: inline-block; border-radius: 6px; padding: 1px 7px; font-size: var(--text-xs); }
 .mbt-badge.is-measured { background: #d7f0dd; color: #17512c; }
 .mbt-badge.is-catalog { background: #fdeecd; color: #6b4e12; }
 #cov-frame iframe, .tl-diff-frame iframe { width: 100%; min-height: 460px; border: 1px solid var(--border); border-radius: 8px; background: #fff; }
 /* 比較した2時点の明示（差分が無いときに「比較できていない」と誤読させないため） */
-.tl-diff-basis { margin: 0 0 8px; font-size: 12.5px; color: var(--text-muted); }
+.tl-diff-basis { margin: 0 0 8px; font-size: var(--text-sm); color: var(--text-muted); }
 /* 変更 0 件は「読み飛ばしてよい結論」なので、比較対象の注記より一段強く出す。 */
 .tl-diff-basis.is-no-change {
   padding: 8px 12px; border: 1px solid var(--ok-border); border-radius: var(--radius);
@@ -2018,12 +2018,12 @@
 /* 「解析なし」バッジつきの導線。解析を待たずに開けることが一目で分かるようにする。 */
 .sample-zero {
   display: inline-block; margin-left: 6px; padding: 1px 7px; border-radius: 999px;
-  background: #2e7d32; color: #fff; font-size: 10.5px; font-weight: 800; vertical-align: middle;  /* 白文字で 4.5:1 以上 */
+  background: #2e7d32; color: #fff; font-size: var(--text-xs); font-weight: 800; vertical-align: middle;  /* 白文字で 4.5:1 以上 */
 }
 .btn-sample-report {
   display: inline-flex; align-items: center; gap: 2px; margin-top: 8px;
   padding: 8px 14px; border: 1px solid var(--ok-border); border-radius: var(--radius);
-  background: var(--ok-bg); color: #1b5e20; font-size: 13px; font-weight: 700; cursor: pointer;
+  background: var(--ok-bg); color: #1b5e20; font-size: var(--text-sm); font-weight: 700; cursor: pointer;
 }
 .btn-sample-report:hover { filter: brightness(0.97); }
 .btn-sample-report:disabled { opacity: .6; cursor: default; }
@@ -2042,10 +2042,10 @@
 #r-recrawl-btn[hidden] { display: none; }
 .result-sample-mark {
   flex: none; padding: 2px 10px; border-radius: 999px;
-  background: var(--ok); color: #fff; font-size: 11px; font-weight: 800;
+  background: var(--ok); color: #fff; font-size: var(--text-xs); font-weight: 800;
 }
-.result-sample-text { font-size: 12.5px; color: #1b5e20; line-height: 1.6; }
-.result-sample-banner .btn-sm { margin-left: auto; padding: 7px 14px; font-size: 12.5px; }
+.result-sample-text { font-size: var(--text-sm); color: #1b5e20; line-height: 1.6; }
+.result-sample-banner .btn-sm { margin-left: auto; padding: 7px 14px; font-size: var(--text-sm); }
 
 /* ---- R3-13: ログインモーダル×ショートカットヘルプのz-index競合 ----
    ログインモーダルは .file-preview-modal（static/app-report.css, z-index:2000）を
@@ -2055,17 +2055,17 @@
 #autorun-login-modal { z-index: 2300; }
 
 /* ==================== 実行履歴（run-history）データテーブル ==================== */
-.rh-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.rh-table { width: 100%; border-collapse: collapse; font-size: var(--text-sm); }
 .rh-table th, .rh-table td { padding: 9px 10px; border-bottom: 1px solid var(--border); text-align: left; vertical-align: middle; }
 .rh-table th { background: var(--surface-soft); font-weight: 700; color: var(--text-muted); white-space: nowrap; }
 .rh-table tbody tr:hover td { background: var(--surface-soft); }
-#rh-empty { padding: 32px; text-align: center; color: var(--text-muted); font-size: 14px; }
+#rh-empty { padding: 32px; text-align: center; color: var(--text-muted); font-size: var(--text-base); }
 /* 種別タブは廃止した（5つのうち3つが実データ0件、「すべて」は別システムが混在）。
    種別は行のバッジで示し、絞り込みが要るときだけ開く。 */
 
 /* 種別・状態バッジ（soft パターン。--c を基準色に color-mix でライト/ダーク自動追従） */
 .rh-type-badge, .rh-status-badge {
-  display: inline-block; padding: 2px 9px; border-radius: 999px; font-size: 11px; font-weight: 700;
+  display: inline-block; padding: 2px 9px; border-radius: 999px; font-size: var(--text-xs); font-weight: 700;
   white-space: nowrap; border: 1px solid;
   color: var(--c); background: color-mix(in srgb, var(--c) 14%, var(--surface));
   border-color: color-mix(in srgb, var(--c) 32%, transparent);
@@ -2091,7 +2091,7 @@
 .ops-scope { display: grid; gap: 18px; margin-bottom: 4px; }
 
 .ops-section { padding-top: 22px; margin-top: 22px; border-top: 1px solid var(--border); }
-.ops-section-title { margin: 0 0 16px; font-size: 15px; font-weight: 700; color: var(--text); }
+.ops-section-title { margin: 0 0 16px; font-size: var(--text-base); font-weight: 700; color: var(--text); }
 .ops-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px 16px; }
 .ops-grid .full { grid-column: 1 / -1; }
 
@@ -2153,11 +2153,11 @@
 /* ==================== 共通ページャ（table-utils.js） ==================== */
 .pager-wrap { margin-top: 12px; }
 .pager { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
-.pager-info { font-size: 12px; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.pager-info { font-size: var(--text-xs); color: var(--text-muted); font-variant-numeric: tabular-nums; }
 .pager-controls { display: flex; align-items: center; gap: 4px; }
 .pager-btn {
   min-width: 32px; height: 32px; padding: 0 8px; border: 1px solid var(--border); border-radius: var(--radius-sm);
-  background: var(--surface); color: var(--text); font-size: 13px; font-weight: 600; cursor: pointer;
+  background: var(--surface); color: var(--text); font-size: var(--text-sm); font-weight: 600; cursor: pointer;
   font-variant-numeric: tabular-nums; transition: border-color .12s, background .12s, color .12s;
 }
 .pager-btn:hover:not(:disabled) { border-color: var(--primary); color: var(--primary-dark); background: var(--surface-subtle); }
@@ -2176,32 +2176,32 @@
   transition: border-color .12s, box-shadow .12s, background .12s;
 }
 .tc-search input:focus { border-color: var(--primary); background: var(--surface); box-shadow: 0 0 0 3px var(--focus-ring); }
-.tc-count { font-size: 12px; color: var(--text-muted); margin-left: auto; font-variant-numeric: tabular-nums; }
+.tc-count { font-size: var(--text-xs); color: var(--text-muted); margin-left: auto; font-variant-numeric: tabular-nums; }
 
 
 /* ==================== トレーサビリティマトリクス ==================== */
 .traceability-header { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 16px; }
-.traceability-header h2 { margin: 0; font-size: 18px; }
-#traceability-summary { font-size: 13px; color: var(--text-muted); }
+.traceability-header h2 { margin: 0; font-size: var(--text-md); }
+#traceability-summary { font-size: var(--text-sm); color: var(--text-muted); }
 #traceability-coverage-bar { display: flex; height: 16px; border-radius: 8px; overflow: hidden; margin-bottom: 16px; background: var(--border); }
 .coverage-bar-covered { background: var(--color-low); transition: width .3s ease; }
 .coverage-bar-partial { background: var(--color-high); transition: width .3s ease; }
 .coverage-bar-uncovered { background: var(--color-critical); transition: width .3s ease; }
-.traceability-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.traceability-table { width: 100%; border-collapse: collapse; font-size: var(--text-sm); }
 .traceability-table th, .traceability-table td { padding: 9px 10px; border-bottom: 1px solid var(--border); text-align: left; vertical-align: middle; }
 .traceability-table th { background: var(--surface-soft); font-weight: 700; color: var(--text-muted); white-space: nowrap; }
 .traceability-table tbody tr:hover td { background: var(--surface-soft); }
-.traceability-table td.url-cell { font-size: 11px; color: var(--text-muted); word-break: break-all; max-width: 200px; }
+.traceability-table td.url-cell { font-size: var(--text-xs); color: var(--text-muted); word-break: break-all; max-width: 200px; }
 .traceability-table td.req-id-cell { white-space: nowrap; font-weight: 600; }
 .traceability-msg { padding: 20px; }
-.test-ids-cell { font-size: 11px; color: var(--text-muted); }
+.test-ids-cell { font-size: var(--text-xs); color: var(--text-muted); }
 .tc-dash { color: var(--text-subtle); }
-#traceability-loading { padding: 32px; text-align: center; color: var(--text-muted); font-size: 14px; }
+#traceability-loading { padding: 32px; text-align: center; color: var(--text-muted); font-size: var(--text-base); }
 .traceability-msg { text-align: center; color: var(--text-muted); }
-.traceability-msg.is-error { color: var(--color-critical); }
+.traceability-msg.is-error { color: var(--color-error-tx); }
 /* カバレッジバッジ（soft パターン。run-history と同方式で --c 基準色から color-mix） */
 .coverage-badge {
-  display: inline-block; padding: 2px 9px; border-radius: 999px; font-size: 11px; font-weight: 700;
+  display: inline-block; padding: 2px 9px; border-radius: 999px; font-size: var(--text-xs); font-weight: 700;
   white-space: nowrap; border: 1px solid;
   color: var(--c); background: color-mix(in srgb, var(--c) 14%, var(--surface));
   border-color: color-mix(in srgb, var(--c) 32%, transparent);
@@ -2221,8 +2221,8 @@
 .onboarding-checklist-head, .onboarding-replay-card {
   display: flex; align-items: center; justify-content: space-between; gap: 18px;
 }
-.onboarding-checklist-head h2 { margin: 2px 0 0; color: var(--text); font-size: 18px; line-height: 1.4; }
-.onboarding-eyebrow { margin: 0; color: var(--primary); font-size: 12px; font-weight: 700; letter-spacing: .06em; }
+.onboarding-checklist-head h2 { margin: 2px 0 0; color: var(--text); font-size: var(--text-md); line-height: 1.4; }
+.onboarding-eyebrow { margin: 0; color: var(--primary); font-size: var(--text-xs); font-weight: 700; letter-spacing: .06em; }
 .onboarding-checklist-steps {
   display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px;
   margin: 18px 0 0; padding: 0; list-style: none;
@@ -2234,17 +2234,17 @@
 .onboarding-check {
   display: grid; flex: 0 0 30px; width: 30px; height: 30px; place-items: center;
   border-radius: 50%; background: var(--surface-soft); color: var(--text-muted);
-  font-size: 13px; font-weight: 700;
+  font-size: var(--text-sm); font-weight: 700;
 }
 .onboarding-checklist-steps strong, .onboarding-checklist-steps small { display: block; }
-.onboarding-checklist-steps strong { color: var(--text); font-size: 13px; }
-.onboarding-checklist-steps small { margin-top: 3px; color: var(--text-muted); font-size: 11px; line-height: 1.35; }
+.onboarding-checklist-steps strong { color: var(--text); font-size: var(--text-sm); }
+.onboarding-checklist-steps small { margin-top: 3px; color: var(--text-muted); font-size: var(--text-xs); line-height: 1.35; }
 .onboarding-checklist-steps li.is-complete {
   border-color: color-mix(in srgb, var(--color-low) 45%, var(--border));
   background: color-mix(in srgb, var(--color-low) 7%, var(--surface));
 }
 .onboarding-checklist-steps li.is-complete .onboarding-check { background: var(--color-low); color: #fff; }
-.onboarding-demo-hint { margin: 12px 0 0; color: var(--text-muted); font-size: 11px; }
+.onboarding-demo-hint { margin: 12px 0 0; color: var(--text-muted); font-size: var(--text-xs); }
 .empty-demo-btn { display: block; margin: 4px auto 0; }
 .onboarding-replay-card { margin-top: 16px; }
 .onboarding-replay-card .input-hint { margin: 4px 0 0; }
@@ -2260,14 +2260,14 @@
   background: var(--surface); color: var(--text); box-shadow: 0 18px 50px rgb(0 0 0 / 22%);
 }
 .wsd-tour-popover.is-animated { transition: left .2s ease, top .2s ease; }
-.wsd-tour-title { margin: 0 24px 6px 0; color: var(--text); font-size: 17px; font-weight: 700; }
-.wsd-tour-description { color: var(--text-muted); font-size: 14px; line-height: 1.6; }
+.wsd-tour-title { margin: 0 24px 6px 0; color: var(--text); font-size: var(--text-md); font-weight: 700; }
+.wsd-tour-description { color: var(--text-muted); font-size: var(--text-base); line-height: 1.6; }
 .wsd-tour-close {
   position: absolute; top: 8px; right: 8px; width: 28px; height: 28px; border: 0; border-radius: 6px;
-  background: transparent; color: var(--text-muted); font-size: 18px; line-height: 1; cursor: pointer;
+  background: transparent; color: var(--text-muted); font-size: var(--text-md); line-height: 1; cursor: pointer;
 }
 .wsd-tour-footer { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 14px; }
-.wsd-tour-progress { color: var(--text-muted); font-size: 12px; }
+.wsd-tour-progress { color: var(--text-muted); font-size: var(--text-xs); }
 .wsd-tour-buttons { display: flex; flex: 1; justify-content: flex-end; gap: 6px; }
 .wsd-tour-next, .wsd-tour-prev, .wsd-tour-skip {
   min-height: 34px; padding: 6px 12px; border: 1px solid var(--border); border-radius: 8px;
@@ -2298,7 +2298,7 @@
 .rh-approval.is-partial {
   background: var(--color-high-bg);
   border-color: var(--color-high-border);
-  color: var(--color-high);
+  color: var(--color-high-tx);
 }
 /* 中立（「なし」「過去の実行」など、良し悪しを含まない状態） */
 .rh-approval.is-neutral {
@@ -2309,7 +2309,7 @@
 .rh-approval-note {
   display: block;
   margin-top: 2px;
-  font-size: 10.5px;
+  font-size: var(--text-xs);
   color: var(--color-text-secondary);
 }
 
@@ -2410,7 +2410,7 @@
   margin-left: auto;
   background: var(--color-low, #2f8f4e);
   color: #fff;
-  font-size: 10px;
+  font-size: var(--text-xs);
   font-weight: 700;
   border-radius: 3px;
   padding: 1px 7px;
@@ -2435,7 +2435,7 @@
 .ard-error {
   margin: 8px 0 0;
   font-size: var(--text-xs);
-  color: var(--color-critical);
+  color: var(--color-error-tx);
 }
 
 /* 画面には出さないが支援技術へは伝える（状態変化の読み上げ用）。 */
@@ -2551,7 +2551,7 @@
   padding: 12px 15px;
   margin-bottom: 12px;
 }
-.autorun-stop-title { font-weight: 700; color: var(--color-critical); font-size: var(--text-sm); }
+.autorun-stop-title { font-weight: 700; color: var(--color-error-tx); font-size: var(--text-sm); }
 .autorun-stop-body { margin: 3px 0 8px; font-size: var(--text-xs); }
 .autorun-stop-fact {
   background: var(--color-surface);
@@ -2571,22 +2571,22 @@
   background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg);
   padding: 12px 16px; margin-bottom: 16px; box-shadow: var(--shadow-sm);
 }
-.rr-runbar-label { font-size: 10.5px; color: var(--text-muted); font-weight: 700; }
+.rr-runbar-label { font-size: var(--text-xs); color: var(--text-muted); font-weight: 700; }
 .rr-select {
   height: 36px; padding: 0 10px; border: 1px solid var(--border-strong);
   border-radius: var(--radius-sm); background: var(--surface);
-  font-family: var(--font-mono); font-size: 12.5px; min-width: 250px; color: var(--text);
+  font-family: var(--font-mono); font-size: var(--text-sm); min-width: 250px; color: var(--text);
 }
 .rr-nav {
   width: 34px; height: 34px; border: 1px solid var(--border-strong); background: var(--surface);
-  border-radius: var(--radius-sm); cursor: pointer; font-size: 14px; color: var(--text-muted);
+  border-radius: var(--radius-sm); cursor: pointer; font-size: var(--text-base); color: var(--text-muted);
 }
 .rr-nav:hover:not(:disabled) { border-color: var(--primary); color: var(--primary-dark); }
 .rr-nav:disabled { opacity: .35; cursor: not-allowed; }
-.rr-meta { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; font-size: 12px; color: var(--text-muted); }
-.rr-runid { font-family: var(--font-mono); font-size: 11.5px; color: var(--text); }
+.rr-meta { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; font-size: var(--text-xs); color: var(--text-muted); }
+.rr-runid { font-family: var(--font-mono); font-size: var(--text-xs); color: var(--text); }
 .rr-runbar-actions { margin-left: auto; display: flex; gap: 7px; }
-.rr-loading { font-size: 13px; color: var(--text-muted); }
+.rr-loading { font-size: var(--text-sm); color: var(--text-muted); }
 
 .rr-artifacts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 16px; }
 .rr-artifact {
@@ -2598,40 +2598,40 @@
 .rr-artifact.is-active { border-color: var(--primary); background: var(--info-bg); box-shadow: inset 0 -3px 0 var(--primary); }
 .rr-artifact:disabled { opacity: .55; cursor: not-allowed; background: var(--surface-soft); }
 .rr-artifact-badge { position: absolute; top: 12px; right: 12px; }
-.rr-artifact-n { display: block; font-size: 10px; color: var(--text-subtle); font-weight: 700; }
-.rr-artifact-t { display: block; font-size: 14.5px; font-weight: 800; margin: 3px 0 4px; }
-.rr-artifact-d { display: block; font-size: 11px; color: var(--text-muted); line-height: 1.5; }
-.rr-artifact-f { display: block; font-family: var(--font-mono); font-size: 10px; color: var(--text-subtle); margin-top: 6px; word-break: break-all; }
+.rr-artifact-n { display: block; font-size: var(--text-xs); color: var(--text-subtle); font-weight: 700; }
+.rr-artifact-t { display: block; font-size: var(--text-base); font-weight: 800; margin: 3px 0 4px; }
+.rr-artifact-d { display: block; font-size: var(--text-xs); color: var(--text-muted); line-height: 1.5; }
+.rr-artifact-f { display: block; font-family: var(--font-mono); font-size: var(--text-xs); color: var(--text-subtle); margin-top: 6px; word-break: break-all; }
 
 .rr-pane { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; }
 .rr-pane-head {
   padding: 12px 16px; border-bottom: 1px solid var(--border); background: var(--surface-soft);
   display: flex; gap: 12px; align-items: center; flex-wrap: wrap;
 }
-.rr-path { font-family: var(--font-mono); font-size: 11px; color: var(--text-subtle); margin-left: auto; word-break: break-all; }
+.rr-path { font-family: var(--font-mono); font-size: var(--text-xs); color: var(--text-subtle); margin-left: auto; word-break: break-all; }
 .rr-pane-body { padding: 18px; }
 .rr-files { display: flex; gap: 8px; flex-wrap: wrap; margin: 12px 0 16px; }
 .rr-files-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); }
-.rr-file { display: block; font-family: var(--font-mono); font-size: 10px; color: var(--text-subtle); font-weight: 400; }
+.rr-file { display: block; font-family: var(--font-mono); font-size: var(--text-xs); color: var(--text-subtle); font-weight: 400; }
 .rr-frame { width: 100%; height: 520px; border: 1px solid var(--border); border-radius: var(--radius); background: #fff; }
 .rr-missing {
   background: var(--color-high-bg); border: 1px solid var(--color-high-border);
   border-radius: var(--radius-lg); padding: 28px 22px; text-align: center; line-height: 1.8;
 }
-.rr-missing strong { display: block; font-size: var(--text-md); color: var(--color-high); margin-bottom: 6px; }
-.rr-missing p { font-size: 13px; color: var(--text-muted); margin: 0; }
+.rr-missing strong { display: block; font-size: var(--text-md); color: var(--color-high-tx); margin-bottom: 6px; }
+.rr-missing p { font-size: var(--text-sm); color: var(--text-muted); margin: 0; }
 
 /* ==================== 実行履歴（タブ廃止後） ====================
    種別タブをやめ、件数＋絞り込み（折りたたみ）＋ソート可能な表にした。 */
 .rh-head { display: flex; gap: 14px; align-items: baseline; flex-wrap: wrap; margin-bottom: 12px; }
-.rh-count { font-size: 19px; font-weight: 800; font-variant-numeric: tabular-nums; }
-.rh-count span { font-size: 13px; font-weight: 400; color: var(--text-muted); margin-left: 4px; }
-.rh-sub { font-size: 12px; color: var(--text-muted); }
+.rh-count { font-size: var(--text-xl); font-weight: 800; font-variant-numeric: tabular-nums; }
+.rh-count span { font-size: var(--text-sm); font-weight: 400; color: var(--text-muted); margin-left: 4px; }
+.rh-sub { font-size: var(--text-xs); color: var(--text-muted); }
 .rh-head-actions { margin-left: auto; display: flex; gap: 7px; align-items: center; }
 .rh-filter-toggle { display: inline-flex; align-items: center; gap: 5px; }
 .rh-filter-n {
   background: var(--primary); color: #fff; border-radius: var(--radius-full);
-  font-size: 10px; padding: 0 6px; height: 16px; display: inline-grid; place-items: center;
+  font-size: var(--text-xs); padding: 0 6px; height: 16px; display: inline-grid; place-items: center;
   font-variant-numeric: tabular-nums;
 }
 
@@ -2641,21 +2641,21 @@
 }
 .rh-filter-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 10px; }
 .rh-filter-row:last-child { margin-bottom: 0; }
-.rh-filter-label { font-size: 10.5px; color: var(--text-muted); font-weight: 700; min-width: 52px; }
+.rh-filter-label { font-size: var(--text-xs); color: var(--text-muted); font-weight: 700; min-width: 52px; }
 .rh-chips { display: flex; gap: 7px; flex-wrap: wrap; }
-.rh-tilde { color: var(--text-muted); font-size: 12px; }
+.rh-tilde { color: var(--text-muted); font-size: var(--text-xs); }
 .rh-chip {
   height: 29px; padding: 0 12px; border-radius: var(--radius-full);
   border: 1px solid var(--border-strong); background: var(--surface);
-  font-size: 12px; font-weight: 700; cursor: pointer; color: var(--text-muted); font-family: inherit;
+  font-size: var(--text-xs); font-weight: 700; cursor: pointer; color: var(--text-muted); font-family: inherit;
 }
 .rh-chip:hover { border-color: var(--primary); color: var(--primary-dark); }
 .rh-chip.is-on { background: var(--info-bg); border-color: var(--primary); color: var(--primary-dark); }
-.rh-chip-n { margin-left: 5px; font-size: 10.5px; color: var(--text-subtle); font-variant-numeric: tabular-nums; }
+.rh-chip-n { margin-left: 5px; font-size: var(--text-xs); color: var(--text-subtle); font-variant-numeric: tabular-nums; }
 .rh-chip.is-on .rh-chip-n { color: var(--primary-dark); }
 .rh-filter input[type=date] {
   height: 29px; padding: 0 9px; border: 1px solid var(--border-strong);
-  border-radius: var(--radius-sm); background: var(--surface); font-size: 12px;
+  border-radius: var(--radius-sm); background: var(--surface); font-size: var(--text-xs);
   font-family: inherit; color: var(--text);
 }
 
@@ -2663,14 +2663,14 @@
 .rh-tag {
   display: inline-flex; align-items: center; gap: 5px; background: var(--info-bg);
   border: 1px solid var(--primary); color: var(--primary-dark);
-  border-radius: var(--radius-full); padding: 2px 9px; font-size: 11.5px; font-weight: 700;
+  border-radius: var(--radius-full); padding: 2px 9px; font-size: var(--text-xs); font-weight: 700;
 }
-.rh-tag button { border: 0; background: transparent; color: var(--primary-dark); cursor: pointer; font-size: 13px; line-height: 1; padding: 0; }
+.rh-tag button { border: 0; background: transparent; color: var(--primary-dark); cursor: pointer; font-size: var(--text-sm); line-height: 1; padding: 0; }
 
 .rh-table th.rh-sortable { cursor: pointer; user-select: none; }
 .rh-table th.rh-sortable:hover { color: var(--primary-dark); background: var(--info-bg); }
 .rh-table th.rh-sortable.is-sorted { color: var(--primary-dark); }
-.rh-arrow { margin-left: 4px; font-size: 10px; color: var(--text-subtle); }
+.rh-arrow { margin-left: 4px; font-size: var(--text-xs); color: var(--text-subtle); }
 .rh-table th.is-sorted .rh-arrow { color: var(--primary); }
 /* 数値列は右揃え。桁が揃って大小を比べられる */
 .rh-table th.rh-num, .rh-table td.rh-num { text-align: right; }
@@ -2681,7 +2681,7 @@
    ここだけ既定カーソルに戻し、行クリックとの境界を視覚的に示す。 */
 .rh-table td .rh-act-cell { cursor: default; }
 /* 日付区切り。同じ日に何度実行したかが見える */
-.rh-day td { background: var(--surface-soft); font-size: 11.5px; font-weight: 700; color: var(--text-muted); padding: 6px 10px; }
+.rh-day td { background: var(--surface-soft); font-size: var(--text-xs); font-weight: 700; color: var(--text-muted); padding: 6px 10px; }
 .rh-day-n { color: var(--text-subtle); font-weight: 400; margin-left: 8px; }
 /* その回の成果物が残っていない行。押せる（最新が開く）が、その回のものではない */
 .rh-nosave { color: var(--text-subtle); }
@@ -2691,7 +2691,7 @@
    固定幅の合計を 470px 台に抑え、サイト名と日時へ余白を回す。 */
 /* 種別バッジは行内で最も情報量が少ない。幅を詰めてサイト名へ回す。 */
 .rh-table th.rh-col-type { width: 96px; }
-.rh-table td .rh-type-badge { font-size: 12px; padding: 2px 8px; }
+.rh-table td .rh-type-badge { font-size: var(--text-xs); padding: 2px 8px; }
 .rh-table th.rh-col-site { min-width: 210px; }
 .rh-table th.rh-col-ts { width: 156px; }
 .rh-table th.rh-col-status { width: 64px; }
@@ -2715,7 +2715,7 @@
   z-index: 400; max-width: min(560px, calc(100vw - 48px));
   padding: 12px 18px; border-radius: var(--radius-md, 10px);
   background: var(--color-text, #1d2129); color: #fff;
-  font-size: 13px; font-weight: 600; line-height: 1.6;
+  font-size: var(--text-sm); font-weight: 600; line-height: 1.6;
   box-shadow: 0 8px 28px rgba(0, 0, 0, .22);
   opacity: 0; pointer-events: none;
   transition: opacity .16s ease, transform .16s ease;

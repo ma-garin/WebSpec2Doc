@@ -1,0 +1,26 @@
+{#- 状態部品（1 種）。{% include 'partials/state.html' with kind=, title=, msg=, cta_label=, cta_href= %}
+    kind: empty | zero | loading | error | forbidden。loading 以外は cta_label 必須（無ければ描画エラー）。
+    cta_href があれば <a>、無ければ <button type="button" data-ui-state-cta>。 -#}
+{%- set _ok = require_cta(kind, cta_label|default('')) -%}
+<section class="ui-state" data-kind="{{ kind }}" role="{{ 'alert' if kind in ('error', 'forbidden') else 'status' }}">
+  <svg class="ui-state__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+    {%- if kind == 'loading' %}<path d="M12 3a9 9 0 1 0 9 9"/>
+    {%- elif kind == 'error' %}<circle cx="12" cy="12" r="9"/><path d="M12 7v6M12 16.5v.01"/>
+    {%- elif kind == 'forbidden' %}<rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>
+    {%- elif kind == 'zero' %}<circle cx="11" cy="11" r="6"/><path d="M20 20l-4.5-4.5"/>
+    {%- else %}<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>{% endif -%}
+  </svg>
+  <h2 class="ui-state__title">{{ title }}</h2>
+  {%- if msg %}
+  <p class="ui-state__msg">{{ msg }}</p>
+  {%- endif %}
+  {%- if kind != 'loading' %}
+  <div class="ui-state__actions">
+    {%- if cta_href %}
+    <a class="c-btn{{ ' c-btn--primary' if kind in ('empty', 'zero') else '' }}" href="{{ cta_href }}">{{ cta_label }}</a>
+    {%- else %}
+    <button type="button" class="c-btn{{ ' c-btn--primary' if kind in ('empty', 'zero') else '' }}" data-ui-state-cta>{{ cta_label }}</button>
+    {%- endif %}
+  </div>
+  {%- endif %}
+</section>

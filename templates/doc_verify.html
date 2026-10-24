@@ -2,7 +2,6 @@
 {#- ドキュメント検証（System 06）。共通レイアウトに載せる。管理群は レビュー一覧・観点・履歴＋設定（サイドバー）。
     概要・要件・指摘・矛盾・トレーサビリティ・変更・AI レビューはレビューを開いた後の本文上部タブ（c-tabs）。 -#}
 {% set system_key = 'docverify' %}
-{% set topbar_crumb = 'ドキュメント検証' %}{% set topbar_title = 'レビュー一覧' %}
 {% block head_css %}
   <link rel="stylesheet" href="{{ url_for('static', filename='css/user-menu.css') }}?v={{ _ver }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/ta2.css') }}?v={{ _ver }}">
@@ -15,15 +14,6 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='css/docverify-pair.css') }}?v={{ dv_ver }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/docverify-followup.css') }}?v={{ dv_ver }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/docverify-cases.css') }}?v={{ dv_ver }}">
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/docassure.css') }}?v={{ dv_ver }}">
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/docassure-trace-panel.css') }}?v={{ dv_ver }}">
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/docassure-panels.css') }}?v={{ dv_ver }}">
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/docassure-links-panel.css') }}?v={{ dv_ver }}">
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/docassure-s-conflicts.css') }}?v={{ dv_ver }}">
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/docassure-s-changes.css') }}?v={{ dv_ver }}">
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/docassure-s-review.css') }}?v={{ dv_ver }}">
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/docassure-s-requirements.css') }}?v={{ dv_ver }}">
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/docassure-s-shared.css') }}?v={{ dv_ver }}">
 {% endblock %}
 {% block head_css_late %}  <link rel="stylesheet" href="{{ url_for('static', filename='css/docverify-sidebar.css') }}?v={{ dv_ver }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/docverify-frame.css') }}?v={{ dv_ver }}">
@@ -32,8 +22,6 @@
   {# 既存 CSS は .dv-page を祖先に取る（子孫セレクタのみ）。body の class は共通レイアウトが持つので html に付ける #}
   <script>document.documentElement.classList.add('dv-page');</script>
 {% endblock %}
-{% block sidebar_cta %}{% endblock %}
-{% block sidebar_nav %}{% include 'partials/docverify-sidebar.html' %}{% endblock %}
 {% block content %}
       <header class="c-page-head dv-pagehead" id="dv-pagehead">
         <div class="c-page-head__main">
@@ -65,19 +53,6 @@
       {% include 'docverify/_pair.html' %}
       {% include 'docverify/_gate.html' %}
       {% include 'docverify/_trace.html' %}
-      <section class="dv-view da" data-view="assure" hidden>
-        {# レビューを開いた後のタブ。dv-sb / dv-sb__item / dv-sb__label / dv-sb__count は docassure.js が参照する #}
-        <nav class="c-tabs dv-da-tabs dv-sb" id="dv-da-tabs" role="tablist" aria-label="レビューの画面" hidden>
-          <a role="tab" class="dv-sb__item" href="#assure" data-da-tab="overview"><span class="dv-sb__label">概要</span></a>
-          <a role="tab" class="dv-sb__item" href="#assure" data-da-tab="req"><span class="dv-sb__label">要件</span></a>
-          <a role="tab" class="dv-sb__item" href="#assure" data-da-tab="issues"><span class="dv-sb__label">指摘</span><span class="dv-sb__count" data-count="issues" hidden></span></a>
-          <a role="tab" class="dv-sb__item" href="#assure" data-da-tab="conf"><span class="dv-sb__label">矛盾</span><span class="dv-sb__count" data-count="conf" hidden></span></a>
-          <a role="tab" class="dv-sb__item" href="#assure" data-da-tab="changes"><span class="dv-sb__label">変更</span></a>
-          <a role="tab" class="dv-sb__item" href="#assure" data-da-tab="review"><span class="dv-sb__label">AI レビュー</span></a>
-          <a role="tab" class="dv-sb__item" href="#assure" data-da-tab="trace"><span class="dv-sb__label">トレーサビリティ</span></a>
-        </nav>
-        <div id="da-root" aria-label="ドキュメント検証"></div>
-      </section>
       {% include 'docverify/_process.html' %}
       {% include 'docverify/_accuracy.html' %}
 {% endblock %}
@@ -86,6 +61,11 @@
 {% endblock %}
 {% block scripts %}
 <script>(function(){var m=document.getElementById('app-content');if(m)m.classList.add('dv-content');})();</script>
+<script>(function(){/* 共通サイドメニュー（s_docverify）の選択中表示をハッシュに合わせる */
+var MAP={cases:'cases',checklists:'checklists',metrics:'metrics',screen:'metrics',settings:'settings'};
+function mark(){var h=(location.hash||'#cases').slice(1).split('/')[0],k=MAP[h]||'cases';
+document.querySelectorAll('.app-nav-item[data-nav-key]').forEach(function(a){var on=a.dataset.navKey===k;a.classList.toggle('is-active',on);if(on)a.setAttribute('aria-current','page');else a.removeAttribute('aria-current');});}
+window.addEventListener('hashchange',mark);window.addEventListener('popstate',mark);document.addEventListener('click',function(){setTimeout(mark,0);});mark();})();</script>
 <script src="{{ url_for('static', filename='js/c-hybrid.js') }}?v={{ _ver }}"></script>
 <script src="{{ url_for('static', filename='js/user-menu.js') }}?v={{ _ver }}"></script>
 <script src="{{ url_for('static', filename='js/docverify-core.js') }}?v={{ dv_ver }}"></script>
@@ -103,36 +83,6 @@
 <script src="{{ url_for('static', filename='js/docverify-followup.js') }}?v={{ dv_ver }}"></script>
 <script src="{{ url_for('static', filename='js/docverify-cases.js') }}?v={{ dv_ver }}"></script>
 <script src="{{ url_for('static', filename='js/docverify-accuracy.js') }}?v={{ dv_ver }}"></script>
-<script src="{{ url_for('static', filename='js/docassure-vocab.js') }}?v={{ dv_ver }}"></script>
-<script src="{{ url_for('static', filename='js/docassure.js') }}?v={{ dv_ver }}"></script>
-<script src="{{ url_for('static', filename='js/docassure-trace-panel.js') }}?v={{ dv_ver }}"></script>
-<script src="{{ url_for('static', filename='js/docassure-diff-panel.js') }}?v={{ dv_ver }}"></script>
-<script src="{{ url_for('static', filename='js/docassure-review-panel.js') }}?v={{ dv_ver }}"></script>
-<script src="{{ url_for('static', filename='js/docassure-links-panel.js') }}?v={{ dv_ver }}"></script>
 <script src="{{ url_for('static', filename='js/docverify-frame.js') }}?v={{ dv_ver }}"></script>
 <script>DV.start();</script>
-<script>(function(){
-  /* タブ（レビューを開いた後）とサイドバーの aria-current、作成フォームの表示、パンくずを同期する */
-  var tabs=document.getElementById('dv-da-tabs'),side=document.getElementById('dv-sidenav');if(!tabs||!side)return;
-  var form=document.getElementById('dvgNewForm'),rv=document.querySelector('section.dv-view[data-view="reviews"]');
-  function syncForm(){if(form&&rv)form.hidden=rv.hidden;}
-  if(rv)new MutationObserver(syncForm).observe(rv,{attributes:true,attributeFilter:['hidden']});syncForm();
-  var ob;
-  function curTab(){var h=location.hash||'',m=h.match(/^#assure(?:\/[^\/]*\/([\w-]+))?/);return m?(m[1]||'overview'):null;}
-  function sync(){var tab=curTab();if(ob)ob.disconnect();
-    tabs.hidden=!window.DAX_IID;
-    tabs.querySelectorAll('[data-da-tab]').forEach(function(a){var on=a.dataset.daTab===tab;a.classList.toggle('active',on);a.setAttribute('aria-selected',on?'true':'false');if(on)a.setAttribute('aria-current','page');else a.removeAttribute('aria-current');});
-    side.querySelectorAll('.dv-sec').forEach(function(a){var on=a.classList.contains('active');if(on)a.setAttribute('aria-current','page');else a.removeAttribute('aria-current');});
-    if(ob)ob.observe(side,{subtree:true,attributes:true,attributeFilter:['class']});}
-  tabs.addEventListener('click',function(e){var a=e.target.closest('[data-da-tab]');if(!a)return;e.preventDefault();var t=a.dataset.daTab;location.hash=window.DAX_IID?('#assure/'+window.DAX_IID+'/'+t):'#assure';});
-  window.addEventListener('dax:counts',function(e){var d=e.detail||{};tabs.querySelectorAll('.dv-sb__count').forEach(function(c){var v=d[c.dataset.count];if(v==null||v===''||+v===0){c.hidden=true;return;}c.textContent=v;var L=(window.DAM||{}).LABEL,k=c.dataset.count,lb=L?(k==='conf'?L.confOf(d.issues,v):k==='req'?L.reqOpen(v):L.issues(v)):(k==='conf'?'判断待ち '+d.issues+' 件のうち矛盾 ':'判断待ち ')+v+' 件';c.title=lb;c.setAttribute('aria-label',lb);c.hidden=false;});});
-  /* パンくずは「WebSpec2Doc / ドキュメント検証」。レビューを開いた後のタブ画面だけ レビュー名 / タブ名 を足す（他の画面は docverify-core.js が書く） */
-  function crumb(){var bc=document.getElementById('topbar-breadcrumb');if(!bc)return;if(!/^#assure/.test(location.hash||''))return;var cur=tabs.querySelector('[aria-current="page"] .dv-sb__label');var r=window.DV&&DV.state&&DV.state.review&&DV.state.review.name;var parts=['WebSpec2Doc','ドキュメント検証'];if(r){parts.push(r);if(cur)parts.push(cur.textContent.trim());}
-    var h=parts.map(function(t,i){var e=document.createElement('span');e.textContent=t;if(i===parts.length-1)e.setAttribute('aria-current','page');return e.outerHTML;}).join('<span class="sep">/</span>');if(bc.innerHTML!==h)bc.innerHTML=h;}
-  var bcEl=document.getElementById('topbar-breadcrumb');if(bcEl)new MutationObserver(function(){setTimeout(crumb,0);}).observe(bcEl,{childList:true,subtree:true,characterData:true});
-  window.addEventListener('dax:counts',function(){setTimeout(sync,0);setTimeout(crumb,0);});
-  window.addEventListener('hashchange',function(){setTimeout(sync,0);setTimeout(crumb,60);});
-  ob=new MutationObserver(function(){setTimeout(sync,0);});sync();setTimeout(crumb,300);
-  var rl=document.getElementById('dvgReviewsReload');if(rl)rl.addEventListener('click',function(){if(window.DV)DV.show('reviews');});
-})();</script>
 {% endblock %}

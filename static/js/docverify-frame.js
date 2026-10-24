@@ -2,7 +2,7 @@
 (function () {
   'use strict';
   function enhance(inp) {
-    if (inp.dataset.dvFile) return;
+    if (inp.dataset.dvFile || inp.hidden) return;   // hidden の入力は画面側のボタンから開く（後付けボタンを増やさない）
     inp.dataset.dvFile = '1';
     const lab = inp.closest('label');
     const cap = lab && lab.querySelector('span');
@@ -25,11 +25,6 @@
   }
   function init() {
     document.querySelectorAll('.app-content input[type=file]').forEach(enhance);
-    document.addEventListener('click', (e) => {
-      if (!e.target.closest('[data-view="plan"] [data-act="save"]')) return;
-      const other = document.getElementById('dvR4PlanSave');
-      if (other) setTimeout(() => other.click(), 0);
-    });
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
 })();

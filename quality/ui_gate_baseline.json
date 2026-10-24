@@ -1,0 +1,55 @@
+{
+  "G-1": {
+    "count": 6,
+    "screens": 3
+  },
+  "G-2": {
+    "count": 6,
+    "screens": 3
+  },
+  "G-3": {
+    "count": 21,
+    "screens": 3
+  },
+  "G-4": {
+    "count": 9,
+    "screens": 3
+  },
+  "G-5": {
+    "count": 24,
+    "screens": 3
+  },
+  "G-6": {
+    "count": 6,
+    "screens": 3
+  },
+  "G-7": {
+    "count": 0,
+    "screens": 3
+  },
+  "G-8": {
+    "count": 4,
+    "screens": 3
+  },
+  "date": "2026-10-24",
+  "git": "0841eb0",
+  "base": "http://127.0.0.1:8766",
+  "pages": [
+    "/dashboard",
+    "/generate",
+    "/docverify"
+  ],
+  "widths": [
+    "1440x900",
+    "1280x800",
+    "1280x720"
+  ],
+  "total": 76,
+  "static": {
+    "生px": 3107,
+    "状態色文字色": 104,
+    "生の色": 308,
+    "total": 3519,
+    "scope": "static/css/*.css"
+  }
+}

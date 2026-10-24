@@ -171,6 +171,7 @@
       setSev(b.dataset.id, VSEV[i][0]);
     });
   }
+  if (window.DV) DV.on('checklists', function () { var h = document.querySelector('[data-dv-title="checklists"]'); if (h) h.textContent = DV.title('checklists'); });
   var fileIn = $('dvgVpFile'), openBtn = $('dvgVpImport'), expBtn = $('dvgVpExport');
   if (openBtn && fileIn) {
     openBtn.addEventListener('click', function () { fileIn.value = ''; fileIn.click(); });

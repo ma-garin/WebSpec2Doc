@@ -1,0 +1,14 @@
+{# 共通サイドメニュー。項目は web/nav_registry の nav_items(system_key)。選択中は aria-current="page"。 #}
+<nav class="app-nav" aria-label="メインナビゲーション">
+{%- for it in nav_items(system_key) %}
+  {%- set _on = nav_cur is defined and nav_cur and nav_cur.key == it.key %}
+  {%- if it.disabled %}
+  <span class="app-nav-item is-disabled" aria-disabled="true" title="対象システムを選ぶと使えます" style="color:var(--color-text-secondary)">
+  {%- else %}
+  <a class="app-nav-item{{ ' is-active' if _on }}" href="{{ it.href }}" data-nav-key="{{ it.key }}"{% if _on %} aria-current="page"{% endif %}>
+  {%- endif %}
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">{{ (it.icon or '')|safe }}</svg>
+    <span class="nav-label">{{ it.label }}</span>
+  {%- if it.disabled %}</span>{% else %}</a>{% endif %}
+{%- endfor %}
+</nav>

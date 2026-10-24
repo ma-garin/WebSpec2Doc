@@ -82,7 +82,7 @@ html.dv-page .dvs-changes li{display:grid;gap:var(--space-1);line-height:1.8;ove
 html.dv-page .dvs-changes strong{font-size:var(--text-sm);font-weight:500}
 html.dv-page .dvs-changes b{color:var(--color-primary-dark);font-weight:500}
 html.dv-page .dvs-no-change{color:var(--color-text-secondary)}
-html.dv-page .dvs-savebar{grid-row:5;display:flex;align-items:center;gap:var(--space-3);padding:var(--space-4) 0 0;border:0;border-top:1px solid var(--color-border);border-radius:0;background:none;box-shadow:none;flex-wrap:nowrap;position:static;min-width:0}
+html.dv-page .dvs-savebar{grid-row:5;display:flex;align-items:center;gap:var(--space-3);padding:var(--space-4) var(--space-6) 0;border:0;border-top:1px solid var(--color-border);border-radius:0;background:none;box-shadow:none;flex-wrap:nowrap;position:static;min-width:0}
 html.dv-page .dvs-save-state{display:flex;flex-direction:column;gap:var(--space-1);flex:1;min-width:0}
 html.dv-page .dvs-count{font-size:var(--text-sm);font-weight:600;color:var(--color-text-secondary)}
 html.dv-page .dvs-count.is-dirty{color:var(--color-primary-dark)}

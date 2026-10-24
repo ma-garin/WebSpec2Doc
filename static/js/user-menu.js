@@ -61,7 +61,7 @@
   document.getElementById('usermenu-feedback-btn')?.addEventListener('click', () => go('feedback'));
 })();
 
-/* 現在テナントの表示。
+/* 現在の組織の表示。
  *
  * テナントはテンプレート変数に渡っていない（context_processor が渡すのは auth_user だけ）ため、
  * /api/auth/me から取得してヘッダーのチップ・サイドメニュー・ユーザーメニューへ流し込む。
@@ -86,13 +86,13 @@
       if (!label) return;
       if (navName) navName.textContent = label;
       if (menuName) {
-        menuName.textContent = 'テナント: ' + label;
+        menuName.textContent = '組織: ' + label;
         menuName.hidden = false;
       }
       if (chip && chipName) {
         chipName.textContent = label;
         chip.style.display = 'inline-flex';
-        chip.title = 'テナント: ' + label + '（クリックで切り替え）';
+        chip.title = '組織: ' + label + '（クリックで切り替え）';
       }
     })
     .catch(() => {

@@ -11,9 +11,9 @@ html.dv-page #page-reason{display:none!important}
 html.dv-page #dv-pagehead{flex:none;display:flex;align-items:center;gap:8px;min-height:32px;margin:0!important;padding:0 0 0 0!important;
   border:0!important;background:none!important;box-shadow:none!important;border-radius:0!important;min-width:0}
 html.dv-page #dv-pagehead .c-page-head__main{display:flex;align-items:center;gap:8px;min-width:0;flex-wrap:nowrap;padding:0;margin:0}
-html.dv-page #dv-pagehead .c-page-head__title{font-size:15px;font-weight:700;margin:0;white-space:nowrap;line-height:32px}
+html.dv-page #dv-pagehead .c-page-head__title{font-size:var(--text-base);font-weight:700;margin:0;white-space:nowrap;line-height:32px}
 html.dv-page #dv-pagehead .c-page-head__desc{display:none!important}
-html.dv-page #dv-pagehead .c-page-head__state{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--color-text-secondary);
+html.dv-page #dv-pagehead .c-page-head__state{display:flex;align-items:center;gap:6px;font-size:var(--text-xs);color:var(--color-text-secondary);
   margin:0;white-space:nowrap;min-width:0;overflow:hidden;text-overflow:ellipsis}
 html.dv-page #dv-pagehead .c-page-head__state:empty{display:none}
 /* タブ列は 1 本 */
@@ -32,8 +32,9 @@ html.dv-page .dv-view:not([hidden])>.p1-head,html.dv-page .dv-view:not([hidden])
 html.dv-page .dv-view>.p1-head>h2,html.dv-page .dv-view>.dvf-head>h2,html.dv-page .dv-view>.dvr-head>h2{display:none}
 html.dv-page .dv-view>.p1-head>.sp{display:none}
 /* 各画面の行（見出しが抜けた分を詰め、明示配置） */
-html.dv-page .dvp:not([hidden]){grid-template-rows:auto minmax(0,1fr) auto}
-html.dv-page .dvp>.p1-notice{grid-row:1}html.dv-page .dvp>.p1-pair{grid-row:2}html.dv-page .dvp>.p1-gate{grid-row:3}
+html.dv-page .dvp:not([hidden]){grid-template-rows:auto minmax(0,1fr) 56px}
+html.dv-page .dvp>.dv-gatebar{grid-row:3;height:56px;min-height:0}
+html.dv-page .dvp>.p1-notice{grid-row:1}html.dv-page .dvp>.p1-pair{grid-row:2}
 html.dv-page .dvc:not([hidden]){grid-template-rows:auto auto minmax(0,1fr)}
 html.dv-page .dvc>.dvc-new{grid-row:1}html.dv-page .dvc>.dvc-msg{grid-row:2}html.dv-page .dvc>.dvc-body{grid-row:3}
 html.dv-page .dvg:not([hidden]){grid-template-rows:auto minmax(0,1fr)}
@@ -44,55 +45,43 @@ html.dv-page .dvf>:nth-child(2){grid-row:1}html.dv-page .dvf>:nth-child(3){grid-
 html.dv-page .dvc-new{flex-wrap:nowrap;gap:8px}
 html.dv-page .dvc-new .dvc-name{flex:0 1 260px;width:260px;min-width:120px}
 html.dv-page .dvc-new .dvc-file{flex:0 1 auto;min-width:0;display:inline-flex;align-items:center;gap:6px;white-space:nowrap;overflow:hidden}
-html.dv-page .dvc-new .dvc-file input[type=file]{width:190px;max-width:100%;font-size:12px}
+html.dv-page .dvc-new .dvc-file input[type=file]{width:190px;max-width:100%;font-size:var(--text-xs)}
 html.dv-page .dvc-new>button{margin-left:auto}
 /* ボタン: 内容幅・高さ 32px・左右 14px。全幅にしない */
 html.dv-page .app-content :is(.p1-btn,.c-btn,.btn-outline-sm,.btn-primary,.dash-hero-start){height:32px;padding:0 14px;width:auto;
-  min-width:0;max-width:none;display:inline-flex;align-items:center;justify-content:center;gap:6px;font-size:12.5px;
+  min-width:0;max-width:none;display:inline-flex;align-items:center;justify-content:center;gap:6px;font-size:var(--text-sm);
   line-height:1;box-sizing:border-box;flex:none;white-space:nowrap;border-radius:6px}
-html.dv-page .app-content .p1-acts .p1-btn{height:26px;padding:0 8px;font-size:11.5px}
-html.dv-page .app-content .p1-filter button,html.dv-page .app-content .p3-chip{font-size:11.5px;border-radius:999px;padding:0 8px;height:auto}
+html.dv-page .app-content .p1-acts .p1-btn{height:26px;padding:0 8px;font-size:var(--text-xs)}
+html.dv-page .app-content .p1-filter button,html.dv-page .app-content .p3-chip{font-size:var(--text-xs);border-radius:999px;padding:0 8px;height:auto}
 /* 工程画面（計画・文書を読む・質問票 など）: 本文は内側スクロール、判定帯は最下部に固定 */
 html.dv-page .dv-view:has(>[data-dvr-gate]):not([hidden]){display:flex;flex-direction:column;gap:8px;overflow:hidden}
 html.dv-page .dv-view:has(>[data-dvr-gate])>*{flex:none;min-width:0}
 html.dv-page .dv-view:has(>[data-dvr-gate])>:not([data-dvr-gate]):not(.dvr-head):not(.dvr-msg):not(.r2-state):not([hidden]){flex:1 1 auto;min-height:0;overflow:auto}
-html.dv-page .dv-view>[data-dvr-gate]{order:9;display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1.6fr) auto;gap:8px;align-items:center;
-  border:1px solid var(--color-border);border-radius:8px;padding:6px 10px;background:var(--color-surface,#fff);font-size:12px;max-height:150px;overflow:auto}
-html.dv-page [data-dvr-gate] .p5-gates{display:grid;grid-template-columns:1fr 1fr;gap:6px;min-width:0}
-html.dv-page [data-dvr-gate] .p5-gate{border:1px solid var(--color-border,#d8dee4);border-radius:6px;padding:4px 8px;min-width:0}
-html.dv-page [data-dvr-gate] .p5-gate .lbl{font-size:11.5px;color:var(--color-text-secondary,#57606a);overflow-wrap:anywhere}
-html.dv-page [data-dvr-gate] .p5-gate .val{font-size:15px;font-weight:700}
-html.dv-page [data-dvr-gate] .p5-gate.ok{border-color:var(--color-success,#1a7f37);background:var(--color-success-light,#e8f5e9)}
-html.dv-page [data-dvr-gate] .p5-gate.ok .val{color:var(--color-success,#1a7f37)}
-html.dv-page [data-dvr-gate] .p5-gate.ng{border-color:var(--color-danger,#c62828);background:var(--color-danger-light,#fdecec)}
-html.dv-page [data-dvr-gate] .p5-gate.ng .val{color:var(--color-danger,#c62828)}
-html.dv-page [data-dvr-gate] .p5-why{margin:0;font-size:12px;overflow-wrap:anywhere;min-width:0;max-height:4.8em;overflow:auto}
+html.dv-page .dv-view>[data-dvr-gate]{order:9;display:flex;gap:var(--space-4);align-items:center;height:56px;min-height:0;
+  border:1px solid var(--color-border);border-radius:var(--radius-md);padding:0 var(--space-4);background:var(--color-surface);font-size:var(--text-xs);overflow:hidden}
 /* ---- 監査 S06-design-audit.md の是正 ---- */
 /* D-04 見出しは H1 1 つ（15px/700）。見出し行の H2 は H1 と同じ語なので出さない。H3 は本文より太く */
-html.dv-page .app-topbar-title{font-size:15px;font-weight:700}
+html.dv-page .app-topbar-title{font-size:var(--text-base);font-weight:700}
 html.dv-page #dv-pagehead .c-page-head__title{display:none}
-html.dv-page .app-content .dv-view h3{font-size:13px;font-weight:700;margin-top:8px}
+html.dv-page .app-content .dv-view h3{font-size:var(--text-sm);font-weight:700;margin-top:8px}
 /* D-05 タブ列 1 本・折り返さない */
 html.dv-page #dv-subtabs{display:flex;flex-wrap:nowrap;overflow:hidden;gap:0}
-html.dv-page #dv-subtabs>a{flex:0 1 auto;min-width:0;white-space:nowrap;font-size:12.5px;overflow:hidden;text-overflow:ellipsis}
+html.dv-page #dv-subtabs>a{flex:0 1 auto;min-width:0;white-space:nowrap;font-size:var(--text-sm);overflow:hidden;text-overflow:ellipsis}
 /* D-08〜D-10 コントラスト 4.5:1 以上（文字は濃い色、色相は枠と背景に残す） */
-html.dv-page .dvp .p1-tag.sev-w{color:#8a5a00;border-color:#d99a2b}
-html.dv-page .dvc-chip.ok{color:#0f7a46}
-html.dv-page .dvf .p5-gate.ok .val,html.dv-page [data-dvr-gate] .p5-gate.ok .val,html.dv-page .dvp .p5-gate.ok .val{color:#0f7a46}
-html.dv-page .dvf-tag.is-add{color:#0f7a46}
-html.dv-page .dvs-off{color:var(--color-text-secondary,#5f6670)}
+html.dv-page .dvp .p1-tag.sev-w{color:var(--color-warning-tx);border-color:var(--color-warning-border)}
+html.dv-page .dvc-chip.ok{color:var(--color-success-tx)}
+html.dv-page .dvf-tag.is-add{color:var(--color-success-tx)}
+html.dv-page .dvs-off{color:var(--color-text-secondary)}
 /* D-11 チェックボックスはラベル全体を 24px 以上のターゲットに */
 html.dv-page .app-content label:has(>input[type=checkbox]){display:inline-flex;align-items:center;gap:6px;min-height:24px;padding:0 4px;cursor:pointer}
 html.dv-page .app-content input[type=checkbox]{width:16px;height:16px;margin:0}
 /* D-12 判定帯の右端に主ボタン 1 つ。証跡（承認）を開いている間は承認する側だけを主にする */
 html.dv-page .dvp:has([data-pane="trail"]:not([hidden])) [data-pair-act="to-approve"]{display:none}
-/* D-13 修正版の確認: 判定帯は本文と重ねない */
-html.dv-page .dvf .dvf-gate{position:static}
 html.dv-page .dvf .dvf-body{min-height:0;overflow:auto;position:relative}
 /* D-15 ファイル入力はブラウザ標準の英語を出さない（docverify-frame.js が日本語のボタンと名前を置く） */
 html.dv-page .app-content label:has(>input.dv-file-native){position:relative}
 html.dv-page .app-content input.dv-file-native{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none;overflow:hidden}
-html.dv-page .dv-file-name{font-size:12px;color:var(--color-text-secondary);max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+html.dv-page .dv-file-name{font-size:var(--text-xs);color:var(--color-text-secondary);max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 /* D-17 1024 で表が見切れない */
 html.dv-page .dvc-t td.c-name{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 html.dv-page .dvc-t td,html.dv-page .dvc-t th{overflow-wrap:anywhere}
@@ -107,10 +96,36 @@ html.dv-page #dvR4PlanSave{display:none}
 html.dv-page .skip-link:focus{position:fixed;top:8px;left:8px;z-index:100}
 html.dv-page .dv-file-btn{width:auto!important;justify-self:start;align-self:start;flex:none}
 /* S06 polish: D-23 押せない理由 / D-26 章ごとの指摘ボタン / D-22 文字は 11・12.5・13・15 */
-.r2-need{font-size:11.5px;color:var(--color-text-secondary)}
+.r2-need{font-size:var(--text-xs);color:var(--color-text-secondary)}
 .r2-need[hidden]{display:none}
-.r2-pick{min-height:24px;margin-left:8px;font-size:11.5px;font-weight:400}
+.r2-pick{min-height:24px;margin-left:8px;font-size:var(--text-xs);font-weight:400}
 /* S06 polish: D-23 押せない理由 / D-26 章ごとの指摘ボタン */
-.r2-need{font-size:11.5px;color:var(--color-text-secondary)}
+.r2-need{font-size:var(--text-xs);color:var(--color-text-secondary)}
 .r2-need[hidden]{display:none}
-.r2-pick{min-height:24px;margin-left:8px;font-size:11.5px;font-weight:400}
+.r2-pick{min-height:24px;margin-left:8px;font-size:var(--text-xs);font-weight:400}
+
+/* 判定帯（U06-01）: 全体｜今回の変更分｜理由 1 行｜主ボタン 1 個 */
+.dv-gatebar { height: 56px; display: flex; align-items: center; gap: var(--space-4); padding: 0 var(--space-4); background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-md); min-width: 0; }
+.dv-gatebar__cell { display: inline-flex; align-items: baseline; gap: var(--space-2); flex: none; padding-left: var(--space-2); border-left: 4px solid var(--color-border); }
+.dv-gatebar__cell.ok { border-left-color: var(--color-success); }
+.dv-gatebar__cell.ng { border-left-color: var(--color-error, var(--color-warning)); }
+.dv-gatebar__cell.na { border-left-color: var(--color-warning); }
+.dv-gatebar__lbl { color: var(--color-text-secondary); }
+.dv-gatebar__why { flex: 1 1 0; min-width: 0; color: var(--color-text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dv-gatebar .p1-btn { flex: none; }
+.dv-more { position: relative; }
+.dv-more > summary { list-style: none; cursor: pointer; }
+.dv-more > summary::-webkit-details-marker { display: none; }
+.dv-more__list { position: absolute; right: 0; top: 100%; z-index: 20; display: flex; flex-direction: column; gap: var(--space-1); padding: var(--space-2); background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-md); }
+.dvp-scope-more > summary { cursor: pointer; display: inline; margin-left: var(--space-2); color: var(--color-text-secondary); }
+
+/* 文書を読む（U06-10）: 章ごとの指摘ボタンはホバー/フォーカス時のみ。右パネルは操作行を下端に置く */
+.r2-pick { opacity: 0; width: 16px; height: 16px; min-width: 0; padding: 0; line-height: 1; }
+.p1-sec:hover .r2-pick, .r2-pick:focus-visible { opacity: 1; }
+
+.dvg-two { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-4); }
+.dvf-drop { border: 1px dashed var(--color-border-strong); border-radius: var(--radius-md); padding: var(--space-4); cursor: pointer; }
+.dvf-drop.is-over { background: var(--color-primary-bg); border-color: var(--color-primary); }
+.dvf-picked { list-style: none; margin: var(--space-2) 0 0; padding: 0; }
+.dvf-picked li { display: flex; gap: var(--space-3); align-items: center; }
+.dvc-doc-line { display: block; }

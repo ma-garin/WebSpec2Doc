@@ -33,8 +33,8 @@ REVIEW_TYPES = {
               "phases": PHASES, "checklist": True,
               "exit": {"require_all_verified": True, "require_all_individual_done": True}},
 }
-LEGACY_LABEL = "未設定（旧形式）"
-LEGACY_HINT = "レビューの種別が未設定です（旧形式）。計画の画面で種別を選ぶと、必須の役割と基準が決まります。"
+LEGACY_LABEL = "未設定"
+LEGACY_HINT = "レビューの種別を選ぶと、必須の役割と基準が決まります。"
 
 KINDS = {"missing": "欠落", "wrong": "誤り", "ambiguous": "曖昧", "contradiction": "矛盾", "violation": "規約違反"}
 VERDICTS = {"approved": "承認", "conditional": "条件付き承認", "rereview": "再レビュー"}

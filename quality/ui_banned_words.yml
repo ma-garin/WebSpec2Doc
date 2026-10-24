@@ -1,0 +1,78 @@
+# 禁止語辞書（共通基盤改修仕様 §5.2 の 52 語 + 追加の型 8 種 + 01 の語）。G-3 が照合する。
+# words: id / pattern / regex(bool) / replace。exceptions: 画面パス × 要素セレクタ（その中は照合しない）。
+words:
+  - {id: 1, pattern: ".env に保存", regex: false, replace: "削除（保存先は書かない）"}
+  - {id: 2, pattern: "LLM 接続先", regex: false, replace: "AI の接続先"}
+  - {id: 3, pattern: "LLM", regex: false, replace: "AI"}
+  - {id: 4, pattern: "Organization ID", regex: false, replace: "組織 ID"}
+  - {id: 5, pattern: "Project ID", regex: false, replace: "プロジェクト ID"}
+  - {id: 6, pattern: "SLACK_WEBHOOK_URL", regex: false, replace: "Slack の通知先 URL"}
+  - {id: 7, pattern: "Incoming Webhook", regex: false, replace: "Slack の通知先 URL"}
+  - {id: 8, pattern: "受信 Webhook URL", regex: false, replace: "Teams の通知先 URL"}
+  - {id: 9, pattern: "hooks\\.slack\\.com", regex: true, replace: "Slack で発行した URL"}
+  - {id: 10, pattern: "SSRF 保護", regex: false, replace: "この PC のアドレスのみ"}
+  - {id: 11, pattern: "localhost|127\\.0\\.0\\.1", regex: true, replace: "この PC"}
+  - {id: 12, pattern: "SSRF保護をバイパス", regex: false, replace: "社内のアドレスも解析"}
+  - {id: 13, pattern: "⚠️", regex: false, replace: "警告アイコン（線）"}
+  - {id: 14, pattern: "テスト設計（MBT）", regex: false, replace: "テスト設計の既定値"}
+  - {id: 15, pattern: "技法別設計（MBT）", regex: false, replace: "技法別の設計"}
+  - {id: 16, pattern: "WEBSPEC2DOC_ALLOW_LOCAL", regex: false, replace: "社内 URL の許可設定"}
+  - {id: 17, pattern: "report.json", regex: false, replace: "解析結果"}
+  - {id: 18, pattern: "screens.md|forms.md", regex: true, replace: "画面一覧・入力項目一覧"}
+  - {id: 19, pattern: "diff_report.html", regex: false, replace: "差分レポート"}
+  - {id: 20, pattern: "snapshots/", regex: false, replace: "削除"}
+  - {id: 21, pattern: "exit code 1", regex: false, replace: "削除（CLI 画面へ）"}
+  - {id: 22, pattern: "GitHub Actions", regex: false, replace: "削除（CLI 画面へ）"}
+  - {id: 23, pattern: "python src/main.py", regex: false, replace: "削除（CLI 画面へ）"}
+  - {id: 24, pattern: "stdout", regex: false, replace: "削除"}
+  - {id: 25, pattern: "OWASP WSTG|OWASP ASVS|WSTG/ASVS", regex: true, replace: "セキュリティの観点"}
+  - {id: 26, pattern: "↓MMD", regex: false, replace: "図のテキスト"}
+  - {id: 27, pattern: "↓ ?(SVG|PNG)", regex: true, replace: "図を保存（形式を選ぶ）"}
+  - {id: 28, pattern: "確認用: ?(通常|読込中)", regex: true, replace: "削除"}
+  - {id: 29, pattern: "表示確認 ?(通常|0件)", regex: true, replace: "削除"}
+  - {id: 30, pattern: "表示状態の確認用切替", regex: false, replace: "削除"}
+  - {id: 31, pattern: "状態の理由: ?Python", regex: true, replace: "削除"}
+  - {id: 32, pattern: "サーバでクロール", regex: false, replace: "解析"}
+  - {id: 33, pattern: "再クロール", regex: false, replace: "もう一度解析"}
+  - {id: 34, pattern: "Playwright を実行", regex: false, replace: "自動テストを実行"}
+  - {id: 35, pattern: "Playwright の実コード", regex: false, replace: "自動テストの手順"}
+  - {id: 36, pattern: "リバース解析", regex: false, replace: "画面の読み取り"}
+  - {id: 37, pattern: "Trace", regex: false, replace: "操作の記録"}
+  - {id: 38, pattern: "API トークン", regex: false, replace: "外部連携用のキー"}
+  - {id: 39, pattern: "テナント", regex: false, replace: "組織"}
+  - {id: 40, pattern: "保守下に置く", regex: false, replace: "定期確認に加える"}
+  - {id: 41, pattern: "System 01 で巡回", regex: false, replace: "ドキュメント作成で解析"}
+  - {id: 42, pattern: "System 02 の", regex: false, replace: "テスト自動化の"}
+  - {id: 43, pattern: "breaking", regex: false, replace: "互換性を壊す変更"}
+  - {id: 44, pattern: "Recorder|Selenium IDE", regex: true, replace: "操作の記録ファイル"}
+  - {id: 45, pattern: "QualityForward カラム", regex: false, replace: "削除（書き出しのみ）"}
+  - {id: 46, pattern: "旧形式", regex: false, replace: "削除（自動で移行）"}
+  - {id: 47, pattern: "finding_resolved", regex: false, replace: "指摘を解消"}
+  - {id: 48, pattern: "断片あたりの指摘", regex: false, replace: "1 章あたりの指摘"}
+  - {id: 49, pattern: "Ai 送信先", regex: false, replace: "AI の送信先"}
+  - {id: 50, pattern: "40 tests", regex: false, replace: "40 件のテスト"}
+  - {id: 51, pattern: "Items", regex: false, replace: "項目"}
+  - {id: 52, pattern: "P001.png", regex: false, replace: "画面名"}
+  # 追加の型（§5.2 末尾）
+  - {id: 53, pattern: "PW-\\d{4}|TC-P\\d{3}-[A-Z]{3}-\\d{3}|\\bP\\d{3}\\b", regex: true, replace: "ケース名・画面名（ID は詳細パネルの ID 欄だけ）"}
+  - {id: 54, pattern: "page\\.goto|text=", regex: true, replace: "開く／文字が〇〇"}
+  - {id: 55, pattern: "Asia/Tokyo|\\bUTC\\b", regex: true, replace: "日本時間"}
+  - {id: 56, pattern: "\\b(reset|unknown|admin|deleted|user)\\b", regex: true, replace: "初期化／不明／管理者／削除／利用者"}
+  - {id: 57, pattern: "\\.(json|jsonl|md|html|xlsx|csv|py)\\b", regex: true, replace: "ファイル名は表示しない（形式名だけ）"}
+  - {id: 58, pattern: "SYSTEM 0\\d|System 0\\d", regex: true, replace: "システム名"}
+  - {id: 59, pattern: "\\b(REST|JSON)\\b", regex: true, replace: "削除（04 CLI/API 以外）"}
+  - {id: 60, pattern: "[\\U0001F300-\\U0001FAFF\\u2600-\\u27BF]", regex: true, replace: "線アイコン"}
+  # C-28: 01 の語（U01-23 の禁止語のうち 52 語に無いもの）。09 由来の置換語は含めない
+  - {id: 61, pattern: "\\bmake\\b", regex: true, replace: "削除（開発用コマンド）"}
+  - {id: 62, pattern: "\\bMBT\\b", regex: true, replace: "テスト設計"}
+  - {id: 63, pattern: "\\bMMD\\b", regex: true, replace: "図のテキスト"}
+  - {id: 64, pattern: "\\bFit\\b", regex: true, replace: "全体表示"}
+  - {id: 65, pattern: "\\bPASS\\b", regex: true, replace: "合格"}
+  - {id: 66, pattern: "\\bFAIL\\b", regex: true, replace: "不合格"}
+  - {id: 67, pattern: "exit code", regex: false, replace: "削除（CLI 画面へ）"}
+
+# 例外: 画面パス（前方一致）× 要素セレクタ。その要素の中は照合しない
+exceptions:
+  - {path: "/cli", selector: "code,pre", ids: "all"}
+  - {path: "/settings", selector: "body", ids: [6, 7, 8, 9]}   # 連携先製品名（Slack・Teams）
+  - {path: "/export", selector: "body", ids: [6, 7, 8, 9]}     # 書き出しの連携先

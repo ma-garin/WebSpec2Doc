@@ -1,0 +1,20 @@
+# G-4 状態注入 fixture。画面パス -> 注入する API。各画面が実際に叩く API（static/js の fetch）に合わせる。
+# 各 api は glob（page.route 用）。empty は空応答の本体、500/403 は状態コード、loading は遅延 10 秒。
+/dashboard:
+  apis: ["**/api/history*", "**/api/sample-report*"]
+  empty: {body: {"items": [], "history": [], "reports": []}}
+/test-automation:
+  apis: ["**/api/ta2/tests*", "**/api/ta2/design/sources*"]
+  empty: {body: {"items": [], "tests": [], "sources": []}}
+/healing:
+  apis: ["**/api/healing/projects*", "**/api/healing/reports*", "**/api/healing/bundles*"]
+  empty: {body: {"items": [], "projects": [], "reports": [], "bundles": []}}
+/docverify:
+  apis: ["**/api/docverify/home*", "**/api/docverify/inspections*", "**/api/docverify/pair/cases*"]
+  empty: {body: {"items": [], "inspections": [], "cases": []}}
+/backend-test:
+  apis: ["**/api/backend-test/jobs*", "**/api/backend-test/summary*"]
+  empty: {body: {"items": [], "jobs": [], "summary": {}}}
+# データ取得領域を持たない入力フォームのため G-4（状態注入）の対象外
+/generate:
+  skip: "入力フォームのみで一覧・取得 API の領域が無い"

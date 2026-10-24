@@ -2,19 +2,40 @@
 async function loadHistory() {
   const body = document.getElementById('history-body');
   if (!body) return;
-  body.innerHTML = '<div class="empty">読み込み中...</div>';
+  body.innerHTML = '<section class="ui-state" data-kind="loading" role="status"><h2 class="ui-state__title">読み込み中…</h2></section>';
   try {
     const res = await fetch('/api/history');
-    const data = await res.json();
-    if (!data.items.length) {
-      body.innerHTML = _emptyState();
-      body.querySelector('.empty-add-btn')?.addEventListener('click', openAddSite);
+    if (res.status === 403) {
+      UIStates.set(body, 'forbidden', {
+        title: 'この一覧を見る権限がありません',
+        msg: '権限のあるアカウントで入り直すか、管理者に依頼してください。',
+        cta: { label: 'システム選択へ戻る', href: '/systems' },
+      });
       return;
     }
+    if (!res.ok) throw new Error('history ' + res.status);
+    const data = await res.json();
+    if (!data.items.length) {
+      _toggleEmptyHero(true);
+      UIStates.set(body, 'empty', {
+        title: 'まだ解析したサイトがありません',
+        msg: '上の欄に URL を入れて解析するか、サンプルレポートで内容を確かめられます。',
+        cta: { label: 'サンプルレポートを見る', onClick: () => document.getElementById('hero-sample-btn')?.click() },
+      });
+      // 画面の主ボタンは「解析を始める」の 1 個。空状態の操作は副次にする。
+      body.querySelector('.ui-state .c-btn')?.classList.remove('c-btn--primary');
+      return;
+    }
+    _toggleEmptyHero(false);
     body.innerHTML = _buildTable(data.items);
-    body.querySelectorAll('.hist-open').forEach(b => b.addEventListener('click', () => {
+    const openRow = (domain) => {
       document.dispatchEvent(new CustomEvent('webspec2doc:report-viewed'));
-      openResultsForDomain(b.dataset.domain);
+      openResultsForDomain(domain);
+    };
+    body.querySelectorAll('.hist-open').forEach(b => b.addEventListener('click', (ev) => { ev.stopPropagation(); openRow(b.dataset.domain); }));
+    body.querySelectorAll('tr[data-domain]').forEach(tr => tr.addEventListener('click', (ev) => {
+      if (ev.target.closest('button, a, .c-menu')) return;
+      openRow(tr.dataset.domain);
     }));
     body.querySelectorAll('.hist-recrawl').forEach(b => b.addEventListener('click', async () => {
       b.disabled = true;
@@ -25,41 +46,17 @@ async function loadHistory() {
     body.querySelectorAll('.hist-delete').forEach(b => b.addEventListener('click', () => deleteSite(b.dataset.domain, b)));
   } catch (e) {
     // 空状態・エラー状態は ui-states.js に統一（再試行導線つき）。
-    uiError(body, {
+    UIStates.set(body, 'error', {
       title: '解析履歴の読み込みに失敗しました',
-      message: '通信状態を確認して、もう一度お試しください。',
-      onRetry: loadHistory,
+      msg: '通信状態を確認して、もう一度お試しください。',
+      cta: { label: '再試行', onClick: loadHistory },
     });
   }
 }
-document.getElementById('reload-history')?.addEventListener('click', loadHistory);
 
-function _emptyState() {
-  return `
-    <div class="dashboard-empty">
-      <div class="dashboard-empty-icon">🔍</div>
-      <div class="dashboard-empty-title">まだ解析履歴がありません</div>
-      <div class="dashboard-empty-desc">
-        対象システムのURLを登録すると、画面仕様書・テスト設計・画面遷移図を自動生成します。
-      </div>
-      <div class="onboard-steps">
-        <div class="onboard-step"><span class="onboard-num">1</span><strong>URLを入力</strong><span>対象システムのURLを貼り付けて解析</span></div>
-        <div class="onboard-arrow">→</div>
-        <div class="onboard-step"><span class="onboard-num">2</span><strong>画面を選択</strong><span>検出された画面から生成対象を選択</span></div>
-        <div class="onboard-arrow">→</div>
-        <div class="onboard-step"><span class="onboard-num">3</span><strong>ドキュメントを確認</strong><span>生成された仕様書とテスト設計を確認</span></div>
-      </div>
-      <button type="button" class="btn-primary empty-add-btn" style="height:44px;padding:0 28px;font-size:15px;margin-top:8px">
-        最初の解析を始める
-      </button>
-      <button type="button" class="btn-sample-report" data-sample-report>
-        サンプルレポートを見る<span class="sample-zero">解析なし</span>
-      </button>
-      <button type="button" class="btn-outline-sm empty-demo-btn" data-onboarding-demo>
-        同梱デモサイトのURLを使う
-      </button>
-      <p style="font-size:12px;color:var(--text-muted);margin-top:4px">所要時間の目安: 1画面あたり約2〜3秒（10画面で30秒前後）</p>
-    </div>`;
+// 説明文と工程チップはサイトが 0 件のときだけ出す
+function _toggleEmptyHero(isEmpty) {
+  document.querySelectorAll('#view-dashboard [data-when-empty]').forEach(el => { el.hidden = !isEmpty; });
 }
 
 function _freshnessLabel(updatedTs) {
@@ -115,16 +112,21 @@ function _buildTable(items) {
       : it.snapshot_count === 1 ? '<span class="snap-badge snap-badge-first">初回</span>' : '';
     const diffBadge = it.has_diff ? '<span class="diff-badge">差分あり</span>' : '';
     html += `
-      <tr class="${it.has_diff ? 'has-drift' : ''}">
+      <tr class="${it.has_diff ? 'has-drift' : ''} is-clickable" data-domain="${escHtml(it.domain)}">
         <td><div class="site-cell"><strong>${escHtml(it.domain)}</strong>${diffBadge}</div></td>
         <td class="num">${it.screens}</td>
         <td class="num">${it.fields}</td>
         <td>${snapBadge}</td>
         <td><span class="freshness ${fresh.cls}">${fresh.label}</span></td>
         <td><div class="history-actions">
-          <button type="button" class="btn-primary hist-open" data-domain="${escHtml(it.domain)}" style="height:36px;padding:0 14px;font-size:13px">開く</button>
-          <button type="button" class="btn-outline-sm hist-recrawl" data-domain="${escHtml(it.domain)}">再解析</button>
-          <button type="button" class="btn-outline-sm hist-delete" data-domain="${escHtml(it.domain)}">削除</button>
+          <button type="button" class="c-btn c-btn--sm hist-open" data-domain="${escHtml(it.domain)}">開く</button>
+          <div class="c-menu" data-menu>
+            <button type="button" class="c-menu__toggle" aria-haspopup="menu" aria-expanded="false" aria-label="${escHtml(it.domain)} のその他の操作">…</button>
+            <ul class="c-menu__list" role="menu" hidden>
+              <li role="none"><button type="button" role="menuitem" class="c-menu__item hist-recrawl" data-domain="${escHtml(it.domain)}">再解析</button></li>
+              <li role="none"><button type="button" role="menuitem" class="c-menu__item c-menu__item--danger hist-delete" data-domain="${escHtml(it.domain)}">削除</button></li>
+            </ul>
+          </div>
         </div></td>
       </tr>`;
   }

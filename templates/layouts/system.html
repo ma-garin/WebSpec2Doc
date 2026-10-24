@@ -18,10 +18,23 @@
 {% block head_css %}{% endblock %}  {#- トップバーのユーザーメニューは共通部品なので共通 CSS に置く #}
   <link rel="stylesheet" href="{{ url_for('static', filename='css/user-menu.css') }}?v={{ _ver }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/c-hybrid.css') }}?v={{ _ver }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/buttons.css') }}?v={{ _ver }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/inputs.css') }}?v={{ _ver }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/c-shell.css') }}?v={{ _ver }}">
 {% block head_css_late %}{% endblock %}
   <link rel="stylesheet" href="{{ url_for('static', filename='css/product-shell.css') }}?v={{ _ver }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/shell.css') }}?v={{ _ver }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/ui-states.css') }}?v={{ _ver }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/kpi.css') }}?v={{ _ver }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/menus.css') }}?v={{ _ver }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/gates-strip.css') }}?v={{ _ver }}">
 </head>
+{#- 選択中のナビ項目 nav_cur: 子が nav_key を置けばそれ、無ければ現在パスと項目 href（#より前）の一致。nav_items が空の System は None（従来の見出し・サイドのまま） -#}
+{%- set _ns = namespace(cur=none) %}
+{%- for _it in nav_items(system_key) %}
+  {%- if not _ns.cur and ((nav_key is defined and nav_key == _it.key) or (nav_key is not defined and _it.href.split('#')[0] == request.path)) %}{% set _ns.cur = _it %}{% endif %}
+{%- endfor %}
+{%- set nav_cur = _ns.cur %}
 <body class="app-page"{% block body_attrs %}{% endblock %}>
 <a href="#app-content" class="skip-link">本文へスキップ</a>
 <div class="app-shell">
@@ -40,21 +53,26 @@
       <span class="sys-switcher-cur" id="sys-current-name">{{ sysreg(system_key).short_name }}</span>
       <span class="sys-switcher-swap">切替</span>
     </a>
-{% block sidebar_cta %}{% endblock %}
-{% block sidebar_nav %}{% include 'partials/nav.html' %}{% endblock %}
+{% block sidebar_nav %}{% if nav_items(system_key) %}{% include 'partials/sidebar.html' %}{% else %}{% include 'partials/nav.html' %}{% endif %}{% endblock %}
     <button type="button" id="sidebar-toggle-btn" class="sidebar-toggle-btn" title="サイドバーを折りたたむ">
       <svg class="icon-collapse" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
       <svg class="icon-expand"  viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
       <span class="nav-label">折りたたむ</span>
     </button>
     <div class="app-sidebar-foot">
-{% block sidebar_foot %}      <span>{{ sysreg(system_key).description|striptags }}</span>
-{% endblock %}    </div>
+    </div>
   </aside>
 
   <div class="app-main">
-{% include 'partials/topbar.html' %}
-{% include 'partials/page-header.html' %}
+<header class="app-header">
+  <div class="app-header-lead">
+    <div class="app-breadcrumb" id="topbar-breadcrumb"><span>{{ nav_crumb(system_key, nav_cur.key) if nav_cur else (topbar_crumb or sysreg(system_key).name) }}</span></div>
+    <h1 class="app-topbar-title" id="topbar-title">{{ nav_cur.label if nav_cur else (topbar_title or sysreg(system_key).name) }}</h1>
+  </div>
+  <div class="app-topbar-actions" id="topbar-actions">{% block header_actions %}{% endblock %}</div>
+{% include 'partials/topbar-right.html' %}
+</header>
+<p class="c-reason" id="page-reason" hidden></p>
 
 {#- 領域スロット（共通契約 §2.1）。右パネル・下部判定帯は System が block を書いたときだけ出る（書かない System の DOM は従来どおり）。
     本文の状態は data-state（normal/empty/no-match/loading/error/forbidden/dirty/conflict/restored）で切り替える。 -#}
@@ -83,6 +101,8 @@
 </div>
 {% block modals %}{% endblock %}
 {% if _has_rpanel %}<script src="{{ url_for('static', filename='js/c-hybrid.js') }}?v={{ _ver }}" defer></script>{% endif %}
+<script src="{{ url_for('static', filename='js/ui-states.js') }}?v={{ _ver }}" defer></script>
+<script src="{{ url_for('static', filename='js/menus.js') }}?v={{ _ver }}" defer></script>
 {% block scripts %}{% endblock %}
 </body>
 </html>

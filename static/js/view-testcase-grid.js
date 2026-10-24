@@ -45,7 +45,7 @@ function tcgCellRaw(row, key) {
 // ============================================================
 // 読み込み（System 01 の結果タブ / System 02 の設計画面で共用）
 // ============================================================
-const TCG_RESULT_NOTE = 'テスト設計から生成したローレベルテストケースです。手順・期待結果は省略せず全文を表示します。セルをダブルクリック（または Enter）で編集でき、編集内容と履歴はサーバに保存されます。';
+const TCG_RESULT_NOTE = 'テスト設計から生成したローレベルテストケースです。手順・期待結果は省略せず全文を表示します。セルをダブルクリックで編集できます。変更は自動で保存されます。';
 
 // TCG はグローバル単数のため、グリッドは同時に 2 つ存在できない。
 // マウント先の外に残っているグリッドは必ず捨てる（tcg-scroll 等の id が重複すると
@@ -148,22 +148,27 @@ function _tcgBuildShell(body, opts = {}) {
     _tcgCommonPreconditionsHtml() +
     '<div class="tcg-cond-banner" id="tcg-cond-banner" role="status" hidden></div>' +
     '<div class="tcg-toolbar">' +
-      '<div class="tc-search">' +
+      '<div class="tc-search c-search">' +
         '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>' +
-        '<input type="search" id="tcg-query" placeholder="全列を横断して検索" autocomplete="off" aria-label="テストケースを全列検索">' +
+        '<input type="text" id="tcg-query" class="c-search__input" placeholder="全列を横断して検索" autocomplete="off" aria-label="テストケースを全列検索">' +
       '</div>' +
-      '<button type="button" class="btn-outline-sm" id="tcg-clear-filters">フィルタ解除</button>' +
-      '<button type="button" class="btn-outline-sm" id="tcg-compact">表示: 全文</button>' +
+      '<button type="button" class="c-btn c-btn--sm" id="tcg-clear-filters" hidden>フィルタ解除</button>' +
       '<span class="tcg-sep"></span>' +
-      '<button type="button" class="btn-outline-sm" id="tcg-add-row">＋ 行を追加</button>' +
-      '<button type="button" class="btn-outline-sm" id="tcg-del-row">− 行を削除</button>' +
-      '<button type="button" class="btn-outline-sm" id="tcg-reset-cell">セルを生成値に戻す</button>' +
-      '<button type="button" class="btn-outline-sm" id="tcg-history-btn">履歴</button>' +
+      '<button type="button" class="c-btn c-btn--tertiary c-btn--sm" id="tcg-compact">表示: 全文</button>' +
+      '<div class="c-menu tcg-more" data-menu>' +
+        '<button type="button" class="c-menu__toggle" aria-haspopup="menu" aria-expanded="false" aria-label="その他の操作">…</button>' +
+        '<ul class="c-menu__list" role="menu" hidden>' +
+          '<li role="none"><button type="button" role="menuitem" class="c-menu__item" id="tcg-add-row">行を追加</button></li>' +
+          '<li role="none"><button type="button" role="menuitem" class="c-menu__item" id="tcg-del-row">行を削除</button></li>' +
+          '<li role="none"><button type="button" role="menuitem" class="c-menu__item" id="tcg-reset-cell">セルを生成値に戻す</button></li>' +
+          '<li role="none"><button type="button" role="menuitem" class="c-menu__item" id="tcg-history-btn">履歴</button></li>' +
+        '</ul>' +
+      '</div>' +
       // 実行は System 01 の責務。設計画面では隠すが、要素自体は必ず残す
       //（testcase-grid-edit.js が #tcg-run へ無条件でリスナーを張るため、
       //  取り除くと編集の初期化ごと失敗する）。
-      '<button type="button" class="btn-primary tcg-run-btn" id="tcg-run"' +
-        (showRun ? '' : ' hidden style="display:none"') + '>▶ 実行</button>' +
+      '<button type="button" class="c-btn c-btn--primary tcg-run-btn" id="tcg-run"' +
+        (showRun ? '' : ' hidden style="display:none"') + '>実行</button>' +
       '<span class="tcg-count" id="tcg-count" aria-live="polite"></span>' +
     '</div>' +
     `<div class="tcg-grid" id="tcg-grid" style="--tcg-cols:${gridTemplate}">` +
@@ -185,9 +190,9 @@ function _tcgBuildShell(body, opts = {}) {
 function _tcgCommonPreconditionsHtml() {
   const items = TCG.commonPreconditions || [];
   if (!items.length) return '';
-  return '<div class="tcg-common"><strong>全ケース共通の前提</strong><ul>' +
+  return '<details class="tcg-common"><summary>共通前提条件 ' + items.length + ' 件</summary><ul>' +
     items.map(x => `<li>${escHtml(x)}</li>`).join('') +
-    '</ul></div>';
+    '</ul></details>';
 }
 
 function _tcgBuildHeader() {
@@ -348,6 +353,8 @@ function _tcgBindToolbar() {
 // フィルタ・ソート
 // ============================================================
 function tcgApplyFilters() {
+  const _clr = document.getElementById('tcg-clear-filters');
+  if (_clr) _clr.hidden = !(TCG.query || Object.values(TCG.filters || {}).some(v => Array.isArray(v) ? v.length : v));
   const q = TCG.query.trim().toLowerCase();
   const active = Object.entries(TCG.filters).filter(([, v]) => v);
   TCG.view = TCG.rows.filter(row => {

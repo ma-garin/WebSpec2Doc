@@ -11,4 +11,4 @@
 @media (max-width: 1024px) { .dv-newform__fields { grid-template-columns: 1fr; } }
 .dv-newform[hidden] { display: none; }
 .dv-section-head { display: flex; align-items: flex-end; justify-content: space-between; gap: var(--space-3); margin: 0 0 var(--space-3); }
-.dvt-s1 h2.dvt-s1-h { font-size: 24px; margin: 16px 0 4px; font-weight: 650; }
+.dvt-s1 h2.dvt-s1-h { font-size: var(--text-xl); margin: 16px 0 4px; font-weight: 650; }

@@ -59,18 +59,7 @@ html.dv-page .dvp .p1-card-d{font-size:var(--text-sm);line-height:1.7}
 html.dv-page .dvp .p1-card:not([aria-selected=true]) .p1-card-d{display:none}
 html.dv-page .dvp .p1-links{font-size:var(--text-xs);line-height:1.7;margin-top:var(--space-2)}
 html.dv-page .dvp .p1-card-id{font-weight:500;color:var(--color-text-secondary);font-size:var(--text-xs);display:block;margin-bottom:var(--space-1)}
-html.dv-page .dvp .p1-gate{grid-template-columns:minmax(0,1fr) auto;gap:var(--space-2) var(--space-4);padding:var(--space-3) var(--space-4);border-radius:var(--radius-lg)}
-html.dv-page .dvp .p5-gates{gap:var(--space-4)}
-html.dv-page .dvp .p5-gate{display:grid;grid-template-columns:auto auto minmax(0,1fr);align-items:center;gap:var(--space-2);padding:var(--space-2) var(--space-3);background:var(--color-surface);border:0;border-left:3px solid var(--color-border-strong);border-radius:0}
-html.dv-page .dvp .p5-gate.ok{border-left-color:var(--color-success)}
-html.dv-page .dvp .p5-gate.ng{border-left-color:var(--color-error)}
-html.dv-page .dvp .p5-gate.ok .val{color:var(--color-success-tx)}
-html.dv-page .dvp .p5-gate.ng .val{color:var(--color-error-tx)}
-html.dv-page .dvp .p5-gate .val{font-size:var(--text-base);white-space:nowrap}
-html.dv-page .dvp .p5-gate .lbl{font-size:var(--text-xs);line-height:1.6;overflow-wrap:anywhere}
-html.dv-page .dvp .p5-gate .lbl:last-child{grid-column:1/-1}
 html.dv-page .dvp .p5-why{grid-column:1;margin:0;font-size:var(--text-xs);line-height:1.7;color:var(--color-text-secondary)}
-html.dv-page .dvp .p1-gate>[data-pair-act]{grid-column:2;grid-row:1/3;align-self:center}
 @media(max-width:1100px){
   html.dv-page .app-content-inner{padding:var(--space-2) var(--space-3);gap:var(--space-2)}
   html.dv-page .dvp .p1-pair{grid-template-columns:minmax(0,1fr) minmax(0,1fr) minmax(260px,.95fr);gap:var(--space-2)}
@@ -92,5 +81,5 @@ html.dv-page .dv-view[data-view=metrics]>.dvg-h{display:none}
 html.dv-page .dvp .p1-doc-t [data-doc-label]{min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
 html.dv-page .dvp .p1-assessment{display:grid;gap:var(--space-1);padding:var(--space-3);border:1px solid var(--color-border);border-radius:var(--radius-md);font-size:var(--text-xs);line-height:1.7;margin-bottom:var(--space-3);background:var(--color-surface-3)}
 html.dv-page .dvp .p1-assessment.is-unverified{border-color:var(--color-warning-border);background:var(--color-warning-bg);color:var(--color-warning-tx)}
-html.dv-page .p5-gate.na .val,html.dv-page .dvc-chip.na{color:var(--color-text-secondary)}
+html.dv-page .dvc-chip.na{color:var(--color-text-secondary)}
 html.dv-page .p1-chip.is-unknown{color:var(--color-warning-tx);border-color:var(--color-warning-border);background:var(--color-warning-bg)}

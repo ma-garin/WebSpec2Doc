@@ -1,0 +1,36 @@
+/* ボタン 4 階層（仕様 §3）。primary / secondary(c-btn 既定) / tertiary / danger。旧クラスは別名セレクタで寄せる */
+.c-btn { display: inline-flex; align-items: center; justify-content: center; gap: var(--space-2); box-sizing: border-box; width: auto; height: 32px; padding: 0 var(--space-4); border: 1px solid var(--color-border-strong); border-radius: var(--radius-md); background: var(--color-surface); color: var(--color-text); font: 700 var(--text-sm)/var(--leading-tight) var(--font-main); white-space: nowrap; text-decoration: none; cursor: pointer; transition: background var(--motion-fast), border-color var(--motion-fast); }
+.c-btn:hover { background: var(--color-surface-2); color: var(--color-primary-dark); }
+.c-btn--sm { height: 28px; padding: 0 var(--space-3); font-size: var(--text-xs); }
+
+/* secondary の別名 */
+.app-shell .btn-outline-sm, .app-shell .btn, .app-shell .p1-btn, .app-shell .dax-btn, .app-shell .s2btn { display: inline-flex; align-items: center; justify-content: center; gap: var(--space-2); box-sizing: border-box; width: auto; height: 32px; padding: 0 var(--space-4); border: 1px solid var(--color-border-strong); border-radius: var(--radius-md); background: var(--color-surface); color: var(--color-text); font: 700 var(--text-sm)/var(--leading-tight) var(--font-main); cursor: pointer; }
+.app-shell .btn-outline-sm:hover, .app-shell .btn:hover, .app-shell .p1-btn:hover, .app-shell .dax-btn:hover, .app-shell .s2btn:hover { background: var(--color-surface-2); color: var(--color-primary-dark); }
+
+/* primary */
+.c-btn--primary, .c-btn.primary,
+.app-shell .c-btn--primary, .app-shell .btn-primary, .app-shell .dax-btn--primary, .app-shell .pri, .app-shell .is-primary, .app-shell .primary, .app-shell .sidebar-primary-action, .app-shell .rv-btn-pri, .app-shell .dv-btn-primary, .app-shell .rh-open-primary { height: 32px; padding: 0 var(--space-4); background: var(--color-primary); border-color: var(--color-primary); color: var(--color-on-primary); font-size: var(--text-sm); font-weight: 700; border-radius: var(--radius-md); box-shadow: none; }
+.c-btn--primary:hover, .c-btn.primary:hover,
+.app-shell .c-btn--primary:hover, .app-shell .btn-primary:hover, .app-shell .dax-btn--primary:hover, .app-shell .pri:hover, .app-shell .is-primary:hover, .app-shell .primary:hover, .app-shell .sidebar-primary-action:hover, .app-shell .rv-btn-pri:hover, .app-shell .dv-btn-primary:hover, .app-shell .rh-open-primary:hover { background: var(--color-primary-dark); border-color: var(--color-primary-dark); color: var(--color-on-primary); }
+
+/* tertiary: 枠なし・青字 */
+.c-btn--tertiary, .c-btn--ghost, .c-btn.ghost,
+.app-shell .c-btn--tertiary, .app-shell .c-btn--ghost, .app-shell .zoom-btn, .app-shell .preview-btn, .app-shell .link-button, .app-shell .dax-btn--ghost { background: transparent; border-color: transparent; color: var(--color-primary); }
+.c-btn--tertiary:hover, .c-btn--ghost:hover, .c-btn.ghost:hover,
+.app-shell .c-btn--tertiary:hover, .app-shell .c-btn--ghost:hover, .app-shell .zoom-btn:hover, .app-shell .preview-btn:hover, .app-shell .link-button:hover, .app-shell .dax-btn--ghost:hover { background: var(--color-primary-light); color: var(--color-primary-dark); }
+
+/* danger: 白地・赤字・赤枠 */
+.c-btn--danger, .c-btn.danger,
+.app-shell .c-btn--danger, .app-shell .btn-danger, .app-shell .btn-danger-outline, .app-shell .im-btn-danger, .app-shell .hl-btn-danger { background: var(--color-surface); border-color: var(--color-error-tx); color: var(--color-error-tx); }
+.c-btn--danger:hover, .c-btn.danger:hover,
+.app-shell .c-btn--danger:hover, .app-shell .btn-danger:hover, .app-shell .btn-danger-outline:hover, .app-shell .im-btn-danger:hover, .app-shell .hl-btn-danger:hover { background: var(--color-surface-2); border-color: var(--color-error-tx); color: var(--color-error-tx); }
+
+/* 小 */
+.app-shell .c-btn--sm, .app-shell .dax-btn--sm { height: 28px; padding: 0 var(--space-3); font-size: var(--text-xs); }
+
+/* 無効 */
+.c-btn:disabled, .c-btn[aria-disabled="true"], .c-btn--primary:disabled, .c-btn.primary:disabled, .c-btn--danger:disabled, .c-btn.danger:disabled,
+.app-shell .c-btn:disabled, .app-shell .c-btn[aria-disabled="true"], .app-shell .btn:disabled, .app-shell .btn-primary:disabled, .app-shell .btn-outline-sm:disabled, .app-shell .p1-btn:disabled, .app-shell .dax-btn:disabled, .app-shell .dax-btn--primary:disabled, .app-shell .s2btn:disabled, .app-shell .pri:disabled, .app-shell .is-primary:disabled { background: var(--color-surface-2); color: var(--color-text-secondary); border-color: var(--color-border); box-shadow: none; cursor: not-allowed; }
+
+/* モーダル下部のボタン列だけ幅を持たせてよい */
+.c-modal__foot .c-btn { flex: 1; }

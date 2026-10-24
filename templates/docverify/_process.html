@@ -1,8 +1,11 @@
 {# System 06 R4: レビュー工程・工数と指標・プリセット・判定と記録。docverify-process.js が各画面（計画・指摘の検討・質問票・判定と記録）へ差し込む。 #}
 <div id="dvR4Parts" hidden>
   <section class="dv-card dv-r4" id="dvR4-plan" data-r4-view="plan" aria-labelledby="dvR4PlanTitle">
-    <h3 class="dv-r4-title" id="dvR4PlanTitle">レビューの種別と工程</h3>
-    <p class="dv-r4-hint" id="dvR4Legacy" hidden></p>
+    <h3 class="dv-r4-title" id="dvR4PlanTitle">レビューの計画</h3>
+    <div class="dv-r4-row">
+      <label for="dvR4Goal">目的</label><input type="text" id="dvR4Goal" maxlength="200" placeholder="例: API仕様と画面仕様の条件の食い違いを確認する">
+      <label for="dvR4Due">期限</label><input type="date" id="dvR4Due">
+    </div>
     <div class="dv-r4-row">
       <label for="dvR4Type">種別</label>
       <select id="dvR4Type"></select>
@@ -26,8 +29,14 @@
       <button type="button" class="btn-outline-sm" id="dvR4PresetCopy">複製する</button>
       <button type="button" class="btn-outline-sm" id="dvR4PresetDelete">削除する</button>
     </div>
-    <div class="dv-r4-row"><button type="button" class="p1-btn" id="dvR4PlanSave">計画を保存</button></div>
-    <h3 class="dv-r4-title">工程</h3>
+    <div class="dv-r4-row dv-r4-save">
+      <p class="dv-r4-hint" id="dvR4Legacy" hidden></p>
+      <button type="button" class="p1-btn is-primary" id="dvR4PlanSave">計画を保存</button>
+    </div>
+  </section>
+
+  <section class="dv-card dv-r4" id="dvR4-flow" data-r4-view="gate" aria-labelledby="dvR4FlowTitle">
+    <h3 class="dv-r4-title" id="dvR4FlowTitle">工程</h3>
     <ul class="dv-r4-errors" id="dvR4Entry" aria-live="polite"></ul>
     <div class="dv-r4-row"><button type="button" class="p1-btn" id="dvR4Advance">次の工程へ進める</button></div>
     <div class="dv-tscroll"><table class="dv-r4-table" id="dvR4Log"></table></div>
@@ -49,13 +58,9 @@
     <div class="dv-tscroll"><table class="dv-r4-table" id="dvR4Kinds"></table></div>
   </section>
 
-  <section class="dv-card dv-r4" id="dvR4-questions" data-r4-view="questions" aria-labelledby="dvR4AnsTitle">
-    <h3 class="dv-r4-title" id="dvR4AnsTitle">回答の取り込み（CSV・Excel）</h3>
-    <div class="dv-r4-row">
-      <label for="dvR4AnsFile">回答を書いた質問票</label>
-      <input type="file" title="" id="dvR4AnsFile" accept=".csv,.xlsx">
-      <button type="button" class="btn-outline-sm" id="dvR4AnsImport">取り込む</button>
-    </div>
+  <section class="dv-card dv-r4" id="dvR4-questions" data-r4-view="questions" aria-labelledby="dvR4AnsTitle" hidden>
+    <h3 class="dv-r4-title" id="dvR4AnsTitle">回答の取り込み</h3>
+    <input type="file" title="" id="dvR4AnsFile" accept=".csv,.xlsx" hidden>
     <p class="dv-r4-result" id="dvR4AnsResult" aria-live="polite"></p>
   </section>
 

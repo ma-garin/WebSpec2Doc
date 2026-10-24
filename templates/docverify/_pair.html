@@ -1,12 +1,17 @@
 {# 対検査レビュー（要件定義書 ⇔ 基本設計書）。状態は data-state を docverify-pair.js が API 応答で切り替える #}
 <section class="dv-view dvp" data-view="pair" data-state="loading" hidden aria-labelledby="dvp-title">
   <div class="p1-head">
-    <h2 id="dvp-title" class="dvp-title">文書の比較</h2>
+    <h2 id="dvp-title" class="dvp-title">対検査</h2>
     <span class="p1-ver" data-pair-ver></span>
     <span class="sp"></span>
     <span class="dvp-msg" role="status" aria-live="polite" data-pair-msg></span>
-    <button type="button" class="p1-btn" data-dv-report>指摘書を出力</button>
-    <button type="button" class="p1-btn" data-pair-act="reload">再読み込み</button>
+    <details class="dv-more">
+      <summary class="p1-btn" aria-label="その他の操作">…</summary>
+      <div class="dv-more__list">
+        <button type="button" class="p1-btn" data-dv-report>指摘書を出力</button>
+        <button type="button" class="p1-btn" data-pair-act="reload">再読み込み</button>
+      </div>
+    </details>
   </div>
   <div class="p1-notice" role="alert" data-pair-notice>
     <span data-pair-notice-msg></span>
@@ -55,9 +60,5 @@
       <button type="button" class="p1-btn" data-pair-act="reload">もう一度読み込む</button>
     </div>
   </div>
-  <div class="p1-gate" aria-label="判定">
-    <div class="p5-gates" data-pair-gates></div>
-    <p class="p5-why" data-pair-why></p>
-    <button type="button" class="p1-btn is-primary" data-pair-act="to-approve">承認へ</button>
-  </div>
+  {% include 'docverify/_gatebar.html' %}
 </section>

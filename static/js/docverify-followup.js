@@ -51,11 +51,9 @@
   }
 
   function renderGate(g) {
-    const one = (lbl, o) => `<div class="p5-gate ${DV.gateClass(o)}"><div class="lbl">${lbl}</div><div class="val">${DV.verdict(o)}</div></div>`;
-    q('[data-f-gates]').innerHTML = one('全体', g.overall) + one('今回の変更分', g.changed);
     const c = g.changed;
     const why = DV.verdict(c) === '判定不能' ? (c.unverified_reasons || ['検査範囲が未確認です。']).join(' ') : c.pass ? '今回の変更分に未解決の問題はありません。' : `今回の変更分: 要確認 ${c.needs_review.length} 件・重大の未解決 ${c.unresolved_critical.length} 件・対応の抜け ${c.missing_links.length} 件。`;
-    q('[data-f-why]').textContent = why + ' ' + (g.reasons || []).join('');
+    DV.gatebar(q('[data-dv-gatebar]'), { overall: g.overall, changed: g.changed, reasons: [why + ' ' + (g.reasons || []).join('')] }, { label: '対検査で今回の変更分を開く', attr: 'data-f-act="to-pair"' });
   }
 
   function fit() {   // 対検査と同じく、画面の残りの高さに収めて内側だけスクロールさせる
@@ -85,22 +83,37 @@
   }
 
   function syncUpload() {
-    const any = Array.from(root().querySelectorAll('input[type=file]')).some((i) => i.files && i.files.length);
-    q('[data-f-act="upload"]').disabled = !any;
+    q('[data-f-act="upload"]').disabled = !F.files.length;
+  }
+
+  // 直した文書は 1 つの領域で受け、ファイルごとに「基準／確認」を割り当てる
+  const F = { files: [] };
+  function guessRole(name) { return /要件|requirement|基準/i.test(name) ? 'requirements' : 'design'; }
+  function renderPicked() {
+    q('[data-f-picked]').innerHTML = F.files.map((f, i) => `<li><span class="dvf-pname">${esc(f.file.name)}</span>`
+      + `<select data-f-role="${i}" aria-label="${esc(f.file.name)} の区分"><option value="requirements"${f.role === 'requirements' ? ' selected' : ''}>基準文書</option><option value="design"${f.role === 'design' ? ' selected' : ''}>確認する文書</option></select></li>`).join('');
+    syncUpload();
+  }
+  function setFiles(list) {
+    F.files = Array.from(list || []).slice(0, 2).map((file) => ({ file, role: guessRole(file.name) }));
+    if (F.files.length === 2 && F.files[0].role === F.files[1].role) F.files[1].role = F.files[0].role === 'design' ? 'requirements' : 'design';
+    renderPicked();
   }
 
   async function upload(form) {
     const err = q('[data-f-up-err]');
     err.textContent = '';
     const fd = new FormData();
-    form.querySelectorAll('input[type=file]').forEach((i) => { if (i.files[0]) fd.append(i.name, i.files[0]); });
+    const roles = F.files.map((f) => f.role);
+    if (new Set(roles).size !== roles.length) { err.textContent = '同じ区分のファイルが 2 つあります。区分を分けてから取り込んでください。'; return; }
+    F.files.forEach((f) => fd.append(f.role, f.file));
     if (S.rev != null) fd.append('rev', String(S.rev));
     const btn = q('[data-f-act="upload"]');
     btn.disabled = true;
     q('[data-f-msg]').textContent = '取り込み中';
     try {
       const r = await call('/versions', { method: 'POST', body: fd });
-      form.reset();
+      form.reset(); setFiles([]);
       await load(`取り込みました。要確認に戻した指摘 ${r.reopened.length} 件。`);
     } catch (e) {
       err.textContent = e.message;
@@ -117,7 +130,15 @@
 
   function bind() {
     const r = root();
-    r.addEventListener('change', (e) => { if (e.target.type === 'file') syncUpload(); });
+    r.addEventListener('change', (e) => {
+      if (e.target.matches('[data-f-files]')) setFiles(e.target.files);
+      else if (e.target.matches('[data-f-role]')) { F.files[Number(e.target.dataset.fRole)].role = e.target.value; }
+    });
+    const drop = r.querySelector('[data-f-drop]');
+    drop.addEventListener('click', (e) => { if (!e.target.closest('select')) r.querySelector('[data-f-files]').click(); });
+    drop.addEventListener('dragover', (e) => { e.preventDefault(); drop.classList.add('is-over'); });
+    drop.addEventListener('dragleave', () => drop.classList.remove('is-over'));
+    drop.addEventListener('drop', (e) => { e.preventDefault(); drop.classList.remove('is-over'); setFiles(e.dataTransfer.files); });
     r.addEventListener('submit', (e) => { e.preventDefault(); upload(e.target); });
     r.addEventListener('click', (e) => {
       const b = e.target.closest('[data-f-act]');

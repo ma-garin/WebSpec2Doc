@@ -7,9 +7,16 @@ async function renderDocFusion() {
 
   if (!docFusionData) {
     uiEmpty(host, {
-      icon: '📄',
       title: '参考文書が指定されていません',
-      desc: '条件設定で参考文書（画面一覧・項目定義書など）をアップロードしてから解析してください。',
+      desc: '参考文書（画面一覧・項目定義書など）を追加して再解析すると、画面との突合結果が表示されます。',
+      actionLabel: '参考文書を追加して再解析',
+      onAction: () => {
+        document.getElementById('r-recrawl-btn')?.click();
+        const blk = document.getElementById('reference-doc-block');
+        const det = blk && blk.closest('details');
+        if (det) det.open = true;
+        if (blk) blk.scrollIntoView({ block: 'center' });
+      },
     });
     return;
   }

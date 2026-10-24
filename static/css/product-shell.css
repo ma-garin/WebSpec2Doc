@@ -20,7 +20,7 @@
 .app-shell .app-content .c-page-head :is(.c-page-head__title,h2){font-size:var(--text-md);line-height:1.5;font-weight:600}
 .app-shell .app-content .c-page-head__desc{font-size:var(--text-sm);line-height:1.7;max-width:76ch}
 .app-shell .app-content .c-page-head__actions{align-items:center;justify-content:flex-end}
-.app-shell .app-content .c-btn{min-height:36px;border-radius:var(--radius-md);font-size:var(--text-sm)}
+.app-shell .app-content .c-btn{min-height:32px;border-radius:var(--radius-md);font-size:var(--text-sm)}
 .app-shell .app-page-header .p1-btn{height:36px;padding:0 var(--space-4);border:1px solid var(--color-border-strong);border-radius:var(--radius-md);font:inherit;font-size:var(--text-sm);color:var(--color-text);background:var(--color-surface);cursor:pointer}
 .app-shell .app-page-header button:focus-visible,.app-shell .app-page-header a:focus-visible{outline:2px solid var(--color-primary);outline-offset:2px}
 /* S06 retains its contextual review toolbar, while the shared heading owns the title. */

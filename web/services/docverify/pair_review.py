@@ -51,8 +51,24 @@ def pair_dir(iid: str) -> Path:
     return scoped_output_dir(config.DATA_DIR) / "docverify" / check_iid(iid) / "pair"
 
 
-def _existing(iid: str) -> Path:
+def resolve_iid(iid: str) -> str:
+    """一覧の inspection ID で開かれたときは、pair/docs/meta.json の inspection_id から対検査の iid へ読み替える。"""
     d = pair_dir(iid)
+    if (d / "findings.json").exists():
+        return iid
+    root = d.parent.parent
+    if root.exists():
+        for meta in root.glob("*/pair/docs/meta.json"):
+            try:
+                if json.loads(meta.read_text(encoding="utf-8")).get("inspection_id") == iid:
+                    return meta.parent.parent.parent.name
+            except (OSError, ValueError):
+                continue
+    return iid
+
+
+def _existing(iid: str) -> Path:
+    d = pair_dir(resolve_iid(iid))
     if not (d / "findings.json").exists():
         raise PairError(404, "not_found", "レビューが見つかりません。レビュー一覧から開き直してください。")
     return d

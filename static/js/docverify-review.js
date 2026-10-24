@@ -579,9 +579,17 @@
       });
   }
 
+  // 指摘の採否は対検査で決める（同じ機能を 2 か所に置かない・S06 r2）
+  function toPair(view) {
+    var b = sect(view).querySelector('[data-dvr-body]');
+    b.innerHTML = '<p class="dvr-redirect">指摘の採否（採用／不採用／要確認／解消済み）は対検査で決めます。 <button type="button" class="b p" data-go-pair>対検査を開く</button></p>';
+    b.querySelector('[data-go-pair]').addEventListener('click', function () { window.DV.show('pair'); });
+    return Promise.resolve();
+  }
+
   function init() {
     if (!window.DV || !window.DV.on) { setTimeout(init, 30); return; }
-    var map = { plan: renderPlan, read: renderRead, triage: renderTriage, questions: renderQuestions, followup: renderFollowup, screen: renderScreen, gate: renderGate };
+    var map = { plan: renderPlan, read: renderRead, triage: toPair, questions: renderQuestions, followup: renderFollowup, screen: renderScreen };
     Object.keys(map).forEach(function (v) { if (sect(v)) window.DV.on(v, open(v, map[v])); });
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();

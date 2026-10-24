@@ -414,7 +414,7 @@ def register_inspection(iid: str) -> str:
     except KeyError:
         pass
     head = next((ln[2:].strip() for ln in _doc_text(d, "requirements.md").splitlines() if ln.startswith("# ")), iid)
-    insp = store.save(store.new(f"{head}（要件定義書 ⇔ 基本設計書）"))
+    insp = store.save(store.new(meta.get("name") or f"{head}（要件定義書 ⇔ 基本設計書）"))
     _write(meta_path, {**meta, "inspection_id": insp["id"]})
     return insp["id"]
 

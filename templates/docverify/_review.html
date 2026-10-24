@@ -1,5 +1,5 @@
-{# レビューの中の画面（plan, read, triage, questions, followup, screen, gate）。描画は static/js/docverify-review.js #}
-{% for key, title in [('plan','計画'),('read','文書を読む'),('triage','指摘の検討'),('questions','質問票'),('followup','修正版の確認'),('screen','実画面との照合'),('gate','判定と記録')] %}
+{# レビューの中の画面（plan, read, triage, questions, followup, screen）。判定と記録は _gate.html。描画は static/js/docverify-review.js #}
+{% for key, title in [('plan','計画'),('read','文書を読む'),('triage','指摘の検討'),('questions','質問票'),('followup','修正版の確認'),('screen','実画面との照合')] %}
 <section class="dv-view dvr-view" data-view="{{ key }}" hidden>
   <div class="steps" data-dvr-steps></div>
   <div class="dvr-head"><h2 class="dvr-title">{{ title }}</h2><div class="dvr-head-right" data-dvr-headright></div></div>

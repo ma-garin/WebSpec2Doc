@@ -1,0 +1,108 @@
+/* System 06 の画面枠（proposal-1.html の骨格）。ページはスクロールしない。
+   行 = [見出し 1 行（左: 対象 / 右: 操作）][タブ 1 本][本文 1fr][判定帯]。スクロールは本文の内側だけ。 */
+html.dv-page,html.dv-page body{height:100%;overflow:hidden;margin:0}
+html.dv-page .app-shell{height:100vh;min-height:0}
+html.dv-page .app-main{display:flex;flex-direction:column;min-height:0;min-width:0}
+html.dv-page .app-content{flex:1 1 auto;min-height:0;overflow:hidden!important;padding:0!important}
+html.dv-page .app-content-inner{position:relative;height:100%;max-width:none;margin:0;padding:8px 12px 10px;
+  box-sizing:border-box;display:flex;flex-direction:column;gap:8px;min-height:0;overflow:hidden}
+html.dv-page #page-reason{display:none!important}
+/* 見出し 1 行（カードにしない・説明文を出さない） */
+html.dv-page #dv-pagehead{flex:none;display:flex;align-items:center;gap:8px;min-height:32px;margin:0!important;padding:0 0 0 0!important;
+  border:0!important;background:none!important;box-shadow:none!important;border-radius:0!important;min-width:0}
+html.dv-page #dv-pagehead .c-page-head__main{display:flex;align-items:center;gap:8px;min-width:0;flex-wrap:nowrap;padding:0;margin:0}
+html.dv-page #dv-pagehead .c-page-head__title{font-size:15px;font-weight:700;margin:0;white-space:nowrap;line-height:32px}
+html.dv-page #dv-pagehead .c-page-head__desc{display:none!important}
+html.dv-page #dv-pagehead .c-page-head__state{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--color-text-secondary);
+  margin:0;white-space:nowrap;min-width:0;overflow:hidden;text-overflow:ellipsis}
+html.dv-page #dv-pagehead .c-page-head__state:empty{display:none}
+/* タブ列は 1 本 */
+html.dv-page #dv-subtabs{flex:none;margin:0!important}
+html.dv-page #dv-subtabs .dv-subtabs-name{display:none}
+html.dv-page #dv-banner{flex:none;margin:0}
+/* 本文: 表示中の画面が残りの高さいっぱい */
+html.dv-page .app-content-inner>.dv-view:not([hidden]){flex:1 1 auto;min-height:0;min-width:0;height:auto!important;max-height:none;overflow:auto;margin:0}
+html.dv-page .app-content-inner>.dv-view[hidden]{display:none!important}
+html.dv-page .dvp:not([hidden]),html.dv-page .dvc:not([hidden]),html.dv-page .dvg:not([hidden]),
+html.dv-page .dvf:not([hidden]),html.dv-page .dvs:not([hidden]){overflow:hidden}
+/* 画面ごとの見出し行は撤去し、操作だけを見出し 1 行の右端（Z 型の右上）へ置く */
+html.dv-page .dv-view:not([hidden])>.p1-head,html.dv-page .dv-view:not([hidden])>.dvf-head,html.dv-page .dv-view:not([hidden])>.dvr-head{
+  position:absolute;top:8px;right:12px;height:32px;max-width:62%;z-index:3;display:flex;align-items:center;gap:8px;
+  margin:0;padding:0;border:0;background:none;min-width:0}
+html.dv-page .dv-view>.p1-head>h2,html.dv-page .dv-view>.dvf-head>h2,html.dv-page .dv-view>.dvr-head>h2{display:none}
+html.dv-page .dv-view>.p1-head>.sp{display:none}
+/* 各画面の行（見出しが抜けた分を詰め、明示配置） */
+html.dv-page .dvp:not([hidden]){grid-template-rows:auto minmax(0,1fr) auto}
+html.dv-page .dvp>.p1-notice{grid-row:1}html.dv-page .dvp>.p1-pair{grid-row:2}html.dv-page .dvp>.p1-gate{grid-row:3}
+html.dv-page .dvc:not([hidden]){grid-template-rows:auto auto minmax(0,1fr)}
+html.dv-page .dvc>.dvc-new{grid-row:1}html.dv-page .dvc>.dvc-msg{grid-row:2}html.dv-page .dvc>.dvc-body{grid-row:3}
+html.dv-page .dvg:not([hidden]){grid-template-rows:auto minmax(0,1fr)}
+html.dv-page .dvg>.dvc-msg{grid-row:1}html.dv-page .dvg>.dvg-body{grid-row:2}
+html.dv-page .dvf:not([hidden]){grid-template-rows:minmax(0,1fr) auto}
+html.dv-page .dvf>:nth-child(2){grid-row:1}html.dv-page .dvf>:nth-child(3){grid-row:2}
+/* 作成フォームは 1 行。入力は内容幅、ボタンは右端 */
+html.dv-page .dvc-new{flex-wrap:nowrap;gap:8px}
+html.dv-page .dvc-new .dvc-name{flex:0 1 260px;width:260px;min-width:120px}
+html.dv-page .dvc-new .dvc-file{flex:0 1 auto;min-width:0;display:inline-flex;align-items:center;gap:6px;white-space:nowrap;overflow:hidden}
+html.dv-page .dvc-new .dvc-file input[type=file]{width:190px;max-width:100%;font-size:12px}
+html.dv-page .dvc-new>button{margin-left:auto}
+/* ボタン: 内容幅・高さ 32px・左右 14px。全幅にしない */
+html.dv-page .app-content :is(.p1-btn,.c-btn,.btn-outline-sm,.btn-primary,.dash-hero-start){height:32px;padding:0 14px;width:auto;
+  min-width:0;max-width:none;display:inline-flex;align-items:center;justify-content:center;gap:6px;font-size:12.5px;
+  line-height:1;box-sizing:border-box;flex:none;white-space:nowrap;border-radius:6px}
+html.dv-page .app-content .p1-acts .p1-btn{height:26px;padding:0 8px;font-size:11.5px}
+html.dv-page .app-content .p1-filter button,html.dv-page .app-content .p3-chip{font-size:11.5px;border-radius:999px;padding:0 8px;height:auto}
+/* 工程画面（計画・文書を読む・質問票 など）: 本文は内側スクロール、判定帯は最下部に固定 */
+html.dv-page .dv-view:has(>[data-dvr-gate]):not([hidden]){display:flex;flex-direction:column;gap:8px;overflow:hidden}
+html.dv-page .dv-view:has(>[data-dvr-gate])>*{flex:none;min-width:0}
+html.dv-page .dv-view:has(>[data-dvr-gate])>:not([data-dvr-gate]):not(.dvr-head):not(.dvr-msg):not(.r2-state):not([hidden]){flex:1 1 auto;min-height:0;overflow:auto}
+html.dv-page .dv-view>[data-dvr-gate]{order:9;display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1.6fr) auto;gap:8px;align-items:center;
+  border:1px solid var(--color-border);border-radius:8px;padding:6px 10px;background:var(--color-surface,#fff);font-size:12px;max-height:150px;overflow:auto}
+html.dv-page [data-dvr-gate] .p5-gates{display:grid;grid-template-columns:1fr 1fr;gap:6px;min-width:0}
+html.dv-page [data-dvr-gate] .p5-gate{border:1px solid var(--color-border,#d8dee4);border-radius:6px;padding:4px 8px;min-width:0}
+html.dv-page [data-dvr-gate] .p5-gate .lbl{font-size:11.5px;color:var(--color-text-secondary,#57606a);overflow-wrap:anywhere}
+html.dv-page [data-dvr-gate] .p5-gate .val{font-size:16px;font-weight:700}
+html.dv-page [data-dvr-gate] .p5-gate.ok{border-color:var(--color-success,#1a7f37);background:var(--color-success-light,#e8f5e9)}
+html.dv-page [data-dvr-gate] .p5-gate.ok .val{color:var(--color-success,#1a7f37)}
+html.dv-page [data-dvr-gate] .p5-gate.ng{border-color:var(--color-danger,#c62828);background:var(--color-danger-light,#fdecec)}
+html.dv-page [data-dvr-gate] .p5-gate.ng .val{color:var(--color-danger,#c62828)}
+html.dv-page [data-dvr-gate] .p5-why{margin:0;font-size:12px;overflow-wrap:anywhere;min-width:0;max-height:4.8em;overflow:auto}
+/* ---- 監査 S06-design-audit.md の是正 ---- */
+/* D-04 見出しは H1 1 つ（15px/700）。見出し行の H2 は H1 と同じ語なので出さない。H3 は本文より太く */
+html.dv-page .app-topbar-title{font-size:15px;font-weight:700}
+html.dv-page #dv-pagehead .c-page-head__title{display:none}
+html.dv-page .app-content .dv-view h3{font-size:13px;font-weight:700;margin-top:8px}
+/* D-05 タブ列 1 本・折り返さない */
+html.dv-page #dv-subtabs{display:flex;flex-wrap:nowrap;overflow:hidden;gap:0}
+html.dv-page #dv-subtabs>a{flex:0 1 auto;min-width:0;white-space:nowrap;font-size:12.5px;overflow:hidden;text-overflow:ellipsis}
+/* D-08〜D-10 コントラスト 4.5:1 以上（文字は濃い色、色相は枠と背景に残す） */
+html.dv-page .dvp .p1-tag.sev-w{color:#8a5a00;border-color:#d99a2b}
+html.dv-page .dvc-chip.ok{color:#0f7a46}
+html.dv-page .dvf .p5-gate.ok .val,html.dv-page [data-dvr-gate] .p5-gate.ok .val,html.dv-page .dvp .p5-gate.ok .val{color:#0f7a46}
+html.dv-page .dvf-tag.is-add{color:#0f7a46}
+html.dv-page .dvs-off{color:var(--color-text-secondary,#5f6670)}
+/* D-11 チェックボックスはラベル全体を 24px 以上のターゲットに */
+html.dv-page .app-content label:has(>input[type=checkbox]){display:inline-flex;align-items:center;gap:6px;min-height:24px;padding:0 4px;cursor:pointer}
+html.dv-page .app-content input[type=checkbox]{width:16px;height:16px;margin:0}
+/* D-12 判定帯の右端に主ボタン 1 つ。証跡（承認）を開いている間は承認する側だけを主にする */
+html.dv-page .dvp:has([data-pane="trail"]:not([hidden])) [data-pair-act="to-approve"]{display:none}
+/* D-13 修正版の確認: 判定帯は本文と重ねない */
+html.dv-page .dvf .dvf-gate{position:static}
+html.dv-page .dvf .dvf-body{min-height:0;overflow:auto;position:relative}
+/* D-15 ファイル入力はブラウザ標準の英語を出さない（docverify-frame.js が日本語のボタンと名前を置く） */
+html.dv-page .app-content label:has(>input.dv-file-native){position:relative}
+html.dv-page .app-content input.dv-file-native{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none;overflow:hidden}
+html.dv-page .dv-file-name{font-size:12px;color:var(--color-text-secondary);max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* D-17 1024 で表が見切れない */
+html.dv-page .dvc-t .c-name{white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+html.dv-page .dvc-t td,html.dv-page .dvc-t th{overflow-wrap:anywhere}
+@media (max-width:1100px){html.dv-page .dvc-t th:last-child,html.dv-page .dvc-t td:last-child{display:none}}
+/* D-18 パンくずは 1 行で省略 */
+html.dv-page .app-breadcrumb{min-width:0;max-width:100%;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+/* D-19 サイドバー下の説明文は出さない */
+html.dv-page .app-sidebar-foot{display:none}
+/* D-07 計画の保存は 1 つ（工程カード側の保存は「計画を保存」と同時に走らせる） */
+html.dv-page #dvR4PlanSave{display:none}
+/* D-24 本文へスキップは移った時に見える */
+html.dv-page .skip-link:focus{position:fixed;top:8px;left:8px;z-index:100}
+html.dv-page .dv-file-btn{width:auto!important;justify-self:start;align-self:start;flex:none}

@@ -17,7 +17,8 @@
 - 保存先: `scoped_output_dir(config.DATA_DIR)/docverify/<iid>/pair/`（テナント有効時は tenants/<t>/ 配下）。既存 store の iid 検証は変えない。
 - 採否: decisions.json に追記のみ。取消は `revoke: true` の行を追記し、指摘の status は decisions の再生で決める（取消し切ったら取り込み時の status＝initial_status に戻る）。findings.json は再生結果で上書き。
 - rev = decisions.json の件数。body に rev があり不一致なら 409。無ければ検査しない。
-- 判定: unresolved_critical = 重大 かつ 不採用以外／needs_review = 要確認／unverified = 未判定（合否に影響しない）／missing_links = 要件の REQ ID（範囲表記を展開）で基本設計書に現れないもの。pass = 前 3 つが 0。changed は changed_in_current の指摘と、meta.changed_sections.requirements の節だけで計算。
+- 採否 4 値: 採用・不採用・要確認・解消済み（解消済みは採用からのみ・理由必須・不採用から 409）。
+- 判定: unresolved_critical = 重大 かつ 不採用・解消済み以外／needs_review = 要確認／unverified = 未判定（合否に影響しない）／missing_links = 要件の REQ ID（範囲表記を展開）で基本設計書に現れないもの。pass = 前 3 つが 0。changed は changed_in_current の指摘と、meta.changed_sections.requirements の節だけで計算。
 - 承認: 認証オフ（利用者 `_none`）→403 auth_required、理由空→400、未合格→403 gate_not_passed、起票者未記録→403 no_author、起票者と同一→403 same_person、通れば trail に approved。
 - 起票者: GET /findings を認証済み利用者が最初に開いたとき review_started を追記（`_seed`・`_none` は起票者に数えない）。
 - 利用者: web.auth.auth_enabled() と g.auth_user（settings.current_user 経由）。web/auth.py は編集しない。

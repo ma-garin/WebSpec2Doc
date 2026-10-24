@@ -47,3 +47,30 @@
 
 ## 変更要求
 - docs/change-requests/S06-1.md（web/__init__.py で doc_verify_pair.bp を登録。暫定は doc_verify.py 末尾 3 行）
+
+## 追補: 解消済み・レビュー一覧への登録（2026-10-24 指揮官決定）
+
+- 採否に「解消済み」を追加。理由（文書のどこを直したか）が必須で、空なら 400。採用からだけ移れ、それ以外（未判定・要確認・不採用）からは 409 bad_transition。証跡は finding_resolved。
+- 判定: 重大のうち 解消済み・不採用 を解決済みに数える（採用は未解決のまま）。
+- seed の最後に register_inspection(iid) を呼ぶ。store.new の形のまま検査を 1 件作り、対応は pair/docs/meta.json の inspection_id に持つ（既存 inspection.json にキーは足さない。2 回目以降は作らない）。W3 の投入データにも適用済み: v1-a-order-payment → db26053a7dac。
+- 確認はアプリ内テストクライアント（認証オフ）で、複製 iid=s06-api-test2 を使用（使用後は退避）。
+
+| 操作 | API | status | 期待 | 要点 |
+|---|---|---|---|---|
+| 未判定から解消済み | POST /findings/V1-A-01/decide | 409 | OK | bad_transition: 「未判定」から解消済みにはできません。先に採用してから解消済みにしてください。 |
+| 理由なしで解消済み | POST /findings/V1-A-01/decide | 400 | OK | reason_required: 解消済みにするには、文書のどこを直したかを理由に書いてください。 |
+| 要確認 | POST /findings/V1-A-01/decide | 200 | OK | {"at": "2026-10-24T08:51:40+00:00", "by": "_none", "finding_id": "V1-A-01", "reason": "業務確認", "status": "要確認"} |
+| 採用 | POST /findings/V1-A-01/decide | 200 | OK | {"at": "2026-10-24T08:51:40+00:00", "by": "_none", "finding_id": "V1-A-01", "reason": "設計を直す", "status": "採用"} |
+| 判定（採用＝未解決） | GET /gate | 200 | OK | {"changed": {"missing_links": [], "needs_review": [], "pass": false, "unresolved_critical": ["V1-A-01"], "unve |
+| 　→ unresolved_critical | | | OK | ['V1-A-01', 'V1-A-05'] |
+| 採用から解消済み | POST /findings/V1-A-01/decide | 200 | OK | {"at": "2026-10-24T08:51:40+00:00", "by": "_none", "finding_id": "V1-A-01", "reason": "基本設計書 4章 API-A-02 を30秒に |
+| 不採用 | POST /findings/V1-A-05/decide | 200 | OK | {"at": "2026-10-24T08:51:40+00:00", "by": "_none", "finding_id": "V1-A-05", "reason": "対象外", "status": "不採用"} |
+| 不採用から解消済み | POST /findings/V1-A-05/decide | 409 | OK | bad_transition: 「不採用」から解消済みにはできません。先に採用してから解消済みにしてください。 |
+| 判定（解消済み・不採用＝解決） | GET /gate | 200 | OK | {"changed": {"missing_links": [], "needs_review": [], "pass": true, "unresolved_critical": [], "unverified": [ |
+| 　→ unresolved_critical | | | OK | [] |
+| 証跡 | GET /trail | 200 | OK | ['finding_decided', 'finding_decided', 'finding_resolved', 'finding_decided'] |
+| 一覧登録 s06-api-test2 | register_inspection ×2 | - | OK | id=b32776144682 2回目同一=True 一覧の名前=['受注・決済 要件定義書（V1 領域 A）（要件定義書 ⇔ 基本設計書）'] |
+| 一覧登録 v1-a-order-payment | register_inspection ×2 | - | OK | id=db26053a7dac 2回目同一=True 一覧の名前=['受注・決済 要件定義書（V1 領域 A）（要件定義書 ⇔ 基本設計書）'] |
+| W3 データ一覧 | GET findings | - | OK | meta.inspection_id=db26053a7dac |
+
+- 未検証: 一覧画面に実際に表示されるか（画面は W3 側）

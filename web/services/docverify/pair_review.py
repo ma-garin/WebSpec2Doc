@@ -17,7 +17,8 @@ _IID = re.compile(r"^[a-z0-9-]{3,64}$")
 _FID = re.compile(r"^[A-Za-z0-9_-]{1,40}$")
 TYPES = ("矛盾", "欠落", "曖昧", "不整合ID", "重複", "用語揺れ")
 SEVERITIES = ("重大", "警告", "提案")
-STATUSES = ("採用", "不採用", "要確認")
+STATUSES = ("採用", "不採用", "要確認", "解消済み")
+RESOLVED = ("不採用", "解消済み")
 NONE_USER = "_none"
 SYSTEM_USERS = ("_none", "_seed")
 _REQ_ID = re.compile(r"REQ-[A-Z]+-\d{3}")
@@ -192,16 +193,22 @@ def _target(d: Path, fid: str) -> None:
 
 def decide(iid: str, fid: str, status: str, reason: str, user: str, rev=None) -> dict:
     if status not in STATUSES:
-        raise PairError(400, "bad_status", "採否は「採用」「不採用」「要確認」から選んでください。")
+        raise PairError(400, "bad_status", "採否は「採用」「不採用」「要確認」「解消済み」から選んでください。")
+    if status == "解消済み" and not (reason or "").strip():
+        raise PairError(400, "reason_required", "解消済みにするには、文書のどこを直したかを理由に書いてください。")
     d = _existing(iid)
     with _lock(d):
         _check_rev(d, rev)
         _target(d, fid)
+        cur = next(f for f in _findings(d) if f["id"] == fid).get("status")
+        if status == "解消済み" and cur != "採用":
+            raise PairError(409, "bad_transition", f"「{cur or '未判定'}」から解消済みにはできません。先に採用してから解消済みにしてください。")
         dec = {"finding_id": fid, "status": status, "by": user, "at": _now(), "reason": (reason or "").strip()}
         decisions = [*_decisions(d), dec]
         _write(d / "decisions.json", decisions)
         _write(d / "findings.json", _replay(_findings(d), decisions))
-        _trail(d, user, "finding_decided", fid, f"{status}: {dec['reason']}".rstrip(": "))
+        action = "finding_resolved" if status == "解消済み" else "finding_decided"
+        _trail(d, user, action, fid, f"{status}: {dec['reason']}".rstrip(": "))
     return dec
 
 
@@ -245,7 +252,7 @@ def _missing_links(d: Path, changed_req: set | None) -> list[dict]:
 
 
 def _judge(findings: list[dict], missing: list[dict]) -> dict:
-    crit = [f["id"] for f in findings if f["severity"] == "重大" and f.get("status") != "不採用"]
+    crit = [f["id"] for f in findings if f["severity"] == "重大" and f.get("status") not in RESOLVED]
     review = [f["id"] for f in findings if f.get("status") == "要確認"]
     unverified = [f["id"] for f in findings if f.get("status") is None]
     return {"pass": not crit and not review and not missing, "unresolved_critical": crit,
@@ -359,7 +366,28 @@ def seed(iid: str, src: Path, by: str, prev: Path | None = None) -> dict:
     _write(d / "decisions.json", [])
     _write(d / "trail.json", [])
     _trail(d, by, "review_started", iid, f"指摘 {len(findings)} 件を取り込み")
-    return {"iid": iid, "findings": len(findings), "meta": meta}
+    inspection_id = register_inspection(iid)
+    return {"iid": iid, "findings": len(findings), "meta": meta, "inspection_id": inspection_id}
+
+
+def register_inspection(iid: str) -> str:
+    """既存のレビュー一覧に出すため、既存の形（store.new）のままの検査を 1 件だけ作る。
+
+    対応は pair/docs/meta.json の inspection_id に持つ（既存 inspection.json にキーを足さない）。2 回目以降は作らない。
+    """
+    from web.services.docverify import store
+    d = _existing(iid)
+    meta_path = d / "docs" / "meta.json"
+    meta = _read(meta_path, {})
+    try:
+        store.load(meta.get("inspection_id") or "")
+        return meta["inspection_id"]
+    except KeyError:
+        pass
+    head = next((ln[2:].strip() for ln in _doc_text(d, "requirements.md").splitlines() if ln.startswith("# ")), iid)
+    insp = store.save(store.new(f"{head}（要件定義書 ⇔ 基本設計書）"))
+    _write(meta_path, {**meta, "inspection_id": insp["id"]})
+    return insp["id"]
 
 
 def _section_of_line(md: str, line_no: int) -> str | None:

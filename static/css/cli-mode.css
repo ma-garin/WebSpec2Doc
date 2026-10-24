@@ -4,14 +4,14 @@
 .cli-first { font-size: var(--text-md, 15px); color: var(--color-text); margin: 0; }
 
 .cli-section { margin-top: 28px; }
-.cli-section h2 { font-size: var(--text-md); margin: 0 0 6px; padding-bottom: 7px; border-bottom: 2px solid var(--color-primary); }
+.cli-section h2 { font-size: 15px; font-weight: 700; color: var(--color-text); margin: 0 0 6px; padding-bottom: 7px; border-bottom: 1px solid var(--color-border); }
 .cli-lead { margin: 0 0 12px; font-size: var(--text-sm); color: var(--color-text-secondary); }
 .cli-hint { margin: 8px 0 0; font-size: var(--text-xs); color: var(--color-text-secondary); }
 
 .cli-builder {
   display: flex; flex-wrap: wrap; gap: 12px 16px; align-items: flex-end;
-  padding: 16px 18px; background: var(--color-surface); border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
+  padding: var(--space-4); background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius-md); box-shadow: var(--shadow-sm);
 }
 .cli-field { display: flex; flex-direction: column; gap: 5px; flex: 1 1 240px; min-width: 0; }
 .cli-field.cli-narrow { flex: 0 0 140px; }
@@ -27,7 +27,7 @@
 .cli-out {
   display: flex; align-items: center; gap: 12px; margin-top: 12px;
   padding: 14px 16px; border-radius: var(--radius-lg);
-  background: #1F2937; color: #E5E7EB; overflow-x: auto;
+  background: #1F2937; color: var(--color-border); overflow-x: auto;
 }
 .cli-out code {
   font-family: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, monospace);

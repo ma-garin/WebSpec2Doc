@@ -200,7 +200,7 @@
   border-top: 1px solid var(--color-divider);
   padding: 11px 0 4px;
   margin-top: 4px;
-  background: var(--color-surface, #fff);
+  background: var(--color-surface, var(--color-surface));
 }
 .arv-foot-note {
   flex: 1;

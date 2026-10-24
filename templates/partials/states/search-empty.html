@@ -1,0 +1,6 @@
+{#- 状態: no-match。親に class="ui-state-root" data-state="..." を付け、その直下に include する。文言は UIStates.set の opts で上書きする。 -#}
+<section class="ui-state-pane" data-pane="no-match" role="status">
+  <p class="ui-state-title">{{ state_title|default('条件に合うものがありません') }}</p>
+  <p class="ui-state-message">{{ state_message|default('絞り込みの条件に一致するものが 0 件でした。') }}</p>
+  <p class="ui-state-next">{{ state_next|default('条件を解除するか、語を短くして探し直してください。') }}</p>
+</section>

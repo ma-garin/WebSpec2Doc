@@ -68,6 +68,11 @@ def approve(iid):
     return _call(lambda: pr.approve(iid, b.get("reason", ""), pr.current_user(), b.get("rev")))
 
 
+def revoke_approval(iid):
+    b = _body()
+    return _call(lambda: pr.revoke_approval(iid, b.get("reason", ""), pr.current_user(), b.get("rev")))
+
+
 def analyze(iid):
     return _call(lambda: pr.analyze(iid, pr.current_user()))
 
@@ -136,6 +141,7 @@ _RULES = (
     ("/gate", gate, ["GET"]),
     ("/trail", trail, ["GET"]),
     ("/approve", approve, ["POST"]),
+    ("/approve/revoke", revoke_approval, ["POST"]),
     ("/docs", docs, ["GET"]),
     ("/analyze", analyze, ["POST"]),
 )

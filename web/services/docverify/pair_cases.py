@@ -23,7 +23,7 @@ def _name(d: Path, meta: dict, iid: str) -> str:
 
 
 def _stage(findings: list[dict], gate: dict, trail: list[dict]) -> str:
-    if any(t.get("action") == "approved" for t in trail):
+    if pr.active_approval(trail):
         return "承認"
     if findings and gate["overall"]["pass"] and all(f.get("status") for f in findings):
         return "判定"

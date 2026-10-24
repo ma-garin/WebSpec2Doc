@@ -348,6 +348,34 @@ def approve(iid: str, reason: str, user: str, rev=None) -> dict:
         return _trail(d, user, "approved", iid, reason.strip())
 
 
+def active_approval(trail_rows: list[dict]) -> dict | None:
+    """有効な承認（最後の approved で、その後に approval_revoked が無いもの）。"""
+    cur = None
+    for t in trail_rows:
+        if t.get("action") == "approved":
+            cur = t
+        elif t.get("action") == "approval_revoked":
+            cur = None
+    return cur
+
+
+def revoke_approval(iid: str, reason: str, user: str, rev=None) -> dict:
+    """承認の取消。取り消せるのは承認した本人だけ（S06-auth・2026-10-24）。"""
+    d = _existing(iid)
+    if user == NONE_USER:
+        raise PairError(403, "auth_required", "承認の取消にはログインが必要です。ログインしてから取り消してください。")
+    if not (reason or "").strip():
+        raise PairError(400, "reason_required", "取消の理由を入力してください。")
+    with _lock(d):
+        _check_rev(d, rev)
+        cur = active_approval(_read(d / "trail.json", []))
+        if cur is None:
+            raise PairError(400, "not_approved", "取り消す承認がありません。一覧を再読み込みしてください。")
+        if cur["user"] != user:
+            raise PairError(403, "not_approver", "承認を取り消せるのは承認した本人だけです。承認者に依頼してください。")
+        return _trail(d, user, "approval_revoked", iid, reason.strip())
+
+
 # ---- 取り込み・既存の対検査ロジックへの接続 ----
 def _write_docs(d: Path, req: str, design: str, prev_req: str | None, prev_design: str | None) -> dict:
     def changed(cur: str, prev: str | None) -> list[str]:

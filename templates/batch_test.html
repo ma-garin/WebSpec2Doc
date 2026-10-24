@@ -115,6 +115,13 @@
     {# ② 観点とケース表 #}
     <section class="bt-panel" data-panel="cases" hidden>
       <div id="bt-cases-state" class="bt-state"></div>
+      <section class="bt-verdict" id="bt-verdict" aria-labelledby="bt-verdict-title">
+        <div class="bt-card-h"><h3 id="bt-verdict-title">判定</h3><span class="bt-mut" id="bt-verdict-at"></span><span class="sp"></span>
+          <label class="btn sm" for="bt-results-file" title="書き出したテストコードを手元で実行して出た結果ファイル（JUnit 形式の XML）">実行結果を取り込む</label>
+          <input id="bt-results-file" type="file" accept=".xml" hidden></div>
+        <div class="bt-verdict__scopes" id="bt-verdict-scopes"></div>
+        <div class="bt-verdict__unv" id="bt-verdict-unv"></div>
+      </section>
       <div class="c-kpis" id="bt-kpis"></div>
       <div class="bt-card">
         <div class="bt-card-h"><h3>観点</h3><span class="bt-mut">ISO/IEC/IEEE 29119-4 の技法を当てています。押すとその観点だけ表示します</span></div>
@@ -135,7 +142,7 @@
         </form>
         <div class="bt-tblwrap">
           <table class="bt-tbl bt-cases" aria-label="テストケース">
-            <thead><tr><th>ID</th><th>観点</th><th>技法</th><th>前提・入力</th><th>実行</th><th>期待結果</th><th>根拠</th><th>状態</th></tr></thead>
+            <thead><tr><th>ID</th><th>観点</th><th>技法</th><th>入力</th><th>実行</th><th>期待結果</th><th>根拠仕様</th><th>状態</th></tr></thead>
             <tbody id="bt-rows"></tbody>
           </table>
         </div>

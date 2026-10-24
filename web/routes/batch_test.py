@@ -8,7 +8,7 @@ from flask import Blueprint, Response, g, jsonify, render_template, request
 
 from web.auth import auth_enabled
 from web.routes.backend_test import actor
-from web.services.batchtest import codegen, design, export, parse, store
+from web.services.batchtest import codegen, design, export, parse, store, judge
 
 bp = Blueprint("batch_test", __name__)
 log = logging.getLogger(__name__)
@@ -229,7 +229,9 @@ def make_cases(jid: str):
         return _err("先に「読み取る」を押して、スクリプトを読み取ってください。", 400)
     manual = [c for c in job["cases"] if c.get("origin") == "manual"]
     cases = design.renumber(design.design(job["facts"], job["spec"], job["files"], job["settings"]["command"]) + manual)
-    return jsonify(job=store.save({**job, "cases": cases, "designed_at": store.now(), "sources": []}))
+    cases = judge.mark_changed(job["cases"], cases)
+    # ケース ID が振り直されるので、前の実行結果は引き継がない（判定帯では未実行に戻る）
+    return jsonify(job=store.save({**job, "cases": cases, "designed_at": store.now(), "sources": [], "results": []}))
 
 
 @bp.route("/api/batch-test/jobs/<jid>/cases/<cid>", methods=["PATCH"])
@@ -249,7 +251,7 @@ def edit_case(jid: str, cid: str):
     for c in job["cases"]:
         if c["id"] == cid:
             hit = True
-            c = {**c, "exp": exp, "ask": False, "src": c["src"] if c["src"] != "—" else "利用者が記入",
+            c = {**c, "exp": exp, "ask": False, "changed": True, "src": c["src"] if c["src"] != "—" else "利用者が記入",
                  "expect": {**c["expect"], "code": int(code) if code not in (None, "") else c["expect"]["code"]}}
         cases.append(c)
     if not hit:
@@ -273,10 +275,29 @@ def add_case(jid: str):
     head = (job["settings"]["command"] or (job.get("facts") or {}).get("script", "")).split(" {")[0]
     case = {"id": "", "obs": str(body.get("obs") or "追加").strip()[:20], "tech": "経験ベース", "pre": pre,
             "argv": argv, "run": " ".join([head, *argv]).strip(), "exp": exp, "src": "利用者が記入",
-            "ask": False, "origin": "manual",
+            "ask": False, "manual": False, "changed": True, "origin": "manual",
             "setup": {"inputs": "sample", "unset_env": [], "lock": False, "rerun": False, "outdir_missing": False},
             "expect": {"code": int(code) if code not in (None, "") else None, "output": None, "log": None}}
     return jsonify(job=store.save({**job, "cases": design.renumber(job["cases"] + [case]), "sources": []}))
+
+
+@bp.route("/api/batch-test/jobs/<jid>/results", methods=["POST"])
+def import_results(jid: str):
+    """書き出したテストコードを手元で実行した結果（JUnit XML）を取り込み、ケースごとの状態にする。"""
+    job, err = _load(jid)
+    if err:
+        return err
+    if not job["cases"]:
+        return _err("先にケース表を作ってください。", 400)
+    up = request.files.get("file")
+    if up is None:
+        return _err("結果ファイルを選んでください。", 400)
+    try:
+        results = judge.parse_junit(up.read(judge.MAX_XML + 1), {c["id"] for c in job["cases"]}, store.now())
+    except judge.ResultError as exc:
+        return _err(str(exc), 400)
+    log.info("batch-test results imported jid=%s n=%d", jid, len(results))
+    return jsonify(job=store.save({**job, "results": results}))
 
 
 @bp.route("/api/batch-test/jobs/<jid>/code", methods=["POST"])

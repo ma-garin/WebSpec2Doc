@@ -98,3 +98,20 @@ a.btn{text-decoration:none}a.btn[aria-disabled=true]{opacity:.45;pointer-events:
 .bt-newform[hidden],.bt-home[hidden],#bt-jobs-wrap[hidden]{display:none}
 .bt-ops{white-space:nowrap;text-align:right}
 .bt-banner{margin:0}
+/* 判定帯（全体／今回の変更分）と未検証の名指し */
+.bt-verdict { border: 1px solid var(--line, #d0d7de); border-radius: 8px; padding: 10px 12px; margin: 0 0 12px; background: var(--surface, #fff); }
+.bt-verdict__scopes { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.bt-scope { border-left: 4px solid #8c959f; padding: 6px 10px; min-width: 0; }
+.bt-scope p { margin: 4px 0 0; overflow-wrap: anywhere; }
+.bt-scope__h { display: flex; gap: 8px; align-items: baseline; }
+.bt-scope__v { font-weight: 700; }
+.bt-scope[data-verdict="合格"] { border-left-color: #1a7f37; }
+.bt-scope[data-verdict="不合格"] { border-left-color: #cf222e; }
+.bt-scope[data-verdict="判定保留"] { border-left-color: #9a6700; }
+.bt-verdict__unv { margin-top: 8px; }
+.bt-verdict__unv ul { margin: 6px 0 0; padding-left: 18px; max-height: 160px; overflow: auto; }
+.bt-verdict__unv li { overflow-wrap: anywhere; }
+.bt-warn { color: #9a6700; margin: 4px 0; }
+
+.p-pass { background: var(--ok-bg, #dafbe1); color: var(--ok, #1a7f37); }
+.p-fail { background: var(--critical-bg, #ffebe9); color: var(--critical, #cf222e); }

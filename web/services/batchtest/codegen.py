@@ -44,6 +44,7 @@ def prepare(case, home):
     env = dict(os.environ)
     values = {{e["name"]: str(home) for e in FACTS["env_vars"]}}
     env.update(values)
+    env.update(case["setup"].get("env_set") or {{}})
     for name in case["setup"]["unset_env"]:
         env.pop(name, None)
     values.update({{a["name"]: v for a, v in zip(FACTS["args"], case["argv"])}})
@@ -81,7 +82,7 @@ def _read(p):
 
 
 @pytest.mark.parametrize("case", [
-    pytest.param(c, id=c["id"], marks=[pytest.mark.skip(reason=c["id"] + ": 仕様に記載なし（要確認）")] if c["ask"] else [])
+    pytest.param(c, id=c["id"], marks=[pytest.mark.skip(reason=c["id"] + (": 手動確認" if c.get("manual") else ": 仕様に記載なし（要確認）"))] if (c["ask"] or c.get("manual")) else [])
     for c in CASES
 ])
 def test_case(case, tmp_path):
@@ -125,7 +126,7 @@ setup() {{
 
 
 def _pester_block(c: dict, facts: dict) -> str:
-    skip = " -Skip" if c["ask"] else ""
+    skip = " -Skip" if (c["ask"] or c.get("manual")) else ""
     args = " ".join(f"'{a}'" for a in c["argv"])
     lines = [f'  It "{c["id"]} {c["obs"]}: {c["pre"]}"{skip} {{',
              "    Push-Location $TestDrive",
@@ -143,7 +144,7 @@ def _bats_block(c: dict, facts: dict) -> str:
     args = " ".join(f'"{a}"' for a in c["argv"])
     runner = {"cmd": "cmd /c", "sh": "bash", "pwsh": "pwsh -File"}[facts["dialect"]]
     body = [f'@test "{c["id"]} {c["obs"]}: {c["pre"]}" {{']
-    if c["ask"]:
+    if (c["ask"] or c.get("manual")):
         body.append(f'  skip "{c["id"]}: 仕様に記載なし（要確認）"')
     body += [f"  unset {n}" for n in c["setup"]["unset_env"]]
     body.append(f'  run {runner} "./{facts["script"]}" {args}')

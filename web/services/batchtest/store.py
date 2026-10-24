@@ -54,7 +54,7 @@ def new(name: str) -> dict:
     return {
         "id": uuid.uuid4().hex[:12], "name": name, "created_at": ts, "updated_at": ts,
         "files": [], "settings": {"env": "cmd", "framework": "pytest", "command": ""},
-        "facts": None, "spec": [], "cases": [], "sources": [],
+        "facts": None, "spec": [], "cases": [], "sources": [], "results": [],
         "analyzed_at": None, "designed_at": None, "generated_at": None,
     }
 
@@ -72,6 +72,12 @@ def export_basis(job: dict, kind: str) -> str:
 
 
 def with_export_state(job: dict) -> dict:
+    """返す job に書き出しの stale と判定帯（全体／今回の変更分）を付ける。判定帯は保存しない。"""
+    from . import judge
+    return {**_with_exports(job), "verdict": judge.verdict(job)}
+
+
+def _with_exports(job: dict) -> dict:
     """書き出しの記録に「その後で中身が変わったか（stale）」を付ける。
 
     記録はサーバがファイルを送り出した事実だけ。受け取り・実行・確認は記録しない（画面では未実行・未確認のまま）。
@@ -95,7 +101,7 @@ def load(jid: str) -> dict:
 
 
 def save(job: dict) -> dict:
-    job = {**job, "updated_at": now()}
+    job = {**{k: v for k, v in job.items() if k != "verdict"}, "updated_at": now()}
     directory = job_dir(job["id"])
     directory.mkdir(parents=True, exist_ok=True)
     fd, tmp = tempfile.mkstemp(dir=directory, suffix=".tmp")

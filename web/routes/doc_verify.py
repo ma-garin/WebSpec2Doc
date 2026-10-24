@@ -636,8 +636,3 @@ def metrics_api():
         log.exception("メトリクスの集計に失敗")
         return _err("メトリクスを集計できませんでした。時間をおいて再読み込みしてください。", 500)
 
-
-# 対検査レビュー API（暫定登録。正式には web/__init__.py で doc_verify_pair.bp を登録する: docs/change-requests/S06-1.md）
-from web.routes.doc_verify_pair import register as _register_pair  # noqa: E402
-
-_register_pair(bp)

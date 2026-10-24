@@ -135,9 +135,9 @@
   }
   function syncNav() {
     var inSys = !!state.sid && state.view !== 'guide', inCr = inSys && !!state.cr;
-    $$('[data-scope=sys]').forEach(function (b) { b.hidden = !inSys; });
-    $$('[data-scope=cr]').forEach(function (b) { b.hidden = !inCr; });
-    var cur = state.view === 'guide' ? 'guide' : inCr ? 'cr:' + (state.tab || 'changes') : inSys ? 'sys:' + (state.tab || 'overview') : 'home';
+    $$('[data-scope=sys]').forEach(function (b) { b.hidden = false; if (b.tagName === 'BUTTON') { b.disabled = !inSys; b.setAttribute('aria-disabled', String(!inSys)); } });
+    $$('[data-scope=cr]').forEach(function (b) { b.hidden = false; if (b.tagName === 'BUTTON') { b.disabled = !inCr; b.setAttribute('aria-disabled', String(!inCr)); } });
+    var cur = state.view === 'guide' ? 'guide' : inCr ? 'cr:' + (state.tab || 'decision') : inSys ? 'sys:' + (state.tab || 'overview') : 'home';
     $$('.app-nav-item').forEach(function (b) {
       var key = b.dataset.nav || (b.dataset.scope + ':' + b.dataset.tab);
       var on = key === cur;
@@ -264,7 +264,7 @@
         if (b.dataset.nav === 'home') go({});
         else if (b.dataset.nav === 'guide') go({ view: 'guide' });
         else if (b.dataset.scope === 'sys') go({ sid: state.sid, tab: b.dataset.tab === 'overview' ? '' : b.dataset.tab });
-        else if (b.dataset.scope === 'cr') go({ sid: state.sid, cr: state.cr, tab: b.dataset.tab === 'changes' ? '' : b.dataset.tab });
+        else if (b.dataset.scope === 'cr') go({ sid: state.sid, cr: state.cr, tab: b.dataset.tab === 'decision' ? '' : b.dataset.tab });
       });
     });
     $('[data-act=new-sys-side]').addEventListener('click', newSystem);

@@ -30,6 +30,11 @@
     .syscard-cond .syscard-icon { background: #E0E7FF; color: #312E81; }
     .syscard-cond .syscard-no { color: #312E81; }
     .syscard-cond .syscard-open { color: #312E81; }
+    .sysselect-cases { border: 1px solid #c7d2fe; background: #eef2ff; border-radius: 10px; padding: 16px 20px; margin: 0 0 20px; }
+    .sysselect-cases__title { font-size: 17px; margin: 0 0 6px; color: #312E81; }
+    .sysselect-cases__desc { margin: 0 0 12px; font-size: 13px; }
+    .sysselect-cases__go { display: inline-flex; text-decoration: none; }
+    .sysselect-sub { font-size: 14px; margin: 0 0 10px; color: #475569; }
   </style>
 </head>
 <body class="sysselect-body">
@@ -60,9 +65,15 @@
       <p>使うシステムを選んでください。各システムは独立していて、入口・ナビは別です。CLI / API は画面を持たず、端末や外部システムから同じ機能を使います。</p>
     </div>
 
+    <section class="sysselect-cases" aria-labelledby="ss-cases-title">
+      <h2 id="ss-cases-title" class="sysselect-cases__title">QA 案件から始める</h2>
+      <p class="sysselect-cases__desc">案件ごとに 仕様評価 → リスク → テスト設計 → 実行 → 欠陥 → 判定 のどこで止まっているかを確かめ、その段の画面へ進みます。</p>
+      <a class="btn-primary sysselect-cases__go" href="/orchestration">案件概況を開く</a>
+    </section>
+    <h2 class="sysselect-sub">システムを直接開く</h2>
     <div class="sysselect-grid">
       {% for s in SYSTEMS %}
-      {% if not s.role or not auth_user or auth_user.role == s.role %}
+      {% if not s.prototype and (not s.role or not auth_user or auth_user.role == s.role) %}
       {# 管理者専用の System は、押しても 403 になるカードを並べない。 #}
       <a class="syscard syscard-{{ {'cond':'cond','doc':'doc','app':'app','test':'test','autorun':'run','cli':'cli','heal':'heal','docverify':'dv','batch':'batch','backend':'backend','impact':'impact'}[s.key] }}" href="{{ s.url }}">
         <span class="syscard-accent" aria-hidden="true"></span>

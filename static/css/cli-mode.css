@@ -48,3 +48,29 @@ p.cli-check[hidden] { display: none; }
 @media (max-width: 816px) {
   .cli-field.cli-narrow { max-width: none; }
 }
+
+/* ── ジョブ（投入・状態・結果・証跡） ── */
+.cli-submit-form { align-items: end; }
+.cli-jobs-tools { display: flex; gap: 8px; align-items: end; }
+.cli-statesw .c-input { min-width: 9em; }
+.cli-jobs-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(240px, 300px); gap: 16px; align-items: start; min-width: 0; }
+.cli-jobs-body, .cli-detail { min-width: 0; }
+.cli-detail { border: 1px solid var(--border, #d0d7de); border-radius: 8px; padding: 12px; background: var(--surface, #fff); overflow-wrap: anywhere; }
+.cli-jobs-table td { overflow-wrap: anywhere; }
+.cli-jobs-table tr.is-selected td { background: var(--accent-soft, #eef4ff); }
+.cli-link { background: none; border: 0; padding: 0; color: var(--accent, #0b5cd5); text-decoration: underline; cursor: pointer; font: inherit; }
+.cli-dl { display: grid; grid-template-columns: 5.5em minmax(0, 1fr); gap: 4px 8px; margin: 0 0 8px; }
+.cli-dl dt { color: var(--text-muted, #57606a); }
+.cli-dl dd { margin: 0; }
+.cli-ev { list-style: none; margin: 0 0 8px; padding: 0; }
+.cli-ev .who { font-weight: 600; }
+.cli-ev .tm { color: var(--text-muted, #57606a); }
+.cli-log pre { max-height: 160px; overflow: auto; white-space: pre-wrap; font-size: 12px; }
+.p5-gates { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin: 0 0 12px; }
+.p5-gate { display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: baseline; padding: 8px 12px; border-radius: 8px; border-left: 4px solid var(--border, #d0d7de); background: var(--surface-2, #f6f8fa); min-width: 0; overflow-wrap: anywhere; }
+.p5-gate.ng { border-left-color: var(--danger, #cf222e); }
+.p5-gate.ok { border-left-color: var(--success, #1a7f37); }
+.p5-gate.hold { border-left-color: var(--warning, #9a6700); }
+.p5-gate__k { color: var(--text-muted, #57606a); font-size: 12px; }
+@media (max-width: 1180px) { .cli-jobs-grid { grid-template-columns: minmax(0, 1fr); } }
+.cli-jobs-table td:first-child, .cli-jobs-table td:nth-child(3) { white-space: nowrap; overflow-wrap: normal; }

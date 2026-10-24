@@ -23,6 +23,9 @@ from web.services.drift_summary import drift_count, load_drift_summary, should_n
 _JOBS: dict[str, CrawlJob] = {}
 _FINISHED_STATUSES = frozenset({"completed", "failed"})
 _JOBS_LOCK = threading.Lock()
+# 表示用の付帯情報（出力先のテナント範囲・投入者）。CrawlJob に足すと API 応答へ
+# 出力先パスが漏れるため、別の辞書に持つ。
+_JOB_META: dict[str, dict[str, str]] = {}
 
 MAX_LOG_BYTES = 4096
 MAX_JOBS_PER_DOMAIN = 20
@@ -55,6 +58,7 @@ def start_crawl_job(
     output_dir: Path | None = None,
     on_done: Callable[[CrawlJob], None] | None = None,
     domain_name: str = "",
+    requested_by: str = "",
 ) -> str:
     """バックグラウンドスレッドでクロールを開始し、job_id を返す。
 
@@ -74,6 +78,10 @@ def start_crawl_job(
 
     with _JOBS_LOCK:
         _JOBS[job_id] = job
+        _JOB_META[job_id] = {
+            "scope": str(output_dir.resolve()) if output_dir else "",
+            "requested_by": requested_by,
+        }
         _publish_queue_depth()
         _evict_old_jobs(domain)
 
@@ -109,6 +117,26 @@ def list_jobs_for_domain(domain: str) -> list[CrawlJob]:
     return sorted(jobs, key=lambda j: j.started_at, reverse=True)[:MAX_JOBS_PER_DOMAIN]
 
 
+def active_job_for_domain(domain: str) -> CrawlJob | None:
+    """domain で待機中・実行中のジョブを返す（無ければ None）。二重投入の検出用。"""
+    with _JOBS_LOCK:
+        active = [j for j in _JOBS.values() if j.domain == domain and j.status not in _FINISHED_STATUSES]
+    return max(active, key=lambda j: j.started_at) if active else None
+
+
+def job_requested_by(job_id: str) -> str:
+    with _JOBS_LOCK:
+        return _JOB_META.get(job_id, {}).get("requested_by", "")
+
+
+def list_jobs_in_scope(output_dir: Path, limit: int = 50) -> list[CrawlJob]:
+    """出力先（テナント範囲）が同じジョブを新しい順に返す。他テナントのジョブは返さない。"""
+    scope = str(output_dir.resolve())
+    with _JOBS_LOCK:
+        jobs = [j for j in _JOBS.values() if _JOB_META.get(j.job_id, {}).get("scope") == scope]
+    return sorted(jobs, key=lambda j: j.started_at, reverse=True)[:limit]
+
+
 def _evict_old_jobs(domain: str) -> None:
     """_JOBS_LOCK 保持中に呼ぶ。domain の古いジョブを上限まで削除する。"""
     domain_jobs = sorted(
@@ -116,7 +144,9 @@ def _evict_old_jobs(domain: str) -> None:
         key=lambda jid: _JOBS[jid].started_at,
     )
     while len(domain_jobs) >= MAX_JOBS_PER_DOMAIN:
-        del _JOBS[domain_jobs.pop(0)]
+        old = domain_jobs.pop(0)
+        del _JOBS[old]
+        _JOB_META.pop(old, None)
 
 
 def _run_job(

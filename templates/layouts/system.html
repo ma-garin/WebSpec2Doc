@@ -1,6 +1,6 @@
 {#- 全 System の共通レイアウト（シェル）。子テンプレートは {% set system_key = '<registry の key>' %} を置いて extends する。
     サイドバーの「折りたたむ」と app-sidebar-foot はここに固定で置く（System 側で消せない）。
-    共通 CSS の順序もここで固定: tokens → app → app-components → css/components → head_css → user-menu → c-hybrid → c-shell -#}
+    共通 CSS の順序もここで固定: tokens → css/tokens（段階） → app → app-components → css/components → head_css → user-menu → c-hybrid → c-shell -#}
 <!DOCTYPE html>
 <html lang="ja">
 <head>
@@ -11,6 +11,7 @@
   <!-- Google Fonts はローカル専用の CSP（style-src 'self'）でブロックされ読み込まれないため撤去。
        描画は --font-main / --font-mono のシステムフォント・フォールバックで確定する。 -->
   <link rel="stylesheet" href="{{ url_for('static', filename='tokens.css') }}?v={{ _ver }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/tokens.css') }}?v={{ _ver }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='app.css') }}?v={{ _ver }}">
 {% block head_css_pre %}{% endblock %}  <link rel="stylesheet" href="{{ url_for('static', filename='app-components.css') }}?v={{ _ver }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/components.css') }}?v={{ _ver }}">
@@ -52,14 +53,33 @@
   <div class="app-main">
 {% include 'partials/topbar.html' %}
 
-    <main class="app-content" id="app-content" tabindex="-1">
+{#- 領域スロット（共通契約 §2.1）。右パネル・下部判定帯は System が block を書いたときだけ出る（書かない System の DOM は従来どおり）。
+    本文の状態は data-state（normal/empty/no-match/loading/error/forbidden/dirty/conflict/restored）で切り替える。 -#}
+{%- set _has_rpanel = self.right_panel()|trim|length > 0 %}
+{%- set _has_verdict = self.verdict_band()|trim|length > 0 %}
+{% if _has_rpanel %}    <div class="app-body">
+{% endif %}    <main class="app-content" id="app-content" tabindex="-1" data-state="{% block content_state %}normal{% endblock %}">
       <div class="app-content-inner">
 {% block content %}{% endblock %}
       </div>
     </main>
-  </div>
+{% if _has_rpanel %}    <aside class="app-rpanel" id="app-rpanel" data-system="{{ system_key }}" aria-label="{% block right_panel_label %}詳細{% endblock %}">
+      <div class="app-rpanel-head">
+        <span class="app-rpanel-title">{{ self.right_panel_label() }}</span>
+        <button type="button" class="app-rpanel-toggle" id="app-rpanel-toggle" aria-controls="app-rpanel" aria-expanded="true" title="右パネルを閉じる">閉じる</button>
+      </div>
+      <div class="app-rpanel-body">
+{% block right_panel %}{% endblock %}
+      </div>
+    </aside>
+    </div>
+{% endif %}{% if _has_verdict %}    <section class="app-verdict-band verdict-band" id="app-verdict-band" aria-label="判定">
+{% block verdict_band %}{% endblock %}
+    </section>
+{% endif %}  </div>
 </div>
 {% block modals %}{% endblock %}
+{% if _has_rpanel %}<script src="{{ url_for('static', filename='js/c-hybrid.js') }}?v={{ _ver }}" defer></script>{% endif %}
 {% block scripts %}{% endblock %}
 </body>
 </html>

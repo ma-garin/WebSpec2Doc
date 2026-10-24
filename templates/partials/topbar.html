@@ -9,6 +9,12 @@
         <h1 class="app-topbar-title" id="topbar-title">{{ topbar_title or 'QAドキュメント生成' }}</h1>
       </div>
       <div class="app-topbar-right">
+        {#- 案件と対象版（共通契約 §2.2。URL の ?case=&tv= が正）。表示名の解決は共通 API v1（§3）接続後に置き換える -#}
+        {%- set _case = request.args.get('case', '')|trim %}{% set _tv = request.args.get('tv', '')|trim %}
+        <span class="app-topbar-ctx{{ ' is-unset' if not _case }}" id="topbar-ctx" title="案件と対象版">
+          {%- if _case %}<span class="app-topbar-ctx-k">案件</span><b>{{ _case[:40] }}</b>{% if _tv %}<span class="app-topbar-ctx-k">版</span><b>{{ _tv[:40] }}</b>{% endif %}
+          {%- else %}案件未選択{% endif -%}
+        </span>
         {% if auth_user %}
         {# 現在テナントの常時表示。見た目は .app-topbar-tenant（static/css/user-menu.css）にある。
            テナント名は /api/auth/me から JS で埋めるため、埋まるまでは空のチップを見せない。

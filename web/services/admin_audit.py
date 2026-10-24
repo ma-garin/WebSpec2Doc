@@ -79,6 +79,10 @@ def read_admin_audit(
     action: str = "",
     outcome: str = "",
     query: str = "",
+    actor: str = "",
+    case: str = "",
+    since: str = "",
+    until: str = "",
 ) -> list[AdminAuditEvent]:
     if not path.is_file():
         return []
@@ -97,6 +101,16 @@ def read_admin_audit(
             if action and event.action != action:
                 continue
             if outcome and event.outcome != outcome:
+                continue
+            if actor and actor.casefold() not in (
+                f"{event.actor_id} {event.actor_email}".casefold()
+            ):
+                continue
+            if case and audit_case_of(event) != case:
+                continue
+            if since and event.at[: len(since)] < since:
+                continue
+            if until and event.at[: len(until)] > until:
                 continue
             if normalized_query:
                 searchable = " ".join(
@@ -120,6 +134,41 @@ def read_admin_audit(
     except OSError:
         return events
     return events
+
+
+def audit_case_of(event: AdminAuditEvent) -> str:
+    """どの案件への操作か。共通証跡（common-contract §4.2）の case と同じ値を返す。"""
+    if event.target_type == "case":
+        return event.target_id
+    value = event.detail.get("case")
+    return value if isinstance(value, str) else ""
+
+
+def audit_events_csv(events: list[AdminAuditEvent]) -> str:
+    """監査ログを CSV にする。detail は秘密値を除去済みのものだけを出す。"""
+    import csv
+    import io
+
+    buffer = io.StringIO()
+    writer = csv.writer(buffer)
+    writer.writerow(["日時", "利用者ID", "利用者", "操作", "案件", "対象種別", "対象", "結果", "理由", "詳細"])
+    for event in events:
+        reason = event.detail.get("reason", "")
+        writer.writerow(
+            [
+                event.at,
+                event.actor_id,
+                event.actor_email,
+                event.action,
+                audit_case_of(event),
+                event.target_type,
+                event.target_id,
+                event.outcome,
+                reason if isinstance(reason, str) else "",
+                json.dumps(event.detail, ensure_ascii=False),
+            ]
+        )
+    return buffer.getvalue()
 
 
 def _event_from_data(data: object) -> AdminAuditEvent | None:

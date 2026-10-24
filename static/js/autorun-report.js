@@ -300,6 +300,115 @@
     return nodes;
   }
 
+
+  // ---------------------------------------------------------------- 判定と証跡（常時表示部）
+
+  function namedList(named) {
+    var ul = el('ul', 'arep-vnamed');
+    Object.keys(named || {}).forEach(function (label) {
+      var items = named[label] || [];
+      if (!items.length) return;
+      var shown = items.slice(0, 5).join('、') + (items.length > 5 ? ' ほか' + (items.length - 5) + '件' : '');
+      ul.appendChild(el('li', null, label + '（' + items.length + '件）: ' + shown));
+    });
+    return ul;
+  }
+
+  function renderChrome(v) {
+    var bar = $('arep-stagebar');
+    bar.textContent = '';
+    (v.stages || []).forEach(function (s) {
+      var li = el('li', 'arep-stage');
+      li.setAttribute('data-status', s.status);
+      li.title = s.step_no + '. ' + s.name + '\n出口条件: ' + s.exit_criteria + '\n' + s.owner
+        + (s.approver ? '\n判断: ' + s.approver + ' ' + s.approved_at : '');
+      li.appendChild(el('span', 'arep-stage-name', s.step_no + '. ' + s.name));
+      li.appendChild(el('span', 'arep-stage-status', s.status_label));
+      bar.appendChild(li);
+    });
+    var run = el('li', 'arep-stage');
+    var kind = (v.outcome || {}).kind;
+    run.setAttribute('data-status', kind === 'complete' ? 'approved' : (kind === 'not_run' ? 'pending' : 'generated'));
+    run.appendChild(el('span', 'arep-stage-name', '9. 実行'));
+    run.appendChild(el('span', 'arep-stage-status', (v.outcome || {}).title || ''));
+    bar.appendChild(run);
+
+    var oc = $('arep-outcome');
+    oc.textContent = '';
+    oc.appendChild(el('strong', null, (v.outcome || {}).title || ''));
+    oc.appendChild(document.createTextNode(((v.outcome || {}).detail || '') + ' ' + ((v.outcome || {}).next_action || '')));
+    $('arep-log').textContent = (v.log && v.log.length) ? v.log.join('\n')
+      : '実行ログはまだありません。実行が終わるとここに残ります。';
+
+    var band = $('arep-verdictband');
+    band.textContent = '';
+    (v.verdicts || []).forEach(function (r) {
+      var row = el('div', 'arep-vrow');
+      row.appendChild(el('span', 'arep-vscope', r.scope));
+      var badge = el('span', 'arep-vbadge', r.verdict);
+      badge.setAttribute('data-verdict', r.verdict);
+      row.appendChild(badge);
+      row.appendChild(el('span', null, r.basis));
+      row.appendChild(namedList(r.named));
+      band.appendChild(row);
+    });
+  }
+
+  function renderVerdict(v) {
+    var nodes = [];
+    var head = el('section', 'arep-card');
+    head.appendChild(el('h2', null, (v.outcome || {}).title || ''));
+    head.appendChild(el('p', null, (v.outcome || {}).detail || ''));
+    head.appendChild(el('p', null, '次の行動: ' + ((v.outcome || {}).next_action || '')));
+    head.appendChild(el('p', 'arep-claim', v.claim_scope || ''));
+    nodes.push(head);
+
+    var sec = el('section', 'arep-card');
+    sec.appendChild(el('h2', null, '段階承認の記録'));
+    var wrap = el('div', 'arep-trail-wrap');
+    var table = el('table', 'arep-trail');
+    var thead = el('tr');
+    ['段階', '出口条件', '状態', '判断（誰が・いつ・理由）'].forEach(function (h) { thead.appendChild(el('th', null, h)); });
+    table.appendChild(thead);
+    (v.stages || []).forEach(function (s) {
+      var tr = el('tr');
+      tr.appendChild(el('td', null, s.step_no + '. ' + s.name));
+      tr.appendChild(el('td', null, s.exit_criteria));
+      tr.appendChild(el('td', null, s.status_label));
+      var who = el('td', s.approver === '本人確認なし' ? 'arep-noauth' : null,
+        s.approver ? (s.approver + '／' + s.approved_at + '／' + (s.reason || '理由の記載なし'))
+          + (s.authenticated ? '' : '（承認として数えません）') : '判断の記録なし');
+      tr.appendChild(who);
+      table.appendChild(tr);
+    });
+    wrap.appendChild(table);
+    sec.appendChild(wrap);
+    nodes.push(sec);
+    return nodes;
+  }
+
+  function loadChrome() {
+    return fetch('/api/autorun/report/' + encodeURIComponent(domain) + '?section=verdict')
+      .then(function (r) { return r.json().then(function (d) { if (!r.ok) throw new Error(d.error); return d; }); })
+      .then(function (d) { renderChrome(d.data || {}); })
+      .catch(function () {
+        $('arep-log').textContent = '実行ログを読み込めませんでした。ページを再読み込みしてください。';
+      });
+  }
+
+  function previewState(state) {
+    document.querySelectorAll('.arep-state-btn').forEach(function (b) {
+      b.classList.toggle('is-active', b.getAttribute('data-state-switch') === state);
+    });
+    if (state === 'normal') { load(current || 'verdict'); return; }
+    var box = $('arep-content');
+    box.setAttribute('data-state', state);
+    if (state === 'loading') setContent([el('p', 'arep-loading', '読み込んでいます…')]);
+    if (state === 'empty') setContent([el('div', 'arep-empty', 'この対象にはまだ実行結果がありません。AutoRun の画面から実行を開始してください。')]);
+    if (state === 'error') setContent([el('div', 'arep-error', '結果を読み込めませんでした。時間をおいて再読み込みし、続く場合は管理者に連絡してください。')]);
+    box.setAttribute('data-state', state);
+  }
+
   // ---------------------------------------------------------------- 読み込み
 
   async function load(section) {
@@ -315,18 +424,21 @@
       var data = await res.json();
       if (!res.ok) throw new Error(data.error || '読み込みに失敗しました');
 
-      if (data.kind === 'dashboard') setContent(renderDashboard(data.data || {}));
+      if (data.kind === 'verdict') { setContent(renderVerdict(data.data || {})); renderChrome(data.data || {}); }
+      else if (data.kind === 'dashboard') setContent(renderDashboard(data.data || {}));
       else if (data.kind === 'markdown') setContent(renderMarkdown(data.text, data.source));
       else if (data.kind === 'code') setContent(renderCode(data.text, data.source));
       else if (data.kind === 'table') setContent(renderTable(data));
       else if (data.kind === 'results') setContent(renderResults(data.data, data.source));
       else setContent(notGenerated());
 
+      $('arep-content').setAttribute('data-state', 'normal');
       try {
         history.replaceState(null, '', '#' + section);
       } catch (e) { /* 履歴が使えない環境では無視 */ }
     } catch (e) {
-      setContent([el('div', 'arep-error', e && e.message ? e.message : '読み込みに失敗しました')]);
+      $('arep-content').setAttribute('data-state', 'error');
+      setContent([el('div', 'arep-error', (e && e.message ? e.message : '読み込みに失敗しました') + ' 再読み込みしてください。')]);
     }
   }
 
@@ -337,12 +449,16 @@
       });
     });
 
-    var initial = (location.hash || '').replace('#', '') || 'dashboard';
+    document.querySelectorAll('.arep-state-btn').forEach(function (btn) {
+      btn.addEventListener('click', function () { previewState(btn.getAttribute('data-state-switch')); });
+    });
+    var initial = (location.hash || '').replace('#', '') || 'verdict';
+    if (initial !== 'verdict') loadChrome();
     var known = Array.prototype.map.call(
       document.querySelectorAll('.arep-nav-item'),
       function (b) { return b.getAttribute('data-section'); }
     );
-    load(known.indexOf(initial) >= 0 ? initial : 'dashboard');
+    load(known.indexOf(initial) >= 0 ? initial : 'verdict');
   }
 
   if (document.readyState === 'loading') {

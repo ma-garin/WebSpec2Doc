@@ -178,6 +178,7 @@
     renderRiskSummary(run);
     renderBlockers(run);
     applyFixedHint();
+    if (window.HealingTrace) { window.HealingTrace.render(run); }
   }
 
   /* ---------------- リスク要約（判断の直前に出す） ----------------

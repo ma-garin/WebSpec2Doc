@@ -10,6 +10,7 @@ import logging
 from flask import Blueprint, Response, jsonify, request
 
 from web.services.docverify import pair_cases as pc
+from web.services.docverify import pair_report as prep
 from web.services.docverify import pair_review as pr
 
 bp = Blueprint("doc_verify_pair", __name__)
@@ -67,6 +68,11 @@ def approve(iid):
     return _call(lambda: pr.approve(iid, b.get("reason", ""), pr.current_user(), b.get("rev")))
 
 
+def revoke_approval(iid):
+    b = _body()
+    return _call(lambda: pr.revoke_approval(iid, b.get("reason", ""), pr.current_user(), b.get("rev")))
+
+
 def analyze(iid):
     return _call(lambda: pr.analyze(iid, pr.current_user()))
 
@@ -100,15 +106,42 @@ def report_md(iid):
                     headers={"Content-Disposition": f"attachment; filename=findings-{pr.resolve_iid(iid)}.md"})
 
 
+_MIME = {"docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+         "xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"}
+
+
+def _binary(iid, ext: str, build):
+    try:
+        data = build(iid)
+    except pr.PairError as e:
+        return _err(e.status, e.code, e.message)
+    except Exception:
+        log.exception("指摘書（%s）の出力に失敗", ext)
+        return _err(500, "internal", "指摘書を作れませんでした。時間をおいてもう一度出力してください。")
+    return Response(data, content_type=_MIME[ext],
+                    headers={"Content-Disposition": f"attachment; filename=findings-{pr.resolve_iid(iid)}.{ext}"})
+
+
+def report_docx(iid):
+    return _binary(iid, "docx", prep.to_docx)
+
+
+def report_xlsx(iid):
+    return _binary(iid, "xlsx", prep.to_xlsx)
+
+
 _RULES = (
     ("/summary", summary, ["GET"]),
     ("/report.md", report_md, ["GET"]),
+    ("/report.docx", report_docx, ["GET"]),
+    ("/report.xlsx", report_xlsx, ["GET"]),
     ("/findings", findings, ["GET"]),
     ("/findings/<fid>/decide", decide, ["POST"]),
     ("/findings/<fid>/revoke", revoke, ["POST"]),
     ("/gate", gate, ["GET"]),
     ("/trail", trail, ["GET"]),
     ("/approve", approve, ["POST"]),
+    ("/approve/revoke", revoke_approval, ["POST"]),
     ("/docs", docs, ["GET"]),
     ("/analyze", analyze, ["POST"]),
 )

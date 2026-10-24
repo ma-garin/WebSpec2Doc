@@ -39,7 +39,7 @@ def summarize(results: list[dict]) -> dict:
 
 
 def verdict(summary: dict) -> dict:
-    """全体判定。不合格 > 判定保留 > 合格の順に決める。"""
+    """全体判定。不合格 > 判定不能 > 合格の順に決める。"""
     fail = int(summary.get("fail", 0))
     unverified = int(summary.get("unverified", 0))
     total = int(summary.get("total", 0))
@@ -48,13 +48,13 @@ def verdict(summary: dict) -> dict:
         return {"verdict": "不合格", "reason": f"不合格 {fail} 件", "unverified": unverified}
     if unverified > 0:
         return {
-            "verdict": f"保留（未検証 {unverified} 件）",
+            "verdict": "判定不能",
             "reason": f"未検証 {unverified} 件（合格に数えていません）",
             "unverified": unverified,
         }
     if total > 0 and passed == total:
         return {"verdict": "合格", "reason": f"全 {total} 件が合格", "unverified": 0}
-    return {"verdict": "判定保留", "reason": "結果が 0 件です。実行してください", "unverified": 0}
+    return {"verdict": "判定不能", "reason": "結果が 0 件です。実行してください", "unverified": 0}
 
 
 def _diff_counts(fact: dict) -> dict:

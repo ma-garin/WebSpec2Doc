@@ -30,6 +30,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "src"))
 from autorun.qf_schema import to_table  # noqa: E402
 from autorun.stages import Pipeline, test_case_rows  # noqa: E402
 
+from web.services.autorun_verdict import build_verdict  # noqa: E402
+
 logger = logging.getLogger(__name__)
 
 bp = Blueprint("autorun_report", __name__)
@@ -47,6 +49,7 @@ class Section:
 
 
 SECTIONS: tuple[Section, ...] = (
+    Section("verdict", "判定と証跡", "全体／今回の変更分の判定と段階承認の記録"),
     Section("dashboard", "ダッシュボード", "この実行で何が分かったかの要約"),
     Section("spec", "QA仕様書", "実測した画面仕様"),
     Section("plan", "計画", "テスト目的とテスト計画"),
@@ -158,6 +161,8 @@ def _section_payload(domain: str, key: str) -> dict[str, Any]:
     base = _domain_dir(domain)
     qa = base / "qa_process"
 
+    if key == "verdict":
+        return {"kind": "verdict", "data": build_verdict(qa)}
     if key == "dashboard":
         return {
             "kind": "dashboard",
@@ -259,7 +264,7 @@ def api_autorun_report(domain: str) -> tuple[dict, int] | dict:
     if not _domain_dir(domain).is_dir():
         return {"error": "この対象の成果物が見つかりません"}, 404
 
-    key = request.args.get("section", "dashboard")
+    key = request.args.get("section", "verdict")
     if key not in {s.key for s in SECTIONS}:
         return {"error": f"未知のセクションです: {key}"}, 400
 

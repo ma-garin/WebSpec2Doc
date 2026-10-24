@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 import sys
 from pathlib import Path
 from typing import Any
@@ -110,6 +111,44 @@ def _validate_feature(feature: dict[str, Any], errors: list[str]) -> None:
             errors.append(f"{feature_id}: symbol {symbol!r} not found in core_files")
 
 
+def _test_id_exists(node_id: str) -> bool:
+    """'tests/<file>.py::<関数>' または '::<Class>::<method>' の実在をファイルと定義で照合する。"""
+    path_text, sep, rest = node_id.partition("::")
+    if not sep or not rest or not path_text.startswith("tests/") or not path_text.endswith(".py"):
+        return False
+    text = _file_text(path_text)
+    parts = rest.split("::")
+    if len(parts) > 1 and not re.search(rf"^class {re.escape(parts[0])}\b", text, re.M):
+        return False
+    return bool(re.search(rf"^\s*(async\s+)?def {re.escape(parts[-1])}\(", text, re.M))
+
+
+def _validate_test_ids(feature: dict[str, Any], errors: list[str], pending: list[str]) -> None:
+    """required_tests の語ごとに、実在する pytest の node id が 1 件以上あることを照合する。
+
+    required_test_ids が空の high/critical 契約は「未照合」として数える（形式移行中・NG にはしない）。
+    書かれた node id が実在しない場合と、語に対応する id が無い場合は NG。
+    """
+    feature_id = feature.get("feature_id", "<missing>")
+    ids = feature.get("required_test_ids", {})
+    if not isinstance(ids, dict):
+        errors.append(f"{feature_id}: required_test_ids must be an object")
+        return
+    if not ids:
+        if feature.get("risk_level") in RISK_LEVELS_REQUIRING_FAILURE_TESTS:
+            pending.append(str(feature_id))
+        return
+    for word in feature.get("required_tests", []):
+        if not ids.get(word):
+            errors.append(f"{feature_id}: required_tests {word!r} has no test id")
+    for word, node_ids in ids.items():
+        if word not in feature.get("required_tests", []):
+            errors.append(f"{feature_id}: required_test_ids {word!r} is not in required_tests")
+        for node_id in node_ids if isinstance(node_ids, list) else [node_ids]:
+            if not _test_id_exists(str(node_id)):
+                errors.append(f"{feature_id}: missing required test: {node_id}")
+
+
 def _validate_docs(errors: list[str]) -> None:
     for path in REQUIRED_DOCS:
         if not path.exists():
@@ -166,6 +205,7 @@ def _validate_all_modules_registered(features: list[dict[str, Any]], errors: lis
 
 def main() -> int:
     errors: list[str] = []
+    pending: list[str] = []
     _validate_docs(errors)
     contracts = _read_contracts()
     features = contracts.get("features", [])
@@ -177,19 +217,23 @@ def main() -> int:
                 errors.append("feature entry must be an object")
                 continue
             _validate_feature(feature, errors)
+            _validate_test_ids(feature, errors, pending)
 
     if isinstance(features, list):
         _validate_all_modules_registered(features, errors)
     _validate_no_unimplemented_user_paths(errors)
 
+    checked = sum(1 for f in features if isinstance(f, dict) and f.get("required_test_ids")) if isinstance(features, list) else 0
     if errors:
         print("Functional Integrity Harness: FAIL")
+        print(f"ng={len(errors)} test_id_unverified={len(pending)}")
         for error in errors:
             print(f"- {error}")
         return 1
 
     print("Functional Integrity Harness: PASS")
     print(f"validated_features={len(features)}")
+    print(f"test_id_checked={checked} test_id_unverified={len(pending)}")
     return 0
 
 

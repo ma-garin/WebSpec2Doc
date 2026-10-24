@@ -60,3 +60,21 @@ def api_site() -> dict:
         return {"site": None}
     config = load_site(domain, scoped_output_dir(OUTPUT_DIR))
     return {"site": asdict(config) if config else None}
+
+
+@bp.get("/api/s01/versions")
+def api_s01_versions() -> dict | tuple[dict, int]:
+    """対象サイトの版（クロール時点）・今回の変更分・区分・失敗・判定帯。"""
+    from web.services.s01_versions import build_site_versions
+
+    domain = request.args.get("domain", "").strip()
+    if not domain or not _valid_domain(domain):
+        return {"error": "対象サイトの指定が正しくありません。一覧から選び直してください。"}, 400
+    domain_dir = scoped_output_dir(OUTPUT_DIR) / domain
+    if not domain_dir.is_dir():
+        return {"error": "このサイトはまだ解析されていません。URL を入れて解析してください。"}, 404
+    try:
+        return build_site_versions(domain_dir)
+    except OSError:
+        current_app.logger.exception("版の情報の読み込みに失敗しました: %s", domain)
+        return {"error": "版の情報を読み込めませんでした。少し待ってから再読み込みしてください。"}, 500

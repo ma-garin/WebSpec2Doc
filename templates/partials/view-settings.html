@@ -8,7 +8,7 @@
             <button type="button" class="set-tab" data-tab="operations" role="tab" aria-selected="false" aria-controls="set-panel-operations" id="set-tab-operations" tabindex="-1">運用監視</button>
             {% if not auth_user or auth_user.role in ('owner', 'admin') %}
             <button type="button" class="set-tab" data-tab="data" role="tab" aria-selected="false" aria-controls="set-panel-data" id="set-tab-data" tabindex="-1">データ管理</button>
-            <button type="button" class="set-tab" data-tab="audit" role="tab" aria-selected="false" aria-controls="set-panel-audit" id="set-tab-audit" tabindex="-1">監査ログ</button>
+            <button type="button" class="set-tab" data-tab="audit" role="tab" aria-selected="false" aria-controls="set-panel-audit" id="set-tab-audit" tabindex="-1">承認と監査</button>
             {% endif %}
             <button type="button" class="set-tab" data-tab="test-design" role="tab" aria-selected="false" aria-controls="set-panel-test-design" id="set-tab-test-design" tabindex="-1">テスト設計</button>
           </div>
@@ -454,6 +454,45 @@
           </div>
 
           <div class="set-panel" id="set-panel-audit" role="tabpanel" aria-labelledby="set-tab-audit">
+            <form class="input-card approval-policy" id="approval-policy" data-state="loading" aria-labelledby="approval-policy-title" novalidate>
+              <div class="admin-panel-head">
+                <div>
+                  <h2 class="set-card-title" id="approval-policy-title">承認規則</h2>
+                  <p class="input-hint">判断の起票者と承認者を同じ人にできるかを決めます。適用範囲: このワークスペースの全案件。AI は承認できません。</p>
+                </div>
+                <span class="ap-state" id="ap-state" role="status" aria-live="polite">読み込み中です。</span>
+              </div>
+              <fieldset class="ap-field">
+                <legend>職務分離</legend>
+                <label class="ap-choice"><input type="radio" name="ap-self" value="forbid" checked> 起票者と承認者の同一を禁止する（既定）</label>
+                <label class="ap-choice"><input type="radio" name="ap-self" value="allow"> 同一を許可する</label>
+              </fieldset>
+              <fieldset class="ap-field" id="ap-exception-field">
+                <legend>少人数テナントの例外</legend>
+                <label class="ap-choice"><input type="checkbox" id="ap-exception"> メンバーが少ないときだけ、本人による承認を認める</label>
+                <div class="ap-exception-body" id="ap-exception-body" hidden>
+                  <div class="field">
+                    <label for="ap-members">対象とする人数の上限（人・1〜5）</label>
+                    <input type="number" id="ap-members" min="1" max="5" step="1" value="2" aria-describedby="ap-members-err">
+                    <p class="ap-error" id="ap-members-err" hidden></p>
+                  </div>
+                  <div class="field">
+                    <label for="ap-reason">例外の理由（必須・10文字以上）</label>
+                    <textarea id="ap-reason" rows="3" maxlength="500" aria-describedby="ap-reason-err" placeholder="例: 担当が 2 名のため、休暇中は本人承認を認める"></textarea>
+                    <p class="ap-error" id="ap-reason-err" hidden></p>
+                  </div>
+                </div>
+              </fieldset>
+              <p class="ap-meta" id="ap-meta"></p>
+              <div class="ap-conflict" id="ap-conflict" hidden role="alert">
+                <p>他の管理者が先に保存しました。最新の値: <span id="ap-conflict-detail"></span></p>
+                <button type="button" class="btn-outline-sm" id="ap-reload">最新の値を読み込む</button>
+              </div>
+              <div class="ap-actions">
+                <button type="submit" class="btn-primary" id="ap-save" disabled>保存する</button>
+                <button type="button" class="btn-outline-sm" id="ap-cancel" disabled>取り消す</button>
+              </div>
+            </form>
             <div class="input-card">
               <div class="admin-panel-head">
                 <div>
@@ -463,16 +502,22 @@
                 <button type="button" class="btn-outline-sm" id="audit-refresh">再読み込み</button>
               </div>
               <div class="audit-filters">
-                <div class="field"><label for="audit-action">操作</label><select id="audit-action"><option value="">すべて</option><option value="user.login">ログイン</option><option value="user.created">メンバー追加</option><option value="user.updated">メンバー変更</option><option value="schedule.settings_updated">スケジュール・通知設定</option><option value="settings.updated">システム設定</option><option value="notification.tested">通知テスト</option><option value="retention.settings_updated">保持設定</option><option value="retention.snapshots_pruned">保持GC</option><option value="report.exported">レポート出力</option><option value="review.exported">レビュー出力</option><option value="viewpoint.exported">観点出力</option></select></div>
+                <div class="field"><label for="audit-action">操作</label><select id="audit-action"><option value="">すべて</option><option value="decision.draft">判断の起票</option><option value="decision.approve">判断の承認</option><option value="decision.revoke">判断の取消</option><option value="review.adopt">採用</option><option value="review.reject">却下</option><option value="review.hold">保留</option><option value="policy.approval_updated">承認規則の変更</option><option value="audit.exported">監査ログの出力</option><option value="user.login">ログイン</option><option value="user.created">メンバー追加</option><option value="user.updated">メンバー変更</option><option value="schedule.settings_updated">スケジュール・通知設定</option><option value="settings.updated">システム設定</option><option value="notification.tested">通知テスト</option><option value="retention.settings_updated">保持設定</option><option value="retention.snapshots_pruned">保持GC</option><option value="report.exported">レポート出力</option><option value="review.exported">レビュー出力</option><option value="viewpoint.exported">観点出力</option></select></div>
                 <div class="field"><label for="audit-outcome">結果</label><select id="audit-outcome"><option value="">すべて</option><option value="success">成功</option><option value="failure">失敗</option></select></div>
-                <div class="field audit-query"><label for="audit-query">検索</label><input type="search" id="audit-query" placeholder="メール・対象・操作"></div>
+                <div class="field"><label for="audit-actor">誰が</label><input type="search" id="audit-actor" placeholder="メール・利用者ID"></div>
+                <div class="field"><label for="audit-since">いつから</label><input type="date" id="audit-since"></div>
+                <div class="field"><label for="audit-until">いつまで</label><input type="date" id="audit-until"></div>
+                <div class="field"><label for="audit-case">どの案件に</label><input type="search" id="audit-case" placeholder="案件ID"></div>
+                <div class="field audit-query"><label for="audit-query">その他の語</label><input type="search" id="audit-query" placeholder="対象・理由"></div>
                 <button type="button" class="btn-primary" id="audit-search">絞り込む</button>
+                <button type="button" class="btn-outline-sm" id="audit-clear">条件を解除</button>
+                <button type="button" class="btn-outline-sm" id="audit-export">CSV で出力</button>
               </div>
               <div class="settings-msg" id="audit-msg" role="status"></div>
               <div class="admin-table-wrap">
                 <table class="admin-data-table" id="admin-audit-table" aria-label="管理操作の監査ログ">
-                  <thead><tr><th>日時</th><th>実行者</th><th>操作</th><th>対象</th><th>結果</th><th>詳細</th></tr></thead>
-                  <tbody id="admin-audit-events"><tr><td colspan="6">読み込み前です。</td></tr></tbody>
+                  <thead><tr><th>いつ</th><th>誰が</th><th>何を</th><th>どの案件に</th><th>対象</th><th>結果</th><th>理由・詳細</th></tr></thead>
+                  <tbody id="admin-audit-events" data-state="loading"><tr><td colspan="7">読み込み前です。</td></tr></tbody>
                 </table>
               </div>
               <button type="button" class="btn-outline-sm" id="audit-load-more" hidden style="margin-top:12px">さらに読み込む</button>

@@ -15,6 +15,8 @@ from typing import Any
 from flask import Blueprint, request
 
 from web.audit_context import record_admin_event
+from web.config import OUTPUT_DIR
+from web.tenancy import scoped_output_dir
 from web.routes.schedule import (
     _VALID_INTERVALS,
     _VALID_NOTIFY_TYPES,
@@ -61,6 +63,19 @@ def api_v1_schedule_get(domain: str) -> tuple[dict, int] | dict:
     if not _valid_domain(domain):
         return {"error": "invalid domain"}, 400
     return {"schedule": _public_config(_load_config(domain))}
+
+
+@bp.get("/schedules")
+def api_v1_schedules() -> dict:
+    """このテナントの解析済みサイトのうち、定期クロール設定があるものを返す（参照のみ）。"""
+    root = scoped_output_dir(OUTPUT_DIR)
+    items: list[dict[str, Any]] = []
+    domains = sorted(p.name for p in root.iterdir() if p.is_dir()) if root.is_dir() else []
+    for domain in domains:
+        if not _valid_domain(domain) or not _schedule_path(domain).is_file():
+            continue
+        items.append({"domain": domain, "schedule": _public_config(_load_config(domain))})
+    return {"total": len(items), "schedules": items}
 
 
 @bp.put("/sites/<domain>/schedule")

@@ -1011,3 +1011,40 @@ def api_rea_test_viewpoints(domain: str) -> Any:
         logger.warning("テストの実行記録を取得できませんでした: %s", domain, exc_info=True)
         tests = None
     return build_viewpoints(site_evidence(domain), _existing_candidate_count(domain), probe, tests)
+
+
+# ---- テスト設計ボード（根拠要件・観点・期待結果・状態／全体と今回の変更分の判定）----
+@bp.get("/api/ta2/design/sources")
+@_guard
+def design_sources() -> Any:
+    from web.services import ta2_design
+
+    return {"sources": ta2_design.sources()}
+
+
+@bp.get("/api/ta2/design")
+@_guard
+def design_board() -> Any:
+    from web.services import ta2_design
+
+    domain = _domain()
+    if not _store().tests_path(domain).is_file():
+        raise Ta2Error("このテスト設計はまだありません。一覧から別の設計を選んでください。", 404)
+    return ta2_design.board(domain)
+
+
+@bp.post("/api/ta2/design/baseline")
+@_guard
+def design_baseline() -> Any:
+    from web.services import ta2_design
+    from web.services.docverify.settings import current_user
+
+    domain = _domain()
+    if not _store().tests_path(domain).is_file():
+        raise Ta2Error("このテスト設計はまだありません。一覧から別の設計を選んでください。", 404)
+    try:
+        rec = ta2_design.record_baseline(domain, current_user(), str(_body().get("expected_at") or ""))
+    except ta2_design.BaselineConflict as exc:
+        return {"error": str(exc), "conflict": True}, 409
+    logger.info("テスト設計の基準を記録: %s by %s", domain, rec["by"])
+    return rec

@@ -7,6 +7,8 @@ from __future__ import annotations
 
 import re
 
+from . import boundary
+
 _USAGE = r"使い方|usage|引数|指定して|必要です|required"
 _FORMAT = r"不正|形式|正しく|invalid|format|範囲"
 _MISSING = r"ありません|見つかりません|存在しません|not\s*found|no\s*such|入力"
@@ -78,14 +80,14 @@ def design(facts: dict, spec: list[dict], files: list[dict], command: str) -> li
     ctx = _Ctx(facts, spec, files, command)
     cases: list[dict] = []
 
-    def add(obs, tech, pre, argv, exp, src, *, setup=None, expect=None, ask=False, proposal=""):
+    def add(obs, tech, pre, argv, exp, src, *, setup=None, expect=None, ask=False, proposal="", manual=False):
         cases.append({
             "id": f"B-{len(cases) + 1:02d}", "obs": obs, "tech": tech, "pre": pre,
             "argv": argv, "run": ctx.run_text(argv),
             "exp": ("仕様に記載なし（案: " + proposal + "）") if ask else exp,
-            "src": src or "—", "ask": ask, "origin": "auto",
+            "src": src or "—", "ask": ask, "manual": manual, "origin": "auto",
             "setup": {"inputs": "sample", "unset_env": [], "lock": False, "rerun": False,
-                      "outdir_missing": False, **(setup or {})},
+                      "outdir_missing": False, "env_set": {}, **(setup or {})},
             "expect": {"code": None, "output": None, "log": None, **(expect or {})},
         })
 
@@ -170,19 +172,17 @@ def design(facts: dict, spec: list[dict], files: list[dict], command: str) -> li
             setup={"unset_env": [env["name"]]}, expect={"code": code, "output": "absent" if has_out else None},
             ask=code is None, proposal="0 以外で終わり、設定が無いことを表示する")
 
-    if has_out:
-        ref = ctx.spec_ref(r"再実行|上書き|冪等|2\s*回")
-        add("再実行", "状態遷移", "正常の実行のあと、同じ引数でもう一度", ctx.argv(),
-            _code_text(ok_code) + "／出力が 1 回目と同じ（件数が増えない）", ref,
-            setup={"rerun": True}, expect={"code": ok_code, "output": "same"},
-            ask=not ref, proposal="2 回目も終了コード 0 で、出力が 1 回目と同じ")
-
     if facts["lock"]:
         code, src = ctx.code_for(_LOCKED)
         add("二重起動", "状態遷移", f"{facts['lock']['path']} が残っている", ctx.argv(),
             _code_text(code) + "／出力ファイルを作らない", src,
             setup={"lock": True}, expect={"code": code, "output": "absent" if has_out else None},
             ask=code is None, proposal="0 以外で終わり、実行中であることを表示する")
+
+    bad_code, bad_src = ctx.code_for(_FORMAT)
+    for b in boundary.cases(ctx, ok_code, ok_src, bad_code, bad_src, has_out):
+        add(b["obs"], b["tech"], b["pre"], b["argv"], b["exp"], b["src"], setup=b["setup"], expect=b["expect"],
+            ask=b["ask"], proposal=b["proposal"], manual=b["manual"])
     return cases
 
 

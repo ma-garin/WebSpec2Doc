@@ -5,8 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
   <title>実行結果レポート {{ domain }} - AutoRun</title>
-  <!-- Google Fonts はローカル専用の CSP（style-src 'self'）でブロックされ読み込まれないため撤去。
-       描画は --font-main / --font-mono のシステムフォント・フォールバックで確定する。 -->
   <link rel="stylesheet" href="{{ url_for('static', filename='tokens.css') }}?v={{ _ver }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/autorun-report.css') }}?v={{ _ver }}">
 </head>
@@ -18,10 +16,18 @@
       <span class="arep-kicker">実行結果レポート</span>
       <h1>{{ domain }}</h1>
     </div>
+    <div class="arep-statebar" role="group" aria-label="表示状態の確認">
+      <span class="arep-statebar-label">表示確認</span>
+      {% for k, v in [('normal','通常'),('loading','読込中'),('empty','0件'),('error','失敗')] %}
+      <button type="button" class="arep-state-btn" data-state-switch="{{ k }}">{{ v }}</button>
+      {% endfor %}
+    </div>
     <div class="arep-actions">
       <a class="arep-btn" href="/api/autorun/stages/testcases?domain={{ domain }}&format=csv">テストケースCSV</a>
     </div>
   </header>
+
+  <ol class="arep-stagebar" id="arep-stagebar" aria-label="段階承認の工程"></ol>
 
   <div class="arep-shell">
     <nav class="arep-nav" aria-label="レポートセクション">
@@ -34,11 +40,19 @@
     </nav>
 
     <main class="arep-main" id="arep-main" tabindex="-1">
-      <div id="arep-content" class="arep-content" aria-live="polite">
+      <div id="arep-content" class="arep-content" data-state="loading" aria-live="polite">
         <p class="arep-loading">読み込んでいます…</p>
       </div>
     </main>
+
+    <aside class="arep-logpanel" aria-label="実行ログ">
+      <h2 class="arep-logpanel-title">実行ログ</h2>
+      <p class="arep-outcome" id="arep-outcome"></p>
+      <pre class="arep-log" id="arep-log" tabindex="0">読み込んでいます…</pre>
+    </aside>
   </div>
+
+  <footer class="arep-verdictband" id="arep-verdictband" aria-label="判定"></footer>
 
   <script src="{{ url_for('static', filename='js/autorun-report.js') }}"></script>
 </body>

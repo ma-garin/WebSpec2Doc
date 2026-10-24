@@ -15,6 +15,7 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='css/testcase-grid.css') }}?v={{ _ver }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/reverse-analysis.css') }}?v={{ _ver }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/ws.css') }}?v={{ _ver }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/ta2-design.css') }}?v={{ _ver }}">
 {% endblock %}
 
 {# data-mode は state.js が URL の書き換え先を決めるのに使う（test-only で "/" に書き換えるとリロードで /dashboard に着地する） #}
@@ -128,6 +129,30 @@
     <div id="home-next"></div>
   </div>
 
+  <section class="ws-sec p2-design" id="ws-design-sec" data-state="loading" aria-labelledby="ws-design-h">
+    <div class="ws-sec-head p1-head"><div><h3 id="ws-design-h">テスト設計と判定</h3><p>要件・観点からつくったテストケースと、その合否を確認します。ドキュメント検証から受け取った設計もここに並びます。</p></div>
+      <div class="p1-states" role="group" aria-label="表示の確認用の切替"><span>確認用:</span>
+        <button type="button" data-set="normal" aria-pressed="true">通常</button><button type="button" data-set="loading" aria-pressed="false">読込中</button><button type="button" data-set="empty" aria-pressed="false">0 件</button><button type="button" data-set="error" aria-pressed="false">失敗</button><button type="button" data-set="conflict" aria-pressed="false">競合</button></div></div>
+    <div class="p2-src-row"><label for="p2-src">設計</label><select id="p2-src" class="ws-filter"></select><span class="p1-tag t" id="p2-origin"></span>
+      <input id="p2-q" class="ws-filter" type="search" placeholder="ケース名・要件 ID で絞り込み" aria-label="ケースの絞り込み">
+      <select id="p2-st" class="ws-filter" aria-label="状態で絞り込み"><option value="">すべての状態</option><option>未実行</option><option>合格</option><option>失敗</option><option>要確認</option></select></div>
+    <div class="p2-banner" id="p2-banner" role="alert" hidden></div>
+    <p class="p2-note" id="p2-note" hidden></p>
+    <div class="p1-skel" aria-hidden="true"><i></i><i></i><i></i></div>
+    <div class="p2-empty only-empty"><b>テストケースがまだありません。</b> ドキュメント検証の「テスト自動化へ送る」か、サイトを解析してテストをつくると、ここに並びます。</div>
+    <div class="p2-grid not-empty">
+      <div class="p2-tablewrap"><table class="p2-table" aria-label="テストケース">
+        <thead><tr><th>ケース</th><th>根拠要件</th><th>観点</th><th>期待結果</th><th>状態</th></tr></thead><tbody id="p2-rows"></tbody></table>
+        <p class="p2-noresult" id="p2-noresult" hidden>条件に合うケースはありません。<button type="button" class="p1-btn" id="p2-clear">条件を解除</button></p></div>
+      <aside class="p1-side p2-side" id="p2-side" aria-label="選択中のケース"><p class="ws-muted">ケースを選ぶと、根拠と手順が表示されます。</p></aside>
+    </div>
+    <div class="p2-gates not-empty">
+      <div class="p1-g" id="p2-gate-all"></div><div class="p1-g" id="p2-gate-chg"></div>
+      <div class="p1-g p1-sign"><div class="p1-g-h">判定の基準</div><div id="p2-base"></div>
+        <div class="row"><button type="button" class="p1-btn" id="p2-baseline">今の設計を基準にする</button></div>
+        <small>基準を記録すると、以後に追加・変更したケースが「今回の変更分」になります。</small></div>
+    </div>
+  </section>
   <section class="ws-sec" aria-labelledby="ws-sites-h">
     <div class="ws-sec-head"><div><h3 id="ws-sites-h">解析できたサイト</h3><p>行の「開く」でそのサイトの作業へ進みます。</p></div>
       <input id="site-q" class="ws-filter" type="search" placeholder="サイト名・URL で絞り込み" aria-label="サイトの絞り込み"></div>
@@ -445,6 +470,7 @@
 <script src="{{ url_for('static', filename='js/ta2/ws-team.js') }}?v={{ _ver }}"></script>
 <script src="{{ url_for('static', filename='js/ta2/ws-resync.js') }}?v={{ _ver }}"></script>
 <script src="{{ url_for('static', filename='js/ta2/ws-tech.js') }}?v={{ _ver }}"></script>
+<script src="{{ url_for('static', filename='js/ta2/ws-design.js') }}?v={{ _ver }}"></script>
 <script src="{{ url_for('static', filename='js/ta2/ws-context.js') }}?v={{ _ver }}"></script>
 <script src="{{ url_for('static', filename='js/ta2/app.js') }}?v={{ _ver }}"></script>
 {% endblock %}

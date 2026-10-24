@@ -9,7 +9,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass, field
 
-ID_RE = re.compile(r"\bREQ-\d{3,}\b")
+ID_RE = re.compile(r"\bREQ-(?:[A-Z]{1,3}-)?\d{3,}\b")  # REQ-012 / REQ-A-012
 _HEAD = re.compile(r"^(#{1,6})\s+(.*)$")
 _ITEM = re.compile(r"^(?:[-*+]|\d+[.)])\s+")
 _SEP = re.compile(r"^\|?\s*:?-{2,}")
@@ -97,5 +97,9 @@ def segment(markdown: str) -> list[Unit]:
 def requirement_units(units: list[Unit]) -> list[Unit]:
     """要件定義書のうち、機能要件・非機能要件の章にある item と para。"""
     keys = ("機能要件", "非機能要件")
-    return [u for u in units if u.kind in ("item", "para")
-            and any(k in h for h in u.heading for k in keys)]
+    found = [u for u in units if u.kind in ("item", "para")
+             and any(k in h for h in u.heading for k in keys)]
+    if found:
+        return found
+    # 「機能要件」の章が無い書式（章ごとに REQ-ID を振る形）は、ID を持つ item と para を要件とみなす
+    return [u for u in units if u.kind in ("item", "para") and u.ids]

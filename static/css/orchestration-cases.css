@@ -1,0 +1,61 @@
+/* 指揮ホーム「案件概況」。値は tokens.css の変数を使う。本文の内側だけをスクロールさせる。 */
+.cs-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+.cs-search input { width: 220px; max-width: 100%; }
+.cs-statebar { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; margin: 0 0 8px; font-size: 12px; }
+.cs-statebar__lbl { color: var(--text-sub, #64748b); margin-right: 4px; }
+.cs-statebtn { border: 1px solid var(--border, #e2e8f0); background: var(--surface, #fff); border-radius: 6px; padding: 2px 8px; font-size: 12px; cursor: pointer; }
+.cs-root { display: grid; grid-template-rows: auto minmax(0, 1fr) auto; min-height: 0; gap: 8px; }
+.cs-banner:empty { display: none; }
+.cs-banner { border: 1px solid var(--border, #e2e8f0); border-radius: 8px; padding: 8px 12px; display: flex; gap: 12px; align-items: center; background: var(--surface-2, #f8fafc); }
+.cs-banner p { margin: 0; }
+.cs-banner.is-error, .cs-banner.is-conflict, .cs-banner.is-forbidden { border-color: #fca5a5; background: #fef2f2; }
+.cs-grid { max-height: 46vh; display: grid; grid-template-columns: minmax(240px, 1fr) minmax(0, 2fr) minmax(220px, 1fr); gap: 12px; min-height: 0; }
+.cs-list, .cs-detail, .cs-panel { min-width: 0; min-height: 0; overflow: auto; border: 1px solid var(--border, #e2e8f0); border-radius: 8px; background: var(--surface, #fff); padding: 8px; }
+.cs-table, .cs-stagetbl { width: 100%; border-collapse: collapse; font-size: 13px; table-layout: fixed; }
+.cs-table th, .cs-table td, .cs-stagetbl th, .cs-stagetbl td { text-align: left; padding: 6px; border-bottom: 1px solid var(--border, #e2e8f0); vertical-align: top; overflow-wrap: anywhere; }
+.cs-row { cursor: pointer; }
+.cs-row:hover, .cs-row.is-sel { background: #eef2ff; }
+.cs-row:focus-visible { outline: 2px solid #3730A3; outline-offset: -2px; }
+.cs-title { display: block; font-weight: 600; }
+.cs-sub { display: block; font-size: 12px; color: var(--text-sub, #64748b); }
+.cs-ks .cs-k { margin: 0 4px 4px 0; }
+.cs-k { display: inline-block; font-size: 11px; padding: 1px 6px; border-radius: 4px; white-space: nowrap; }
+.k-crit { background: #fee2e2; color: #991b1b; }
+.k-miss { background: #fef3c7; color: #92400e; }
+.k-unv { background: #e0e7ff; color: #312e81; }
+.cs-st { display: inline-block; font-size: 12px; padding: 1px 6px; border-radius: 4px; background: #f1f5f9; color: #334155; }
+.st-in_progress { background: #dbeafe; color: #1e40af; }
+.st-needs_decision { background: #fee2e2; color: #991b1b; }
+.st-done { background: #dcfce7; color: #166534; }
+.cs-stages { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 4px; list-style: none; margin: 0 0 8px; padding: 0; }
+.cs-step { border: 1px solid var(--border, #e2e8f0); border-radius: 6px; padding: 4px 6px; font-size: 12px; display: grid; gap: 2px; min-width: 0; }
+.cs-step.is-cur { outline: 2px solid #3730A3; }
+.cs-step__no { color: var(--text-sub, #64748b); }
+.cs-step__name { font-weight: 600; overflow-wrap: anywhere; }
+.cs-step.st-done { background: #f0fdf4; }
+.cs-step.st-needs_decision { background: #fef2f2; }
+.cs-step.st-in_progress { background: #eff6ff; }
+.cs-case { margin: 4px 0 8px; font-size: 15px; }
+.cs-stagetbl th[scope=col]:nth-child(1) { width: 22%; } .cs-stagetbl th[scope=col]:nth-child(2) { width: 14%; } .cs-stagetbl th[scope=col]:nth-child(4) { width: 22%; }
+.cs-panel__title { font-size: 13px; margin: 4px 0 6px; }
+.cs-namedlist { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; font-size: 13px; }
+.cs-namedlist li { display: grid; gap: 2px; border-bottom: 1px solid var(--border, #e2e8f0); padding-bottom: 6px; overflow-wrap: anywhere; }
+.cs-ev { font-size: 12px; margin: 0; } .cs-ev dt { color: var(--text-sub, #64748b); } .cs-ev dd { margin: 0 0 6px; }
+.cs-gate { display: grid; gap: 4px; border: 1px solid var(--border, #e2e8f0); border-radius: 8px; padding: 6px 10px; background: var(--surface, #fff); }
+.cs-gate__row { display: grid; grid-template-columns: 120px 80px minmax(0, 1fr); gap: 8px; align-items: center; font-size: 13px; }
+.cs-gate__lbl { color: var(--text-sub, #64748b); }
+.cs-gate__val { font-weight: 700; }
+.cs-gate__row[data-verdict="不合格"] .cs-gate__val { color: #b91c1c; }
+.cs-gate__row[data-verdict="合格"] .cs-gate__val { color: #15803d; }
+.cs-gate__row[data-verdict="判定不能"] .cs-gate__val { color: #92400e; }
+.cs-empty:empty { display: none; }
+.cs-empty { padding: 12px; font-size: 13px; }
+.cs-root[data-state="loading"] .cs-list, .cs-root[data-state="loading"] .cs-detail { opacity: .5; }
+.cs-root[data-state="empty"] .cs-table, .cs-root[data-state="no-match"] .cs-table { display: none; }
+.cs-root[data-state="error"] .cs-grid, .cs-root[data-state="forbidden"] .cs-grid { opacity: .4; }
+.cs-legacy { margin-top: 12px; } .cs-legacy > summary { cursor: pointer; font-size: 13px; color: var(--text-sub, #64748b); }
+@media (max-width: 1100px) {
+  .cs-grid { grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); }
+  .cs-panel { grid-column: 1 / -1; }
+  .cs-stages { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}

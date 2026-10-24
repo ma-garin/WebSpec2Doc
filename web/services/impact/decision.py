@@ -96,7 +96,7 @@ def _verdict_change(cr: dict, rows: list[dict], missing_codes: set[str]) -> dict
         return {"verdict": "不合格", "reason": f"対応要なのに確かめるテストが無い・つながりが欠けている項目: {_names(bad)}。",
                 "next": "テストを追加するか、つながりを登録してから見直してください。", "named": bad}
     if open_:
-        return {"verdict": "未判定", "reason": f"要確認が残っています: {_names(open_)}。",
+        return {"verdict": "判定不能", "reason": f"要確認が残っています: {_names(open_)}。",
                 "next": "上の順に、対応要か対応不要を決めてください。", "named": open_}
     return {"verdict": "合格", "reason": "影響はすべて判断済みで、対応要の項目には再テストがあります。",
             "next": "再テスト対象を実施し、承認に回してください。", "named": []}

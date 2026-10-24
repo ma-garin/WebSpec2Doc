@@ -29,7 +29,7 @@ class CommonError(Exception):
     """共通 API のエラー。code は共通契約 §3.1 の語彙。"""
 
     STATUS = {"bad_request": 400, "unauthorized": 401, "forbidden": 403, "not_found": 404,
-              "conflict": 409, "stale": 409, "too_large": 413, "upstream_failed": 502}
+              "conflict": 409, "stale": 409, "too_large": 413, "upstream_failed": 502, "internal_error": 500}
 
     def __init__(self, code: str, message: str, detail: dict | None = None,
                  retryable: bool = False) -> None:

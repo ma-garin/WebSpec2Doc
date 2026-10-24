@@ -135,8 +135,8 @@
   }
   function syncNav() {
     var inSys = !!state.sid && state.view !== 'guide', inCr = inSys && !!state.cr;
-    $$('[data-scope=sys]').forEach(function (b) { b.hidden = !inSys; });
-    $$('[data-scope=cr]').forEach(function (b) { b.hidden = !inCr; });
+    $$('[data-scope=sys]').forEach(function (b) { b.hidden = false; if (b.tagName === 'BUTTON') { b.disabled = !inSys; b.setAttribute('aria-disabled', String(!inSys)); } });
+    $$('[data-scope=cr]').forEach(function (b) { b.hidden = false; if (b.tagName === 'BUTTON') { b.disabled = !inCr; b.setAttribute('aria-disabled', String(!inCr)); } });
     var cur = state.view === 'guide' ? 'guide' : inCr ? 'cr:' + (state.tab || 'decision') : inSys ? 'sys:' + (state.tab || 'overview') : 'home';
     $$('.app-nav-item').forEach(function (b) {
       var key = b.dataset.nav || (b.dataset.scope + ':' + b.dataset.tab);

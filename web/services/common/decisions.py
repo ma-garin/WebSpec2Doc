@@ -122,7 +122,11 @@ def approve(case: str, dc: str, payload: dict) -> dict:
                               {"state": d["state"]})
         _require_rev(d, payload)
         if d["drafted"]["by"].get("user_id") == actor["user_id"]:
-            raise CommonError("forbidden", "起票した本人は承認できません。別の承認者に依頼してください。")
+            from web.services.approval_policy import self_approval_note
+            note = self_approval_note()
+            if note is None:
+                raise CommonError("forbidden", "起票した本人は承認できません。別の承認者に依頼してください。")
+            reason = f"{reason}（{note}）" if reason else reason
         if not d["gate"]["passed"]:
             raise CommonError("forbidden", "合格していない判断は承認できません。結果を確認して起票し直してください。")
         if not tv.startswith(_TV_PREFIX) or not reason:
@@ -145,6 +149,8 @@ def revoke(case: str, dc: str, payload: dict) -> dict:
         if d["state"] == "revoked":
             raise CommonError("conflict", "この判断は既に取り消されています。再読込してください。")
         _require_rev(d, payload)
+        if actor["user_id"] not in (d["drafted"]["by"].get("user_id"), ((d.get("approved") or {}).get("by") or {}).get("user_id")):
+            raise CommonError("forbidden", "取り消せるのは起票した本人か承認者だけです。")
         if not reason:
             raise CommonError("bad_request", "取り消す理由を入力してください。")
         _write({"event": "revoked", "id": dc, "case": case, "at": ev.now(), "actor": actor,

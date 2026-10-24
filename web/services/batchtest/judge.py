@@ -67,7 +67,7 @@ def _scope(cases: list[dict], results: dict[str, dict], label: str) -> dict:
     elif failed:
         verdict, reason = "不合格", f"不合格 {len(failed)} 件: {'・'.join(failed[:8])}"
     elif unverified:
-        verdict, reason = "判定保留", f"未検証 {len(unverified)} 件が残っています。"
+        verdict, reason = "判定不能", f"未検証 {len(unverified)} 件が残っています。"
     else:
         verdict, reason = "合格", "すべてのケースが合格しました。"
     return {"label": label, "total": len(cases), "passed": count("合格"), "failed": len(failed),

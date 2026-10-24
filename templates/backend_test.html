@@ -316,7 +316,6 @@
 
       {# 段階 8 判定・報告（事実／判断／未検証） #}
       <section class="bs-panel" id="bs-stage-8" data-stage="8" hidden>
-        <div class="s8-gate" id="s8-verdict-band" role="region" aria-label="判定帯" data-state="empty"><p class="bs-mut s8-gate-empty">まだ判定していません。実行を承認してから「判定する」を押してください。</p></div>
         <div class="c-kpis" id="bs-result-kpis"></div>
         <div class="bs-split">
           <div class="bs-card"><span class="bs-tag fact"><span data-ev="observed"></span> 事実 — 実行で確かめたこと</span><ul class="bs-list" id="bs-judge-facts"></ul></div>
@@ -389,4 +388,7 @@
 <script src="{{ url_for('static', filename='js/user-menu.js') }}?v={{ _ver }}"></script>
 <script src="{{ url_for('static', filename='js/backend-test.js') }}?v={{ _ver }}"></script>
 <script src="{{ url_for('static', filename='js/backend-test-run.js') }}?v={{ _ver }}"></script>
+{% endblock %}
+{% block verdict_band %}
+        <div class="s8-gate" id="s8-verdict-band" role="region" aria-label="判定帯" data-state="empty"><p class="bs-mut s8-gate-empty">まだ判定していません。実行を承認してから「判定する」を押してください。</p></div>
 {% endblock %}

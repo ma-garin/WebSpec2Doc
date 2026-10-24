@@ -313,7 +313,9 @@ def approve(iid: str, reason: str, user: str, rev=None) -> dict:
             raise PairError(403, "gate_not_passed", "判定が不合格のため承認できません。" + g["reasons"][-1])
         started = creator(d)
         if started and started["user"] == user:
-            raise PairError(403, "same_person", "起票者は自分のレビューを承認できません。別の承認者に依頼してください。")
+            from web.services.approval_policy import self_approval_note
+            if self_approval_note() is None:
+                raise PairError(403, "same_person", "起票者は自分のレビューを承認できません。別の承認者に依頼してください。")
         if started is None:
             raise PairError(403, "no_author", "起票者が記録されていません。起票者がレビューを開いてから承認してください。")
         return _trail(d, user, "approved", iid, reason.strip())

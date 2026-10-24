@@ -2809,3 +2809,6 @@
 .step-bar__step.is-done { background: var(--state-ok-bg); color: var(--state-ok-tx); }
 .step-bar__step.is-current { background: var(--color-primary); color: var(--color-on-primary); font-weight: 700; }
 .step-bar__step.is-blocked { background: var(--state-ng-bg); color: var(--state-ng-tx); }
+
+/* 設定タブ名を 1024 幅でも 1 行に収める（S10 指摘） */
+@media (max-width: 1279px) { .set-tab { font-size: var(--fs-13); white-space: nowrap; } }

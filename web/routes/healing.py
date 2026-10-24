@@ -922,6 +922,9 @@ def api_record_decision(run_id: str):
     try:
         note = _clean_note(data.get("note", ""))
         out_dir = _out()
+        current = orchestrator.get_run(out_dir, run_id)
+        if current is not None and current.status != "awaiting_human":
+            return {"error": "人の判断待ちになってから判断を記録してください（実行が終わるまでお待ちください）。", "code": "not_awaiting"}, 409
         run = orchestrator.record_decision(out_dir, run_id, action=action, note=note)
         _record_audit(
             "healing.run.decision", {"run_id": run_id, "action": action}

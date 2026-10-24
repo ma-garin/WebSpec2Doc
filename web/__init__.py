@@ -183,6 +183,10 @@ def create_app() -> Flask:
     # 共通 API v1（案件・対象版・参照）。
     from web.routes import common_api  # noqa: E402
     app.register_blueprint(common_api.bp)
+    from web.routes import common_decisions_api, dev_states, doc_verify_pair  # noqa: E402
+    app.register_blueprint(common_decisions_api.bp)
+    app.register_blueprint(dev_states.bp)
+    app.register_blueprint(doc_verify_pair.bp)
 
     from web.services.viewpoint_store import get_viewpoint_store
 

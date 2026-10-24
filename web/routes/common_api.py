@@ -44,7 +44,7 @@ def _guard(fn):
             raise
         except Exception:
             logger.exception("common_api: %s に失敗しました", fn.__name__)
-            return CommonError("upstream_failed", "処理に失敗しました。時間をおいて再試行してください。",
+            return CommonError("internal_error", "処理に失敗しました。時間をおいて再試行してください。",
                                retryable=True).body(), 500
     wrapper.__name__ = fn.__name__
     return wrapper

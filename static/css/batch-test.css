@@ -107,7 +107,7 @@ a.btn{text-decoration:none}a.btn[aria-disabled=true]{opacity:.45;pointer-events:
 .bt-scope__v { font-weight: 700; }
 .bt-scope[data-verdict="合格"] { border-left-color: #1a7f37; }
 .bt-scope[data-verdict="不合格"] { border-left-color: #cf222e; }
-.bt-scope[data-verdict="判定保留"] { border-left-color: #9a6700; }
+.bt-scope[data-verdict="判定不能"] { border-left-color: #9a6700; }
 .bt-verdict__unv { margin-top: 8px; }
 .bt-verdict__unv ul { margin: 6px 0 0; padding-left: 18px; max-height: 160px; overflow: auto; }
 .bt-verdict__unv li { overflow-wrap: anywhere; }

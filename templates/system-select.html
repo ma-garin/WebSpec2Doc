@@ -73,7 +73,7 @@
     <h2 class="sysselect-sub">システムを直接開く</h2>
     <div class="sysselect-grid">
       {% for s in SYSTEMS %}
-      {% if not s.role or not auth_user or auth_user.role == s.role %}
+      {% if not s.prototype and (not s.role or not auth_user or auth_user.role == s.role) %}
       {# 管理者専用の System は、押しても 403 になるカードを並べない。 #}
       <a class="syscard syscard-{{ {'cond':'cond','doc':'doc','app':'app','test':'test','autorun':'run','cli':'cli','heal':'heal','docverify':'dv','batch':'batch','backend':'backend','impact':'impact'}[s.key] }}" href="{{ s.url }}">
         <span class="syscard-accent" aria-hidden="true"></span>

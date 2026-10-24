@@ -16,7 +16,6 @@ from flask import Blueprint, request
 
 from web.audit_context import record_admin_event
 from web.config import OUTPUT_DIR
-from web.services.api_v1_format import install
 from web.tenancy import scoped_output_dir
 from web.routes.schedule import (
     _VALID_INTERVALS,
@@ -34,7 +33,6 @@ from web.validation import _valid_domain, _valid_url
 
 bp = Blueprint("api_v1_schedule", __name__, url_prefix="/api/v1")
 logger = logging.getLogger(__name__)
-install(bp)
 
 INSTANCE_DIR = Path("instance")
 

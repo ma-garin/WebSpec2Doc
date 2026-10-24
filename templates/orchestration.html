@@ -53,10 +53,6 @@
               <div id="cs-evidence" class="cs-evidence"></div>
             </aside>
           </div>
-          <footer class="cs-gate" aria-label="判定">
-            <div class="cs-gate__row" id="cs-gate-all"><span class="cs-gate__lbl">全体</span><span class="cs-gate__val">未判定</span><span class="cs-gate__why"></span></div>
-            <div class="cs-gate__row" id="cs-gate-chg"><span class="cs-gate__lbl">今回の変更分</span><span class="cs-gate__val">未判定</span><span class="cs-gate__why"></span></div>
-          </footer>
         </section>
         <details class="cs-legacy" id="ch-legacy">
           <summary>サイト別の運用状況（実行・報告書の件数）</summary>
@@ -133,4 +129,10 @@
 {% if mode == 'home' %}<script src="{{ url_for('static', filename='js/orchestration-home.js') }}?v={{ _ver }}"></script>
 <script src="{{ url_for('static', filename='js/orchestration-cases.js') }}?v={{ _ver }}"></script>
 {% else %}<script src="{{ url_for('static', filename='js/orchestration.js') }}?v={{ _ver }}"></script>{% endif %}
+{% endblock %}
+{% block verdict_band %}
+          <footer class="cs-gate" aria-label="判定">
+            <div class="cs-gate__row" id="cs-gate-all"><span class="cs-gate__lbl">全体</span><span class="cs-gate__val">未判定</span><span class="cs-gate__why"></span></div>
+            <div class="cs-gate__row" id="cs-gate-chg"><span class="cs-gate__lbl">今回の変更分</span><span class="cs-gate__val">未判定</span><span class="cs-gate__why"></span></div>
+          </footer>
 {% endblock %}

@@ -228,9 +228,9 @@ def api_home_cases():
         return case_overview.build(_out())
     except Exception:  # noqa: BLE001
         logger.exception("orchestration: 案件概況の集計に失敗しました")
-        return {"error": {"code": "upstream_failed",
+        return {"error": {"code": "internal_error",
                           "message": "案件の状況を読み込めませんでした。再読み込みしてください。",
-                          "retryable": True}}, 502
+                          "retryable": True}}, 500
 
 
 @bp.get("/orchestration/<variant>")

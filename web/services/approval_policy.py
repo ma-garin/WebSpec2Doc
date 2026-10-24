@@ -151,3 +151,18 @@ def _atomic_write(path: Path, data: dict[str, Any]) -> None:
     except OSError:
         Path(tmp).unlink(missing_ok=True)
         raise
+
+
+def self_approval_note(members: int | None = None) -> str | None:
+    """本人承認を許すなら監査に残す注記、許さないなら None（CR-10-2・既定は禁止）。
+
+    人数が分からない（members=None）ときは小規模テナントの例外を適用しない。
+    """
+    from web.routes.admin import _approval_policy_path
+
+    policy = load_approval_policy(_approval_policy_path())
+    if not policy.forbid_self_approval:
+        return "本人承認（規則で許可）"
+    if policy.small_tenant_exception and members is not None and members <= policy.small_tenant_max_members:
+        return f"本人承認の例外: {policy.exception_reason}"
+    return None

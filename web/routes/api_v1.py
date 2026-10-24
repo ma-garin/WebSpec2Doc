@@ -11,13 +11,12 @@ from pathlib import Path
 from flask import Blueprint, Response, g, request
 
 from web.config import MAX_DEPTH, MAX_PAGES_LIMIT, OUTPUT_DIR
-from web.services.api_v1_format import api_error, install, job_view
+from web.services.api_v1_format import job_view
 from web.tenancy import scoped_output_dir
 from web.validation import _clean_int, _valid_domain, _valid_url
 
 bp = Blueprint("api_v1", __name__, url_prefix="/api/v1")
 logger = logging.getLogger(__name__)
-install(bp)
 
 
 def _requester() -> str:
@@ -216,11 +215,10 @@ def api_crawl(domain: str) -> tuple[dict, int] | dict:
 
     active = active_job_for_domain(domain)
     if active is not None:
-        return api_error(
-            "conflict",
-            "同じサイトのジョブが待機中または実行中です。終わるのを待ってから再投入してください。",
-            job_id=active.job_id,
-        )
+        return {
+            "error": "同じサイトのジョブが待機中または実行中です。終わるのを待ってから再投入してください。",
+            "job_id": active.job_id,
+        }, 409
 
     job_id = start_crawl_job(
         domain=domain,

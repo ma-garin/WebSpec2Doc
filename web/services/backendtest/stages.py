@@ -306,12 +306,12 @@ def approve(job: dict, n: int, version: int, role, actor: str) -> dict:
             raise StoreError(reason)
     st = {**st, "status": "approved", "approved_by_role": actor_role, "approved_by": actor,
           "approved_at": _now(), "reject_reason": None}
-    if n == 8:  # 未判定・未実行が残っても承認できる。判定は「保留（未検証 n 件）」として残す
+    if n == 8:  # 未判定・未実行が残っても承認できる。判定は「判定不能」として残す
         pending = [r for r in job.get("results") or [] if r.get("state") in ("undetermined", "not_run", "cancelled", "error")
                    and not (r.get("human") or {}).get("verdict")]
         verdict = (job.get("judgement") or {}).get("verdict") or ""
         if pending and verdict != "不合格":
-            job = {**job, "judgement": {**(job.get("judgement") or {}), "verdict": f"保留（未検証 {len(pending)} 件）"}}
+            job = {**job, "judgement": {**(job.get("judgement") or {}), "verdict": "判定不能"}}
     return _audit(_with_stages(job, {n: st}), "approve", n, st["version"], "", actor)
 
 

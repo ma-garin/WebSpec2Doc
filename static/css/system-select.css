@@ -1,188 +1,47 @@
-/* システム選択ハブ（ログイン → ここ → 各システム）。ta2.css / ws.css のトークン体系を土台に。 */
+/* システム選択。共通シェル内の 1 画面（スクロールなし）。値は tokens.css の変数のみ。 */
+.app-content:has(.ss-page) { overflow: hidden; padding: var(--space-5) var(--space-6); }
+.ss-page { display: grid; gap: var(--space-3); align-content: start; }
+.ss-lead { margin: 0; color: var(--color-text-secondary); font-size: var(--text-sm); }
+.ss-label { margin: var(--space-2) 0 0; font-size: var(--text-xs); font-weight: 700; color: var(--color-text-secondary); }
 
-/* ここで :root を再定義しない（ws.css 冒頭の規約）。ta2.css に無い System 02/03/04 の
-   識別色は、変数を増やさず各規則にリテラル値で置く。
-     System 01 ドキュメント作成 = ta2 の --ac 系（var(--color-primary) / var(--color-primary-light) / var(--color-primary-dark)）
-     System 02 テスト自動化     = #6D4AC4 / #EDE7FB / #4A2E93
-     System 03 AutoRun          = #0E9C7A / var(--color-low-bg) / var(--color-low)
-     System 04 CLI・API         = var(--color-text-secondary) / var(--color-border) / var(--color-text)
-     System 05 オートヒーリング = var(--color-high) / #FEF3C7 / var(--color-high)
-     System 01·app ドキュメント作成(app) = #0891B2 / #CFFAFE / #155E75（01 の派生。青系で近づけつつ区別） */
+.ss-hero {
+  display: grid; grid-template-columns: 1fr auto; align-items: center; gap: var(--space-5);
+  background: var(--color-surface); border: 1px solid var(--color-primary-border);
+  border-left: 4px solid var(--color-primary); border-radius: var(--radius-lg);
+  padding: var(--space-4) var(--space-5); box-shadow: var(--shadow-sm);
+}
+.ss-hero h2 { margin: 0; font-size: var(--text-lg, 16px); }
+.ss-hero p { margin: var(--space-1) 0 0; max-width: 760px; color: var(--color-text-secondary); font-size: var(--text-sm); }
+.ss-hero__go { text-decoration: none; display: inline-flex; align-items: center; }
 
-.sysselect-body {
-  margin: 0;
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  background: var(--bg);
-  color: var(--tx);
-  font-family: var(--sans);
-  -webkit-font-smoothing: antialiased;
+.ss-core { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--space-3); }
+.ss-card {
+  display: flex; flex-direction: column; gap: var(--space-1); min-width: 0;
+  background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-lg);
+  padding: var(--space-4); color: inherit; text-decoration: none; box-shadow: var(--shadow-sm);
 }
+.ss-card:hover, .ss-card:focus-visible { border-color: var(--color-primary); outline: 2px solid var(--color-primary-border); }
+.ss-card__no { font-size: var(--text-xs); color: var(--color-text-secondary); font-weight: 700; }
+.ss-card b { font-size: var(--text-base); }
+.ss-card__desc {
+  color: var(--color-text-secondary); font-size: var(--text-xs);
+  display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
+}
+.ss-card em { margin-top: auto; padding-top: var(--space-2); font-style: normal; color: var(--color-primary-dark); font-size: var(--text-xs); }
 
-/* topbar は templates/partials/topbar.html（.app-topbar）に統一。
-   ここに独自のトップバー CSS は置かない（旧 .sysselect-topbar 一式は削除済み）。 */
+.ss-more {
+  display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0 var(--space-5);
+  background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-lg);
+  padding: var(--space-1) var(--space-4);
+}
+.ss-more a {
+  display: flex; justify-content: space-between; gap: var(--space-3); padding: var(--space-2) 0;
+  border-bottom: 1px solid var(--color-divider); color: var(--color-text); text-decoration: none; font-size: var(--text-sm);
+}
+.ss-more a:hover { color: var(--color-primary-dark); }
+.ss-more a span { color: var(--color-text-secondary); font-size: var(--text-xs); white-space: nowrap; }
 
-/* ---- stage ---- */
-.sysselect-stage {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  padding: 28px 32px 40px;
+@media (max-width: 1100px) {
+  .ss-core { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .app-content:has(.ss-page) { overflow: auto; }
 }
-.sysselect-head { text-align: left; margin-bottom: 20px; }
-.sysselect-kicker {
-  font-size: 11px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase;
-  color: var(--tx2);
-}
-.sysselect-head h1 { font-size: 22px; margin: 6px 0 4px; }
-.sysselect-head p { margin: 0; color: var(--tx2); font-size: 12.5px; max-width: 780px; }
-
-.sysselect-grid {
-  display: grid;
-  /* カードは 7 枚（指揮 / 01 ドキュメント作成 / 01·app ドキュメント作成(app) / 02 テスト自動化 /
-     03 AutoRun / 04 CLI・API / 05 オートヒーリング）。auto-fit に任せると幅によって
-     「2 段目に 1 枚だけ」が生まれ、余った 1 枚を目で拾い直すことになる。
-     7 枚は 4 + 3 で割り、段の割れ方を幅ごとに決め打ちする（system-select.html 冒頭の
-     インライン上書きも同じ値にしてある）。 */
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 16px;
-  width: 100%;
-  max-width: 1500px;
-}
-
-.syscard {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  padding: 24px;
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  background: var(--sf);
-  box-shadow: 0 1px 3px rgba(16,24,40,.06);
-  text-decoration: none;
-  color: var(--tx);
-  overflow: hidden;
-  transition: transform .12s, box-shadow .12s, border-color .12s;
-}
-.syscard:hover { transform: translateY(-3px); box-shadow: 0 6px 18px rgba(0,0,0,.08); }
-.syscard:focus-visible { outline: 2px solid var(--ac); outline-offset: 3px; }
-.syscard-accent { position: absolute; inset: 0 0 auto 0; height: 4px; }
-.syscard-doc:hover { border-color: var(--ac); }
-.syscard-doc .syscard-accent { background: var(--ac); }
-.syscard-run:hover { border-color: #0E9C7A; }
-.syscard-run .syscard-accent { background: #0E9C7A; }
-.syscard-test:hover { border-color: #6D4AC4; }
-.syscard-test .syscard-accent { background: #6D4AC4; }
-.syscard-cli:hover { border-color: var(--color-text-secondary); }
-.syscard-cli .syscard-accent { background: var(--color-text-secondary); }
-.syscard-heal:hover { border-color: var(--color-high); }
-.syscard-heal .syscard-accent { background: var(--color-high); }
-.syscard-app:hover { border-color: #0891B2; }
-.syscard-app .syscard-accent { background: #0891B2; }
-
-.syscard-icon {
-  width: 48px; height: 48px; border-radius: 10px;
-  display: grid; place-items: center; margin-top: 4px;
-}
-.syscard-doc .syscard-icon { background: var(--ac-bg); color: var(--ac-dk); }
-.syscard-run .syscard-icon { background: var(--color-low-bg); color: var(--color-low); }
-.syscard-test .syscard-icon { background: #EDE7FB; color: #4A2E93; }
-.syscard-cli .syscard-icon { background: var(--color-border); color: var(--color-text); }
-.syscard-heal .syscard-icon { background: #FEF3C7; color: var(--color-high); }
-
-.syscard-no {
-  font-size: 11px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase;
-}
-.syscard-doc .syscard-no { color: var(--ac-dk); }
-.syscard-run .syscard-no { color: var(--color-low); }
-.syscard-test .syscard-no { color: #4A2E93; }
-.syscard-cli .syscard-no { color: var(--color-text); }
-.syscard-heal .syscard-no { color: var(--color-high); }
-.syscard-app .syscard-icon { background: #CFFAFE; color: #155E75; }
-.syscard-app .syscard-no { color: #155E75; }
-
-.syscard-title { font-size: 18px; font-weight: 800; }
-.syscard-desc {
-  font-size: 12.5px; color: var(--tx2); line-height: 1.5;
-  /* 5 列に増えてカード 1 枚が細くなり、説明文が 4〜6 行に伸びた。68px のままだと
-     短い説明のカードだけチップが上に浮くので、実測の行数に合わせて底上げする。
-     行数が揃わない分は .syscard-open の margin-top:auto が吸収する。 */
-  min-height: 92px;
-}
-.syscard-chips { display: flex; flex-wrap: wrap; gap: 8px; }
-.syscard-chip {
-  font-size: 11px; padding: 3px 10px; border-radius: 999px;
-  border: 1px solid var(--line); background: var(--bg); color: var(--tx);
-}
-.syscard-open {
-  /* 説明文とチップの行数はカードごとに違う。auto にしないと「開く →」の高さが
-     4 枚でずれ、押せる場所を目で探し直すことになる。下端で揃える。 */
-  margin-top: auto; padding-top: 8px; align-self: flex-start;
-  font-size: 12.5px; font-weight: 800;
-}
-.syscard-doc .syscard-open { color: var(--ac-dk); }
-.syscard-run .syscard-open { color: var(--color-low); }
-.syscard-test .syscard-open { color: #4A2E93; }
-/* CLI / API だけ .syscard-open の色指定が無く、本文と同じ色で沈んでいた。4 枚を並べると
-   ここだけ導線に見えないので、他の 3 枚と同じ規則を与える。 */
-.syscard-cli .syscard-open { color: var(--color-text); }
-.syscard-heal .syscard-open { color: var(--color-high); }
-.syscard-app .syscard-open { color: #155E75; }
-/* ドキュメント検証（System 06）= #BE185D / #FCE7F3 / #9D174D。既存のどの識別色とも重ならない。 */
-.syscard-dv:hover { border-color: #BE185D; }
-.syscard-dv .syscard-accent { background: #BE185D; }
-.syscard-dv .syscard-icon { background: #FCE7F3; color: #9D174D; }
-.syscard-dv .syscard-no { color: #9D174D; }
-.syscard-dv .syscard-open { color: #9D174D; }
-/* System 07 バッチ・スクリプトのテスト。既存の識別色と重ならない緑。 */
-.syscard-batch:hover { border-color: var(--color-low); }
-.syscard-batch .syscard-accent { background: var(--color-low); }
-.syscard-batch .syscard-icon { background: var(--color-low-bg); color: var(--color-low); }
-.syscard-batch .syscard-no { color: var(--color-low); }
-.syscard-batch .syscard-open { color: var(--color-low); }
-/* System 08 バッチ・バックエンドのテスト。ドキュメント作成と同じアクセント系トークンを使う。 */
-.syscard-backend:hover { border-color: var(--ac); }
-.syscard-backend .syscard-accent { background: var(--ac); }
-.syscard-backend .syscard-icon { background: var(--ac-bg); color: var(--ac-dk); }
-.syscard-backend .syscard-no { color: var(--ac-dk); }
-.syscard-backend .syscard-open { color: var(--ac-dk); }
-
-.syscard-badge {
-  position: absolute; top: 16px; right: 16px;
-  font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 999px;
-  background: var(--bg); color: var(--tx2); border: 1px solid var(--line);
-}
-
-.sysselect-note {
-  /* 警告ではない単なる補足なので、警告色（--wa 系）ではなく中立色を使う。 */
-  margin: 24px 0 0;
-  max-width: 780px;
-  border-left: 3px solid var(--line);
-  background: var(--sf);
-  border: 1px solid var(--line);
-  border-left-width: 3px;
-  border-radius: 0 8px 8px 0;
-  padding: 12px 16px;
-  font-size: 11px;
-  color: var(--tx3);
-}
-
-/* 7 枚は広い PC ウィンドウで 4 + 3。狭くなるにつれて 2 枚ずつ → 1 列と落とす。 */
-@media (max-width: 1040px) {
-  .sysselect-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-}
-@media (max-width: 720px) {
-  .sysselect-grid { grid-template-columns: 1fr; }
-}
-
-/* ta2.css の html,body{overflow:hidden} で 2 段目が切れる（8 枚になって 1440x900 に収まらない）。この画面だけ縦スクロールを許す */
-html:has(body.sysselect-body), body.sysselect-body { overflow-y: auto; height: auto; }
-/* System 08 影響度分析。既存の識別色と重ならない橙。 */
-.syscard-impact:hover { border-color: var(--color-critical); }
-.syscard-impact .syscard-accent { background: var(--color-critical); }
-.syscard-impact .syscard-icon { background: var(--color-high-bg); color: var(--color-critical); }
-.syscard-impact .syscard-no { color: var(--color-critical); }
-.syscard-impact .syscard-open { color: var(--color-critical); }

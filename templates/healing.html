@@ -126,6 +126,8 @@
         </div>
 
         {# 判断の文脈: 接続先・実行・PR・報告書を 1 行に。承認の前に残っている問題の件数を判断ボタンの直下に出す。 #}
+        {# 工程バー: 検証→欠陥→修正案→再検証→PR→人の判断。状態はサーバの再検証データから決まる（healing-trace.js）。 #}
+        <ol class="hl-steps" id="hl-steps" aria-label="ヒーリングの工程"></ol>
         <div class="c-context hl-run-context" id="hl-run-context" hidden></div>
         <div class="hl-blockers" id="hl-blockers" hidden aria-live="polite"></div>
 
@@ -170,6 +172,23 @@
               </div>
             </div>
             <div class="hl-loop-scroll">
+              {# 欠陥ごとの 根拠 → 修正差分 → 再検証 → 判断。左＝欠陥の一覧、右＝選んだ欠陥の証跡。
+                 data-state: normal / empty / loading / error（?hl_state= で固定できる）。 #}
+              <section class="card hl-trace" id="hl-trace" data-state="loading" aria-labelledby="hl-trace-title">
+                <h3 class="hl-trace__title" id="hl-trace-title">欠陥ごとの証跡</h3>
+                <div class="hl-gate" role="group" aria-label="判定">
+                  <div class="hl-gate__row" id="hl-gate-overall"><span class="hl-gate__scope">全体</span><b class="hl-gate__verdict">未判定</b><ul class="hl-gate__items"></ul></div>
+                  <div class="hl-gate__row" id="hl-gate-change"><span class="hl-gate__scope">今回の変更分</span><b class="hl-gate__verdict">未判定</b><ul class="hl-gate__items"></ul></div>
+                </div>
+                <div class="hl-trace__state hl-trace__state--loading" aria-live="polite"><span class="skeleton-line"></span><span class="skeleton-line"></span>工程と証跡を読み込んでいます。</div>
+                <div class="hl-trace__state hl-trace__state--empty">この実行では欠陥が見つかっていません。検証の結果は上の工程バーで確認できます。</div>
+                <div class="hl-trace__state hl-trace__state--error" role="alert"><span id="hl-trace-error-text">工程と証跡を読み込めませんでした。「再読み込み」を押してください。</span> <button type="button" class="btn-outline-sm" id="hl-trace-retry">再読み込み</button></div>
+                <div class="hl-trace__grid">
+                  <ul class="hl-trace-list" id="hl-trace-list" aria-label="欠陥の一覧"></ul>
+                  <div class="hl-trace-detail" id="hl-trace-detail" aria-live="polite"></div>
+                </div>
+                <div class="hl-trace__audit"><h4 class="hl-tb__title">判断の記録（誰が・いつ）</h4><ul id="hl-trace-audit"></ul></div>
+              </section>
               <section class="card hl-loop-card">
                 <div id="hl-loop"></div>
                 <div class="c-state c-state--empty" data-kind="empty" id="hl-loop-empty" hidden>
@@ -307,6 +326,7 @@
 <script src="{{ url_for('static', filename='js/healing-report.js') }}?v={{ _ver }}"></script>
 <script src="{{ url_for('static', filename='js/healing-run.js') }}?v={{ _ver }}"></script>
 <script src="{{ url_for('static', filename='js/healing-actions.js') }}?v={{ _ver }}"></script>
+<script src="{{ url_for('static', filename='js/healing-trace.js') }}?v={{ _ver }}"></script>
 <script src="{{ url_for('static', filename='js/healing-history.js') }}?v={{ _ver }}"></script>
 <script src="{{ url_for('static', filename='js/healing.js') }}?v={{ _ver }}"></script>
 {% endblock %}

@@ -62,10 +62,7 @@
 </section>
 
 <section class="dv-view dvs" data-view="settings" hidden>
-  <div class="dvs-head">
-    <p class="dashboard-section-copy">各項目の右に、既定値か利用者設定かを表示します。</p>
-    <div class="dvs-head-acts"><span class="dvs-meta" id="dvsMeta"></span><button type="button" class="p1-btn" id="dvsReload">読み直す</button><button type="button" class="p1-btn is-primary" id="dvsSave" disabled>保存</button></div>
-  </div>
+  <div class="dvs-impact" id="dvsImpact" role="status" aria-live="polite"><b>影響プレビュー</b><span class="mut">読み込み中…</span></div>
   <div class="p1-banner" id="dvsBanner" role="status" aria-live="polite" hidden></div>
   <div class="dvs-body">
     <nav class="dvs-nav" aria-label="設定の区分">
@@ -75,5 +72,12 @@
       <a href="#settings" data-sec="ai">AI 送信先</a>
     </nav>
     <form class="dvs-form" id="dvsForm" novalidate autocomplete="off"><p class="mut">読み込み中…</p></form>
+    <aside class="dvs-hist" aria-label="変更履歴"><h3>変更履歴</h3><ol id="dvsHist"><li class="mut">読み込み中…</li></ol></aside>
+  </div>
+  <div class="dvs-savebar">
+    <span class="dvs-count" id="dvsCount">未保存の変更はありません</span>
+    <label class="dvs-reason"><span>変更の理由（必須）</span><input type="text" id="dvsReason" maxlength="200" placeholder="例: 次期リリースは警告 5 件まで許容と合意"></label>
+    <button type="button" class="p1-btn" id="dvsReload">読み直す</button><button type="button" class="p1-btn is-primary" id="dvsSave" disabled>保存</button>
+    <span class="dvs-meta" id="dvsMeta"></span>
   </div>
 </section>

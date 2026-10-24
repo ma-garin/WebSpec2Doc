@@ -599,6 +599,19 @@ def settings_api():
         return _err("設定を保存できませんでした。もう一度お試しください。", 500)
 
 
+@bp.route("/api/docverify/settings/preview", methods=["POST"])
+def settings_preview():
+    """保存前の出口基準で全レビューの判定を計算する（読み取りのみ・保存しない）。"""
+    from web.services.docverify import settings_store as ss
+    try:
+        return jsonify(ss.preview(request.get_json(silent=True)))
+    except ss.SettingsError as e:
+        return jsonify(error=e.message, code=e.code), e.status
+    except Exception:
+        log.exception("設定の影響プレビューに失敗")
+        return _err("影響を計算できませんでした。保存はできます。時間をおいてもう一度お試しください。", 500)
+
+
 @bp.route("/api/docverify/settings/ai-check", methods=["POST"])
 def settings_ai_check():
     denied = _denied("tenant_settings")

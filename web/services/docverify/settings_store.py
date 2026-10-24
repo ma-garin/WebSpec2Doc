@@ -1,10 +1,12 @@
 """System 06 設定（出口基準・語彙・役割・AI 送信先）の保存と読み出し。
 
 保存先: data/docverify/_settings/<tenant または _none>/settings.json（新規）。秘密値は同じ場所の secret.json（0600）に分け、応答では返さない。
-rev で楽観ロックし、古い rev の PUT は 409。
+rev で楽観ロックし、古い rev の PUT は 409。保存には理由が必須で、変更点は同じ場所の history.jsonl に追記する（追記のみ）。
+重大度の表示名は対検査画面・判定・指摘書と共通の「重大／警告／提案」で固定（旧「主要／軽微」は読み込み時に置き換える）。
 """
 from __future__ import annotations
 
+import contextvars
 import fcntl
 import json
 import os
@@ -14,7 +16,9 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 SEV_KEYS = ("critical", "major", "minor")
-SEV_DEFAULT = {"critical": "重大", "major": "主要", "minor": "軽微"}
+SEV_DEFAULT = {"critical": "重大", "major": "警告", "minor": "提案"}
+LEGACY_LABELS = {"主要": "major", "軽微": "minor"}  # 旧語彙。読み込み時に SEV_DEFAULT へ移行
+_override: contextvars.ContextVar = contextvars.ContextVar("dv_settings_override", default=None)
 PAIR_SEV = {"重大": "critical", "警告": "major", "提案": "minor"}  # 対検査の内部値 → 設定のキー
 TYPES = ("矛盾", "欠落", "曖昧", "不整合ID", "重複", "用語揺れ")
 ROLES = ("author", "moderator", "reviewer", "approver")
@@ -87,6 +91,8 @@ def _raw() -> dict:
 
 def effective(raw: dict | None = None) -> dict:
     """既定値に利用者設定を重ねた値（判定計算が使う）。"""
+    if raw is None and _override.get() is not None:
+        return json.loads(json.dumps(_override.get()))
     v = (raw or _raw()).get("values") or {}
     out = json.loads(json.dumps(DEFAULTS))
     for sec in out:
@@ -96,6 +102,7 @@ def effective(raw: dict | None = None) -> dict:
                     out[sec][k].update(val)
                 else:
                     out[sec][k] = val
+    out["labels"] = dict(SEV_DEFAULT)  # 表示名は固定（旧保存値「主要／軽微」もここで移行される）
     return out
 
 
@@ -147,7 +154,7 @@ def load() -> dict:
     return {"rev": raw.get("rev", 0), "values": effective(raw), "defaults": DEFAULTS, "sources": _sources(raw),
             "updated_at": raw.get("updated_at"), "updated_by": raw.get("updated_by"),
             "api_key_masked": _mask(secret.get("api_key", "")), "users": _users(), "approval_policy": _approval_policy(),
-            "fixed": {"unverified_counts_as_pass": False}}
+            "fixed": {"unverified_counts_as_pass": False}, "history": history()}
 
 
 def _int_or_none(v, name: str):
@@ -209,9 +216,121 @@ def _validate(body: dict, users: dict) -> dict:
     return {k: val for k, val in out.items() if val}
 
 
+ROLE_NAMES = {"author": "作成者", "moderator": "進行役", "reviewer": "レビュアー", "approver": "承認者"}
+AI_NAMES = {"provider": "AI の送信先", "endpoint": "AI の接続先", "model": "AI のモデル名"}
+
+
+def _flat(eff: dict) -> dict:
+    out = {f"exit.max_open.{k}": eff["exit"]["max_open"].get(k) for k in SEV_KEYS}
+    out["exit.changed_rule"] = eff["exit"]["changed_rule"]
+    out.update({f"types.{t}": bool(eff["types"].get(t, True)) for t in TYPES})
+    out.update({f"roles.{r}": eff["roles"].get(r) or "" for r in ROLES})
+    out.update({f"ai.{k}": eff["ai"].get(k) or "" for k in AI_NAMES})
+    return out
+
+
+def _label(key: str) -> str:
+    sec, _, rest = key.partition(".")
+    if sec == "exit":
+        return "今回の変更分の合格条件" if rest == "changed_rule" else f"未対応の{SEV_DEFAULT[rest.split('.')[-1]]}の上限"
+    return {"types": lambda: f"種別「{rest}」", "roles": lambda: f"役割「{ROLE_NAMES.get(rest, rest)}」",
+            "ai": lambda: AI_NAMES.get(rest, rest)}[sec]()
+
+
+def _fmt(key: str, v) -> str:
+    if key.startswith("exit.max_open."):
+        return "上限なし" if v is None else f"{v} 件"
+    if key == "exit.changed_rule":
+        return {"same": "全体と同じ上限", "zero": "変更分は未対応 0 件"}.get(v, str(v))
+    if key.startswith("types."):
+        return "有効" if v else "無効"
+    if key == "ai.provider":
+        return {"none": "使わない", "openai": "OpenAI", "ollama": "Ollama"}.get(v, str(v))
+    return str(v) if v else "（なし）"
+
+
+def _diff(before: dict, after: dict) -> list[dict]:
+    a, b = _flat(before), _flat(after)
+    return [{"key": k, "label": _label(k), "before": _fmt(k, a[k]), "after": _fmt(k, b[k])} for k in a if a[k] != b[k]]
+
+
+def history(limit: int = 50) -> list[dict]:
+    try:
+        lines = (_dir() / "history.jsonl").read_text(encoding="utf-8").splitlines()
+    except FileNotFoundError:
+        return []
+    out = []
+    for ln in reversed(lines):
+        try:
+            out.append(json.loads(ln))
+        except ValueError:
+            continue
+        if len(out) >= limit:
+            break
+    return out
+
+
+def _append_history(entry: dict) -> None:
+    p = _dir() / "history.jsonl"
+    p.parent.mkdir(parents=True, exist_ok=True)
+    with open(p, "a", encoding="utf-8") as fh:
+        fh.write(json.dumps(entry, ensure_ascii=False) + "\n")
+
+
+def _reviews() -> list[tuple[str, str]]:
+    from web import config
+    from web.tenancy import scoped_output_dir
+    root = Path(scoped_output_dir(config.DATA_DIR)) / "docverify"
+    out = []
+    for f in sorted(root.glob("*/pair/findings.json")):
+        iid, d = f.parent.parent.name, f.parent
+        meta = _read(d / "docs" / "meta.json", {})
+        name = meta.get("name") if isinstance(meta, dict) else None
+        if not name:
+            try:
+                req = (d / "docs" / "requirements.md").read_text(encoding="utf-8")
+                name = next((ln[2:].strip() for ln in req.splitlines() if ln.startswith("# ")), None)
+            except OSError:
+                name = None
+        out.append((iid, name or iid))
+    return out
+
+
+def _state(iid: str) -> str:
+    from web.services.docverify import pair_review
+    try:
+        return "pass" if pair_review.gate(iid)["overall"]["pass"] else "fail"
+    except Exception:
+        return "unknown"
+
+
+def preview(body: dict) -> dict:
+    """保存せずに、画面入力中の出口基準で全レビューの判定を計算する（読み取りのみ）。"""
+    if not isinstance(body, dict):
+        raise SettingsError(400, "invalid", "設定の形が正しくありません。画面を再読み込みしてやり直してください。")
+    proposed = effective({"values": _validate(body, _users())})
+    rows = []
+    for iid, name in _reviews():
+        now = _state(iid)
+        tok = _override.set(proposed)
+        try:
+            new = _state(iid)
+        finally:
+            _override.reset(tok)
+        rows.append({"iid": iid, "name": name, "now": now, "new": new})
+    count = lambda key: {s: sum(1 for r in rows if r[key] == s) for s in ("pass", "fail", "unknown")}
+    changed = [r for r in rows if r["now"] != r["new"]]
+    return {"total": len(rows), "now": count("now"), "new": count("new"), "changed_count": len(changed), "changed": changed[:5]}
+
+
 def save(body: dict, user: str) -> dict:
     if not isinstance(body, dict):
         raise SettingsError(400, "invalid", "設定の形が正しくありません。画面を再読み込みしてやり直してください。")
+    reason = str(body.get("reason") or "").strip()
+    if not reason:
+        raise SettingsError(400, "reason_required", "変更の理由を入力してください。理由は変更履歴に残ります。")
+    if len(reason) > 200:
+        raise SettingsError(400, "invalid", "変更の理由は 200 文字以内で入力してください。")
     users = _users()
     values = _validate(body, users)
     with _lock():
@@ -219,12 +338,18 @@ def save(body: dict, user: str) -> dict:
         if body.get("rev") != raw.get("rev", 0):
             raise SettingsError(409, "conflict", "別の人が先に設定を更新しました。最新を読み直すか、自分の変更を保持して保存し直してください。",
                                 {"latest": load()})
+        changes = _diff(effective(raw), effective({"values": values}))
         key = body.get("api_key")
+        if (isinstance(key, str) and key.strip()) or body.get("clear_api_key"):
+            changes.append({"key": "api_key", "label": "API キー", "before": "（伏せ字）", "after": "変更" if key else "消去"})
+        if not changes:
+            raise SettingsError(400, "no_change", "保存済みの値から変わった項目がありません。値を変えてから保存してください。")
         if isinstance(key, str) and key.strip():
             _write(_dir() / "secret.json", {"api_key": key.strip()}, 0o600)
         elif body.get("clear_api_key"):
             _write(_dir() / "secret.json", {}, 0o600)
-        _write(_dir() / "settings.json", {"rev": raw.get("rev", 0) + 1, "values": values, "updated_at": _now(), "updated_by": user})
+        _write(_dir() / "settings.json", {"rev": raw.get("rev", 0) + 1, "values": values, "updated_at": (at := _now()), "updated_by": user})
+        _append_history({"rev": raw.get("rev", 0) + 1, "at": at, "by": user, "reason": reason, "changes": changes})
     return load()
 
 

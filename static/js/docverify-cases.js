@@ -140,10 +140,27 @@
       DV.toast('承認を記録しました'); await loadGate();
     } catch (e) { err.textContent = e.message; btn.disabled = false; }
   }
-  function report() {
+  /* 指摘書を出力: 形式（Markdown／Word／Excel）を選ぶメニュー。Esc・外側クリックで閉じる */
+  function report(btn) {
     const rv = DV.state.review;
     if (!rv) return;
-    window.location.href = `/api/docverify/${encodeURIComponent(rv.id)}/pair/report.md`;
+    const open = document.querySelector('[data-dv-report-menu]');
+    if (open) { open.remove(); return; }
+    const base = `/api/docverify/${encodeURIComponent(rv.id)}/pair/report`;
+    const menu = document.createElement('div');
+    menu.setAttribute('role', 'menu'); menu.setAttribute('data-dv-report-menu', '');
+    menu.style.cssText = 'position:absolute;z-index:50;background:#fff;border:1px solid #d0d7de;border-radius:6px;box-shadow:0 4px 12px rgba(0,0,0,.12);padding:4px 0;min-width:160px';
+    [['md', 'Markdown'], ['docx', 'Word'], ['xlsx', 'Excel']].forEach(([ext, label]) => {
+      const a = document.createElement('a');
+      a.setAttribute('role', 'menuitem'); a.href = `${base}.${ext}`; a.setAttribute('download', ''); a.textContent = label;
+      a.style.cssText = 'display:block;padding:6px 14px;color:inherit;text-decoration:none';
+      a.addEventListener('click', () => menu.remove());
+      menu.appendChild(a);
+    });
+    const r = btn.getBoundingClientRect();
+    menu.style.top = `${r.bottom + window.scrollY + 4}px`; menu.style.left = `${r.left + window.scrollX}px`;
+    document.body.appendChild(menu);
+    menu.querySelector('a').focus();
   }
 
   function init() {
@@ -167,7 +184,12 @@
         else if (b.dataset.gateAct === 'approve') approve(b);
       });
     }
-    document.addEventListener('click', (e) => { if (e.target.closest('[data-dv-report]')) report(); });
+    document.addEventListener('click', (e) => {
+      const b = e.target.closest('[data-dv-report]');
+      if (b) { report(b); return; }
+      if (!e.target.closest('[data-dv-report-menu]')) document.querySelector('[data-dv-report-menu]')?.remove();
+    });
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') document.querySelector('[data-dv-report-menu]')?.remove(); });
     if (DV.current === 'cases' && cs) loadCases();
     if (DV.current === 'gate' && gs) loadGate();
   }

@@ -125,7 +125,7 @@ def test_api_diff_no_snapshots(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) 
     monkeypatch.setattr(api_v1_mod, "OUTPUT_DIR", tmp_path)
     resp = _client().get("/api/v1/sites/nonexistent.com/diff")
     assert resp.status_code == 404
-    assert "need at least 2" in resp.get_json()["error"]
+    assert "need at least 2" in resp.get_json()["error"]["message"]
 
 
 def test_api_diff_one_snapshot(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:

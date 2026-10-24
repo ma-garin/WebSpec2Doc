@@ -2,21 +2,85 @@
 {# CLI / API（registry の cli）。この画面はコマンドを組み立てるだけで実行しない。
    型 C（コマンドビルダーがヒーロー）＋型 D の節見出し＋型 F の表。状態の理由は topbar の #page-reason（WS2D.reason）。 #}
 {% set system_key = 'cli' %}
-{% set topbar_crumb = sysreg('cli').label ~ ' ' ~ sysreg('cli').name %}{% set topbar_title = 'コマンドビルダー' %}
+{% set topbar_crumb = sysreg('cli').label ~ ' ' ~ sysreg('cli').name %}{% set topbar_title = 'ジョブと API' %}
 {% block title %}CLI / API - WebSpec2Doc{% endblock %}
 {% block head_css %}  <link rel="stylesheet" href="{{ url_for('static', filename='css/cli-mode.css') }}?v={{ _ver }}">
 {% endblock %}
 {% block body_attrs %} data-system="cli"{% endblock %}
-{% block sidebar_cta %}    <a class="btn-primary sidebar-primary-action" href="#cli-commands" title="できるコマンドの一覧と例を見る">
+{% block sidebar_cta %}    <a class="btn-primary sidebar-primary-action" href="#cli-submit" title="対象 URL を入れてジョブを投入する">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M2 4h7a3 3 0 0 1 3 3v13a2 2 0 0 0-2-2H2z"/><path d="M22 4h-7a3 3 0 0 0-3 3v13a2 2 0 0 1 2-2h8z"/></svg>
-      <span class="nav-label">使い方を見る</span>
+      <span class="nav-label">ジョブを投入する</span>
     </a>
 {% endblock %}
 {% block sidebar_nav %}{% include 'partials/cli-sidebar.html' %}{% endblock %}
 {% block content %}
+      <div class="c-page-head" id="cli-jobs-head">
+        <div class="c-page-head__main">
+          <h2>ジョブ</h2>
+          <p class="c-page-head__desc">対象 URL を投入すると、サーバでクロールを実行します。状態・結果・証跡（誰がいつ投入したか）をこの画面で確かめられます。</p>
+        </div>
+        <div class="c-page-head__actions">
+          <label class="c-field cli-statesw"><span class="c-field__label">表示の確認</span>
+            <select class="c-input" id="cli-state-switch" aria-label="表示状態の切替（検証用）">
+              <option value="">実データ</option><option value="normal">通常</option><option value="empty">0件</option>
+              <option value="no-match">検索0件</option><option value="loading">読込中</option><option value="error">失敗</option>
+              <option value="forbidden">権限不足</option><option value="dirty">未保存</option><option value="conflict">競合</option>
+              <option value="restored">復元</option>
+            </select>
+          </label>
+        </div>
+      </div>
+
+      <section class="cli-section" id="cli-submit">
+        <div class="c-section-head"><div class="c-section-head__main">
+          <h2 class="c-section-head__title">1. 投入する</h2>
+          <p class="c-section-head__desc">対象 URL と範囲を選んで投入します。同じサイトのジョブが動いている間は投入できません。</p>
+        </div></div>
+        <form class="cli-builder cli-submit-form" id="cli-submit-form" novalidate>
+          <label class="c-field cli-field"><span class="c-field__label">対象 URL</span>
+            <input class="c-input" type="url" id="cli-job-url" placeholder="https://example.com" required></label>
+          <label class="c-field cli-field cli-narrow"><span class="c-field__label">深さ</span>
+            <select class="c-input" id="cli-job-depth"><option>1</option><option selected>2</option><option>3</option></select></label>
+          <label class="c-field cli-field cli-narrow"><span class="c-field__label">最大画面数</span>
+            <select class="c-input" id="cli-job-max"><option>10</option><option selected>30</option><option>100</option></select></label>
+          <button type="submit" class="c-btn c-btn--primary" id="cli-job-submit">投入する</button>
+          <p class="cli-check" id="cli-submit-msg" role="status" aria-live="polite" hidden></p>
+        </form>
+      </section>
+
+      <section class="cli-section" id="cli-jobs">
+        <div class="c-section-head"><div class="c-section-head__main">
+          <h2 class="c-section-head__title">2. 状態と結果</h2>
+          <p class="c-section-head__desc">ジョブはサーバのメモリに保持します。サーバを再起動すると一覧から消えます（成果物は残ります）。</p>
+        </div>
+          <div class="c-section-head__actions cli-jobs-tools">
+            <label class="c-field cli-narrow"><span class="c-field__label">状態で絞る</span>
+              <select class="c-input" id="cli-job-filter"><option value="">すべて</option><option value="queued">待機中</option>
+                <option value="running">実行中</option><option value="completed">完了</option><option value="failed">失敗</option></select></label>
+            <button type="button" class="c-btn" id="cli-job-reload">再読込</button>
+          </div>
+        </div>
+        <div class="p5-gates" id="cli-gates" aria-label="判定"></div>
+        <div class="cli-jobs-grid">
+          <div class="cli-jobs-body" id="cli-jobs-body" data-state="loading" aria-live="polite"></div>
+          <aside class="cli-detail" id="cli-detail" aria-label="選択中のジョブ">
+            <h3 class="p3-pane-h">選択中のジョブ</h3>
+            <div id="cli-detail-body"><p class="cli-hint">一覧からジョブを選ぶと、結果と証跡を表示します。</p></div>
+          </aside>
+        </div>
+      </section>
+
+      <section class="cli-section" id="cli-schedules">
+        <div class="c-section-head"><div class="c-section-head__main">
+          <h2 class="c-section-head__title">3. 定期クロールの設定</h2>
+          <p class="c-section-head__desc">既にある設定の確認と停止だけができます。新しい定期実行はこの画面では作りません。停止は管理者のみです。</p>
+        </div></div>
+        <div id="cli-sched-body" data-state="loading" aria-live="polite"></div>
+      </section>
+
       <div class="c-page-head" id="cli-builder">
         <div class="c-page-head__main" id="cli-content">
-          <h2>コマンドビルダー</h2>
+          <h2>4. 端末で実行するコマンド</h2>
           <p class="c-page-head__desc cli-first">条件を選ぶと、端末に貼り付けるコマンドを作ります。この画面では実行しません。</p>
         </div>
         <div class="c-page-head__actions">
@@ -171,12 +235,13 @@
 <script src="{{ url_for('static', filename='js/c-hybrid.js') }}?v={{ _ver }}"></script>
 <script src="{{ url_for('static', filename='js/user-menu.js') }}?v={{ _ver }}"></script>
 <script src="{{ url_for('static', filename='js/cli-mode.js') }}?v={{ _ver }}"></script>
+<script src="{{ url_for('static', filename='js/cli-jobs.js') }}?v={{ _ver }}"></script>
 <script>
   (function () {
     var host = document.getElementById('page-reason');
     if (!host || !window.WS2D) { return; }
     host.hidden = false;
-    WS2D.reason(host, '状態の理由: この画面は端末の状況（Python・仮想環境・認証情報）を調べられないため、準備状況の多くは「未確認」です。端末で確かめてください。', 'warning');
+    WS2D.reason(host, '状態の理由: ジョブはこの画面から投入・確認できます。端末側の準備状況（Python・仮想環境・認証情報）はこの画面から調べられないため「未確認」です。', 'warning');
   })();
 </script>
 {% endblock %}

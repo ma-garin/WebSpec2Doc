@@ -14,6 +14,7 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='css/orchestration-d.css') }}?v={{ _ver }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/c-hybrid.css') }}?v={{ _ver }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/c-shell.css') }}?v={{ _ver }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/product-shell.css') }}?v={{ _ver }}">
 </head>
 <body class="app-page" data-variant="d" data-site="{{ site or '' }}">
 <a href="#app-content" class="skip-link">本文へスキップ</a>
@@ -26,6 +27,7 @@
     {% set topbar_crumb = '<a href="/orchestration">指揮</a>'|safe %}
     {% set topbar_title = '実行履歴' %}
     {% include 'partials/topbar.html' %}
+{% include 'partials/page-header.html' %}
 
     <main class="app-content" id="app-content">
 <div class="cd-shell">

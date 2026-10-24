@@ -5,7 +5,7 @@
   const MSG = { net: '通信できませんでした。接続を確かめて、もう一度読み込んでください。', server: '読み込めませんでした。時間をおいて、もう一度読み込んでください。',
     404: 'レビューが見つかりません。案件一覧から開き直してください。', broken: '応答を読めませんでした。もう一度読み込んでください。' };
   const CLS = { 変更: 'is-mod', 追加: 'is-add', 削除: 'is-del' };
-  const DOCL = { requirements: '要件定義書', design: '基本設計書' };
+  const DOCL = { requirements: '基準文書', design: '確認する文書' };
   const S = { iid: null, seq: 0, rev: null };
   const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const root = () => document.querySelector('.dvf[data-view="followup"]');
@@ -46,15 +46,15 @@
     q('[data-f-n]').textContent = String(hit.length);
     q('[data-f-list]').innerHTML = hit.length ? hit.map((f) => `<li class="dvf-f"><span class="id">${esc(f.id)}</span>
       <span class="t">${esc(f.title)}</span><span class="dvf-st">${esc(f.status || '未判定')}</span>
-      <span class="r">要件 ${esc((f.req_ref || {}).section || '-')} ／ 設計 ${esc((f.design_ref || {}).section || '-')}</span></li>`).join('')
+      <span class="r">基準 ${esc((f.req_ref || {}).section || '-')} ／ 対象 ${esc((f.design_ref || {}).section || '-')}</span></li>`).join('')
       : '<li class="dvf-empty">変わった章に紐づく指摘はありません。</li>';
   }
 
   function renderGate(g) {
-    const one = (lbl, o) => `<div class="p5-gate ${o.pass ? 'ok' : 'ng'}"><div class="lbl">${lbl}</div><div class="val">${o.pass ? '合格' : '不合格'}</div></div>`;
+    const one = (lbl, o) => `<div class="p5-gate ${DV.gateClass(o)}"><div class="lbl">${lbl}</div><div class="val">${DV.verdict(o)}</div></div>`;
     q('[data-f-gates]').innerHTML = one('全体', g.overall) + one('今回の変更分', g.changed);
     const c = g.changed;
-    const why = c.pass ? '今回の変更分に未解決の問題はありません。' : `今回の変更分: 要確認 ${c.needs_review.length} 件・重大の未解決 ${c.unresolved_critical.length} 件・対応の抜け ${c.missing_links.length} 件。`;
+    const why = DV.verdict(c) === '判定不能' ? (c.unverified_reasons || ['検査範囲が未確認です。']).join(' ') : c.pass ? '今回の変更分に未解決の問題はありません。' : `今回の変更分: 要確認 ${c.needs_review.length} 件・重大の未解決 ${c.unresolved_critical.length} 件・対応の抜け ${c.missing_links.length} 件。`;
     q('[data-f-why]').textContent = why + ' ' + (g.reasons || []).join('');
   }
 
@@ -76,7 +76,7 @@
       if (my !== S.seq) return;
       const m = fl.meta || {};
       S.rev = m.rev;
-      q('[data-f-ver]').textContent = `要件定義書 v${m.req_version || 1} ／ 基本設計書 v${m.design_version || 1}`;
+      q('[data-f-ver]').textContent = `${m.baseline_name || '基準文書'} v${m.req_version || 1} ／ ${m.target_name || '確認する文書'} v${m.design_version || 1}`;
       renderDiff(diff); renderFindings(fl.findings || []); renderGate(gate);
       setState('ready', note || '');
     } catch (e) {

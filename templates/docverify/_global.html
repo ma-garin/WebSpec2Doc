@@ -61,23 +61,27 @@
   <div id="dvgMetrics"></div>
 </section>
 
-<section class="dv-view dvs" data-view="settings" hidden>
-  <div class="dvs-impact" id="dvsImpact" role="status" aria-live="polite"><b>影響プレビュー</b><span class="mut">読み込み中…</span></div>
+<section class="dv-view dvs" data-view="settings" hidden aria-label="レビュー設定">
+  <div class="dvs-heading"><button type="button" class="p1-btn" id="dvsHistoryOpen">変更履歴</button></div>
+  <nav class="dvs-nav" role="tablist" aria-label="設定の区分">
+    <a href="#settings" id="dvs-tab-exit" data-sec="exit" role="tab" aria-selected="true" aria-controls="dvs-exit" class="is-on">出口基準</a>
+    <a href="#settings" id="dvs-tab-vocab" data-sec="vocab" role="tab" aria-selected="false" aria-controls="dvs-vocab" tabindex="-1">重大度と種別</a>
+    <a href="#settings" id="dvs-tab-roles" data-sec="roles" role="tab" aria-selected="false" aria-controls="dvs-roles" tabindex="-1">役割と承認</a>
+    <a href="#settings" id="dvs-tab-ai" data-sec="ai" role="tab" aria-selected="false" aria-controls="dvs-ai" tabindex="-1">AI 送信先</a>
+  </nav>
   <div class="p1-banner" id="dvsBanner" role="status" aria-live="polite" hidden></div>
   <div class="dvs-body">
-    <nav class="dvs-nav" aria-label="設定の区分">
-      <a href="#settings" data-sec="exit" class="is-on">出口基準</a>
-      <a href="#settings" data-sec="vocab">重大度と種別</a>
-      <a href="#settings" data-sec="roles">役割の割当</a>
-      <a href="#settings" data-sec="ai">AI 送信先</a>
-    </nav>
-    <form class="dvs-form" id="dvsForm" novalidate autocomplete="off"><p class="mut">読み込み中…</p></form>
-    <aside class="dvs-hist" aria-label="変更履歴"><h3>変更履歴</h3><ol id="dvsHist"><li class="mut">読み込み中…</li></ol></aside>
+    <form class="dvs-form" id="dvsForm" novalidate autocomplete="off" aria-label="設定項目"><p class="mut">読み込み中…</p></form>
+    <aside class="dvs-context" aria-label="変更の確認">
+      <section class="dvs-context-card"><h3>判定への影響</h3><div class="dvs-impact" id="dvsImpact" role="status" aria-live="polite"><span>読み込み中…</span></div></section>
+      <section class="dvs-context-card"><h3>保存する変更</h3><ul class="dvs-changes" id="dvsChanges"><li>変更した項目がここに表示されます。</li></ul></section>
+      <p class="dvs-context-note">保存するまで現在の設定は変わりません。変更理由は履歴に記録されます。</p>
+    </aside>
   </div>
   <div class="dvs-savebar">
-    <span class="dvs-count" id="dvsCount">未保存の変更はありません</span>
-    <label class="dvs-reason"><span>変更の理由（必須）</span><input type="text" id="dvsReason" maxlength="200" placeholder="例: 次期リリースは警告 5 件まで許容と合意"></label>
-    <button type="button" class="p1-btn" id="dvsReload">読み直す</button><button type="button" class="p1-btn is-primary" id="dvsSave" disabled>保存</button>
-    <span class="dvs-meta" id="dvsMeta"></span>
+    <div class="dvs-save-state"><span class="dvs-count" id="dvsCount">変更はありません</span><span class="dvs-meta" id="dvsMeta"></span></div>
+    <label class="dvs-reason" id="dvsReasonField" hidden><span>変更理由 <span class="dvs-required">必須</span></span><input type="text" id="dvsReason" maxlength="200" placeholder="例: リリース判定会議で警告の許容件数を合意"></label>
+    <button type="button" class="p1-btn" id="dvsReload">変更を取り消す</button><button type="button" class="p1-btn is-primary" id="dvsSave" disabled>変更を保存</button>
   </div>
+  <dialog class="dvs-history-dialog" id="dvsHistoryDialog" aria-labelledby="dvsHistoryTitle"><header><div><h2 id="dvsHistoryTitle">設定の変更履歴</h2><p>変更した人・日時・理由を確認できます。</p></div><button type="button" class="p1-btn" id="dvsHistoryClose">閉じる</button></header><ol id="dvsHist"><li>読み込み中…</li></ol></dialog>
 </section>

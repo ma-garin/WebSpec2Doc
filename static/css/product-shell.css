@@ -1,0 +1,48 @@
+/* Shared product shell: context bar, one page heading, then the task workspace. */
+.app-shell:not(.sidebar-collapsed){--sidebar-w:216px}
+.app-shell .app-main{display:flex;flex-direction:column;min-height:0;min-width:0}
+.app-shell .app-topbar{flex:none;height:44px;min-height:44px;padding:var(--space-2) var(--space-5);border-bottom:1px solid var(--color-border)}
+.app-shell .app-topbar-lead{display:block;min-width:0}
+.app-shell .app-breadcrumb{font-size:var(--text-xs);margin:0;line-height:1.7}
+.app-shell .app-page-header{display:flex;align-items:center;justify-content:space-between;gap:var(--space-4);flex:none;height:68px;min-height:68px;padding:var(--space-3) var(--space-5);background:var(--color-bg);border-bottom:1px solid var(--color-border)}
+.app-shell .app-page-header-main{min-width:0;flex:1}
+.app-shell .app-page-header #topbar-title{display:block;font-size:var(--text-xl);line-height:1.4;font-weight:700;margin:0;color:var(--color-text);overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.app-shell .app-page-header .app-topbar-actions{margin:0;flex:none;min-width:0;align-items:center;gap:var(--space-2)}
+.app-shell .app-page-header .app-topbar-actions:empty{display:none}
+.app-shell .app-content{min-height:0;min-width:0;flex:1;padding:var(--space-4) var(--space-5)}
+.app-shell .app-content-inner{max-width:none;min-width:0}
+.app-shell .app-brand{margin-bottom:var(--space-4)}
+.app-shell .app-nav-item{min-height:40px;border-radius:var(--radius-md);padding:var(--space-2) var(--space-3)}
+.app-shell .sys-switcher-label{display:none}
+.app-shell .sys-switcher-cur{font-size:var(--text-sm);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.app-shell .app-sidebar-foot{display:none}
+.app-shell .app-content .c-page-head{background:var(--color-surface);box-shadow:none;border:1px solid var(--color-border);border-radius:var(--radius-lg);padding:var(--space-4);margin-bottom:var(--space-4);gap:var(--space-3);align-items:center}
+.app-shell .app-content .c-page-head :is(.c-page-head__title,h2){font-size:var(--text-md);line-height:1.5;font-weight:600}
+.app-shell .app-content .c-page-head__desc{font-size:var(--text-sm);line-height:1.7;max-width:76ch}
+.app-shell .app-content .c-page-head__actions{align-items:center;justify-content:flex-end}
+.app-shell .app-content .c-btn{min-height:36px;border-radius:var(--radius-md);font-size:var(--text-sm)}
+.app-shell .app-page-header .p1-btn{height:36px;padding:0 var(--space-4);border:1px solid var(--color-border-strong);border-radius:var(--radius-md);font:inherit;font-size:var(--text-sm);color:var(--color-text);background:var(--color-surface);cursor:pointer}
+.app-shell .app-page-header button:focus-visible,.app-shell .app-page-header a:focus-visible{outline:2px solid var(--color-primary);outline-offset:2px}
+/* S06 retains its contextual review toolbar, while the shared heading owns the title. */
+html.dv-page #dv-pagehead:not([hidden]){height:40px;min-height:40px}
+html.dv-page #dv-pagehead .c-page-head__title{display:none}
+html.dv-page .app-content-inner:has(>.dvc:not([hidden]))>#dv-pagehead,
+html.dv-page .app-content-inner:has(>.dvs:not([hidden]))>#dv-pagehead{display:none}
+html.dv-page .dv-view:not([hidden])>.p1-head,
+html.dv-page .dv-view:not([hidden])>.dvf-head,
+html.dv-page .dv-view:not([hidden])>.dvr-head{height:40px}
+html.dv-page .dvs-heading:empty{display:none}
+@media(max-width:1100px){
+  .app-shell .app-page-header{height:60px;min-height:60px;padding:var(--space-3)}
+  .app-shell .app-topbar{padding:var(--space-2) var(--space-3)}
+  .app-shell .app-content{padding:var(--space-3)}
+  .app-shell .sys-switcher-cur{white-space:normal}
+}
+/* Local hero cards keep instructions, fields and actions; the product header owns the page title. */
+.app-shell .app-content .c-page-head__title{display:none}
+/* State simulators are development controls, not part of the end-user workflow. */
+.app-shell .cs-statebar,.app-shell .cli-statesw{display:none}
+.app-shell #page-reason{flex:none;padding:var(--space-2) var(--space-5);margin:0;font-size:var(--text-sm);line-height:1.7}
+.app-main:not(:has(.dvs:not([hidden]))) #dvsHistoryOpen{display:none}
+.app-shell .app-content:has(#cs-root){overflow:auto}
+.app-shell details:not([open])>:not(summary){display:none}

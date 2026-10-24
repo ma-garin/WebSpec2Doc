@@ -1,7 +1,7 @@
 {# 対検査レビュー（要件定義書 ⇔ 基本設計書）。状態は data-state を docverify-pair.js が API 応答で切り替える #}
 <section class="dv-view dvp" data-view="pair" data-state="loading" hidden aria-labelledby="dvp-title">
   <div class="p1-head">
-    <h2 id="dvp-title" class="dvp-title">対検査（要件定義書 ⇔ 基本設計書）</h2>
+    <h2 id="dvp-title" class="dvp-title">文書の比較</h2>
     <span class="p1-ver" data-pair-ver></span>
     <span class="sp"></span>
     <span class="dvp-msg" role="status" aria-live="polite" data-pair-msg></span>
@@ -14,12 +14,12 @@
     <button type="button" class="p1-btn" data-pair-act="reload">最新を読み込む</button>
   </div>
   <div class="p1-pair">
-    <article class="p1-doc" aria-label="要件定義書">
-      <header class="p1-doc-t">要件定義書 <span class="p1-doc-v" data-ver="req"></span></header>
+    <article class="p1-doc" aria-label="基準文書">
+      <header class="p1-doc-t"><span data-doc-label="req">基準文書</span> <span class="p1-doc-v" data-ver="req"></span></header>
       <div class="p1-doc-s" data-doc="req" tabindex="0"></div>
     </article>
-    <article class="p1-doc" aria-label="基本設計書">
-      <header class="p1-doc-t">基本設計書 <span class="p1-doc-v" data-ver="design"></span></header>
+    <article class="p1-doc" aria-label="確認する文書">
+      <header class="p1-doc-t"><span data-doc-label="design">確認する文書</span> <span class="p1-doc-v" data-ver="design"></span></header>
       <div class="p1-doc-s" data-doc="design" tabindex="0"></div>
     </article>
     <aside class="p1-side" aria-label="指摘と証跡">
@@ -28,6 +28,7 @@
         <button type="button" role="tab" class="p3-tab" data-tab="trail" aria-selected="false">証跡</button>
       </div>
       <div class="p3-pane" data-pane="findings" role="tabpanel">
+        <div class="p1-assessment" data-pair-assessment role="status"></div>
         <div class="p1-filter" role="group" aria-label="指摘の絞り込み">
           <button type="button" class="p3-chip" data-filter="all" aria-pressed="true">全件 <span data-n="all"></span></button>
           <button type="button" class="p3-chip" data-filter="changed" aria-pressed="false">今回の変更分 <span data-n="changed"></span></button>

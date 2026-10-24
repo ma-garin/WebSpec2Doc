@@ -19,7 +19,9 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='css/user-menu.css') }}?v={{ _ver }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/c-hybrid.css') }}?v={{ _ver }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/c-shell.css') }}?v={{ _ver }}">
-{% block head_css_late %}{% endblock %}</head>
+{% block head_css_late %}{% endblock %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/product-shell.css') }}?v={{ _ver }}">
+</head>
 <body class="app-page"{% block body_attrs %}{% endblock %}>
 <a href="#app-content" class="skip-link">本文へスキップ</a>
 <div class="app-shell">
@@ -52,6 +54,7 @@
 
   <div class="app-main">
 {% include 'partials/topbar.html' %}
+{% include 'partials/page-header.html' %}
 
 {#- 領域スロット（共通契約 §2.1）。右パネル・下部判定帯は System が block を書いたときだけ出る（書かない System の DOM は従来どおり）。
     本文の状態は data-state（normal/empty/no-match/loading/error/forbidden/dirty/conflict/restored）で切り替える。 -#}

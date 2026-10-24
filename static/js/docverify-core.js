@@ -10,6 +10,9 @@
   };
   const NET_ERR = 'サーバに接続できませんでした。少し待ってから、もう一度お試しください。';
   const handlers = {};
+  const verdict = (g) => g && ['合格', '不合格', '判定不能'].includes(g.verdict) ? g.verdict : g && g.pass === true ? '合格' : g && g.pass === false ? '不合格' : '判定不能';
+  const gateClass = (g) => ({ '合格': 'ok', '不合格': 'ng', '判定不能': 'na' }[verdict(g)]);
+  const errorMessage = (error) => typeof error === 'string' ? error : (error && typeof error.message === 'string' ? error.message : NET_ERR);
   const $ = (s) => document.querySelector(s);
 
   // 保存は UTC。表示は日本時間「2026-10-24 18:17」（対検査・判定と記録で共通）
@@ -53,8 +56,8 @@
     if (opts.raw) {
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        banner(data.error || NET_ERR);
-        const err = new Error(data.error || String(res.status));
+        banner(errorMessage(data.error));
+        const err = new Error(errorMessage(data.error));
         err.status = res.status; err.data = data;
         throw err;
       }
@@ -62,8 +65,8 @@
     }
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
-      banner(data.error || NET_ERR);
-      const err = new Error(data.error || String(res.status));
+      banner(errorMessage(data.error));
+      const err = new Error(errorMessage(data.error));
       err.status = res.status; err.data = data;
       throw err;
     }
@@ -123,7 +126,7 @@
   const PAGE = {
     reviews: ['レビュー', 'レビューを作り、文書の検査から判定までを進めます。', 'AI の自動検出は「候補」です。人が「指摘にする」を押すまで、確定した指摘にはなりません。'],
     cases: ['案件一覧', 'レビューごとに工程・期限・指摘・判定を並べます。行を選ぶと対検査を開きます。', '重大の未解消・要確認・設計に対応の無い要件が残る案件は不合格です。'],
-    pair: ['対検査', '要件定義書と基本設計書を突き合わせ、指摘の採否と判定・承認を記録します。', '指摘を選ぶと両文書の該当箇所が光ります。全体が合格のときだけ承認できます。'],
+    pair: ['対検査', '指定した文書の記述と関係を確認し、根拠・検査範囲・採否を記録します。', '指摘を選ぶと両文書の該当箇所が光ります。全体が合格のときだけ承認できます。'],
     plan: ['計画', 'レビューの目的・参加者・期限・終了基準を決めます。', '計画を保存して「個別レビューを始める」を押すと、文書を読む工程に進みます。'],
     read: ['文書を読む', '本文を読み、指摘の候補を確かめて指摘にします。', '自動で見つけたものは候補です。本文に戻って確かめてから指摘にしてください。'],
     triage: ['指摘', '見つかった指摘を採用・却下・保留に仕分けます。', '指摘ごとの「根拠」で、文書にある内容か、推論か、未確認かを確かめられます。'],
@@ -135,7 +138,7 @@
     assure: ['ドキュメント品質保証', '文書が次の工程へ進める状態かを判定し、直すべき点と決めることを示します。', '点数は評価できた範囲だけで出します。評価できなかった範囲を 0 点や 100 点にはしません。'],
     metrics: ['履歴', '過去の判定と記録、指摘の件数と修正の進み具合を見ます。', '数値は、画面に表示された時点の記録です。'],
     checklists: ['観点', '文書の検査で何を見るか、見つけた指摘をどれだけ重く扱うかを決めます。', '観点は区分ごとに、見る内容と重さを決められます。'],
-    settings: ['設定', '出口基準・言葉・役割・AI の送信先を決めます。保存すると次の判定から反映されます。', 'AI に文書を送る前には、必ず送る内容の確認が出ます。'],
+    settings: ['レビュー設定', '出口基準・言葉・役割・AI の送信先を決めます。保存すると次の判定から反映されます。', 'AI に文書を送る前には、必ず送る内容の確認が出ます。'],
     accuracy: ['精度', '自動検出の規則ごとの適合率・再現率を、評価セットでの測定値で示します。', '測定値は評価セットでの結果です。あなたの文書での正しさを保証するものではありません。'],
   };
   function renderPageHead(view) {
@@ -161,6 +164,7 @@
 
   // 状態チップ（見出しに 1 か所）: 承認済み／全体合格=判定可／採否 1 件以上=検討中／それ以外=準備中
   function pairChipOf(findings, gate, trail) {
+    if (gate && gate.overall && verdict(gate.overall) === '判定不能') return ['判定不能', 'is-unknown'];
     if ((trail || []).some((t) => t.action === 'approved')) return ['承認済み', 'is-done'];
     if (gate && gate.overall && gate.overall.pass) return ['判定可', 'is-ok'];
     if ((findings || []).some((f) => f.status)) return ['検討中', 'is-mid'];
@@ -195,7 +199,7 @@
     const sec = needReview && location.hash.slice(1) === 'setcheck' ? 'trace' : sectionOf(view);
     document.querySelectorAll('.dv-sec').forEach((a) => a.classList.toggle('active', a.dataset.sec === sec));
     const title = $('#topbar-title');
-    if (title) { title.textContent = TITLES[view]; title.hidden = view === 'assure'; }
+    if (title) { title.textContent = TITLES[view]; title.hidden = false; }
     const crumb = $('#topbar-breadcrumb');
     if (crumb) {
       const r = DV.state.review;
@@ -219,7 +223,7 @@
     try { sessionStorage.setItem('dv-review', iid); } catch (e) { /* 保存できない環境では復元しないだけ */ }
     renderReviewNav();
     show(view);
-    loadPairChip(iid);
+    if (REVIEW_VIEWS.includes(view)) loadPairChip(iid);
   }
 
   function setReview(data) {
@@ -368,7 +372,7 @@
   }
 
   window.DV = {
-    api, esc, fmtJst, setPairChip, show, toast, openReview, setReview, start, banner,
+    api, esc, fmtJst, verdict, gateClass, setPairChip, show, toast, openReview, setReview, start, banner,
     busy, modal, download, emptyFindings, scoreText, scoreClass, scoreBar, keyOpen, NO_SCORE,
     state: { review: null, summary: null },
     on(view, fn) { (handlers[view] = handlers[view] || []).push(fn); },

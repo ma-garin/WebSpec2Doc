@@ -1,0 +1,33 @@
+/* 「…」メニュー .c-menu と分割ボタン .c-split。結線は menus.js（data-menu）。値は tokens.css を使う。 */
+.c-menu, .c-split { position: relative; display: inline-flex; }
+.c-menu__toggle {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: var(--space-8); min-height: var(--space-8); padding: var(--space-1);
+  border: 1px solid transparent; border-radius: var(--radius-md);
+  background: transparent; color: var(--color-text-secondary); cursor: pointer; font-size: var(--text-md);
+}
+.c-menu__toggle:hover { background: var(--color-surface-2); color: var(--color-text); }
+.c-menu__toggle:focus-visible, .c-menu__item:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 1px; }
+.c-menu__list {
+  position: absolute; top: 100%; right: 0; z-index: 1000; min-width: 180px;
+  margin: var(--space-1) 0 0; padding: var(--space-1); list-style: none;
+  background: var(--color-surface); border: 1px solid var(--color-border);
+  border-radius: var(--radius-md); box-shadow: var(--shadow-pop);
+}
+.c-menu__list[hidden] { display: none; }
+.c-menu__item {
+  display: block; width: 100%; box-sizing: border-box; padding: var(--space-2) var(--space-3);
+  border: 0; border-radius: var(--radius-sm); background: transparent; text-align: left;
+  font-size: var(--text-sm); color: var(--color-text); cursor: pointer; text-decoration: none;
+}
+.c-menu__item:hover, .c-menu__item:focus { background: var(--color-surface-2); }
+.c-menu__item[aria-disabled="true"] { color: var(--color-text-disabled); pointer-events: none; }
+.c-menu__item--danger { color: var(--color-error-tx); }
+
+/* 分割ボタン: 主動作（c-btn c-btn--primary 1 個）＋ ▾ で他の動作。主ボタンは画面で 1 個の数に含める */
+.c-split > .c-btn:first-child { border-top-right-radius: 0; border-bottom-right-radius: 0; }
+.c-split__toggle { border-top-left-radius: 0; border-bottom-left-radius: 0; border-left-width: 0; }
+.c-split > .c-menu__list { right: 0; }
+
+@media (prefers-reduced-motion: no-preference) { .c-menu__list { animation: c-menu-in 0.12s ease-out; } }
+@keyframes c-menu-in { from { opacity: 0; transform: translateY(-2px); } to { opacity: 1; transform: none; } }

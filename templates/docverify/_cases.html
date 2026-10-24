@@ -1,10 +1,10 @@
 {# 案件一覧。新規作成は作業を分離したモーダルで行う。 #}
-<section class="dv-view dvc" data-view="cases" data-state="loading" hidden aria-label="案件一覧">
+<section class="dv-view dvc" data-view="cases" data-state="loading" hidden aria-label="レビュー一覧">
   <div class="dvc-toolbar">
     <div class="dvc-list-label">レビュー <span class="dvc-sub" data-cases-count></span></div>
     <span class="sp"></span>
-    <input type="search" class="dvc-search" data-cases-q aria-label="レビュー名で絞り込む" placeholder="レビューを検索">
-    <button type="button" class="p1-btn" data-cases-act="reload">再読み込み</button>
+    <input type="search" class="c-search dvc-search" data-cases-q aria-label="レビュー名で絞り込む" placeholder="レビューを検索">
+    <button type="button" class="c-btn c-btn--tertiary" data-cases-act="reload">再読み込み</button>
     <button type="button" class="p1-btn is-primary" id="dv-new-review" aria-haspopup="dialog">新しいレビュー</button>
   </div>
   <p class="dvc-msg" role="status" aria-live="polite" data-cases-msg></p>

@@ -348,7 +348,7 @@ async function renderMbtDesign() {
   const domain = (document.getElementById('r-domain') || {}).textContent.trim();
   host.innerHTML =
     '<div class="hero-pad">' +
-    '<div class="hero-section-title">技法別設計（MBT）</div>' +
+    '<div class="hero-section-title">状態遷移ベースの設計</div>' +
     '<p class="design-section-note">設定「テスト設計」タブのパラメータで、各画面の境界値／デシジョンテーブル／ペアワイズ／状態遷移を機械生成します（実測＝確信度1.0、値カタログ＝0.9）。</p>' +
     '<div id="mbt-body"></div></div>';
   const body = document.getElementById('mbt-body');
@@ -699,9 +699,10 @@ async function renderDesignByScreen() {
   }
   if (!screens.length) {
     uiEmpty(host, {
-      icon: '🧪',
       title: 'テスト設計の対象画面がありません',
       desc: '解析済みの画面に入力要素・遷移が見つからないため、テスト条件を導出できませんでした。',
+      actionLabel: '画面仕様を確認する',
+      onAction: () => selectResultTab('screens', 'spec'),
     });
     return;
   }
@@ -729,4 +730,25 @@ async function renderDesignByScreen() {
     list.appendChild(item);
   });
   _tdsRenderDetail(screens[0].page_id);
+}
+
+// 技法別: サマリーを上段、詳細をその下、状態遷移ベースの設計を 1 区分として同じ面に出す
+function renderTechniqueCombined() {
+  const saved = resultHero;
+  const host = saved;
+  const parts = [
+    ['rp-test-design-summary', renderDesign],
+    ['rp-test-design-detail', renderTechniqueDetail],
+    ['rp-test-design-mbt', renderMbtDesign],
+  ];
+  try {
+    parts.forEach(([id, fn]) => {
+      const el = host.querySelector('#' + id);
+      if (!el) return;
+      resultHero = el;
+      fn();
+    });
+  } finally {
+    resultHero = saved;
+  }
 }

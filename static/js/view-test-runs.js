@@ -9,15 +9,12 @@ async function renderTestRuns() {
   const domain = (document.getElementById('r-domain') || {}).textContent || '';
 
   if (!files.playwright_json) {
-    host.innerHTML =
-      '<div class="hero-pad"><div class="runs-empty">' +
-      '<div class="runs-empty-icon" aria-hidden="true">🧪</div>' +
-      '<div class="hero-section-title" style="margin:0">まだ実行していません</div>' +
-      '<p class="muted-copy">「自動化可」のテストケースを実行すると、ケースごとの PASS/FAIL が' +
-      'ここに表示されます。対象を絞って実行したい場合はテストケースタブから実行してください。</p>' +
-      _runsControlsHtml() +
-      '</div></div>';
-    _bindRunsControls(host);
+    uiEmpty(host, {
+      title: 'まだ実行していません',
+      desc: '自動化できるテストケースを実行すると、ケースごとの合否が表示されます。',
+      actionLabel: 'テストを実行',
+      onAction: () => runTestsFromRunsTab(),
+    });
     return;
   }
 
@@ -88,8 +85,8 @@ async function renderTestRuns() {
   const stale = Number.isFinite(runTime) && Number.isFinite(crawlTime) && runTime < crawlTime;
 
   const cards = [
-    { label: 'PASS', val: passed, cls: 'status-low' },
-    { label: 'FAIL', val: failed, cls: 'status-critical' },
+    { label: '合格', val: passed, cls: 'status-low' },
+    { label: '不合格', val: failed, cls: 'status-critical' },
     { label: 'SKIP', val: skipped, cls: 'status-muted' },
     { label: 'TOTAL', val: total, cls: 'status-default' },
   ].map(c =>
@@ -98,10 +95,10 @@ async function renderTestRuns() {
 
   const ringCls = (failed || r.error || r.interrupted) ? 'is-fail' : 'is-pass';
   const ring =
-    `<div class="runs-passrate ${ringCls}" role="img" aria-label="PASS率 ${passRate}%">` +
+    `<div class="runs-passrate ${ringCls}" role="img" aria-label="合格率 ${passRate}%">` +
     `<svg viewBox="0 0 36 36"><circle class="runs-ring-bg" cx="18" cy="18" r="15.9"></circle>` +
     `<circle class="runs-ring-fill" cx="18" cy="18" r="15.9" stroke-dasharray="${passRate} 100"></circle></svg>` +
-    `<div class="runs-passrate-label"><strong>${passRate}%</strong><span>PASS率</span></div></div>`;
+    `<div class="runs-passrate-label"><strong>${passRate}%</strong><span>合格率</span></div></div>`;
 
   const rows = tests.map(t => {
     const cls = t.status === 'passed' ? 'status-low' : t.status === 'skipped' ? 'status-muted' : 'status-critical';
@@ -159,15 +156,15 @@ function _runsHeadedPref() {
 function _runsControlsHtml() {
   // 試作（サンプルデータ）では実在しないホストに対して実行してしまうため、実行させない
   if (document.body && document.body.dataset.appMode === '1') {
-    return '<span class="runs-controls"><button type="button" class="btn-primary btn-run" id="runs-run-btn" disabled' +
-      ' aria-describedby="runs-run-off">▶ テストを実行</button>' +
+    return '<span class="runs-controls"><button type="button" class="c-btn c-btn--primary btn-run" id="runs-run-btn" disabled' +
+      ' aria-describedby="runs-run-off">テストを実行</button>' +
       '<span id="runs-run-off" class="runs-note">試作（サンプルデータ）のため実行できません。実際のサイトは「ドキュメント作成」で解析してから実行してください。</span></span>';
   }
   const checked = _runsHeadedPref() ? ' checked' : '';
   return '<span class="runs-controls">' +
     '<label class="checkbox-chip" title="ブラウザ画面を表示して実行します（このアプリが動くマシンに開きます）">' +
     `<input type="checkbox" id="runs-headed"${checked}> ブラウザを表示</label>` +
-    '<button type="button" class="btn-primary btn-run" id="runs-run-btn">▶ テストを実行</button>' +
+    '<button type="button" class="c-btn c-btn--primary btn-run" id="runs-run-btn">テストを実行</button>' +
     '</span>';
 }
 
@@ -247,7 +244,7 @@ function _startRunsPolling(domain, started) {
     const title = document.getElementById('runs-live-title');
     if (title) {
       title.textContent = p && p.total
-        ? `実行中 ${p.done} / ${p.total} 件　PASS ${p.passed} ／ FAIL ${p.failed}　経過 ${elapsed}秒`
+        ? `実行中 ${p.done} / ${p.total} 件　合格 ${p.passed} ／ 不合格 ${p.failed}　経過 ${elapsed}秒`
         : `実行中… 経過 ${elapsed}秒`;
     }
 
@@ -320,7 +317,7 @@ async function runTestsFromRunsTab() {
     if (!res.ok) throw new Error(data.error || '実行に失敗しました');
     const s = (data.run && data.run.summary) || {};
     showToast(
-      `実行完了: PASS ${s.passed || 0} / FAIL ${s.failed || 0} / 全${s.total || 0}件`,
+      `実行完了: 合格 ${s.passed || 0} / 不合格 ${s.failed || 0} / 全${s.total || 0}件`,
       data.ok ? 'success' : 'error');
     clearInterval(tick);
     await showResults(domain, 'runs');

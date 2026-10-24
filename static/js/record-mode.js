@@ -56,17 +56,18 @@
     const stopBtn = $('record-stop-btn');
     const startBtn = $('record-start-btn');
     const finalizeBtn = $('record-finalize-btn');
+    // 主ボタンは同時に 1 個: 開始 → 記録中は終了 → 終了後は「文書を作る」に差し替える
     if (phase === 'recording') {
       if (stopBtn) stopBtn.style.display = '';
-      if (startBtn) startBtn.disabled = true;
+      if (startBtn) { startBtn.disabled = true; startBtn.style.display = 'none'; }
     } else if (phase === 'stopped') {
       if (stopBtn) stopBtn.style.display = 'none';
-      if (startBtn) startBtn.disabled = false;
+      if (startBtn) { startBtn.disabled = false; startBtn.style.display = 'none'; }
       if (finalizeBtn) finalizeBtn.style.display = '';
       stopPolling();
     } else {
       if (stopBtn) stopBtn.style.display = 'none';
-      if (startBtn) startBtn.disabled = false;
+      if (startBtn) { startBtn.disabled = false; startBtn.style.display = ''; }
     }
   }
 
@@ -223,11 +224,40 @@
       state.domain = domain;
       setStatus('取り込みました。', false);
       const finalizeBtnEl = $('record-finalize-btn');
-      if (finalizeBtnEl) finalizeBtnEl.style.display = '';
+      if (finalizeBtnEl) {
+        // 取り込み後は「取り込む」を「文書を作る」に差し替える（主ボタンは 1 個）
+        importBtn.parentNode.appendChild(finalizeBtnEl);
+        finalizeBtnEl.style.display = '';
+        importBtn.style.display = 'none';
+      }
     } catch (e) {
       setStatus(e.message || '取り込みに失敗しました', true);
     } finally {
       importBtn.disabled = false;
     }
+  });
+
+  // 入力方式の切替（URL から／操作を記録／記録ファイルから）。表示中の方式の欄だけを出す。
+  const seg = $('gen-method');
+  if (seg) {
+    const apply = (method) => {
+      seg.querySelectorAll('[data-method-tab]').forEach(b => {
+        const on = b.dataset.methodTab === method;
+        b.classList.toggle('is-active', on);
+        b.setAttribute('aria-selected', on ? 'true' : 'false');
+      });
+      document.querySelectorAll('#wizard-p1 [data-method]').forEach(el => { el.hidden = el.dataset.method !== method; });
+    };
+    seg.querySelectorAll('[data-method-tab]').forEach(b => b.addEventListener('click', () => apply(b.dataset.methodTab)));
+    apply('url');
+  }
+  // ファイル選択部品: 選択名を隣に表示する
+  document.querySelectorAll('[data-file-name-for]').forEach(nameEl => {
+    const input = $(nameEl.dataset.fileNameFor);
+    if (!input) return;
+    input.addEventListener('change', () => {
+      const names = Array.from(input.files || []).map(f => f.name);
+      nameEl.textContent = names.length ? names.join('、') : '未選択';
+    });
   });
 })();

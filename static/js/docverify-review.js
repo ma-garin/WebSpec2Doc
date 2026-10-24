@@ -24,7 +24,7 @@
   function rv() { return E().state.review; }
   // サーバが返した役割判定。無いとき（旧応答）は押せる扱いにし、押した結果の 403 は従来どおり日本語で出る
   function can(op) { var c = E().state.can; return !c || c[op] !== false; }
-  var NO_ROLE_HINT = 'この操作には議長・レビュアー・記録者の役割が必要です。議長（またはテナント管理者）に参加者へ追加してもらってください。';
+  var NO_ROLE_HINT = 'この操作には議長・レビュアー・記録者の役割が必要です。議長（または組織の管理者）に参加者へ追加してもらってください。';
   function base() { return '/api/docverify/inspections/' + encodeURIComponent(rv().id); }
   function sect(view) { return document.querySelector('.dvr-view[data-view="' + view + '"]'); }
   function part(view, name) { return sect(view).querySelector('[data-dvr-' + name + ']'); }
@@ -180,24 +180,20 @@
   var R2_Q = ['未回答', '回答済み', '解消'];
   var r2 = { sel: null };
   function pbase() { return '/api/docverify/' + encodeURIComponent(rv().id) + '/pair'; }
-  function r2State(view, st, text) {
+  function r2State(view, st, text, cta) {
     var el = sect(view) && sect(view).querySelector('[data-dvr-state]'); if (!el) return;
     el.hidden = !st; el.setAttribute('data-st', st || '');
-    el.innerHTML = st ? '<span>' + esc(text) + '</span>' + (st === 'error' ? ' <button type="button" class="p1-btn" data-r2-retry>もう一度読み込む</button>' : '') : '';
+    el.innerHTML = st ? '<span>' + esc(text) + '</span>' + (st === 'error' ? ' <button type="button" class="p1-btn" data-r2-retry>もう一度読み込む</button>' : '') + (cta ? ' <button type="button" class="p1-btn" data-r2-cta>' + esc(cta.label) + '</button>' : '') : '';
     var b = el.querySelector('[data-r2-retry]'); if (b) b.onclick = function () { window.DV.show(view); };
-  }
-  function r2GateBox(label, g) {
-    if (!g) return '<div class="p5-gate"><div class="lbl">' + esc(label) + '</div><div class="val">判定不能</div><div class="lbl">判定の材料がまだありません。</div></div>';
-    var c = function (k) { return (g[k] || []).length; };
-    return '<div class="p5-gate ' + E().gateClass(g) + '"><div class="lbl">' + esc(label) + '</div><div class="val">' + E().verdict(g) + '</div><div class="lbl">採用のまま残る重大 ' + c('unresolved_critical') + '・要確認 ' + c('needs_review') + '・対応の抜け ' + c('missing_links') + '</div></div>';
+    var c = el.querySelector('[data-r2-cta]'); if (c) c.onclick = cta.fn;
   }
   function r2Gate(view) {
     var el = sect(view) && sect(view).querySelector('[data-dvr-gate]'); if (!el || !rv()) return Promise.resolve();
-    el.innerHTML = '<div class="p5-gates"><div class="p5-gate"><div class="lbl">判定</div><div class="val">読込中</div></div></div>';
+    el.innerHTML = '<span class="dv-gatebar__why">判定を読み込んでいます。</span>';
     return E().api(pbase() + '/gate').then(function (g) {
-      el.innerHTML = '<div class="p5-gates">' + r2GateBox('全体', g.overall) + r2GateBox('今回の変更分', g.changed) + '</div><p class="p5-why">' + esc((g.reasons || []).join(' ')) + '</p><button type="button" class="p1-btn" data-r2-pair>対検査で判定する</button>';
+      E().gatebar(el, g, { label: '対検査で判定する', attr: 'data-r2-pair' });
     }, function () {
-      el.innerHTML = '<p class="p5-why">判定を読み込めませんでした。対検査を開いて、文書が取り込まれているか確かめてください。</p><button type="button" class="p1-btn" data-r2-pair>対検査を開く</button>';
+      E().gatebar(el, { reasons: ['判定を読み込めませんでした。文書が取り込まれているか確かめてください。'] }, { label: '対検査を開く', attr: 'data-r2-pair' });
     }).then(function () { var b = el.querySelector('[data-r2-pair]'); if (b) b.onclick = function () { window.DV.show('pair'); }; });
   }
   function bands(fn) {
@@ -216,49 +212,28 @@
       var v = (st && (st.values || st.settings)) || {}, mo = (v.exit || {}).max_open || {};
       var lim = function (k, l) { return l + ' ' + (mo[k] == null ? '上限なし' : esc(mo[k]) + ' 件以下'); };
       var exitTxt = st ? '採用のまま残る ' + [lim('critical', '重大'), lim('major', '警告'), lim('minor', '提案')].join('・') : '出口基準を読み込めませんでした。設定を開いて確かめてください。';
-      var who = function (k) { return ps.filter(function (p) { return p.role === k; }).map(function (p) { return p.name; }).join('、'); };
       var ver = function (label, d) { return '<li>' + esc(label) + ' ' + (d && d.version ? '第 ' + esc(d.version) + ' 版・章 ' + ((d.sections || []).length) + ' 件' : '<span class="r2-hint">まだ取り込んでいません</span>') + '</li>'; };
       part(view, 'body').innerHTML = '<div class="r2-card">' +
-        '<div class="r2-row"><label class="r2-k" for="r2-goal">目的</label><input type="text" id="r2-goal" maxlength="200" value="' + esc(r.goal) + '" placeholder="例: API仕様と画面仕様の条件の食い違いを確認する"></div>' +
         '<div class="r2-row"><span class="r2-k">出口基準</span><div class="r2-v"><span>' + exitTxt + '</span> <button type="button" class="p1-btn" data-act="to-settings">設定で変える</button></div></div>' +
-        '<div class="r2-row"><label class="r2-k" for="r2-due">期限</label><input type="date" id="r2-due" value="' + esc(r.due) + '"></div>' +
-        '<div class="r2-row"><span class="r2-k">担当</span><div class="r2-roles">' + Object.keys(R2_ROLES).map(function (k) {
-          return '<label class="r2-role"><span>' + R2_ROLES[k] + '</span><input type="text" data-role="' + k + '" value="' + esc(who(k)) + '" placeholder="名前（複数は「、」で区切る）"></label>'; }).join('') + '</div></div>' +
-        '<div class="r2-row"><span class="r2-k">対象文書と版</span><ul class="r2-docs">' + ver(dd.requirements.label || '基準文書', dd.requirements) + ver(dd.design.label || '確認する文書', dd.design) + '</ul></div>' +
-        '<div class="r2-actions"><button type="button" class="p1-btn is-primary" data-act="save">計画を保存</button></div></div>';
+        '<div class="r2-row"><span class="r2-k">対象文書と版</span><ul class="r2-docs">' + ver(dd.requirements.label || '基準文書', dd.requirements) + ver(dd.design.label || '確認する文書', dd.design) + '</ul></div></div>';
       part(view, 'body').onclick = function (ev) {
         var b = ev.target.closest('[data-act]'); if (!b) return;
-        if (b.getAttribute('data-act') === 'to-settings') { window.DV.show('settings'); return; }
-        busy(b, savePlan2(view));
+        if (b.getAttribute('data-act') === 'to-settings') { window.DV.show('settings'); }
       };
     });
   }
-  function savePlan2(view) {
-    var body = part(view, 'body'), old = rv().participants || [], parts = old.filter(function (p) { return !R2_ROLES[p.role]; });
-    body.querySelectorAll('[data-role]').forEach(function (inp) {
-      var k = inp.getAttribute('data-role');
-      inp.value.split(/[、,，]/).map(function (s) { return s.trim(); }).filter(Boolean).forEach(function (n) {
-        var was = old.filter(function (p) { return p.role === k && p.name === n; })[0];
-        parts.push({ name: n, role: k, done: !!(was && was.done) });
-      });
-    });
-    var payload = { name: rv().name, goal: body.querySelector('#r2-goal').value.trim(), due: body.querySelector('#r2-due').value, participants: parts };
-    return E().api(base(), json('PATCH', payload)).then(setReview).then(function () { E().toast('計画を保存しました'); msg(view, ''); })
-      .catch(function (e) { msg(view, errText(e), true); });
-  }
-
   function r2Doc(side, label, d) {
     var list = (d && d.sections) || [];
     return '<article class="p1-doc" aria-label="' + esc(label) + '"><header class="p1-doc-t">' + esc(label) + ' <span class="p1-doc-v">' + (d && d.version ? '第 ' + esc(d.version) + ' 版' : '') + '</span></header>' +
       '<div class="p1-doc-s" data-r2doc="' + side + '" tabindex="0">' + (list.length ? list.map(function (s) {
-        return '<section class="p1-sec" data-sec-id="' + esc(s.id) + '"><h4 class="p1-doc-h">' + esc(s.heading || s.id) + ' <button type="button" class="p1-btn r2-pick" data-r2-pick="' + side + '" data-r2-sec="' + esc(s.id) + '">この章で指摘</button></h4><p class="p1-doc-b">' + esc(s.text) + '</p></section>'; }).join('')
+        return '<section class="p1-sec" data-sec-id="' + esc(s.id) + '"><h4 class="p1-doc-h">' + esc(s.heading || s.id) + ' <button type="button" class="p1-btn r2-pick" aria-label="この章を指摘に使う" title="この章を指摘に使う" data-r2-pick="' + side + '" data-r2-sec="' + esc(s.id) + '"><span aria-hidden="true">＋</span></button></h4><p class="p1-doc-b">' + esc(s.text) + '</p></section>'; }).join('')
         : '<p class="p1-empty">この文書には読める章がありません。修正版の確認で文書を取り込んでください。</p>') + '</div></article>';
   }
   function renderRead2(view) {
     return E().api(pbase() + '/docs').then(function (dd) {
       var n = ((dd.requirements || {}).sections || []).length + ((dd.design || {}).sections || []).length;
       r2.sel = null;
-      part(view, 'body').innerHTML = '<div class="p1-pair r2-pair">' + r2Doc('req', dd.requirements.name || dd.requirements.label || '基準文書', dd.requirements) + r2Doc('design', dd.design.name || dd.design.label || '確認する文書', dd.design) +
+      part(view, 'body').innerHTML = '<div class="p1-pair r2-pair">' + r2Doc('req', dd.requirements.label || dd.requirements.name || '基準文書', dd.requirements) + r2Doc('design', dd.design.label || dd.design.name || '確認する文書', dd.design) +
         '<aside class="p1-side r2-side" aria-label="指摘にする"><div class="r2-sec-t">選んだ本文</div><blockquote class="r2-quote" data-r2-quote>文書の本文をドラッグで選ぶと、ここに入ります。</blockquote>' +
         '<label class="r2-k" for="r2-title">指摘の内容</label><input type="text" id="r2-title" maxlength="80" placeholder="例: タイムアウトが要件60秒・設計30秒で食い違う">' +
         '<label class="r2-k" for="r2-sev">重大度</label><select id="r2-sev">' + R2_SEV.map(function (s) { return '<option' + (s === '警告' ? ' selected' : '') + '>' + s + '</option>'; }).join('') + '</select>' +
@@ -300,17 +275,20 @@
       var fs = (res[0] && res[0].findings) || [], qs = (res[1] && res[1].questions) || [], asked = {};
       qs.forEach(function (q) { asked[q.finding_id] = 1; });
       var cand = fs.filter(function (f) { return f.status === '要確認' && !asked[f.id]; });
-      part(view, 'headright').innerHTML = '<a class="p1-btn" href="' + esc(base() + '/questions.csv') + '">CSV で出力</a>';
-      var ask = '<div class="r2-card"><div class="r2-sec-t">要確認の指摘から質問を起こす（' + cand.length + ' 件）</div>' + (cand.length ? '<ul class="r2-list">' + cand.map(function (f) {
-          return '<li><span class="r2-id">' + esc(f.id) + '</span><span class="r2-t">' + esc(f.title) + '</span><button type="button" class="p1-btn" data-ask="' + esc(f.id) + '">質問を起こす</button></li>'; }).join('') + '</ul>'
-        : '<p class="r2-hint">要確認の指摘はありません。対検査で採否を「要確認」にすると、ここから質問を起こせます。</p>') + '</div>';
+      part(view, 'headright').innerHTML = '<button type="button" class="p1-btn" data-q-csv>CSV で出力</button> <button type="button" class="p1-btn" data-q-import>回答を取り込む</button>';
+      part(view, 'headright').onclick = function (ev) {
+        if (ev.target.closest('[data-q-csv]')) { location.href = base() + '/questions.csv'; return; }
+        if (ev.target.closest('[data-q-import]')) { var fi = document.getElementById('dvR4AnsFile'); if (fi) fi.click(); }
+      };
+      var ask = cand.length ? '<div class="r2-card"><div class="r2-sec-t">要確認の指摘から質問を起こす（' + cand.length + ' 件）</div><ul class="r2-list">' + cand.map(function (f) {
+          return '<li><span class="r2-id">' + esc(f.id) + '</span><span class="r2-t">' + esc(f.title) + '</span><button type="button" class="p1-btn" data-ask="' + esc(f.id) + '">質問を起こす</button></li>'; }).join('') + '</ul></div>' : '';
       var rows = qs.map(function (q) {
         return '<tr data-q="' + esc(q.id) + '"><td>' + esc(q.id) + '<div class="r2-hint">' + esc(q.finding_id) + '</div></td><td><textarea data-f="question" rows="2" maxlength="500">' + esc(q.question) + '</textarea></td>' +
           '<td><input type="text" data-f="to" maxlength="60" value="' + esc(q.to) + '" placeholder="宛先の名前"><input type="date" data-f="due" value="' + esc(q.due) + '"></td>' +
           '<td><textarea data-f="answer" rows="2" maxlength="1000" placeholder="回答を書く">' + esc(q.answer) + '</textarea></td>' +
           '<td><select data-f="state">' + R2_Q.map(function (s) { return '<option' + (s === q.state ? ' selected' : '') + '>' + s + '</option>'; }).join('') + '</select> <button type="button" class="p1-btn" data-save>保存</button></td></tr>'; }).join('');
-      part(view, 'body').innerHTML = ask + '<div class="r2-card"><div class="r2-sec-t">質問（' + qs.length + ' 件）</div>' + (qs.length ? '<div class="r2-tbl"><table class="dv-t r2-q"><thead><tr><th>番号</th><th>質問</th><th>宛先・期限</th><th>回答</th><th>状態</th></tr></thead><tbody>' + rows + '</tbody></table></div>' : '') + '</div>';
-      if (!qs.length) r2State(view, 'empty', '質問はまだありません。対検査で採否を「要確認」にすると、ここから質問を起こせます。');
+      part(view, 'body').innerHTML = ask + (qs.length ? '<div class="r2-card"><div class="r2-sec-t">質問（' + qs.length + ' 件）</div><div class="r2-tbl"><table class="dv-t r2-q"><thead><tr><th>番号</th><th>質問</th><th>宛先・期限</th><th>回答</th><th>状態</th></tr></thead><tbody>' + rows + '</tbody></table></div></div>' : '');
+      if (!qs.length && !cand.length) r2State(view, 'empty', '要確認の指摘はありません。', { label: '対検査を開く', fn: function () { window.DV.show('pair'); } });
       part(view, 'body').onclick = function (ev) {
         var a = ev.target.closest('[data-ask]'), s = ev.target.closest('[data-save]');
         if (a) {
@@ -416,7 +394,7 @@
     return E().api('/api/docverify/domains').then(function (d) {
       var ds = (d && d.domains) || [];
       var hits = (rv().findings || []).filter(function (f) { return f.viewpoint === '実画面との食い違い'; });
-      if (!ds.length) { part(view, 'body').innerHTML = empty('巡回済みのサイトがありません。まず System 01 で対象サイトを巡回してください。'); return; }
+      if (!ds.length) { part(view, 'body').innerHTML = empty('解析済みのサイトがありません。まずドキュメント作成で対象サイトを解析してください。'); return; }
       part(view, 'body').innerHTML = '<div class="dv-panel" style="margin:0 0 12px">照合するサイト: <select data-dom>' +
         ds.map(function (x) { return '<option>' + esc(x) + '</option>'; }).join('') + '</select> <button type="button" class="b p" data-act="m">照合する</button></div>' +
         (hits.length ? hits.map(function (f) { return findingCard(f, false); }).join('') : empty('照合の結果はまだありません。'));
@@ -450,7 +428,7 @@
       '<label for="dvr-apn">承認者名</label><input type="text" id="dvr-apn" value="' + esc(ap.approver || '') + '">' +
       '<label for="dvr-apd">承認日</label><input type="date" id="dvr-apd" value="' + esc((ap.decided_at || '').slice(0, 10)) + '"></div>' +
       '<div class="dvr-actions"><button type="button" class="b" data-act="ap"' + (can('approve') ? '' : ' disabled title="承認欄は承認者だけが記入できます"') + '>承認欄を保存</button></div></div>' +
-      '<div class="dvr-actions"><button type="button" class="b p" data-act="close"' + (r.status === 'closed' ? ' disabled' : (can('plan_edit') ? '' : ' disabled title="レビューを終えられるのは議長（またはテナント管理者）です"')) + '>' + (r.status === 'closed' ? '終了しています' : 'レビューを終える') + '</button></div>';
+      '<div class="dvr-actions"><button type="button" class="b p" data-act="close"' + (r.status === 'closed' ? ' disabled' : (can('plan_edit') ? '' : ' disabled title="レビューを終えられるのは議長（または組織の管理者）です"')) + '>' + (r.status === 'closed' ? '終了しています' : 'レビューを終える') + '</button></div>';
     part(view, 'body').onclick = function (ev) {
       if (scoreHelpClicked(ev)) return;
       var b = ev.target.closest('[data-act]'); if (!b) return;

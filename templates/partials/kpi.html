@@ -1,0 +1,33 @@
+{#- KPI 1 項目。{% include 'partials/kpi.html' with label=, value=, denominator=, sub=, show_percent=, next_run=, settings_href= %}
+    denominator 必須（母数）。0 なら値・%・棒を出さず「—」と「対象なし」を出す。
+    show_percent=true かつ母数 > 0 のとき value/denominator を % で出し棒を描く（value は数値）。
+    next_run を渡した時だけ「次回予定」欄を出す。空文字なら未設定表示＋settings_href への tertiary ボタン。 -#}
+{%- set _den = denominator | default(none) -%}
+{#- 未指定は未定義関数の呼び出しで描画エラーにする（denominator は必須） -#}
+{%- if _den is none %}{{ denominator_is_required() }}{% endif -%}
+<div class="c-kpi" data-denominator="{{ _den }}"{% if _den == 0 %} data-empty="true"{% endif %}>
+  <div class="c-kpi__head"><span class="c-kpi__label">{{ label }}</span></div>
+  {%- if _den == 0 %}
+  <div class="c-kpi__value">—</div>
+  <div class="c-kpi__sub">対象なし</div>
+  {%- else %}
+  <div class="c-kpi__value">{{ value }}</div>
+  {%- if show_percent | default(false) %}
+  {%- set _pct = ((value | float) / _den * 100) | round | int %}
+  <div class="c-kpi__sub">{{ _pct }}%（母数 {{ _den }}）</div>
+  <div class="c-kpi__bar" aria-hidden="true"><span style="width: {{ [_pct, 100] | min }}%"></span></div>
+  {%- elif sub %}
+  <div class="c-kpi__sub">{{ sub }}</div>
+  {%- endif %}
+  {%- endif %}
+  {%- if next_run is defined %}
+  <div class="c-kpi__next">
+    {%- if next_run %}
+    <span class="c-kpi__next-label">次回予定</span> <span class="c-kpi__next-value">{{ next_run }}</span>
+    {%- else %}
+    <span class="c-kpi__next-label">定期確認は未設定</span>
+    <a class="c-btn c-btn--tertiary c-btn--sm" href="{{ settings_href | default('#') }}">設定する</a>
+    {%- endif %}
+  </div>
+  {%- endif %}
+</div>

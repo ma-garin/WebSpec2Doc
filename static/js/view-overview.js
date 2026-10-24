@@ -28,13 +28,13 @@ function renderOverview() {
     : '';
   const screensMdPath = resultData?.files?.screens_md || '';
   const screensMdLink = screensMdPath
-    ? `<button type="button" class="qa-output-btn qa-preview-btn" data-path="${escHtml(screensMdPath)}" data-label="画面一覧 (screens.md)" style="margin-left:8px">screens.md を開く</button>`
+    ? `<button type="button" class="qa-output-btn qa-preview-btn c-btn" data-path="${escHtml(screensMdPath)}" data-label="画面一覧">画面一覧を開く</button>`
     : '';
   const featuresMdPath = resultData?.files?.features_md || '';
   const featuresSection = featuresMdPath
     ? '<div class="hero-section-title">機能一覧</div>' +
-      '<p style="color:var(--text-muted);font-size:13px;margin:0 0 8px">画面・フォーム・遷移から導出したシステム機能の一覧です。</p>' +
-      `<button type="button" class="qa-output-btn qa-preview-btn" data-path="${escHtml(featuresMdPath)}" data-label="機能一覧 (features.md)">features.md を開く</button>`
+      '<p class="ov-note">画面・フォーム・遷移から導出したシステム機能の一覧です。</p>' +
+      `<button type="button" class="qa-output-btn qa-preview-btn c-btn" data-path="${escHtml(featuresMdPath)}" data-label="機能一覧">機能一覧を開く</button>`
     : '';
   // 選択URLモード（--urls）はリンク追跡をしないため、深さ・最大ページは実行条件ではない。
   // 以前は meta に入った argparse 既定値をそのまま出し、「深さ3・最大50ページ」と誤表示していた。
@@ -50,9 +50,8 @@ function renderOverview() {
     `<p style="color:var(--text-muted);font-size:13px;margin-bottom:12px">対象 ${escHtml(meta.target_url || '')} ／ ${escHtml(crawlCondText)} ／ ${escHtml(meta.crawled_at || '')}</p>` +
     `<div class="next-steps-cta">
       <span class="next-steps-label">次のステップ</span>
-      <button type="button" class="next-step-btn" onclick="selectResultTab('test-design','matrix')">テスト条件を確認する →</button>
-      <button type="button" class="next-step-btn" onclick="selectResultTab('test-design','summary')">技法マトリクスを見る →</button>
-      <button type="button" class="next-step-btn next-step-btn--secondary" onclick="selectResultTab('history')">差分・履歴を確認する →</button>
+      <button type="button" class="c-btn c-btn--primary" onclick="selectResultTab('test-design','by-screen')">テスト設計を見る</button>
+      ${(resultData?.history_count ?? resultData?.snapshot_count ?? 0) > 1 ? `<button type="button" class="c-btn c-btn--tertiary" onclick="selectResultTab('history')">差分・履歴を確認する</button>` : ''}
     </div>` +
     '<div class="hero-section-title">画面インベントリ ' + invNote + screensMdLink + '</div>' +
     '<table class="ov-screens"><thead><tr><th>画面ID</th><th>タイトル</th><th>URL</th><th>フォーム</th><th>入力項目</th><th>遷移先</th></tr></thead><tbody>' +

@@ -1,7 +1,7 @@
 
 const SETTINGS_KEY = 'webspec2doc.settings';
 const VIEW_HEADER = {
-  dashboard: { trail: ['WebSpec2Doc', 'ダッシュボード'], title: 'QAドキュメント生成' },
+  dashboard: { trail: ['WebSpec2Doc', 'ダッシュボード'], title: 'ダッシュボード' },
   generate: { trail: ['ダッシュボード', 'サイトを追加'], title: 'サイトを追加 / 再解析' },
   'qa-quality': { trail: ['ダッシュボード', '品質観点'], title: '品質観点' },
   viewpoints: { trail: ['ダッシュボード', '観点管理'], title: '観点管理' },
@@ -12,11 +12,11 @@ const VIEW_HEADER = {
   'run-result': { trail: ['ダッシュボード', '実行履歴'], title: '実行結果' },
   'user-guide': { trail: ['ダッシュボード', 'ユーザーガイド'], title: 'ユーザーガイド' },
   references: { trail: ['ダッシュボード', '参考'], title: '参考 — 依拠する標準・先行研究・事例' },
-  settings: { trail: ['ダッシュボード', '設定'], title: '設定' },
+  settings: { trail: ['ダッシュボード', 'AI の接続先'], title: 'AI の接続先' },
   // ユーザーメニューから開く画面。サイドバーには置かず、表示方法だけ他のビューに揃える。
-  account: { trail: ['ダッシュボード', '個人設定'], title: '個人設定' },
+  account: { trail: ['ダッシュボード', 'アカウント'], title: 'アカウント' },
   'user-management': { trail: ['ダッシュボード', 'ユーザー管理'], title: 'ユーザー管理' },
-  'tenant-management': { trail: ['ダッシュボード', 'テナント管理'], title: 'テナント管理' },
+  'tenant-management': { trail: ['ダッシュボード', '組織管理'], title: '組織管理' },
   feedback: { trail: ['ダッシュボード', 'フィードバック'], title: 'フィードバック' },
 };
 const escHtml = (s) => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -189,6 +189,9 @@ function previousViewLabel() {
 
 document.querySelectorAll('.app-nav-item[data-view]').forEach(btn => btn.addEventListener('click', () => switchView(btn.dataset.view)));
 function switchView(name, opts = {}) {
+  // 画面名を題名に出す（タブ・履歴で見分けがつくように）
+  const _VIEW_TITLES = { dashboard: 'ダッシュボード - ドキュメント作成', generate: 'サイトを追加 / 再解析 - ドキュメント作成', 'run-result': 'サイト詳細 - ドキュメント作成' };
+  if (_VIEW_TITLES[name] && !document.body.hasAttribute('data-app-mode')) document.title = _VIEW_TITLES[name] + ' - WebSpec2Doc';
   if (name !== _curViewName) {
     _prevViewName = _curViewName;
     _curViewName = name;
@@ -294,8 +297,8 @@ function openAddSite() {
   document.getElementById('p1-summary').style.display = 'none';
   clearDiscovered(); showWizardStep(1);
 }
-document.getElementById('add-site-btn').addEventListener('click', openAddSite);
-document.getElementById('add-site-btn-2').addEventListener('click', openAddSite);
+document.getElementById('add-site-btn')?.addEventListener('click', openAddSite);
+document.getElementById('add-site-btn-2')?.addEventListener('click', openAddSite);
 
 // ---- ナビ「実行履歴」: 種別を問わない一般化された実行履歴ビューへ遷移する（R2-27）----
 document.getElementById('nav-run-history-btn')?.addEventListener('click', () => {

@@ -99,7 +99,21 @@ def create_app() -> Flask:
     # System 一覧の正本（番号・名称・入口）。テンプレートに番号や数を直書きしない。
     from web.system_registry import SYSTEMS, system as _system
 
-    app.jinja_env.globals.update(SYSTEMS=SYSTEMS, sysreg=_system)
+    from web.nav_registry import crumb as _nav_crumb
+    from web.nav_registry import current_item as _nav_current
+    from web.nav_registry import nav_items as _nav_items
+    from web.nav_registry import page_title as _nav_title
+    from web.ui_state import require_cta as _require_cta
+
+    app.jinja_env.globals.update(
+        SYSTEMS=SYSTEMS,
+        sysreg=_system,
+        nav_items=_nav_items,
+        nav_current=_nav_current,
+        nav_title=_nav_title,
+        nav_crumb=_nav_crumb,
+        require_cta=_require_cta,
+    )
     if dev_reload:
         # 開発時はレンダリングのたびに値を差し替える。Jinja のグローバルは
         # 起動時に固定されるため、context_processor で毎回上書きする。

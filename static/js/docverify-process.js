@@ -17,6 +17,12 @@
   function mount(view) {
     const part = document.getElementById(`dvR4-${view}`);
     const host = document.querySelector(`.dv-view[data-view="${view}"]`);
+    if (part && host && part.parentElement !== host) host.insertBefore(part, host.querySelector('[data-dvr-gate]'));
+  }
+
+  function mountFlow() {
+    const part = document.getElementById('dvR4-flow');
+    const host = document.querySelector('[data-r4-host="gate"]');
     if (part && host && part.parentElement !== host) host.appendChild(part);
   }
 
@@ -55,6 +61,9 @@
 
   function renderPlanFields() {
     const t = st.type;
+    const rv = DV.state.review || {};
+    $('#dvR4Goal').value = rv.goal || '';
+    $('#dvR4Due').value = rv.due || '';
     $('#dvR4Legacy').hidden = !t.legacy;
     $('#dvR4Legacy').textContent = t.hint || '';
     $('#dvR4Type').innerHTML = `<option value="">選んでください</option>${options(meta.types, t.type)}`;
@@ -101,6 +110,7 @@
 
   async function showPlan() {
     mount('plan');
+    mountFlow();
     if (!iid()) return;
     const [, pl] = await Promise.all([load(), DV.api(`${P}/presets`)]);
     presetList = pl.presets || [];
@@ -134,7 +144,7 @@
     const canApprove = !DV.state.can || DV.state.can.approve !== false;
     const vs = $('#dvR4VerdictSave');
     vs.disabled = !canApprove;
-    vs.title = canApprove ? '' : '判定を記録できるのは承認者です。議長（またはテナント管理者）に承認者として参加者へ追加してもらってください。';
+    vs.title = canApprove ? '' : '判定を記録できるのは承認者です。議長（または組織の管理者）に承認者として参加者へ追加してもらってください。';
     $('#dvR4Verdict').innerHTML = `<option value="">選んでください</option>${options(meta.verdicts, ap.verdict || '')}`;
     $('#dvR4Unchecked').innerHTML = (st.unchecked || []).map((i) => `<li>${esc(i.text)}</li>`).join('') || '<li>未確認の項目はありません。</li>';
     $('#dvR4Record').innerHTML = `<tbody>${(st.record || []).map((r) => `<tr><th scope="row">${esc(r[0])}</th><td>${esc(r[1])}</td></tr>`).join('')}</tbody>`;
@@ -160,6 +170,10 @@
       renderPeople();
     });
     $('#dvR4PlanSave').addEventListener('click', guard(async () => {
+      const rv = DV.state.review || {};
+      const saved = await DV.api(`/api/docverify/inspections/${encodeURIComponent(iid())}`, { method: 'PATCH', json: { name: rv.name, goal: $('#dvR4Goal').value.trim(), due: $('#dvR4Due').value, participants: rv.participants || [] } });
+      DV.setReview(saved);
+      await load();
       await send('/plan', 'PUT', {
         review_type: $('#dvR4Type').value, participants: people, independent: $('#dvR4Independent').checked,
         exit_options: { require_all_verified: $('#dvR4ExitVerified').checked, require_all_individual_done: $('#dvR4ExitDone').checked },
@@ -200,14 +214,15 @@
       await send(`/findings/${encodeURIComponent(fid)}/kind`, 'POST', { kind: e.target.value });
       DV.toast('指摘の種別を記録しました。');
     }));
-    $('#dvR4AnsImport').addEventListener('click', guard(async () => {
+    $('#dvR4AnsFile').addEventListener('change', guard(async () => {
       const file = $('#dvR4AnsFile').files[0];
-      if (!file) { DV.banner('回答を書き込んだ質問票（CSV か Excel）を選んでください。'); return; }
+      if (!file) return;
       await load();
       const form = new FormData();
       form.append('file', file);
       form.append('rev', String(st.rev));
       const res = await DV.api(`${P}/inspections/${encodeURIComponent(iid())}/answers`, { method: 'POST', form });
+      $('#dvR4-questions').hidden = false;
       $('#dvR4AnsResult').textContent = `${res.applied} 件の回答を反映しました。${res.message ? ` ${res.message}` : ''}`;
     }));
     $('#dvR4VerdictSave').addEventListener('click', guard(async () => {
@@ -227,6 +242,7 @@
     bindPlan();
     bindOthers();
     DV.on('plan', guard(showPlan));
+    DV.on('gate', guard(showPlan));
     DV.on('triage', guard(showTriage));
     DV.on('questions', showQuestions);
     // 判定と記録は対検査の Gate API に一本化した（docverify-cases.js・S06 r2）。旧来の独自判定は描かない

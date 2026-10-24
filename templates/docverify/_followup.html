@@ -11,11 +11,12 @@
     <form class="dvf-card dvf-up" data-f-form aria-labelledby="dvf-up-t">
       <h3 id="dvf-up-t" class="dvf-sec-t">1. 新しい版をアップロード</h3>
       <p class="dvf-hint">直した文書だけを選べば足ります。旧版は履歴に残り、章ごとの差分を出します。</p>
-      <div class="dvf-files">
-        <label class="dvf-file"><span class="dvf-lbl">基準文書（.md）</span><input type="file" name="requirements" accept=".md,.markdown,text/markdown,text/plain"></label>
-        <label class="dvf-file"><span class="dvf-lbl">確認する文書（.md）</span><input type="file" name="design" accept=".md,.markdown,text/markdown,text/plain"></label>
+      <div class="dvf-drop" data-f-drop role="button" tabindex="0">
+        <input type="file" name="files" multiple hidden data-f-files accept=".md,.markdown,text/markdown,text/plain">
+        <span class="dvf-lbl">直した文書をここへ（基準・確認のどちらか、または両方）</span>
+        <ul class="dvf-picked" data-f-picked></ul>
       </div>
-      <div class="dvf-row"><span class="dvf-err" role="alert" data-f-up-err></span><button type="submit" class="p1-btn is-primary" data-f-act="upload" disabled>新しい版を取り込む</button></div>
+      <div class="dvf-row"><button type="submit" class="p1-btn is-primary" data-f-act="upload" disabled>新しい版を取り込む</button><span class="dvf-err" role="alert" data-f-up-err></span></div>
     </form>
     <div class="dvf-statebox" data-f-statebox>
       <div class="dvf-skel" aria-hidden="true"><i></i><i></i><i></i></div>
@@ -31,11 +32,8 @@
     <section class="dvf-card" data-f-rebox aria-labelledby="dvf-re-t">
       <h3 id="dvf-re-t" class="dvf-sec-t">3. 再レビューが必要な指摘 <span class="dvf-n" data-f-n>0</span> 件</h3>
       <ul class="dvf-list" data-f-list></ul>
-      <div class="dvf-row"><span class="dvf-hint">採否は対検査で決め直します。</span><button type="button" class="p1-btn" data-f-act="to-pair">対検査で「今回の変更分」を開く</button></div>
+      <div class="dvf-row"><span class="dvf-hint">採否は対検査で決め直します。</span></div>
     </section>
   </div>
-  <div class="dvf-gate" aria-label="判定">
-    <div class="dvf-gates" data-f-gates></div>
-    <p class="dvf-why" data-f-why></p>
-  </div>
+  {% include 'docverify/_gatebar.html' %}
 </section>

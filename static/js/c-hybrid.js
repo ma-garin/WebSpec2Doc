@@ -379,6 +379,8 @@
   var CRUMB_ROOT = 'WebSpec2Doc';
   var crumbBusy = false;
   function crumbNode() { return doc.getElementById('topbar-breadcrumb'); }
+  // サイドメニューが現在地(aria-current=page)を持つ画面では、パンくずに重ねない（1 画面 1 個）
+  function sideHasCurrent() { return !!doc.querySelector('.app-nav [aria-current="page"]'); }
   function crumbSet(trail, links) {
     var bc = crumbNode();
     if (!bc) { return; }
@@ -390,7 +392,7 @@
       var last = i === all.length - 1;
       var n;
       if (href && !last) { n = el('a', null, t); n.setAttribute('href', href); } else { n = el('span', null, t); }
-      if (last && i) { n.setAttribute('aria-current', 'page'); }
+      if (last && i && !sideHasCurrent()) { n.setAttribute('aria-current', 'page'); }
       bc.appendChild(n);
     });
     crumbBusy = false;
@@ -407,7 +409,7 @@
       bc.insertBefore(sp, first); bc.insertBefore(r, sp);
     }
     var kids = bc.children, last = kids[kids.length - 1];
-    if (last && kids.length > 1 && !last.hasAttribute('aria-current')) { last.setAttribute('aria-current', 'page'); }
+    if (last && kids.length > 1 && !last.hasAttribute('aria-current') && !sideHasCurrent()) { last.setAttribute('aria-current', 'page'); }
     crumbBusy = false;
   }
   function crumbWatch() {

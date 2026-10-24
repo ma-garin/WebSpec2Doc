@@ -4,9 +4,9 @@
   'use strict';
   const REVIEW_VIEWS = ['pair', 'plan', 'read', 'triage', 'questions', 'followup', 'screen', 'gate'];
   const TITLES = {
-    home: 'ホーム', mine: '自分の担当', reviews: 'レビュー一覧', cases: '案件一覧', findings: '指摘一覧',
+    home: 'ホーム', mine: '自分の担当', reviews: 'レビュー一覧', cases: 'レビュー一覧', findings: '指摘一覧',
     pair: '対検査', plan: '計画', read: '文書を読む', triage: '指摘の検討', questions: '質問票', followup: '修正版の確認',
-    screen: '実画面との照合', gate: '判定と記録', trace: 'トレーサビリティ', assure: 'ドキュメント品質保証', checklists: '検証観点', metrics: '履歴', accuracy: '精度', settings: '設定',
+    screen: '実画面との照合', gate: '判定と記録', trace: 'トレーサビリティ', checklists: '観点', metrics: '履歴', accuracy: '精度', settings: '設定',
   };
   const NET_ERR = 'サーバに接続できませんでした。少し待ってから、もう一度お試しください。';
   const handlers = {};
@@ -86,7 +86,7 @@
   // 指摘=「指摘の検討」、根拠=「実画面との照合」の既存画面に対応付ける（新画面は作らない）。
   const SECTIONS = {
     doc: ['home', 'mine', 'reviews', 'cases', 'findings', 'pair', 'plan', 'read', 'questions', 'followup', 'gate'],
-    qa: ['assure'], trace: ['trace'], find: ['triage'], hist: ['metrics', 'screen'], vp: ['checklists', 'accuracy'], set: ['settings'],
+    trace: ['trace'], find: ['triage'], hist: ['metrics'], vp: ['checklists', 'accuracy'], set: ['settings'],
   };
   // ドキュメント検証はレビュー一覧 1 画面。ホーム・自分の担当・指摘一覧は廃止（タブ不要・2026-10-18）。
   const DOC_GONE = ['home', 'mine', 'findings'];
@@ -107,7 +107,7 @@
     let html = '';
     if (sectionOf(view) === 'hist') {
       // 根拠は「履歴」画面の中のタブ（ナビには出さない）
-      html = [['metrics', '履歴'], ['screen', '根拠']].map(([v, l]) => `<a href="#${v}" data-nav="${v}" class="${v === view ? 'active' : ''}"${v === view ? ' aria-current="page"' : ''}>${l}</a>`).join('');
+      html = '';
     } else if (STEPS.includes(view) && r) {
       html = `<a href="#cases" data-nav="cases" class="dv-back">← 案件一覧</a><span class="dv-subtabs-name">${esc(r.name)}</span>`
         + STEPS.filter((v) => !['triage', 'screen'].includes(v)).map((v) => tab(v, view)).join('');
@@ -125,7 +125,7 @@
   // 画面の頭（何の画面か 1 文・現在の状態・状態の理由 1 行）。語は c-hybrid の WS2D 語彙に合わせる
   const PAGE = {
     reviews: ['レビュー', 'レビューを作り、文書の検査から判定までを進めます。', 'AI の自動検出は「候補」です。人が「指摘にする」を押すまで、確定した指摘にはなりません。'],
-    cases: ['案件一覧', 'レビューごとに工程・期限・指摘・判定を並べます。行を選ぶと対検査を開きます。', '重大の未解消・要確認・設計に対応の無い要件が残る案件は不合格です。'],
+    cases: ['レビュー一覧', 'レビューごとに工程・期限・指摘・判定を並べます。行を選ぶと対検査を開きます。', '重大の未解消・要確認・設計に対応の無い要件が残る案件は不合格です。'],
     pair: ['対検査', '指定した文書の記述と関係を確認し、根拠・検査範囲・採否を記録します。', '指摘を選ぶと両文書の該当箇所が光ります。全体が合格のときだけ承認できます。'],
     plan: ['計画', 'レビューの目的・参加者・期限・終了基準を決めます。', '目的・期限・担当を決めて「計画を保存」を押します。'],
     read: ['文書を読む', '本文を読み、指摘の候補を確かめて指摘にします。', '自動で見つけたものは候補です。本文に戻って確かめてから指摘にしてください。'],
@@ -135,7 +135,6 @@
     screen: ['根拠', '実画面と文書を照らし合わせ、一致・不一致・未確認を見ます。', '照合できていない項目は「未確認」です。一致とは読まないでください。'],
     gate: ['判定と記録', 'レビューの合否を決め、記録を残します。', '判定と承認は人が行います。AI は承認しません。'],
     trace: ['トレーサビリティ', '要件・設計・テストの文書どうしのつながりを確かめます。', 'つながりは文書の記述から読み取った推論です。内容が正しいかは人が確かめてください。'],
-    assure: ['ドキュメント品質保証', '文書が次の工程へ進める状態かを判定し、直すべき点と決めることを示します。', '点数は評価できた範囲だけで出します。評価できなかった範囲を 0 点や 100 点にはしません。'],
     metrics: ['履歴', '過去の判定と記録、指摘の件数と修正の進み具合を見ます。', '数値は、画面に表示された時点の記録です。'],
     checklists: ['観点', '文書の検査で何を見るか、見つけた指摘をどれだけ重く扱うかを決めます。', '観点は区分ごとに、見る内容と重さを決められます。'],
     settings: ['レビュー設定', '出口基準・言葉・役割・AI の送信先を決めます。保存すると次の判定から反映されます。', 'AI に文書を送る前には、必ず送る内容の確認が出ます。'],
@@ -145,11 +144,8 @@
     const info = PAGE[view];
     const ws = window.WS2D;
     if (!info) return;
-    const own = view === 'assure';  // System06 は自前のヘッダ 1 段だけを出す
-    ['#dv-pagehead', '#page-reason'].forEach((q) => { const n = $(q); if (n) n.hidden = own; });
-    if (own) return;
     const t = $('#dv-ph-title'), d = $('#dv-ph-desc'), st = $('#dv-ph-state'), rs = $('#page-reason');
-    if (t) t.textContent = info[0];
+    if (t) t.textContent = TITLES[view] || info[0];
     if (d) d.textContent = info[1];
     const r = DV.state.review;
     if (st) {
@@ -192,6 +188,7 @@
 
   function show(view) {
     view = String(view || '').split('/')[0];   // #assure/<iid>/<tab> の深いリンクは先頭だけで画面を決める
+    if (view === 'assure') view = DV.state.review ? 'pair' : 'cases';   // 撤去した旧画面。対検査へ転送する
     if (!TITLES[view] || DOC_GONE.includes(view) || view === 'reviews') view = 'cases';
     const needReview = REVIEW_VIEWS.includes(view) && !DV.state.review;
     if (needReview) view = 'cases';
@@ -207,6 +204,7 @@
         + (r && REVIEW_VIEWS.includes(view) ? `<span class="sep">/</span><span>${esc(r.name)}</span>` : '');
     }
     DV.current = view;
+    document.title = `${TITLES[view]} - ドキュメント検証`;
     if (location.hash.slice(1).split('/')[0] !== view) history.replaceState(null, '', `#${view}`);
     banner(needReview ? 'この画面はレビューを開いてから使えます。一覧からレビューを選んでください。' : '');
     renderSubtabs(view);
@@ -243,7 +241,7 @@
     });
     const sync = () => {
       const d = location.hash.slice(1).split('/'), h = d[0];
-      if (h === 'assure' && d[1] && (!DV.state.review || DV.state.review.id !== decodeURIComponent(d[1]))) { openReview(decodeURIComponent(d[1]), 'assure').catch(() => show('cases')); return; }
+      if (h === 'assure' && d[1]) { openReview(decodeURIComponent(d[1]), 'pair').catch(() => show('cases')); return; }
       if (h && h !== DV.current) show(h);
     };
     window.addEventListener('hashchange', sync);
@@ -254,7 +252,7 @@
     if (deep[0] === 'assure' && deep[1]) saved = decodeURIComponent(deep[1]);   // #assure/<iid> からレビューを復元する
     const qIid = new URLSearchParams(location.search).get('iid');
     if (qIid) saved = qIid;   // ?iid=<id>#<画面> の直開き・共有 URL を優先する（監査 D-01）
-    if (saved) { try { await openReview(saved, deep[0] || 'read'); return; } catch (e) { banner(''); } }
+    if (saved) { try { await openReview(saved, deep[0] === 'assure' ? 'pair' : (deep[0] || 'read')); return; } catch (e) { banner(''); } }
     show(location.hash.slice(1) || 'cases');
   }
 
@@ -371,12 +369,44 @@
     });
   }
 
+  // 証跡アクションの語彙は 1 つ（対検査・判定と記録・レビュー一覧で共通）
+  const ACTION = {
+    review_started: 'レビュー開始', finding_decided: '採否を記録', finding_resolved: '解消を記録', finding_reopened: '再オープン',
+    decision_revoked: '採否を取り消し', finding_revoked: '採否を取り消し', approval_requested: '承認を依頼', review_completed: 'レビュー完了',
+    approved: '承認', approval_revoked: '承認を取り消し', rejected: '差し戻し', version_uploaded: '新しい版を取り込み',
+  };
+  function actionLabel(key) {
+    if (ACTION[key]) return ACTION[key];
+    console.warn('DV.ACTION 未定義:', key);
+    return '記録';
+  }
+  // 画面の題・document.title・サブタブ名は TITLES 1 つから引く
+  const title = (view) => TITLES[view] || '';
+  // 判定帯: 全体｜今回の変更分｜理由 1 行｜主ボタン 1 個。action は {label, attr, primary} か、その配列
+  function gatebar(el, gate, action) {
+    if (!el) return;
+    const g = gate || {};
+    const cell = (label, x) => {
+      const c = (k) => ((x || {})[k] || []).length;
+      const tip = x ? `採用のまま残る重大 ${c('unresolved_critical')}・要確認 ${c('needs_review')}・対応の抜け ${c('missing_links')}` : '判定の材料がまだありません。';
+      return `<span class="dv-gatebar__cell ${x ? gateClass(x) : 'na'}" title="${esc(tip)}"><span class="dv-gatebar__lbl">${esc(label)}</span><b>${x ? verdict(x) : '判定不能'}</b></span>`;
+    };
+    const o = g.overall || null;
+    const why = (g.reasons || []).join(' ') || (o ? `採用のまま残る重大 ${(o.unresolved_critical || []).length}・要確認 ${(o.needs_review || []).length}・対応の抜け ${(o.missing_links || []).length}` : '判定の材料がまだありません。');
+    const acts = (Array.isArray(action) ? action : [action]).filter(Boolean)
+      .map((a) => `<button type="button" class="p1-btn${a.primary ? ' is-primary' : ''}" ${a.attr || ''}>${esc(a.label)}</button>`).join('');
+    el.innerHTML = cell('全体', g.overall) + cell('今回の変更分', g.changed)
+      + `<span class="dv-gatebar__why" title="${esc(why)}">${esc(why)}</span>` + acts;
+  }
+
   window.DV = {
-    api, esc, fmtJst, verdict, gateClass, setPairChip, show, toast, openReview, setReview, start, banner,
+    api, esc, fmtJst, ACTION, actionLabel, verdict, gateClass, setPairChip, show, toast, openReview, setReview, start, banner,
     busy, modal, download, emptyFindings, scoreText, scoreClass, scoreBar, keyOpen, NO_SCORE,
     state: { review: null, summary: null },
     on(view, fn) { (handlers[view] = handlers[view] || []).push(fn); },
     refreshNav: renderReviewNav,
     PHASES: [['plan', '計画'], ['individual', '個別レビュー'], ['triage', '指摘の検討'], ['rework', '修正'], ['followup', '修正版の確認'], ['closed', '判定と記録']],
   };
+  window.DV.gatebar = gatebar;
+  window.DV.title = title;
 })();

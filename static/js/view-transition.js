@@ -209,27 +209,32 @@ function _collectTransitionRows(screens, common) {
 function renderTransition() {
   const screens = reportJson && reportJson.screens || [];
   if (!screens.length) {
-    resultHero.innerHTML = '<div class="hero-msg">遷移データがありません。クロールを実行してください。</div>';
+    uiEmpty(resultHero, {
+      title: '画面遷移が見つかりませんでした',
+      desc: '解析範囲を広げて再解析すると、画面どうしのつながりを検出できることがあります。',
+      actionLabel: '解析範囲を広げて再解析',
+      onAction: () => document.getElementById('r-recrawl-btn')?.click(),
+    });
     return;
   }
 
   resultHero.innerHTML =
     '<div class="uml-view">' +
     '<div class="uml-subtabs" id="uml-subtabs">' +
-    '<button class="uml-subtab is-active" data-uml="sequence">シーケンス図<span>操作順</span></button>' +
-    '<button class="uml-subtab" data-uml="communication">コミュニケーション図<span>全体関係</span></button>' +
-    '<button class="uml-subtab" data-uml="activity">アクティビティ図<span>テスト手順</span></button>' +
-    '<button class="uml-subtab" data-uml="flowchart">フローチャート<span>処理の流れ</span></button>' +
-    '<button class="uml-subtab" data-uml="viewpoints">テスト観点マップ<span>設計観点</span></button>' +
+    '<label class="uml-kind-label" for="uml-kind">図の種類</label>' +
+    '<select id="uml-kind" class="c-select uml-kind-select" aria-label="図の種類">' +
+    '<option value="sequence" selected>画面遷移図（シーケンス図）</option>' +
+    '<option value="communication">全体関係（コミュニケーション図）</option>' +
+    '<option value="activity">テスト手順（アクティビティ図）</option>' +
+    '<option value="flowchart">処理の流れ（フローチャート）</option>' +
+    '<option value="viewpoints">設計観点（テスト観点マップ）</option>' +
+    '</select>' +
     '</div>' +
     '<div id="uml-diagram-area" class="uml-diagram-area"></div>' +
     '</div>';
 
-  document.querySelectorAll('.uml-subtab').forEach(t => {
-    t.addEventListener('click', () => {
-      document.querySelectorAll('.uml-subtab').forEach(x => x.classList.toggle('is-active', x === t));
-      _showUmlPanel(t.dataset.uml, screens);
-    });
+  document.getElementById('uml-kind')?.addEventListener('change', (ev) => {
+    _showUmlPanel(ev.target.value, screens);
   });
 
   _showUmlPanel('sequence', screens);
@@ -307,7 +312,8 @@ function _umlLocalCaseRows() {
 function _umlCaseTable(rows, source) {
   if (!rows.length) {
     return '<div class="uml-case-head"><div class="uml-table-title">テストケース</div></div>' +
-      '<div class="hero-msg">テストケースがありません。</div>';
+      '<div class="ui-empty"><p class="ui-empty-title">テストケースがありません</p>' +
+      '<p class="ui-empty-desc">この図から導出できる手順が見つかりませんでした。</p></div>';
   }
   const body = rows.map(r => `
     <tr>
@@ -382,17 +388,20 @@ async function _loadUmlCaseRows() {
 
 function _umlZoomControls() {
   return (
-    '<div class="uml-zoom-controls" aria-label="図のズーム">' +
-    '<button type="button" class="uml-zoom-btn" data-zoom="out" title="縮小 (ホイール↓)">−</button>' +
+    '<div class="uml-zoom-controls uml-zoom-float" aria-label="図のズーム">' +
+    '<button type="button" class="uml-zoom-btn" data-zoom="out" title="縮小 (ホイール↓)" aria-label="縮小">−</button>' +
     '<button type="button" class="uml-zoom-btn uml-zoom-level" data-zoom="reset" title="100%に戻す">100%</button>' +
-    '<button type="button" class="uml-zoom-btn" data-zoom="in" title="拡大 (ホイール↑)">＋</button>' +
-    '<button type="button" class="uml-zoom-btn" data-zoom="fit" title="幅に合わせる">Fit</button>' +
-    '<button type="button" class="uml-zoom-btn uml-zoom-sep" data-zoom="fullscreen" title="全画面 (Esc で解除)">⛶</button>' +
-    '<span class="uml-zoom-divider"></span>' +
-    '<button type="button" class="uml-zoom-btn uml-dl-btn" data-dl="svg" title="SVGをダウンロード">↓ SVG</button>' +
-    '<button type="button" class="uml-zoom-btn uml-dl-btn" data-dl="png" title="PNGをダウンロード（2x高解像度）">↓ PNG</button>' +
-    '<button type="button" class="uml-zoom-btn uml-dl-btn" data-dl="mmd" title="Mermaidソースをダウンロード（編集・再利用用）">↓ MMD</button>' +
-    '</div>'
+    '<button type="button" class="uml-zoom-btn" data-zoom="in" title="拡大 (ホイール↑)" aria-label="拡大">＋</button>' +
+    '<button type="button" class="uml-zoom-btn" data-zoom="fit" title="幅に合わせる">全体を表示</button>' +
+    '<button type="button" class="uml-zoom-btn uml-zoom-sep" data-zoom="fullscreen" title="全画面 (Esc で解除)" aria-label="全画面">⛶</button>' +
+    '</div>' +
+    '<div class="c-menu uml-save-menu" data-menu>' +
+    '<button type="button" class="c-menu__toggle" aria-haspopup="menu" aria-expanded="false" aria-label="図を保存">保存 ▾</button>' +
+    '<ul class="c-menu__list" role="menu" hidden>' +
+    '<li role="none"><button type="button" role="menuitem" class="c-menu__item uml-dl-btn" data-dl="png">画像（PNG）として保存</button></li>' +
+    '<li role="none"><button type="button" role="menuitem" class="c-menu__item uml-dl-btn" data-dl="svg">図形（SVG）として保存</button></li>' +
+    '<li role="none"><button type="button" role="menuitem" class="c-menu__item uml-dl-btn" data-dl="mmd">編集用データとして保存</button></li>' +
+    '</ul></div>'
   );
 }
 

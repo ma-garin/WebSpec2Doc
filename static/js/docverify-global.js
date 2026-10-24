@@ -243,14 +243,17 @@
     var el = $('dvgMetrics');
     load(el, '/api/docverify/metrics', function (d) {
       d = (d && d.metrics) || d || {};
-      if (Array.isArray(d.by_review)) { var br = {}; d.by_review.forEach(function (r) { br[r.review_name || r.review_id] = r.findings; }); d.by_review = br; }
-      if (!d || !Object.keys(d).length) return empty(el, 'まだ集計できるレビューがありません。');
-      var rate = d.fix_rate != null ? d.fix_rate : d.completion_rate;
-      var dens = d.density != null ? d.density : d.findings_per_fragment;
-      el.innerHTML = '<div class="dvg-cards"><div class="card dvg-card"><div class="mut">修正完了率</div><div class="dvg-num">' +
-        esc(rate == null ? '-' : Math.round(rate * (rate <= 1 ? 100 : 1)) + '%') + '</div></div><div class="card dvg-card"><div class="mut">断片あたりの指摘</div><div class="dvg-num">' +
-        esc(dens == null ? '-' : (+dens).toFixed(2)) + '</div></div></div>' +
-        bars('重大度別', d.by_severity, SEV) + bars('観点別', relabel(d.by_viewpoint || d.by_checklist_item || d.by_checklist)) + bars('レビュー別', d.by_review);
+      var rows = Array.isArray(d.by_review) ? d.by_review : [];
+      if (!rows.length && !d.findings) return empty(el, 'まだ集計できるレビューがありません。');
+      var pct = d.fix_rate == null ? null : Math.round(d.fix_rate * 100);
+      var card = function (t) { return '<div class="card dvg-card"><div class="dvg-num">' + esc(t) + '</div></div>'; };
+      var tbl = '<h3 class="dvg-h3">レビュー別</h3><table class="dv-t"><thead><tr><th>レビュー名</th><th>指摘</th><th>解消率</th><th>最終更新</th></tr></thead><tbody>' + rows.map(function (r) {
+        return '<tr><td>' + esc(r.review_name || r.review_id) + '</td><td>' + esc(r.findings) + ' 件</td><td>' + esc(r.fix_rate == null ? '—' : Math.round(r.fix_rate * 100) + '%') +
+          '</td><td>' + esc(r.updated_at ? DV.fmtJst(r.updated_at) : '—') + '</td></tr>'; }).join('') + '</tbody></table>';
+      el.innerHTML = '<div class="dvg-cards">' + card('指摘 ' + (d.findings || 0) + ' 件') +
+        card(pct == null ? '解消 —（対象の指摘なし）' : '解消 ' + (d.fixed || 0) + ' 件（' + pct + '%）') +
+        card('未解消の重大 ' + (d.unresolved_critical || 0) + ' 件') + '</div>' + tbl +
+        '<div class="dvg-two"><div>' + bars('重大度別', d.by_severity, SEV) + '</div><div>' + bars('観点別', relabel(d.by_viewpoint || {})) + '</div></div>';
     });
   });
 

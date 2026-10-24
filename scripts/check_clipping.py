@@ -10,13 +10,20 @@
 """
 from __future__ import annotations
 
+import datetime
+import json
 import os
+import subprocess
 import sys
 
 from playwright.sync_api import sync_playwright
 
 VIEWPORTS = ((1440, 900), (1280, 720))
 _SKIP = ("/api", "/static", "/auth/oidc", "/download", "/metrics", "/open", "/preview", "/review/export")
+
+GATE_VIEWPORTS = ((1440, 900), (1280, 800), (1280, 720))
+GATE_PAGES = ("/dashboard", "/generate", "/docverify")  # 01・06 の対象
+ALL_GATES = ("G1", "G2", "G3", "G4", "G5", "G6", "G7", "G8")
 
 REVERSE_VIEWPORTS = ((816, 900), (1440, 900))
 
@@ -142,9 +149,100 @@ def _routes() -> list[str]:
     return sorted({r.rule for r in rules if "GET" in r.methods and "<" not in r.rule and not r.rule.startswith(_SKIP)})
 
 
+def _pop_opt(args: list[str], name: str) -> str | None:
+    if name not in args:
+        return None
+    i = args.index(name)
+    val = args[i + 1] if i + 1 < len(args) else ""
+    del args[i:i + 2]
+    return val
+
+
+def _gate_run(browser, base: str, pages: list[str], gates: set[str], states: bool, snap_dir: str | None) -> dict:
+    """G-1〜G-7 を画面 x 幅で走らせる。G-8 は既存の見切れ検査。戻り値は集計 dict。"""
+    sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    from scripts.ui_gates import g1_g2, g3, g4, g5, g6_g7
+    counts = {f"G-{n}": 0 for n in range(1, 9)}
+    snaps = 0
+    fixtures = g4.load_fixtures() if "G4" in gates and states else None
+    for w, h in GATE_VIEWPORTS:
+        ctx = browser.new_context(viewport={"width": w, "height": h})
+        page = ctx.new_page()
+        for path in pages:
+            try:
+                resp = page.goto(base + path, wait_until="load", timeout=15000)
+                page.wait_for_timeout(500)
+            except Exception as exc:
+                print(f"NG {w}x{h} {path} G-8: 開けない（{type(exc).__name__}）")
+                counts["G-8"] += 1
+                continue
+            if resp is None or resp.status >= 400 or "html" not in (resp.headers.get("content-type") or ""):
+                continue
+            found: list[tuple[str, str]] = []
+            if "G1" in gates:
+                found += [("G-1", m) for m in g1_g2.run_g1(page)]
+            if "G2" in gates:
+                found += [("G-2", m) for m in g1_g2.run_g2(page)]
+            if "G3" in gates:
+                found += [("G-3", m) for m in g3.run_g3(page, path)]
+            if "G5" in gates:
+                found += [("G-5", m) for m in g5.check(page)]
+            if "G6" in gates:
+                found += [("G-6", m) for m in g6_g7.check_dynamic(page)]
+            if "G7" in gates:
+                found += [("G-7", m) for m in g6_g7.check_auto(page)]
+            if "G8" in gates:
+                found += [("G-8", m) for m in page.evaluate(_JS)]
+            if snap_dir and "G7" in gates:
+                snaps += g6_g7.snapshot(page, snap_dir, f"{path}_{w}x{h}")
+            if "G4" in gates and states and (w, h) == GATE_VIEWPORTS[0]:
+                found += [("G-4", m) for m in g4.check(ctx, base, path, fixtures)]
+            for g, m in found[:60]:
+                print(f"NG {w}x{h} {path} {m if m.startswith('G-') else g + ': ' + m}")
+            for g, _ in found:
+                counts[g] += 1
+        ctx.close()
+    return {"counts": counts, "snaps": snaps}
+
+
+def _main_gates(base, pages, gates_arg, states, snap_dir, json_out) -> int:
+    gates = {g.strip().upper() for g in gates_arg.split(",") if g.strip()} or set(ALL_GATES)
+    with sync_playwright() as p:
+        try:
+            browser = p.chromium.launch()
+        except Exception:
+            browser = p.chromium.launch(channel="chrome")
+        res = _gate_run(browser, base, pages, gates, states, snap_dir)
+        browser.close()
+    c, total = res["counts"], sum(res["counts"].values())
+    if snap_dir:
+        sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        from scripts.ui_gates import g6_g7
+        print(g6_g7.visual_count_line(res["snaps"]))
+    print(" / ".join(f"G-{n} {c[f'G-{n}']}件" for n in range(1, 9)) + f" / 合計 {total}件（{len(pages)} 画面 × {len(GATE_VIEWPORTS)} 幅）")
+    if json_out:
+        try:
+            rev = subprocess.run(["git", "rev-parse", "--short", "HEAD"], capture_output=True, text=True).stdout.strip()
+        except Exception:
+            rev = ""
+        data = {k: {"count": v, "screens": len(pages)} for k, v in c.items()}
+        data.update({"date": datetime.date.today().isoformat(), "git": rev, "base": base,
+                     "pages": pages, "widths": [f"{w}x{h}" for w, h in GATE_VIEWPORTS], "total": total})
+        os.makedirs(os.path.dirname(os.path.abspath(json_out)), exist_ok=True)
+        with open(json_out, "w", encoding="utf-8") as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
+    return 1 if total else 0
+
+
 def main() -> int:
     base = sys.argv[1].rstrip("/") if len(sys.argv) > 1 else "http://127.0.0.1:8766"
     args = sys.argv[2:]
+    gates_arg = _pop_opt(args, "--gates")
+    json_out = _pop_opt(args, "--json")
+    snap_dir = _pop_opt(args, "--snap-dir")
+    states = "--states" in args
+    if states:
+        args.remove("--states")
     review = None
     if "--docverify-review" in args:  # System 06 のレビュー内の画面（開いたレビューが要る）も見る
         i = args.index("--docverify-review")
@@ -155,6 +253,8 @@ def main() -> int:
         i = args.index("--reverse-analysis")
         reverse.append(args[i + 1])
         args = args[:i] + args[i + 2:]
+    if gates_arg is not None:
+        return _main_gates(base, args or list(GATE_PAGES), gates_arg, states, snap_dir, json_out)
     pages = args or _routes()
     if review:
         pages = pages + [f"/docverify#{v}" for v in ("plan", "read", "triage", "questions", "followup", "screen", "gate")]

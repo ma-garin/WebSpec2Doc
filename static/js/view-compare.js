@@ -67,8 +67,18 @@ async function renderCompare() {
   }
   if (CMP.snapshots.length < 2) {
     // 何が足りないかを書く。「比較できません」だけだと次に何をすればよいか分からない。
-    panel.innerHTML = '<div class="hero-msg">比較には2時点以上のスナップショットが必要です。' +
-      `現在 ${CMP.snapshots.length} 件です。再解析すると1件増えます。</div>`;
+    // 空状態は共通部品（.ui-state）で 1 個・CTA 1 個。版が足りないので、再解析して版を増やす導線を置く。
+    const goGenerate = function () { if (typeof switchView === 'function') switchView('generate'); };
+    if (window.UIStates) {
+      panel.replaceChildren();
+      UIStates.set(panel, 'empty', {
+        title: '比較する版を選んでください',
+        msg: '比較には 2 つ以上の版が必要です。いまは ' + CMP.snapshots.length + ' 件です。',
+        cta: { label: '再解析して新しい版を作る', onClick: goGenerate },
+      });
+    } else {
+      panel.innerHTML = '<div class="hero-msg">比較には2時点以上のスナップショットが必要です。現在 ' + CMP.snapshots.length + ' 件です。</div>';
+    }
     return;
   }
   const last = CMP.snapshots.length - 1;

@@ -1,14 +1,14 @@
 /* Document Assurance パネル（意味差分・AI レビュー）。横スクロールを出さない。 */
 .dap { max-width: 100%; overflow-wrap: anywhere; }
-.dap h3 { margin: 0 0 8px; font-size: 16px; }
-.dap h4 { margin: 0 0 6px; font-size: 14px; }
-.dap h5 { margin: 8px 0 4px; font-size: 12px; color: var(--color-text-secondary, var(--color-text-secondary)); }
-.dap-muted, .dap-meta { color: var(--color-text-secondary, var(--color-text-secondary)); font-size: 12px; }
+.dap h3 { margin: 0 0 8px; font-size: var(--text-md); }
+.dap h4 { margin: 0 0 6px; font-size: var(--text-base); }
+.dap h5 { margin: 8px 0 4px; font-size: var(--text-xs); color: var(--color-text-secondary, var(--color-text-secondary)); }
+.dap-muted, .dap-meta { color: var(--color-text-secondary, var(--color-text-secondary)); font-size: var(--text-xs); }
 .dap-item { border: 1px solid var(--color-border, var(--color-border-strong)); border-radius: 8px; padding: 12px; margin: 10px 0; background: var(--color-surface, var(--color-on-primary)); }
 .dap-cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }
 .dap-side { min-width: 0; }
 .dap-text { white-space: pre-wrap; word-break: break-word; margin: 0; padding: 8px; background: var(--color-surface-2, var(--color-bg)); border-radius: 6px; font: inherit; max-height: 240px; overflow: auto; }
-.dap-badge { display: inline-block; padding: 1px 8px; border-radius: 10px; font-size: 12px; border: 1px solid var(--color-border, var(--color-border-strong)); background: var(--color-surface-2, var(--color-bg)); }
+.dap-badge { display: inline-block; padding: 1px 8px; border-radius: 10px; font-size: var(--text-xs); border: 1px solid var(--color-border, var(--color-border-strong)); background: var(--color-surface-2, var(--color-bg)); }
 .dap-moved { border-style: dashed; }
 .dap-change { font-weight: 600; }
 .dap-note { padding: 8px 10px; border-left: 4px solid var(--color-warning, var(--color-warning-tx)); background: var(--color-surface-2, var(--color-bg)); margin: 8px 0; }
@@ -18,7 +18,7 @@
 .dap-evidence { margin: 0; padding-left: 18px; }
 .dap-evidence blockquote { margin: 2px 0 6px; padding-left: 8px; border-left: 3px solid var(--color-border, var(--color-border-strong)); }
 .dap-unsupported { opacity: .85; }
-.dap-label { display: block; margin-top: 8px; font-size: 12px; }
+.dap-label { display: block; margin-top: 8px; font-size: var(--text-xs); }
 .dap-label textarea { display: block; width: 100%; box-sizing: border-box; margin-top: 4px; font: inherit; }
 .dap-actions { margin-top: 8px; display: flex; gap: 8px; flex-wrap: wrap; }
 .dap-btn { min-height: 36px; padding: 6px 14px; border-radius: 6px; border: 1px solid var(--color-primary, var(--color-primary-dark)); background: var(--color-primary, var(--color-primary-dark)); color: var(--color-on-primary); font: inherit; cursor: pointer; }

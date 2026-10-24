@@ -1,10 +1,10 @@
 {# レビューの中の画面（plan, read, triage, questions, followup, screen）。判定と記録は _gate.html。描画は static/js/docverify-review.js #}
-{% for key, title in [('plan','計画'),('read','文書を読む'),('triage','指摘の検討'),('questions','質問票'),('followup','修正版の確認'),('screen','実画面との照合')] %}
+{% for key, title in [('plan','計画'),('read','文書を読む'),('triage','指摘の検討'),('questions','質問票'),('screen','実画面との照合')] %}
 <section class="dv-view dvr-view" data-view="{{ key }}" hidden>
   <div class="dvr-head"><span class="dvr-title">{{ title }}</span><div class="dvr-head-right" data-dvr-headright></div></div>
   <div class="dvr-msg" data-dvr-msg role="status" aria-live="polite"></div>
   <div class="r2-state" data-dvr-state role="status" aria-live="polite" hidden></div>
   <div class="dvr-body" data-dvr-body></div>
-  <div class="p1-gate r2-gate" data-dvr-gate aria-label="判定"></div>
+  <div class="dv-gatebar" data-dvr-gate data-dv-gatebar aria-label="判定"></div>
 </section>
 {% endfor %}

@@ -1,7 +1,8 @@
 {% extends 'layouts/system.html' %}
 {#- System 01（ドキュメント作成）と 03（AutoRun）の旧シェル。共通シェルは layouts/system.html。data-system で docs/autorun を切り替える -#}
-{% set system_key = 'doc' %}
-{% block title %}{{ 'ドキュメント作成(app)［試作］ - WebSpec2Doc' if app_mode else 'WebSpec2Doc' }}{% endblock %}
+{#- 設定・ガイド・組織・ユーザー・アカウントは共通ナビ（common）、それ以外は System 01 のナビ -#}
+{% set system_key = 'common' if request.path in ['/settings', '/user-guide', '/references', '/tenant-management', '/user-management', '/account'] else 'doc' %}
+{% block title %}{{ 'ドキュメント作成(app)［試作］ - WebSpec2Doc' if app_mode else (('サイトを追加 / 再解析 - ドキュメント作成 - WebSpec2Doc') if request.path == '/generate' else ((view_title|default('ダッシュボード')) ~ ' - ドキュメント作成 - WebSpec2Doc')) }}{% endblock %}
 {% block head_css_pre %}  <link rel="stylesheet" href="{{ url_for('static', filename='app-report.css') }}?v={{ _ver }}">
 {% endblock %}
 {% block head_css %}  <link rel="stylesheet" href="{{ url_for('static', filename='css/autorun-document.css') }}?v={{ _ver }}">
@@ -63,13 +64,13 @@
         <strong id="popup-elapsed">0:00</strong>
         実行時間
       </div>
-      <button type="button" id="popup-view-report-btn" class="btn-primary" style="width:100%;height:46px;font-size:15px">レポートを見る →</button>
-      <button type="button" id="popup-close-btn" style="margin-top:12px;background:none;border:none;color:var(--text-muted);font-size:13px;cursor:pointer;width:100%">閉じる</button>
+      <button type="button" id="popup-view-report-btn" class="btn-primary" style="width:100%;height:46px;font-size:var(--text-base)">レポートを見る →</button>
+      <button type="button" id="popup-close-btn" style="margin-top:12px;background:none;border:none;color:var(--text-muted);font-size:var(--text-sm);cursor:pointer;width:100%">閉じる</button>
     </div>
   </div>
 
   <!-- 最大化モード退出ボタン（全タブ共通・常時 fixed 表示） -->
-  <button type="button" id="r-maximize-exit-btn" class="maximize-exit-btn" title="最大化解除 (Esc)">
+  <button type="button" id="r-maximize-exit-btn" class="maximize-exit-btn" hidden title="最大化解除 (Esc)">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" width="15" height="15"><path d="M18 6L6 18M6 6l12 12"/></svg>
     最大化解除
   </button>

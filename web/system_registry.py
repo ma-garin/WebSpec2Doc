@@ -101,6 +101,11 @@ SYSTEMS: tuple[SystemInfo, ...] = (
         chips=("変更箇所の抽出", "影響範囲", "テスト優先度", "根拠の文書"),
         badge="新規", open_label="影響度分析を開く →",
     ),
+    SystemInfo(
+        key="common", number="", name="共通", short_name="共通", url="/settings",
+        description="設定・ガイド・組織・ユーザー・アカウント。どのシステムからも使う画面です。",
+        chips=(), prototype=True,  # システム選択のカードには出さない
+    ),
 )
 
 _BY_KEY = {s.key: s for s in SYSTEMS}

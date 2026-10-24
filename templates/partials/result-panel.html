@@ -10,45 +10,49 @@
             <div id="r-sample-banner" class="result-sample-banner" hidden>
               <span class="result-sample-mark">サンプル</span>
               <span class="result-sample-text">これは同梱デモサイトを解析した<strong>サンプルレポート</strong>です。あなたが解析したサイトではありません。</span>
-              <button type="button" id="r-sample-exit-btn" class="btn-primary btn-sm">自分のサイトを解析する</button>
+              <button type="button" id="r-sample-exit-btn" class="c-btn c-btn--sm">自分のサイトを解析する</button>
             </div>
             <div class="result-bar">
               <strong id="r-domain" hidden>-</strong>
+              <span class="s01-versions__target" id="s01-target"></span>
+              <label class="s01-versions__ver">版
+                <select id="s01-version-select" class="c-select" aria-describedby="s01-version-note"></select>
+              </label>
+              <span id="s01-version-note" class="s01-versions__note"></span>
               <div class="result-bar-actions">
                 <span id="r-diff-badge" style="display:none"></span>
                 <span id="r-crawled" class="result-crawled"></span>
                 <div class="export-dropdown" id="export-dropdown">
-                  <button type="button" class="btn-outline-sm" id="export-dropdown-btn" aria-haspopup="menu" aria-expanded="false" aria-controls="export-dropdown-menu">↓ エクスポート</button>
+                  <button type="button" class="c-btn c-btn--sm" id="export-dropdown-btn" aria-haspopup="menu" aria-expanded="false" aria-controls="export-dropdown-menu">エクスポート</button>
                   <div class="export-dropdown-menu" id="export-dropdown-menu"></div>
                 </div>
-                <button type="button" id="r-recrawl-btn" class="btn-outline-sm">再解析</button>
-                <button type="button" id="r-density-btn" class="btn-outline-sm btn-icon-only" title="表の行間を切り替え" aria-label="表の行間を切り替え">☰</button>
-                <button type="button" id="r-maximize-btn" class="btn-outline-sm btn-icon-only" title="最大化 (Esc で解除)" aria-label="最大化">⛶</button>
+                <button type="button" id="r-recrawl-btn" class="c-btn c-btn--sm">再解析</button>
+                <div class="c-menu" data-menu>
+                  <button type="button" class="c-menu__toggle" aria-haspopup="menu" aria-expanded="false" aria-label="その他の操作">…</button>
+                  <ul class="c-menu__list" role="menu" hidden>
+                    <li role="none"><button type="button" id="r-density-btn" role="menuitem" class="c-menu__item">表の行間を切り替え</button></li>
+                    <li role="none"><button type="button" id="r-maximize-btn" role="menuitem" class="c-menu__item">最大化（Esc で解除）</button></li>
+                  </ul>
+                </div>
               </div>
             </div>
-            <!-- System 01: 対象サイトの版（クロール時点）を軸にした判定帯。中身は s01-versions.js が
-                 /api/s01/versions から描く。件数だけで判断させず、未確認・今回の変更分を名指しする。 -->
-            <section id="s01-versions" class="s01-versions" data-state="loading" aria-labelledby="s01-versions-title">
-              <div class="s01-versions__head">
-                <h2 id="s01-versions-title" class="s01-versions__title">対象と版</h2>
-                <p class="s01-versions__target" id="s01-target"></p>
-                <label class="s01-versions__ver">版（クロール時点）
-                  <select id="s01-version-select" aria-describedby="s01-version-note"></select>
-                </label>
-                <span id="s01-version-note" class="s01-versions__note"></span>
-              </div>
+            <!-- System 01: 判定帯。版の選択は上のバーへ移し、判定の詳細は折りたたみにして本文の高さを確保する。 -->
+            <section id="s01-versions" class="s01-versions" data-state="loading" aria-label="判定">
               <div class="s01-versions__loading" aria-live="polite">版の情報を読み込んでいます…</div>
               <div class="s01-versions__error" role="alert"></div>
               <div class="s01-versions__body">
-                <div class="s01-verdict" role="group" aria-label="判定">
-                  <div class="s01-verdict__row" id="s01-verdict-overall"></div>
-                  <div class="s01-verdict__row" id="s01-verdict-change"></div>
-                </div>
-                <table class="s01-prov" aria-label="生成物の出所と区分">
-                  <thead><tr><th scope="col">生成物</th><th scope="col">区分</th><th scope="col">件数</th><th scope="col">出所</th></tr></thead>
-                  <tbody id="s01-prov-body"></tbody>
-                </table>
-                <ul class="s01-failures" id="s01-failures" aria-label="取得できなかった画面と次の行動"></ul>
+                <details class="s01-details">
+                  <summary>判定の詳細</summary>
+                  <div class="s01-verdict" role="group" aria-label="判定">
+                    <div class="s01-verdict__row" id="s01-verdict-overall"></div>
+                    <div class="s01-verdict__row" id="s01-verdict-change"></div>
+                  </div>
+                  <table class="s01-prov" aria-label="生成物の出所と区分">
+                    <thead><tr><th scope="col">生成物</th><th scope="col">区分</th><th scope="col">件数</th><th scope="col">出所</th></tr></thead>
+                    <tbody id="s01-prov-body"></tbody>
+                  </table>
+                  <ul class="s01-failures" id="s01-failures" aria-label="取得できなかった画面と次の行動"></ul>
+                </details>
               </div>
             </section>
             <div class="result-body">
@@ -95,11 +99,6 @@
                   <span class="kpi-label">概算ケース</span>
                   <span class="kpi-sub" id="k-hours-sub"></span>
                 </div>
-                <button type="button" class="kpi-tile kpi-tile--action" id="k-runs-tile" title="テスト実行タブを開く">
-                  <span class="kpi-num" id="k-passrate">—</span>
-                  <span class="kpi-label">テスト実行</span>
-                  <span class="kpi-sub" id="k-runs-sub">未実行</span>
-                </button>
               </div>
             </div>
             <div class="result-hero" id="result-hero">
@@ -116,17 +115,17 @@
               </div>
               <div class="result-tab-panel" id="rp-test-design" role="tabpanel" tabindex="0" aria-label="テスト設計" hidden>
                 <div class="result-subtabs" role="tablist" aria-label="テスト設計のビュー" data-tab="test-design">
-                  <button type="button" role="tab" aria-selected="true" class="result-subtab is-active" data-sub="by-screen">画面別設計</button>
+                  <button type="button" role="tab" aria-selected="true" class="result-subtab is-active" data-sub="by-screen">画面別</button>
                   <button type="button" role="tab" aria-selected="false" class="result-subtab" data-sub="matrix">条件マトリクス</button>
-                  <button type="button" role="tab" aria-selected="false" class="result-subtab" data-sub="summary">技法サマリー</button>
-                  <button type="button" role="tab" aria-selected="false" class="result-subtab" data-sub="detail">技法詳細</button>
-                  <button type="button" role="tab" aria-selected="false" class="result-subtab" data-sub="mbt">技法別設計（MBT）</button>
+                  <button type="button" role="tab" aria-selected="false" class="result-subtab" data-sub="technique">技法別</button>
                 </div>
                 <div class="result-subpanel" id="rp-test-design-by-screen"></div>
                 <div class="result-subpanel" id="rp-test-design-matrix" hidden></div>
-                <div class="result-subpanel" id="rp-test-design-summary" hidden></div>
-                <div class="result-subpanel" id="rp-test-design-detail" hidden></div>
-                <div class="result-subpanel" id="rp-test-design-mbt" hidden></div>
+                <div class="result-subpanel" id="rp-test-design-technique" hidden>
+                  <div class="tech-section" id="rp-test-design-summary"></div>
+                  <div class="tech-section" id="rp-test-design-detail"></div>
+                  <div class="tech-section" id="rp-test-design-mbt"></div>
+                </div>
               </div>
               <div class="result-tab-panel rp-simple" id="rp-testcases" role="tabpanel" tabindex="0" aria-label="テストケース" hidden></div>
               <div class="result-tab-panel" id="rp-flow" role="tabpanel" tabindex="0" aria-label="画面遷移" hidden>

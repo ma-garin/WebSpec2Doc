@@ -107,28 +107,75 @@ _ITEM_LABEL = ITEM_LABEL  # 旧名（互換）
 _LABEL = {"critical": "重大", "major": "主要", "minor": "軽微"}
 
 
-def overall(inspections: list[dict]) -> dict:
-    """レビュー別・観点別・重大度別の件数、断片あたりの指摘密度、修正完了率。"""
+_PAIR_SEV = {"重大": "critical", "警告": "major", "提案": "minor"}
+
+
+def _pair_reviews() -> list[dict]:
+    """対検査（pair）の保存先から、採否を反映した指摘を読む。pair 系は inspections に含まれない。"""
+    import json
+    from datetime import datetime, timezone
+    from web import config
+    from web.services.docverify import pair_review as pr
+    from web.tenancy import scoped_output_dir
+    root = scoped_output_dir(config.DATA_DIR) / "docverify"
+    out = []
+    if not root.exists():
+        return out
+    for fp in sorted(root.glob("*/pair/findings.json")):
+        d = fp.parent
+        try:
+            fs = pr._replay(pr._findings(d), pr._decisions(d))
+            meta = json.loads((d / "docs" / "meta.json").read_text(encoding="utf-8")) if (d / "docs" / "meta.json").exists() else {}
+        except (OSError, ValueError):
+            continue
+        mt = max((p.stat().st_mtime for p in (d / "findings.json", d / "decisions.json") if p.exists()), default=0)
+        out.append({"id": d.parent.name, "name": meta.get("name") or meta.get("review_name") or d.parent.name,
+                    "inspection_id": meta.get("inspection_id"), "findings": fs,
+                    "updated_at": datetime.fromtimestamp(mt, timezone.utc).isoformat() if mt else None})
+    return out
+
+
+def _rate(fixed: int, valid: int):
+    """分母 0 は None（0.0 を返すと「0% 解消」に見える）。"""
+    return round(fixed / valid, 3) if valid else None
+
+
+def overall(inspections: list[dict], pair_reviews: list[dict] | None = None) -> dict:
+    """レビュー別・観点別・重大度別の件数と修正完了率。pair 系（対検査）も数える。"""
     from web.services.docverify.settings import normalize_severity
+    pairs = _pair_reviews() if pair_reviews is None else pair_reviews
+    pair_of = {p["inspection_id"] for p in pairs if p.get("inspection_id")}
     by_review, by_viewpoint, by_severity = [], Counter(), Counter()
-    total_passages = total_valid = total_fixed = 0
+    total_valid = total_fixed = total_crit = 0
+
+    def add(rid, name, valid, fixed_n, crit_n, updated_at):
+        nonlocal total_valid, total_fixed, total_crit
+        total_valid += len(valid); total_fixed += fixed_n; total_crit += crit_n
+        by_review.append({"review_id": rid, "review_name": name, "findings": len(valid),
+                          "fix_rate": _rate(fixed_n, len(valid)), "unresolved_critical": crit_n, "updated_at": updated_at})
+
     for insp in inspections:
+        if insp.get("id") in pair_of:
+            continue
         fs = [f for f in insp.get("findings") or [] if f.get("status") != "rejected"]
         valid = [f for f in fs if f.get("status") != "candidate"]
-        fixed = sum(1 for f in valid if f.get("status") in ("fixed", "verified"))
-        n = len(insp.get("passages") or [])
+        done = [f for f in valid if f.get("status") in ("fixed", "verified")]
+        sev = [normalize_severity(f.get("severity")) for f in valid]
         by_viewpoint.update(f.get("checklist_item") or f.get("viewpoint") or "未分類" for f in valid)
-        by_severity.update(normalize_severity(f.get("severity")) for f in valid)
-        total_passages += n
-        total_valid += len(valid)
-        total_fixed += fixed
-        by_review.append({"review_id": insp.get("id"), "review_name": insp.get("name"),
-                          "findings": len(valid), "passages": n,
-                          "density": round(len(valid) / n, 3) if n else 0.0,
-                          "fix_rate": round(fixed / len(valid), 3) if valid else 0.0})
+        by_severity.update(sev)
+        crit = sum(1 for f in valid if f not in done and normalize_severity(f.get("severity")) == "critical")
+        add(insp.get("id"), insp.get("name"), valid, len(done), crit, insp.get("updated_at") or insp.get("created_at"))
+    for pr_ in pairs:
+        valid = [f for f in pr_["findings"] if f.get("status") != "不採用"]
+        done = [f for f in valid if f.get("status") == "解消済み"]
+        sev = [_PAIR_SEV.get(f.get("severity"), "") or normalize_severity(f.get("severity")) for f in valid]
+        by_viewpoint.update(f.get("viewpoint") or "未分類" for f in valid)
+        by_severity.update(sev)
+        crit = sum(1 for f, v in zip(valid, sev) if f.get("status") != "解消済み" and v == "critical")
+        add(pr_["id"], pr_["name"], valid, len(done), crit, pr_.get("updated_at"))
     return {"by_review": by_review, "by_viewpoint": dict(by_viewpoint), "by_severity": dict(by_severity),
-            "density": round(total_valid / total_passages, 3) if total_passages else 0.0,
-            "fix_rate": round(total_fixed / total_valid, 3) if total_valid else 0.0}
+            "findings": total_valid, "fixed": total_fixed, "unresolved_critical": total_crit,
+            "fix_rate": _rate(total_fixed, total_valid)}
 
 
 # ---- R1: 品質スコアの説明・版ごとの記録・検査した範囲（WS2D-DD-006 5 章・9 章・10 章） ----

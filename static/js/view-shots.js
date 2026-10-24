@@ -21,20 +21,21 @@ function renderShots() {
   const items = shots.map(p => {
     const name = p.split('/').pop();
     const pageId = name.replace(/\.png$/, '');
+    const scr = (reportJson.screens || []).find(sc => sc.page_id === pageId.replace(/_full$/, ''));
+    const shotTitle = scr && scr.title ? scr.title : '';
     const src = `/preview?path=${encodeURIComponent(p)}`;
     const fullSrc = fullByPageId[pageId] ? `/preview?path=${encodeURIComponent(fullByPageId[pageId])}` : src;
     const exportPath = fullByPageId[pageId] || p;
     return `<figure class="shots-item">
       <label class="shots-select"><input type="checkbox" class="shots-select-cb" data-path="${escHtml(exportPath)}"></label>
       <img src="${escHtml(src)}" loading="lazy" alt="${escHtml(name)}" class="shots-thumb" onclick="openLightbox('${escHtml(fullSrc)}')" />
-      <figcaption>${escHtml(name)}</figcaption>
+      <figcaption>${shotTitle ? `<strong>${escHtml(shotTitle)}</strong>` : ''}<span>${escHtml(scr ? scr.page_id : pageId)}</span></figcaption>
     </figure>`;
   }).join('');
   resultHero.innerHTML =
     '<div class="shots-toolbar">' +
-    '<button type="button" id="shots-select-all-btn" class="btn-outline-sm">全選択</button>' +
-    '<button type="button" id="shots-select-none-btn" class="btn-outline-sm">全解除</button>' +
-    '<button type="button" id="shots-export-btn" class="btn-outline-sm">選択をエクスポート (<span id="shots-select-count">0</span>)</button>' +
+    '<label class="shots-select-all"><input type="checkbox" id="shots-select-all-cb"> すべて選択</label>' +
+    '<button type="button" id="shots-export-btn" class="c-btn" disabled>選択した画像を保存（<span id="shots-select-count">0</span> 件）</button>' +
     '</div>' +
     '<div class="shots-grid">' + items + '</div>';
   _shotsWireToolbar();
@@ -45,15 +46,17 @@ function _shotsWireToolbar() {
   const checkboxes = () => Array.from(document.querySelectorAll('.shots-select-cb'));
   const countEl = document.getElementById('shots-select-count');
   const updateCount = () => {
-    if (countEl) countEl.textContent = String(checkboxes().filter(cb => cb.checked).length);
+    const n = checkboxes().filter(cb => cb.checked).length;
+    if (countEl) countEl.textContent = String(n);
+    const exp = document.getElementById('shots-export-btn');
+    if (exp) exp.disabled = n === 0;
+    const all = document.getElementById('shots-select-all-cb');
+    if (all) all.checked = n > 0 && n === checkboxes().length;
   };
   checkboxes().forEach(cb => cb.addEventListener('change', updateCount));
-  document.getElementById('shots-select-all-btn')?.addEventListener('click', () => {
-    checkboxes().forEach(cb => { cb.checked = true; });
-    updateCount();
-  });
-  document.getElementById('shots-select-none-btn')?.addEventListener('click', () => {
-    checkboxes().forEach(cb => { cb.checked = false; });
+  const allCb = document.getElementById('shots-select-all-cb');
+  allCb?.addEventListener('change', () => {
+    checkboxes().forEach(cb => { cb.checked = allCb.checked; });
     updateCount();
   });
   document.getElementById('shots-export-btn')?.addEventListener('click', () => {

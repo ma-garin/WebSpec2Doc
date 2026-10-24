@@ -55,6 +55,11 @@
 
             <!-- ステップ1: URL入力・解析（語は AutoRun と揃えて「解析」に統一） -->
             <div id="wizard-p1" class="input-card">
+              <div class="c-seg gen-method" role="tablist" aria-label="入力方式" id="gen-method">
+                <button type="button" role="tab" class="c-btn c-btn--sm is-active" aria-selected="true" data-method-tab="url">URL から</button>
+                <button type="button" role="tab" class="c-btn c-btn--sm" aria-selected="false" data-method-tab="record">操作を記録</button>
+                <button type="button" role="tab" class="c-btn c-btn--sm" aria-selected="false" data-method-tab="import">記録ファイルから</button>
+              </div>
               {% if app_mode %}
               {# ドキュメント作成(app): URL の代わりにアプリを指定する。値は #url-input に
                  https://app.<package> として同期し（doc-app-mode.js）、以降の画面解析・実行・
@@ -76,7 +81,7 @@
                 </div>
                 <div class="doc-app-unsupported__row">
                   <label for="app-file" class="doc-app-unsupported__label">アプリファイル</label>
-                  <input type="file" id="app-file" accept=".apk,.aab" disabled />
+                  <span class="c-file"><label class="c-btn" for="app-file" aria-disabled="true">ファイルを選ぶ</label><input type="file" id="app-file" class="sr-only" accept=".apk,.aab" disabled /><span class="c-file__name">未選択</span></span>
                   <label for="app-device" class="doc-app-unsupported__label">実行先</label>
                   <select id="app-device" class="url-input" disabled>
                     <option>エミュレータ Pixel 8 (API 34)</option><option>実機 (adb 接続)</option>
@@ -86,42 +91,49 @@
               {% else %}
               <label for="url-input" class="form-label">解析対象URL <span style="color:var(--color-critical)">*</span></label>
               {% endif %}
-              <div class="input-row" style="gap:8px">
-                <input type="url" id="url-input" class="url-input" placeholder="https://example.com" autocomplete="url" list="url-history-list" style="flex:1"{% if app_mode %} hidden{% endif %} />
+              <div class="input-row gen-input-row" data-method="url">
+                <input type="url" id="url-input" class="url-input" placeholder="https://example.com" autocomplete="url" list="url-history-list"{% if app_mode %} hidden{% endif %} />
                 <datalist id="url-history-list"></datalist>
-                <button type="button" id="discover-btn" class="btn-primary" style="height:40px;padding:0 16px;font-size:13px;white-space:nowrap">{% if app_mode %}サンプルで出力を見る{% else %}画面解析{% endif %}</button>
+                <button type="button" id="discover-btn" class="c-btn c-btn--primary">{% if app_mode %}サンプルで出力を見る{% else %}画面解析{% endif %}</button>
               </div>
-              <div id="url-input-message" class="input-field-message"></div>
+              <div id="url-input-message" class="input-field-message" data-method="url"></div>
 
               <!-- 記録＆リプレイ（「操作を記録して作る」）: URL/アプリのどちらの入力方式でも
                    その直下に置き、第3の入力方式として選べるようにする。 -->
-              <div id="record-mode" class="record-mode input-card" style="margin-top:12px">
-                <h3 style="margin:0 0 8px;font-size:15px">🎬 操作を記録して作る</h3>
-                <p class="input-hint" style="margin:0 0 12px">見えるブラウザで実際に操作すると、その手順からテストケースとレポートを作成します。</p>
+              <div id="record-mode" class="record-mode input-card" data-method="record" hidden>
+                <h3 class="gen-sub-title">操作を記録して作る</h3>
+                <p class="input-hint">見えるブラウザで実際に操作すると、その手順からテストケースとレポートを作成します。</p>
                 <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-                  <button type="button" id="record-start-btn" class="btn-outline-sm">記録用ブラウザを開く</button>
-                  <button type="button" id="record-stop-btn" class="btn-primary" style="display:none;height:28px;padding:0 12px;font-size:12px">記録を終了</button>
+                  <button type="button" id="record-start-btn" class="c-btn c-btn--primary">記録を開始</button>
+                  <button type="button" id="record-stop-btn" class="c-btn c-btn--primary" style="display:none">記録を終了</button>
                 </div>
                 <div id="record-status" class="input-field-message" style="margin-top:8px"></div>
                 <img id="record-last-shot" style="display:none;max-width:240px;border:1px solid var(--border,#e5e5e5);border-radius:4px;margin-top:8px" alt="直近の操作のスクリーンショット" />
                 <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:8px">
-                  <button type="button" id="record-finalize-btn" class="btn-primary" style="display:none;height:32px;padding:0 16px;font-size:13px">この記録から文書を作る</button>
-                  <button type="button" id="record-replay-btn" class="btn-outline-sm" style="display:none">リプレイして検証</button>
-                </div>
-                <div class="field" style="margin-top:10px;border-top:1px solid var(--border,#e5e5e5);padding-top:10px">
-                  <label for="record-import-input">Recorder / Selenium IDE の記録を取り込む</label>
-                  <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-                    <input type="file" id="record-import-input" accept=".json,.side" />
-                    <button type="button" id="record-import-btn" class="btn-outline-sm">取り込む</button>
-                  </div>
+                  <button type="button" id="record-finalize-btn" class="c-btn c-btn--primary" style="display:none">この記録から文書を作る</button>
+                  <button type="button" id="record-replay-btn" class="c-btn" style="display:none">リプレイして検証</button>
                 </div>
                 <div id="record-result" style="margin-top:8px"></div>
+              </div>
+
+              <div id="record-import-panel" class="record-mode input-card" data-method="import" hidden>
+                <h3 class="gen-sub-title">記録ファイルから作る</h3>
+                <p class="input-hint">記録ファイル（Chrome レコーダー・Selenium IDE で保存したもの）を選ぶと、その手順からテストケースとレポートを作成します。</p>
+                <div class="field">
+                  <label class="form-label">操作の記録ファイル</label>
+                  <div class="c-file">
+                    <label class="c-btn" for="record-import-input">ファイルを選ぶ</label>
+                    <input type="file" id="record-import-input" class="sr-only" accept=".json,.side" />
+                    <span class="c-file__name" data-file-name-for="record-import-input">未選択</span>
+                  </div>
+                </div>
+                <button type="button" id="record-import-btn" class="c-btn c-btn--primary">取り込む</button>
               </div>
 
               <!-- 解析する範囲（Issue #15）。従来は depth=5 / max_pages=300 が固定で渡っており、
                    300画面・15分規模になっても利用者には中断以外の手が無かった。
                    数値の意味を知らなくても所要時間で選べるよう、プリセットを先に置く。 -->
-              <div class="discover-scope" id="discover-scope" role="group" aria-label="解析する範囲">
+              <div class="discover-scope" id="discover-scope" data-method="url" role="group" aria-label="解析する範囲">
                 <span class="discover-scope-title">解析する範囲</span>
                 {#- プリセットは1箇所に列挙する。逐語コピーすると、ラベル・note・data-* の
                     どれか1つの直し忘れが画面とテストの食い違いを生むため。 -#}
@@ -154,21 +166,8 @@
                 </div>
                 <p class="discover-scope-est" id="discover-scope-est" role="status"></p>
               </div>
-              <!-- オンボーディングヒント -->
-              <div class="wizard-p1-hints" style="margin-top:8px;display:flex;flex-direction:column;gap:8px">
-                <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-                  <span style="font-size:12px;color:var(--text-muted)"
-                        title="同梱デモサイトでの実測（7画面16.6秒＝1画面2.4秒）に基づく目安です。対象サイトの応答速度や robots.txt の Crawl-Delay により長くなります。">
-                    ⏱ 目安: 1画面あたり約2〜3秒（10画面で30秒前後）
-                  </span>
-                  <button type="button" id="sample-url-btn" class="btn-outline-sm"
-                    style="font-size:12px;color:var(--primary)">
-                    サンプルURL（example.com）で試す
-                  </button>
-                </div>
-                <p style="font-size:12px;color:var(--text-muted);margin:0">
-                  💡 ログインが必要な閉じた環境も対象にできます。画面解析でログインが必要と分かった時点で、この画面にログインの案内が出ます。
-                </p>
+              <div class="wizard-p1-hints" data-method="url">
+                <button type="button" id="sample-url-btn" class="c-btn c-btn--tertiary c-btn--sm">サンプルURL（example.com）で試す</button>
               </div>
               <div id="discover-loading" class="discover-live-card" style="display:none;margin-top:8px">
                 <div class="discover-live-header">
@@ -202,13 +201,13 @@
                   </div>
                 </div>
                 <span class="wizard-p1-summary-hint" id="p1-login-hint" style="display:none"></span>
-                <button type="button" id="p1-next-btn" class="btn-primary" style="height:44px;padding:0 28px;font-size:14px;margin-top:4px">条件設定へ →</button>
+                <button type="button" id="p1-next-btn" class="c-btn c-btn--primary">条件設定へ →</button>
               </div>
 
               <!-- ログイン案内: 画面解析でログイン壁を検知したときだけ表示する。
                    閉じた環境が例外ではなく通常の対象であるため、折りたたみに隠さない。 -->
               <div id="login-required-card" class="input-card" style="display:none;margin-top:12px">
-                <h3 id="login-required-title" style="margin:0 0 8px;font-size:15px">🔒 このサイトはログインが必要です</h3>
+                <h3 id="login-required-title" class="gen-sub-title">このサイトはログインが必要です</h3>
                 <p class="input-hint" id="login-required-desc" style="margin:0 0 12px">認証の内側にある画面も対象にするには、ログインしてください。</p>
 
                 <div class="field" style="margin-bottom:8px">
@@ -232,7 +231,7 @@
                   <label>ブラウザでログインして保存（MFA・ソーシャルログインにも対応）</label>
                   <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
                     <button type="button" id="login-record-start-btn" class="btn-outline-sm">ブラウザでログインして保存</button>
-                    <button type="button" id="login-record-complete-btn" class="btn-primary" style="display:none;height:28px;padding:0 12px;font-size:12px">ログイン完了</button>
+                    <button type="button" id="login-record-complete-btn" class="btn-primary" style="display:none;height:28px;padding:0 12px;font-size:var(--text-xs)">ログイン完了</button>
                     <button type="button" id="login-record-cancel-btn" class="btn-outline-sm" style="display:none">キャンセル</button>
                   </div>
                   <div id="login-record-status" class="input-field-message" style="margin-top:8px"></div>
@@ -294,8 +293,12 @@
                   <!-- 参考文書（任意） -->
                   <div class="field" id="reference-doc-block" style="margin-top:8px">
                     <label for="reference-doc-input">参考文書（任意 — 既存の画面一覧・項目定義書など）</label>
-                    <input type="file" id="reference-doc-input" multiple
-                           accept=".xlsx,.xlsm,.docx,.pptx,.pdf,.md,.txt,.yaml,.yml,.json" />
+                    <div class="c-file">
+                      <label class="c-btn" for="reference-doc-input">ファイルを選ぶ</label>
+                      <input type="file" id="reference-doc-input" class="sr-only" multiple
+                             accept=".xlsx,.xlsm,.docx,.pptx,.pdf,.md,.txt,.yaml,.yml,.json" />
+                      <span class="c-file__name" data-file-name-for="reference-doc-input">未選択</span>
+                    </div>
                     <ul id="reference-doc-list"></ul>
                     <div id="reference-doc-status" class="input-field-message"></div>
                   </div>
@@ -317,7 +320,7 @@
                   </div>
 
                   <div class="wizard-footer" style="justify-content:flex-end">
-                    <button type="submit" class="btn-primary" id="submit-btn" style="height:44px;padding:0 28px;font-size:15px">{% if app_mode %}サンプルで出力を見る{% else %}解析開始{% endif %}</button>
+                    <button type="submit" class="c-btn c-btn--primary" id="submit-btn">{% if app_mode %}サンプルで出力を見る{% else %}解析開始{% endif %}</button>
                   </div>
                 </div>
               </form>

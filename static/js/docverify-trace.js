@@ -140,38 +140,6 @@
     else if (window.DV && DV.show) DV.show('trace');
   };
 
-  // 履歴: トレーサビリティの実行一覧を先頭に出す
-  function renderHistory() {
-    var view = document.querySelector('.dv-view[data-view="metrics"]');
-    if (!view) return;
-    var box = $('dvtHist');
-    if (!box) {
-      box = document.createElement('section');
-      box.id = 'dvtHist'; box.className = 'dvt-hist';
-      view.insertBefore(box, view.firstChild);
-    }
-    fetch('/api/docverify/inspections').then(json).then(function (d) {
-      var list = (d.inspections || []).filter(function (x) { return x.tier && (x.tier.documents || []).length; })
-        .sort(function (a, b) { return String(b.updated_at || '').localeCompare(String(a.updated_at || '')); });
-      var esc = DV.esc;
-      box.innerHTML = '<h2 class="dvg-h">トレーサビリティの実行履歴</h2>' + (list.length
-        ? '<table class="dv-table"><thead><tr><th>実行</th><th>日時</th><th>文書</th><th>結論</th></tr></thead><tbody>'
-          + list.map(function (x) {
-            var c = x.tier.conclusion;
-            var lv = c ? LEVEL[c.level] + '（確定）' : (x.tier.approved ? '検査済み・未確定' : '登録中');
-            return '<tr data-iid="' + esc(x.id) + '" tabindex="0"><td>' + esc(x.name || x.id) + '</td><td>'
-              + esc(new Date(x.updated_at).toLocaleString('ja-JP', { dateStyle: 'short', timeStyle: 'short' }))
-              + '</td><td>' + x.tier.documents.length + ' 件</td><td>' + esc(lv) + '</td></tr>';
-          }).join('') + '</tbody></table>'
-        : '<p class="mut">まだ実行がありません。サイドの「トレーサビリティ」から文書を登録すると、ここに残ります。</p>');
-      Array.prototype.forEach.call(box.querySelectorAll('tr[data-iid]'), function (tr) {
-        var go = function () { DVT.open(tr.getAttribute('data-iid'), tr.cells[0].textContent); };
-        tr.addEventListener('click', go);
-        tr.addEventListener('keydown', function (e) { if (e.key === 'Enter') go(); });
-      });
-    }).catch(function () { box.innerHTML = '<p class="mut">実行履歴を読み込めませんでした。画面を開き直してください。</p>'; });
-  }
-
   document.addEventListener('DOMContentLoaded', function () {
     $('dvtRestart').addEventListener('click', function () { opening = null; start(); });
     var rs = $('dvtResume');
@@ -180,6 +148,5 @@
 
   if (window.DV) {
     DV.on('trace', start);
-    DV.on('metrics', renderHistory);
   }
 })();

@@ -39,6 +39,8 @@
       ? '今回の変更分は、1 つ前の版との比較です。' : '前回の版がないため、差分はまだ出ません。';
     verdictRow('s01-verdict-overall', '全体', data.verdict.overall);
     verdictRow('s01-verdict-change', '今回の変更分', data.verdict.change);
+    var sm = document.querySelector('.s01-details > summary');
+    if (sm) sm.textContent = '判定: ' + data.verdict.overall.result + '（詳細）';
     var body = document.getElementById('s01-prov-body');
     body.replaceChildren();
     (data.provenance || []).forEach(function (p) {

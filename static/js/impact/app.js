@@ -267,7 +267,8 @@
         else if (b.dataset.scope === 'cr') go({ sid: state.sid, cr: state.cr, tab: b.dataset.tab === 'decision' ? '' : b.dataset.tab });
       });
     });
-    $('[data-act=new-sys-side]').addEventListener('click', newSystem);
+    var sideNew = $('[data-act=new-sys-side]');
+    if (sideNew) sideNew.addEventListener('click', newSystem);
     bindHome($('#im-page-head'));
     $('#im-modal-cancel').addEventListener('click', closeModal);
     $('#im-modal').addEventListener('click', function (e) { if (e.target.id === 'im-modal') closeModal(); });

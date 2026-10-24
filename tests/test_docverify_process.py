@@ -85,7 +85,7 @@ def test_inspection_requires_moderator_and_scribe(client, app):
 def test_legacy_without_type_opens(client, app):
     iid = seed(app)
     body = client.get(f"{P}/inspections/{iid}").get_json()
-    assert body["type"]["label"] == "未設定（旧形式）" and body["type"]["hint"]
+    assert body["type"]["label"] == "未設定" and body["type"]["hint"]
 
 
 # --- FR-06-141 兼務 ---------------------------------------------------------------

@@ -12,7 +12,6 @@
   function savePending(value) { C.pending = value; try { if (value) sessionStorage.setItem('dv-cases-pending', JSON.stringify(value)); else sessionStorage.removeItem('dv-cases-pending'); } catch (e) { /* 同じ画面内では保持 */ } }
   const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const sec = (v) => document.querySelector(`section.dv-view[data-view="${v}"]`);
-  const ACT = { review_started: 'レビュー開始', finding_decided: '採否を記録', finding_revoked: '採否を取り消し', approved: '承認', rejected: '差し戻し' };
   const roleLabel = (role, fallback) => ({ baseline: '基準', target: '確認対象', reference: '参照' }[role] || fallback);
   const who = (u) => ({ _none: '未ログインの利用者', _seed: '取り込み' }[u] || u);
   const when = (v) => window.DV.fmtJst(v);   // 対検査と同じ日本時間の整形（docverify-core.js）
@@ -30,7 +29,11 @@
     root.dataset.state = kind;
     if (kind === 'normal') return;
     if (typeof UIStates !== 'undefined' && UIStates.set) {
-      try { UIStates.set(body, kind === 'search-empty' ? 'empty' : kind, { message, next: action ? action.label : '', onAction: action && action.fn }); return; } catch (e) { /* 自前で描く */ }
+      try { UIStates.set(body, kind === 'search-empty' ? 'no-match' : kind, { msg: message, cta: action && kind !== 'loading' ? { label: action.label, onClick: action.fn } : null }); return; } catch (e) { /* 自前で描く */ }
+    }
+    /* ui-states.js は defer なので、起動直後はまだ無い。読み込み後に共通部品で描き直す（途中で状態が変わっていれば何もしない） */
+    if (typeof UIStates === 'undefined' && document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', () => { if (root.dataset.state === kind && !body.querySelector('.ui-state')) { body.replaceChildren(); state(root, body, kind, message, action); } }, { once: true });
     }
     body.innerHTML = `<div class="dvc-state" data-kind="${esc(kind)}">${kind === 'loading' ? '<div class="p1-skel" aria-hidden="true"><i></i><i></i><i></i></div>' : ''}<p>${esc(message)}</p>`
       + (action ? `<button type="button" class="p1-btn is-primary" data-state-act>${esc(action.label)}</button>` : '') + '</div>';
@@ -49,14 +52,16 @@
     if (!dialog.open) dialog.showModal();
     root.querySelector('[name=name]').focus();
   }
+  const docName = (n) => String(n || '').replace(/\.[A-Za-z0-9]{1,5}$/, '');   // ファイル名は出さず文書名だけ
+  const docVer = (v) => (v ? ` 第${esc(v)}版` : '');
   function row(c) {
     const open = c.inspection_id || c.iid;
     if (c.general) return `<tr tabindex="0" data-open="${esc(open)}" data-general="1"><td class="c-name"><a class="dvc-case-link" href="?iid=${encodeURIComponent(open)}#trace">${esc(c.name)}</a></td><td class="c-doc">文書 ${esc(c.documents)} 件</td><td class="c-stage">文書の確認</td><td class="c-due">${esc(c.due || '未設定')}</td><td class="c-f">関係を確認</td><td class="c-v">未判定</td><td class="c-who">—</td></tr>`;
     return `<tr tabindex="0" data-open="${esc(open)}"><td class="c-name" title="${esc(c.name)}"><a class="dvc-case-link" href="?iid=${encodeURIComponent(open)}#pair">${esc(c.name)}</a></td>`
-      + `<td class="c-doc" title="${esc(c.baseline_name || '要件定義書')} ⇔ ${esc(c.target_name || '基本設計書')}">${esc(c.baseline_name || '要件定義書')}（${esc(roleLabel(c.baseline_role, '基準'))}） ⇔ ${esc(c.target_name || '基本設計書')}（${esc(roleLabel(c.target_role, '確認対象'))}）<span class="dvc-case-purpose">${esc(c.purpose === 'coverage' ? '基準への対応' : c.purpose === 'consistency' ? '記述の整合性' : '対検査')}</span></td>`
+      + `<td class="c-doc" title="${esc(docName(c.baseline_name) || '要件定義書')} ⇔ ${esc(docName(c.target_name) || '基本設計書')}"><span class="dvc-doc-line">基準: ${esc(docName(c.baseline_name) || '要件定義書')}${docVer(c.baseline_version)}</span><span class="dvc-doc-line">確認: ${esc(docName(c.target_name) || '基本設計書')}${docVer(c.target_version)}</span></td>`
       + `<td class="c-stage">${steps(c.stage)}</td><td class="c-due">${esc(c.due || '未設定')}</td>`
       + `<td class="c-f"><span class="${c.critical_open ? 'dvc-crit' : ''}">重大 ${esc(c.critical_open)}</span>／未解消 ${esc(c.unresolved)}</td>`
-      + `<td class="c-v"><span class="dvc-chip ${VCLS[c.verdict] || 'na'}">${esc(c.verdict)}</span>${c.assessment && c.assessment.scope && c.assessment.scope.ai === 'out_of_scope' ? '<small class="dvc-sub" style="display:block">AI 検査は範囲外</small>' : ''}${c.verdict === '判定不能' && !(c.assessment && c.assessment.status === 'complete') ? `<button type="button" class="p1-btn dvc-run" style="display:block;margin-top:4px" data-cases-run="${esc(open)}" title="検査が未実行のため判定できません">検査を実行</button>` : ''}</td>`
+      + `<td class="c-v"><span class="dvc-chip ${VCLS[c.verdict] || 'na'}"${c.verdict === '判定不能' ? ' title="検査が未実行です。開いて検査を実行してください"' : ''}>${esc(c.verdict)}</span></td>`
       + `<td class="c-who" title="${esc(c.assignee)}">${esc(c.assignee ? who(c.assignee) : '未着手')}</td></tr>`;
   }
   function renderCases() {
@@ -70,12 +75,6 @@
     body.innerHTML = '<table class="dvc-t" aria-label="レビュー一覧"><thead><tr><th class="c-name">レビュー名</th><th class="c-doc">対象文書と版</th><th class="c-stage">工程</th>'
       + '<th class="c-due">期限</th><th class="c-f">指摘</th><th class="c-v">判定</th><th class="c-who">担当</th></tr></thead><tbody>'
       + list.map(row).join('') + '</tbody></table>';
-    body.querySelectorAll('[data-cases-run]').forEach((b) => b.addEventListener('click', async (e) => {
-      e.stopPropagation(); e.preventDefault();
-      b.disabled = true; b.textContent = '検査中…';
-      try { await call(`/api/docverify/${encodeURIComponent(b.dataset.casesRun)}/pair/analyze`, { method: 'POST', headers: { Accept: 'application/json', 'Content-Type': 'application/json' }, body: '{}' }); await loadCases(); }
-      catch (err) { b.disabled = false; b.textContent = '検査を実行'; msg(root, '[data-cases-msg]', err.message || MSG[500], true); }
-    }));
     body.querySelectorAll('tr[data-open]').forEach((tr) => {
       const go = () => (tr.dataset.general ? openDocuments(tr.dataset.open, tr.querySelector('.dvc-case-link').textContent) : DV.openReview(tr.dataset.open, 'pair')).catch((e) => msg(root, '[data-cases-msg]', e.message || MSG[500], true));
       tr.addEventListener('click', (e) => { if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return; e.preventDefault(); go(); });
@@ -169,7 +168,7 @@
   function trailItems() {
     const t = G.trail.filter((x) => G.filter === 'all' || fkind(x.action) === G.filter);
     return t.slice().reverse().map((x) =>
-      `<li>${esc(when(x.at))} ${esc(who(x.user))} ・ ${esc(ACT[x.action] || x.action)} ${esc(x.target)}${x.reason ? ' ・ ' + esc(x.reason) : ''}</li>`).join('') || '<li>該当する記録はありません。</li>';
+      `<li>${esc(when(x.at))} ${esc(who(x.user))} ・ ${esc(DV.actionLabel(x.action))} ${esc(x.target)}${x.reason ? ' ・ ' + esc(x.reason) : ''}</li>`).join('') || '<li>該当する記録はありません。</li>';
   }
   const ids = (a) => (a && a.length ? a.map(esc).join('、') : 'なし');
   function card(title, o) {

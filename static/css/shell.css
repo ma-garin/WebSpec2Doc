@@ -1,0 +1,28 @@
+/* シェル統一（仕様 §2.3）。サイド 232px・上部バー 56px（サイドの右側）・主ボタン 32px 太字 角丸 8px。
+   product-shell.css の後に読み込み、同じセレクタの値を上書きする。 */
+body{font-size:var(--text-base)}
+.app-shell{display:grid;grid-template-columns:var(--sidebar-w) minmax(0,1fr);height:100vh;--sidebar-w:232px}
+.app-shell:not(.sidebar-collapsed){--sidebar-w:232px}
+.app-shell.sidebar-collapsed{--sidebar-w:60px}
+.app-shell .app-main{display:grid;grid-template-rows:56px auto minmax(0,1fr) auto;min-height:0;min-width:0}
+.app-shell .app-sidebar{padding:var(--space-3) var(--space-2);gap:var(--space-2)}
+.app-shell .app-sidebar .app-nav-item,.app-shell .app-sidebar .sidebar-toggle-btn{min-height:0;padding:var(--space-2) var(--space-3);font-size:var(--text-sm);border-radius:var(--radius-md);text-decoration:none}
+.app-shell .app-sidebar .nav-label{font-size:var(--text-sm)}
+.app-shell .app-sidebar .app-nav-item[aria-disabled="true"]{color:var(--color-text-secondary);cursor:not-allowed}
+.app-shell .app-sidebar .app-nav-item[aria-disabled="true"]:hover{background:transparent}
+/* 上部バー: 見出し帯 1 段（パンくず 12px の下に h1 20px、右に操作・ユーザー） */
+.app-shell .app-header{grid-row:1;display:flex;align-items:center;justify-content:space-between;gap:var(--space-4);height:56px;min-height:56px;padding:0 var(--space-5);background:var(--color-surface);border-bottom:1px solid var(--color-border);min-width:0}
+.app-shell .app-header-lead{display:flex;flex-direction:column;justify-content:center;min-width:0;flex:1}
+.app-shell .app-header .app-breadcrumb{font-size:var(--text-xs);line-height:1.2;margin:0;color:var(--color-text-secondary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.app-shell .app-header #topbar-title{font-size:var(--text-xl);line-height:1.2;font-weight:700;margin:0;color:var(--color-text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.app-shell .app-header .app-topbar-actions{display:flex;align-items:center;gap:var(--space-2);flex:none;min-width:0;margin:0}
+.app-shell .app-header .app-topbar-actions:empty{display:none}
+.app-shell .app-header .app-topbar-right{flex:none}
+/* 主ボタン */
+.app-shell .btn-primary,.app-shell .app-topbar-actions .btn-primary{height:32px;min-height:32px;padding:0 var(--space-4);border-radius:var(--radius-md);font-size:var(--text-sm);font-weight:700}
+/* 領域（本文だけが内側でスクロールする。ページ全体は伸びない） */
+.app-shell .app-notice,.app-shell .c-reason{grid-row:2;max-height:40px;overflow:hidden}
+.app-shell .app-body{grid-row:3;display:flex;min-height:0;min-width:0}
+.app-shell .app-content{grid-row:3;min-height:0;min-width:0;overflow:auto;padding:var(--space-4) var(--space-5)}
+.app-shell .app-body>.app-content{grid-row:auto;flex:1}
+.app-shell .app-verdict-band{grid-row:4;max-height:48px;overflow:hidden}

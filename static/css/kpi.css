@@ -1,0 +1,15 @@
+/* KPI 部品 c-kpi（partials/kpi.html）。母数 0 は「—」＋対象なし、棒は描かない。値は tokens.css を使う。 */
+.c-kpi[data-denominator] {
+  box-sizing: border-box; min-width: 0; padding: var(--space-3) var(--space-4);
+  display: flex; flex-direction: column; gap: var(--space-1);
+  background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-md);
+  color: var(--color-text); overflow-wrap: anywhere;
+}
+.c-kpi[data-denominator] .c-kpi__label { font-size: var(--text-sm); color: var(--color-text-secondary); }
+.c-kpi[data-denominator] .c-kpi__value { font-size: var(--text-xl); font-weight: 700; line-height: 1.2; }
+.c-kpi[data-denominator] .c-kpi__sub { font-size: var(--text-xs); color: var(--color-text-secondary); }
+.c-kpi[data-empty="true"] .c-kpi__value { color: var(--color-text-disabled); }
+.c-kpi__bar { height: var(--space-1); border-radius: var(--radius-full); background: var(--color-surface-3); overflow: hidden; }
+.c-kpi__bar > span { display: block; height: 100%; background: var(--color-primary); }
+.c-kpi__next { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); margin-top: var(--space-1); font-size: var(--text-xs); color: var(--color-text-secondary); }
+.c-kpi__next-value { color: var(--color-text); font-weight: 600; }

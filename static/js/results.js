@@ -10,7 +10,7 @@ const TAB_DEFS = {
   screens:       { panel: 'rp-screens', defaultSub: 'spec',
                    subs: { spec: 'renderReport', gallery: 'renderShots', coverage: 'renderCoverageHeatmap' } },
   'test-design': { panel: 'rp-test-design', defaultSub: 'by-screen',
-                   subs: { 'by-screen': 'renderDesignByScreen', matrix: 'renderMatrix', summary: 'renderDesign', detail: 'renderTechniqueDetail', mbt: 'renderMbtDesign' } },
+                   subs: { 'by-screen': 'renderDesignByScreen', matrix: 'renderMatrix', technique: 'renderTechniqueCombined' } },
   testcases:     { panel: 'rp-testcases', render: 'renderResultTestcases' },
   flow:          { panel: 'rp-flow', defaultSub: 'diagram',
                    subs: { diagram: 'renderTransition', table: 'renderTransitionTable' } },
@@ -159,16 +159,18 @@ function _updateKpiHero(s, required, data) {
   const fields = s.fields || 0;
   setText('k-screens', s.screens || 0);
   setText('k-forms-sub', s.forms ? `フォーム ${s.forms}` : '');
-  setText('k-fields', fields);
-  setText('k-required-sub', fields ? `必須 ${required}（${Math.round(required / fields * 100)}%）` : '必須 0');
+  setText('k-fields', fields || '—');
+  setText('k-required-sub', fields ? `必須 ${required}（${Math.round(required / fields * 100)}%）` : '');
   const bar = document.getElementById('k-required-bar');
   if (bar) bar.style.width = fields ? Math.round(required / fields * 100) + '%' : '0%';
+  const barWrap = bar && bar.parentElement;
+  if (barWrap) barWrap.hidden = !fields;
 
   if (reportJson) {
     const effort = estimateTestEffort(reportJson);
     setText('k-conds', countTestConditions(reportJson));
     setText('k-cases', effort.cases);
-    setText('k-hours-sub', effort.cases ? `約${effort.hours}時間（1件${effort.caseMinutes}分）` : '');
+    setText('k-hours-sub', effort.cases && fields ? `約${effort.hours}時間（1件${effort.caseMinutes}分）` : '');
   } else {
     setText('k-conds', '—');
     setText('k-cases', '—');
@@ -194,7 +196,7 @@ function _updateKpiHero(s, required, data) {
       passEl.textContent = rate + '%';
       passEl.classList.add(run.failed ? 'is-fail' : 'is-pass');
       const at = data.playwright_run_at ? ` ・ ${data.playwright_run_at}` : '';
-      subEl.textContent = `PASS ${run.passed || 0} / FAIL ${run.failed || 0}` + at;
+      subEl.textContent = `合格 ${run.passed || 0} / 不合格 ${run.failed || 0}` + at;
     }
   }
   if (tile && !tile._bound) {
@@ -280,7 +282,12 @@ document.querySelectorAll('.result-subtabs .result-subtab').forEach(t => {
 
 // タブ・サブタブ名を正規化（旧8タブ時代の名前も受け付ける）
 function _normalizeTab(tab, sub) {
-  if (LEGACY_TAB_MAP[tab]) return LEGACY_TAB_MAP[tab];
+  const _TECH_ALIAS = ['summary', 'detail', 'mbt'];
+  if (LEGACY_TAB_MAP[tab]) {
+    const m = LEGACY_TAB_MAP[tab];
+    return m[0] === 'test-design' && _TECH_ALIAS.includes(m[1]) ? ['test-design', 'technique'] : m;
+  }
+  if (tab === 'test-design' && _TECH_ALIAS.includes(sub)) sub = 'technique';
   const def = TAB_DEFS[tab] ? tab : 'overview';
   const d = TAB_DEFS[def];
   const s = d.subs ? (d.subs[sub] ? sub : d.defaultSub) : '';
@@ -363,8 +370,7 @@ async function renderTimeline() {
   if (snaps.length < 2) {
     host.innerHTML = '<div class="hero-pad"><div class="hero-section-title">クロール履歴</div>' +
       '<p style="color:var(--text-muted);font-size:13px">履歴が' + snaps.length + '件です。<strong>再解析</strong>すると、前回との仕様ドリフト（追加/削除された画面・変更されたフォーム）を時系列で比較できます。</p>' +
-      _ciGuidanceCard(domain) + '</div>';
-    _bindCiCopy();
+      _ciLink() + '</div>';
     return;
   }
   // 既定: to=最新(0), from=ひとつ前(1)
@@ -380,54 +386,19 @@ async function renderTimeline() {
     '<p style="color:var(--text-muted);font-size:13px;margin-bottom:10px">比較する2時点を選び、仕様ドリフトを確認します（比較元＝古い／比較先＝新しい）。</p>' +
     '<table class="ov-screens tl-table"><thead><tr><th>比較元</th><th>比較先</th><th>クロール日時</th><th>画面</th><th>フォーム</th><th>入力項目</th></tr></thead><tbody>' +
     rows + '</tbody></table>' +
-    '<div class="tl-mode" style="margin:10px 0;font-size:13px">比較モード: ' +
-    '<label style="margin-right:14px"><input type="radio" name="tl-mode" value="comparison" checked> 現新比較（4分類・既定）</label>' +
-    '<label><input type="radio" name="tl-mode" value="diff"> 簡易ドリフト差分</label></div>' +
-    '<div style="margin:12px 0"><button type="button" class="btn-primary" id="tl-diff-btn">この2時点を比較する</button></div>' +
+    '<div style="margin:12px 0"><button type="button" class="c-btn c-btn--primary" id="tl-diff-btn">差分を表示</button></div>' +
     '<p class="tl-diff-basis" id="tl-diff-basis"></p>' +
     '<div class="tl-diff-frame" id="tl-diff"></div>' +
-    _ciGuidanceCard(domain) + '</div>';
-  document.getElementById('tl-diff-btn').addEventListener('click', showTimelineDiff);
-  document.querySelectorAll('input[name=tl-mode]').forEach(el => el.addEventListener('change', showTimelineDiff));
-  _bindCiCopy();
-  showTimelineDiff();
-}
-function _bindCiCopy() {
-  const card = document.querySelector('.ci-guidance');
-  const btn = document.getElementById('ci-copy-btn');
-  if (!card || !btn) return;
-  const domain = card.dataset.ciDomain || '';
-  card.querySelectorAll('[data-ci-format]').forEach(tab => {
-    tab.addEventListener('click', () => {
-      _ciSnippetFormat = tab.dataset.ciFormat;
-      card.querySelectorAll('[data-ci-format]').forEach(t => {
-        t.classList.toggle('is-active', t === tab);
-      });
-      const cmd = document.getElementById('ci-cmd');
-      if (cmd) cmd.textContent = _ciSnippetText(domain);
-    });
-  });
-  btn.addEventListener('click', () => {
-    const cmd = document.getElementById('ci-cmd');
-    if (!cmd) return;
-    // 失敗を黙って捨てると「押したのに入っていない」状態になる（clipboard は
-    // 権限・非セキュアコンテキストで拒否されうる）。手でコピーする導線を出す。
-    navigator.clipboard.writeText(cmd.textContent).then(() => {
-      btn.textContent = 'コピーしました';
-      setTimeout(() => { btn.textContent = 'コピー'; }, 1500);
-    }).catch(() => {
-      btn.textContent = 'コピーできません（手で選択してください）';
-      setTimeout(() => { btn.textContent = 'コピー'; }, 3000);
-    });
-  });
+    _ciLink() + '</div>';
+  document.getElementById('tl-diff-btn').addEventListener('click', () => showTimelineDiff('diff'));
+  showTimelineDiff('diff');
 }
 // CI 組み込み用スニペット（P3-3）。--ci は --compare --fail-on-drift を含み、
-// 機械可読サマリを stdout へ出す（src/main.py:177）。個別フラグを並べるより
-// 1 つで意図が伝わり、サマリ出力も付くのでこちらを勧める。
-// 連携先（GitHub Actions / Jenkins / 自前スクリプト）は顧客環境次第のため断定しない。
+// --ci は比較と差分時の失敗終了を含む（src/main.py:177）。個別フラグを並べるより
+// 1 つで意図が伝わるのでこちらを勧める。連携先は顧客環境次第のため断定しない。
 const CI_SNIPPET_FORMATS = {
   gha: {
-    label: 'GitHub Actions',
+    label: '定期実行の設定',
     build: (domain) =>
       '- name: 仕様ドリフト検知\n' +
       '  run: |\n' +
@@ -448,22 +419,9 @@ function _ciSnippetText(domain) {
   return format.build(domain);
 }
 
-function _ciGuidanceCard(domain) {
-  const tabs = Object.entries(CI_SNIPPET_FORMATS).map(([key, f]) =>
-    `<button type="button" class="ci-format-btn${key === _ciSnippetFormat ? ' is-active' : ''}"` +
-    ` data-ci-format="${key}">${escHtml(f.label)}</button>`).join('');
-  return '<div class="ci-guidance" data-ci-domain="' + escHtml(domain) + '">' +
-    '<div class="ci-guidance-title">⚙️ CI/CD で自動ドリフト検知</div>' +
-    '<p style="font-size:12.5px;color:var(--text-muted);margin:4px 0 8px">' +
-    '定期実行ジョブに組み込むと、前回から仕様ドリフトが出たとき <code>exit code 1</code> で失敗し、' +
-    'パイプラインを止められます。</p>' +
-    `<div class="ci-format-tabs">${tabs}</div>` +
-    '<div class="ci-guidance-cmd"><code id="ci-cmd">' + escHtml(_ciSnippetText(domain)) + '</code>' +
-    '<button type="button" class="btn-outline-sm" id="ci-copy-btn">コピー</button></div>' +
-    '<p style="font-size:12px;color:var(--text-muted);margin:8px 0 0">' +
-    '結果の読み方: 差分があると <code>exit code 1</code>。機械可読サマリは stdout と ' +
-    `<code>output/${escHtml(domain)}/drift_summary.json</code> の両方に出ます。</p>` +
-    '</div>';
+// 定期的な差分確認は System 04（CLI・API）へ案内する
+function _ciLink() {
+  return '<p class="ci-link"><a class="c-btn c-btn--tertiary" href="/cli">定期的に差分を確認するには（CLI・API）</a></p>';
 }
 
 // 「この2時点の差分を表示」ボタンの応答が「押しても反応がわからない」と報告された不具合の修正。
@@ -497,7 +455,7 @@ async function _annotateNoChange(from, to) {
     }
   } catch (e) { /* 件数が取れなくても差分表本体の表示は妨げない */ }
 }
-async function showTimelineDiff() {
+async function showTimelineDiff(modeArg) {
   const from = (document.querySelector('input[name=snap-from]:checked') || {}).value;
   const to = (document.querySelector('input[name=snap-to]:checked') || {}).value;
   const box = document.getElementById('tl-diff');
@@ -507,12 +465,12 @@ async function showTimelineDiff() {
   if (!from || !to) { box.innerHTML = '<div class="hero-msg">2時点を選択してください。</div>'; return; }
   if (from === to) { box.innerHTML = '<div class="hero-msg">異なる2時点を選択してください。</div>'; return; }
 
-  const mode = (document.querySelector('input[name=tl-mode]:checked') || {}).value || 'comparison';
+  const mode = modeArg === 'comparison' ? 'comparison' : 'diff';
   const endpoint = mode === 'diff' ? 'snapshot-diff' : 'snapshot-comparison';
   const frameTitle = mode === 'diff' ? '仕様ドリフト差分' : '現新比較（4分類）';
   const myToken = ++_tlDiffToken; // 選択変更・連打時、古い応答の描画を破棄する
-  const origLabel = 'この2時点を比較する';
-  if (btn) { btn.disabled = true; btn.textContent = mode === 'diff' ? '差分を取得中…' : '現新比較を実行中…'; }
+  const origLabel = '差分を表示';
+  if (btn) { btn.disabled = true; btn.textContent = '読み込み中…'; }
   uiSkeleton(box, 'table');
 
   let html = '';
@@ -527,7 +485,7 @@ async function showTimelineDiff() {
     uiError(box, {
       title: (mode === 'diff' ? '差分' : '現新比較') + 'の取得に失敗しました',
       message: e && e.message ? e.message : '通信エラー',
-      onRetry: showTimelineDiff,
+      onRetry: () => showTimelineDiff(mode),
     });
     if (btn) { btn.disabled = false; btn.textContent = origLabel; }
     return;

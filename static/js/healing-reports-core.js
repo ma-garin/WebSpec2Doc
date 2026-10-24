@@ -71,9 +71,18 @@
     var st = document.getElementById('hl-ws-status');
     if (t && o.title) { t.textContent = o.title; }
     if (d && o.desc) { d.textContent = o.desc; }
-    if (st) { st.innerHTML = o.statusCode ? window.WS2D.status.html(o.statusCode, o.statusLabel || undefined) : ''; }
-    var r = document.getElementById('hl-ws-reason');
-    if (r && o.reason) { window.WS2D.reason(r, o.reason, o.reasonKind || 'info'); }
+    /* 状態と理由は topbar の #page-reason に 1 行で出す（本文にチップ・バナーを置かない）。
+       共通レイアウトでない画面は従来どおり本文の #hl-ws-status / #hl-ws-reason。 */
+    var top = document.getElementById('page-reason');
+    if (top && o.reason) {
+      if (st) { st.innerHTML = ''; st.hidden = true; }
+      window.WS2D.reason(top, (o.statusLabel ? o.statusLabel + '。' : '') + o.reason, o.reasonKind || 'info');
+      top.hidden = false;
+    } else {
+      if (st) { st.innerHTML = o.statusCode ? window.WS2D.status.html(o.statusCode, o.statusLabel || undefined) : ''; st.hidden = false; }
+      var r = document.getElementById('hl-ws-reason');
+      if (r && o.reason) { window.WS2D.reason(r, o.reason, o.reasonKind || 'info'); r.hidden = false; }
+    }
     head.hidden = false;
   }
 

@@ -49,7 +49,7 @@
   content: "NEW";
   font-size: 9px;
   margin-left: 4px;
-  color: var(--accent, #4c8dff);
+  color: var(--accent, var(--color-primary));
   font-weight: 700;
 }
 .result-subtab {
@@ -242,7 +242,7 @@ button.kpi-tile--action:focus-visible { outline: 2px solid var(--primary); outli
   border-radius: 12px;
   font-size: 12px;
   font-weight: 700;
-  color: #fff;
+  color: var(--color-surface);
   margin: 2px 3px 2px 0;
   background: var(--text-muted);
   white-space: nowrap;

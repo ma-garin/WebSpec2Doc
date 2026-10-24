@@ -256,8 +256,8 @@
     CUR.ctx = ctx; CUR.linked = false;
     var linked = ((ctx && ctx.system) || {}).code_site || '';
     var want = new URLSearchParams(location.search).get('site') || linked;  // 渡されたサイトを初期選択にする（関連付けとは別）
-    el.innerHTML = '<div class="dashboard-section-head"><div><h2 class="dash-section-title">コード依存（サイト単位・静的）<span id="im-rea-cur" class="im-rea-cur"></span></h2>' +
-      '<p class="dashboard-section-copy">System 01 のリバース解析で見つけた module の import 関係です。' + esc(NOTICE) + '。既存の影響分析とは別の層です。</p></div></div>' +
+    el.innerHTML = '<div class="c-section-head"><div class="c-section-head__main"><h2 class="c-section-head__title">コード依存（サイト単位・静的）<span id="im-rea-cur" class="im-rea-cur"></span></h2>' +
+      '<p class="c-section-head__desc">System 01 のリバース解析で見つけた module の import 関係です。' + esc(NOTICE) + '。既存の影響分析とは別の層です。</p></div></div>' +
       layerBands() + '<div id="im-rea-reason"></div><div id="im-rea-linkbox"></div>' +
       '<div class="im-rea-bar"><label>対象サイト<select id="im-rea-site"><option value="">読み込み中…</option></select></label></div><div id="im-rea-body"></div>';
     linkState(el, ctx, '');

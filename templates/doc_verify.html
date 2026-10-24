@@ -1,14 +1,9 @@
-<!DOCTYPE html>
-<html lang="ja">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ドキュメント検証 - WebSpec2Doc</title>
-  <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
-  <link rel="stylesheet" href="{{ url_for('static', filename='tokens.css') }}?v={{ _ver }}">
-  <link rel="stylesheet" href="{{ url_for('static', filename='app.css') }}?v={{ _ver }}">
-  <link rel="stylesheet" href="{{ url_for('static', filename='app-components.css') }}?v={{ _ver }}">
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/components.css') }}?v={{ _ver }}">
+{% extends 'layouts/system.html' %}
+{#- ドキュメント検証（System 06）。共通レイアウトに載せる。管理群は レビュー一覧・観点・履歴＋設定（サイドバー）。
+    概要・要件・指摘・矛盾・トレーサビリティ・変更・AI レビューはレビューを開いた後の本文上部タブ（c-tabs）。 -#}
+{% set system_key = 'docverify' %}
+{% set topbar_crumb = 'ドキュメント検証' %}{% set topbar_title = 'レビュー一覧' %}
+{% block head_css %}
   <link rel="stylesheet" href="{{ url_for('static', filename='css/user-menu.css') }}?v={{ _ver }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/ta2.css') }}?v={{ _ver }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/docverify.css') }}?v={{ dv_ver }}">
@@ -26,78 +21,65 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='css/docassure-s-review.css') }}?v={{ dv_ver }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/docassure-s-requirements.css') }}?v={{ dv_ver }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/docassure-s-shared.css') }}?v={{ dv_ver }}">
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/c-hybrid.css') }}?v={{ _ver }}">
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/c-shell.css') }}?v={{ _ver }}">
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/docverify-sidebar.css') }}?v={{ dv_ver }}">
-</head>
-<body class="app-page dv-page">
-<a href="#app-content" class="skip-link">本文へスキップ</a>
-<div class="app-shell">
-  {# ドキュメント検証（System 06）。管理群は レビュー一覧・観点・履歴 の 3 つ＋設定。根拠（実画面との照合）は「履歴」画面の中のタブ。 #}
-  <aside class="app-sidebar dv-sb" aria-label="ドキュメント検証のナビゲーション">
-    <div class="dv-sb__brand">
-      <a href="/systems" class="dv-sb__product" title="WebSpec2Doc のシステム一覧"><span class="app-brand-mark" aria-hidden="true">W</span><span class="dv-sb__names"><strong>Document Assurance</strong></span></a>
-      <a href="/systems" class="dv-sb__switch" title="システムを切り替える" aria-label="システムを切り替える（現在: ドキュメント検証）"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></a>
-    </div>
-    <nav class="app-nav dv-sidenav" aria-label="メインナビゲーション">
-      <div class="dv-sb__group">
-        <a class="dv-sb__item" href="#assure" data-da-tab="overview"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg><span class="dv-sb__label">概要</span></a>
-        <a class="dv-sb__item" href="#assure" data-da-tab="req"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M9 13h6M9 17h4"/></svg><span class="dv-sb__label">要件</span></a>
-        <a class="dv-sb__item" href="#assure" data-da-tab="issues"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 21V4"/><path d="M5 4h11l-2 4 2 4H5"/></svg><span class="dv-sb__label">指摘</span><span class="dv-sb__count" data-count="issues" hidden></span></a>
-        <a class="dv-sb__item" href="#assure" data-da-tab="conf"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 2 20h20z"/><path d="M12 10v4M12 17h.01"/></svg><span class="dv-sb__label">矛盾</span><span class="dv-sb__count" data-count="conf" hidden></span></a>
-        <a class="dv-sb__item" href="#assure" data-da-tab="trace"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="6" cy="6" r="2.5"/><circle cx="18" cy="12" r="2.5"/><circle cx="6" cy="18" r="2.5"/><path d="M8.5 6H12a3 3 0 0 1 3 3v.5M8.5 18H12a3 3 0 0 0 3-3v-.5"/></svg><span class="dv-sb__label">トレーサビリティ</span></a>
-        <a class="dv-sb__item" href="#assure" data-da-tab="changes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v18"/><path d="M4 8h5M6.5 5.5v5M15 16h5"/></svg><span class="dv-sb__label">変更</span></a>
-        <a class="dv-sb__item" href="#assure" data-da-tab="review"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="m8 12 3 3 5-6"/></svg><span class="dv-sb__label">AI レビュー</span></a>
-      </div>
-      <hr class="dv-sb__sep">
-      <div class="dv-sb__group dv-sb__group--admin">
-        <div class="dv-sb__heading" aria-hidden="true">管理</div>
-        <a class="dv-sb__item dv-sec" href="#reviews" data-sec="doc" data-go="reviews" title="レビューを作って進める"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg><span class="dv-sb__label">レビュー一覧</span></a>
-        <a class="dv-sb__item dv-sec" href="#checklists" data-sec="vp" data-go="checklists" title="チェックする観点"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6h11M9 12h11M9 18h11"/><path d="M4 6h.01M4 12h.01M4 18h.01"/></svg><span class="dv-sb__label">観点</span></a>
-        <a class="dv-sb__item dv-sec" href="#metrics" data-sec="hist" data-go="metrics" title="過去の判定と記録"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l3 2"/></svg><span class="dv-sb__label">履歴</span></a>
-      </div>
-      <div class="dv-sb__foot"><a class="dv-sb__item dv-sec" href="#settings" data-sec="set" data-go="settings" title="用語・AI の送信先"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1 7 17M17 7l2.1-2.1"/></svg><span class="dv-sb__label">設定</span></a></div>
-    </nav>
-    <script>(function(){var n=document.querySelector('.dv-sb .dv-sidenav');if(!n)return;var ob;
-      function sync(){var h=location.hash||'',m=h.match(/^#assure(?:\/[^\/]*\/([\w-]+))?/),tab=m?(m[1]||'overview'):null;
-        if(ob)ob.disconnect();
-        n.querySelectorAll('[data-da-tab]').forEach(function(a){var on=a.dataset.daTab===tab;a.classList.toggle('active',on);if(on)a.setAttribute('aria-current','page');else a.removeAttribute('aria-current');});
-        n.querySelectorAll('.dv-sec').forEach(function(a){var on=!tab&&a.classList.contains('active');if(on)a.setAttribute('aria-current','page');else a.removeAttribute('aria-current');if(tab)a.classList.remove('active');});
-        var cur=n.querySelector('.dv-sb__more [aria-current]');if(cur)cur.closest('details').open=true;
-        if(ob)ob.observe(n,{subtree:true,attributes:true,attributeFilter:['class']});}
-      n.addEventListener('click',function(e){var a=e.target.closest('[data-da-tab]');if(!a)return;e.preventDefault();var t=a.dataset.daTab;location.hash=window.DAX_IID?('#assure/'+window.DAX_IID+'/'+t):(t==='overview'?'#assure':'#assure');});
-      n.querySelectorAll('.dv-sb__item').forEach(function(it){var l=it.querySelector('.dv-sb__label');if(l&&!it.title)it.title=l.textContent.trim();});
-      window.addEventListener('dax:counts',function(e){var d=e.detail||{};n.querySelectorAll('.dv-sb__count').forEach(function(c){var v=d[c.dataset.count];if(v==null||v===''||+v===0){c.hidden=true;return;}c.textContent=v;var L=(window.DAM||{}).LABEL,k=c.dataset.count,lb=L?(k==='conf'?L.confOf(d.issues,v):k==='req'?L.reqOpen(v):L.issues(v)):(k==='conf'?'判断待ち '+d.issues+' 件のうち矛盾 ':'判断待ち ')+v+' 件';c.title=lb;c.setAttribute('aria-label',lb);c.hidden=false;});});
-      function crumb(){var bc=document.getElementById('topbar-breadcrumb');if(!bc)return;var cur=n.querySelector('[aria-current="page"] .dv-sb__label');var isDA=/^#assure/.test(location.hash||'');var r=window.DV&&DV.state&&DV.state.review&&DV.state.review.name;var parts=['Document Assurance'];if(isDA){if(r&&cur){parts.push(r,cur.textContent.trim());}else parts.push('ドキュメント品質保証');}else if(cur){parts.push(cur.textContent.trim());}
-        var h=parts.map(function(t,i){var e=document.createElement('span');e.textContent=t;if(i===parts.length-1)e.setAttribute('aria-current','page');return e.outerHTML;}).join('<span class="sep">/</span>');var f=bc.firstElementChild;if(f&&f.textContent.trim()==='WebSpec2Doc'){f.hidden=true;if(f.nextElementSibling)f.nextElementSibling.hidden=true;var rest=Array.prototype.slice.call(bc.children,2).map(function(e){return e.outerHTML;}).join('');if(rest===h)return;}if(bc.innerHTML!==h)bc.innerHTML=h;}
-      var bcEl=document.getElementById('topbar-breadcrumb');if(bcEl)new MutationObserver(function(){setTimeout(crumb,0);}).observe(bcEl,{childList:true,subtree:true,characterData:true});
-      window.addEventListener('dax:counts',function(){setTimeout(sync,0);setTimeout(crumb,0);});
-      window.addEventListener('hashchange',function(){setTimeout(sync,0);setTimeout(crumb,60);});
-      ob=new MutationObserver(function(){setTimeout(sync,0);});sync();setTimeout(crumb,300);
-      /* 上部バーの内側を本文コンテナの左右端にそろえる（本文側の幅指定に追従） */
-      function align(){var tb=document.querySelector('.dv-page .app-topbar');if(!tb)return;var t=document.querySelector('.dv-view:not([hidden]) .dax-page')||document.querySelector('.dv-view:not([hidden]) .dax-header__row');if(!t||!t.offsetParent){tb.style.paddingLeft=tb.style.paddingRight='';return;}var r=t.getBoundingClientRect(),c=getComputedStyle(t),b=tb.getBoundingClientRect();var l=Math.max(24,Math.round(r.left+parseFloat(c.paddingLeft)-b.left)),rr=Math.max(24,Math.round(b.right-(r.right-parseFloat(c.paddingRight))));tb.style.paddingLeft=l+'px';tb.style.paddingRight=rr+'px';}
-      window.addEventListener('resize',align);window.addEventListener('hashchange',function(){setTimeout(align,80);});window.addEventListener('dax:counts',function(){setTimeout(align,0);});setTimeout(align,300);})();</script>
-  </aside>
-
-  <div class="app-main">
-    {% set topbar_crumb = 'Document Assurance' %}{% set topbar_title = 'レビュー一覧' %}
-    {% include 'partials/topbar.html' %}
-    <main class="app-content dv-content" id="app-content">
-      <header class="c-page-head dv-pagehead" id="dv-pagehead"><div class="c-page-head__main"><h2 class="c-page-head__title" id="dv-ph-title">レビュー</h2><p class="c-page-head__desc" id="dv-ph-desc"></p><div class="c-page-head__state" id="dv-ph-state"></div></div></header>
-      <div class="dv-reason" id="dv-reason"></div>
+{% endblock %}
+{% block head_css_late %}  <link rel="stylesheet" href="{{ url_for('static', filename='css/docverify-sidebar.css') }}?v={{ dv_ver }}">
+  {# 既存 CSS は .dv-page を祖先に取る（子孫セレクタのみ）。body の class は共通レイアウトが持つので html に付ける #}
+  <script>document.documentElement.classList.add('dv-page');</script>
+{% endblock %}
+{% block sidebar_cta %}    <button type="button" class="btn-primary sidebar-primary-action" id="dv-new-review">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+      <span class="nav-label">新しいレビュー</span>
+    </button>
+{% endblock %}
+{% block sidebar_nav %}{% include 'partials/docverify-sidebar.html' %}{% endblock %}
+{% block content %}
+      <header class="c-page-head dv-pagehead" id="dv-pagehead">
+        <div class="c-page-head__main">
+          <h2 class="c-page-head__title" id="dv-ph-title">レビュー</h2>
+          <p class="c-page-head__desc" id="dv-ph-desc">レビューを作り、文書の検査から判定までを進めます。</p>
+          <div class="c-page-head__state" id="dv-ph-state"></div>
+          {# 作成フォーム。表示はレビュー一覧の画面（.dv-view[data-view=reviews]）に合わせる（下の script） #}
+          <form id="dvgNewForm" class="dv-newform" hidden>
+            <div class="dv-newform__row">
+              <input class="c-input" name="name" required maxlength="100" aria-label="レビュー名" placeholder="レビュー名（例: 会員登録 要求仕様 第 1.2 版）">
+              <button class="c-btn c-btn--primary" type="submit">作成して開く</button>
+            </div>
+            <div class="dash-hero-steps"><span class="dash-hero-step"><b>1</b> 文書を選ぶ</span><span class="dash-hero-arrow">→</span><span class="dash-hero-step"><b>2</b> 検査する</span><span class="dash-hero-arrow">→</span><span class="dash-hero-step"><b>3</b> 判定する</span></div>
+            <div class="dv-newform__fields">
+              <label class="c-field"><span class="c-field__label">対象の文書</span><input class="c-input" name="file" type="file" title="" required></label>
+              <label class="c-field"><span class="c-field__label">観点チェックリスト</span><select class="c-input" name="checklist_id" id="dvgNewChecklist"><option value="">使わない</option></select></label>
+              <label class="c-field"><span class="c-field__label">期限</span><input class="c-input" name="due" type="date"></label>
+            </div>
+          </form>
+        </div>
+      </header>
       <nav class="dv-subtabs" id="dv-subtabs" aria-label="画面の切り替え" hidden></nav>
       <div class="dv-banner" id="dv-banner" role="alert" hidden></div>
       <div class="dv-toast" id="dv-toast" role="status" hidden></div>
       {% include 'docverify/_global.html' %}
       {% include 'docverify/_review.html' %}
       {% include 'docverify/_trace.html' %}
-      <section class="dv-view da" data-view="assure" hidden><div id="da-root" aria-label="ドキュメント品質保証"></div></section>
+      <section class="dv-view da" data-view="assure" hidden>
+        {# レビューを開いた後のタブ。dv-sb / dv-sb__item / dv-sb__label / dv-sb__count は docassure.js が参照する #}
+        <nav class="c-tabs dv-da-tabs dv-sb" id="dv-da-tabs" role="tablist" aria-label="レビューの画面" hidden>
+          <a role="tab" class="dv-sb__item" href="#assure" data-da-tab="overview"><span class="dv-sb__label">概要</span></a>
+          <a role="tab" class="dv-sb__item" href="#assure" data-da-tab="req"><span class="dv-sb__label">要件</span></a>
+          <a role="tab" class="dv-sb__item" href="#assure" data-da-tab="issues"><span class="dv-sb__label">指摘</span><span class="dv-sb__count" data-count="issues" hidden></span></a>
+          <a role="tab" class="dv-sb__item" href="#assure" data-da-tab="conf"><span class="dv-sb__label">矛盾</span><span class="dv-sb__count" data-count="conf" hidden></span></a>
+          <a role="tab" class="dv-sb__item" href="#assure" data-da-tab="changes"><span class="dv-sb__label">変更</span></a>
+          <a role="tab" class="dv-sb__item" href="#assure" data-da-tab="review"><span class="dv-sb__label">AI レビュー</span></a>
+          <a role="tab" class="dv-sb__item" href="#assure" data-da-tab="trace"><span class="dv-sb__label">トレーサビリティ</span></a>
+        </nav>
+        <div id="da-root" aria-label="ドキュメント検証"></div>
+      </section>
       {% include 'docverify/_process.html' %}
       {% include 'docverify/_accuracy.html' %}
-      <dialog class="dv-modal" id="dv-modal" aria-labelledby="dv-modal-title"><h2 class="dv-modal-title" id="dv-modal-title"></h2><div class="dv-modal-body" id="dv-modal-body"></div><div class="dv-modal-actions"><button type="button" class="b" data-modal="cancel"></button><button type="button" class="b p" data-modal="ok"></button></div></dialog>
-    </main>
-  </div>
-</div>
+{% endblock %}
+{% block modals %}
+<dialog class="dv-modal" id="dv-modal" aria-labelledby="dv-modal-title"><h2 class="dv-modal-title" id="dv-modal-title"></h2><div class="dv-modal-body" id="dv-modal-body"></div><div class="dv-modal-actions"><button type="button" class="b" data-modal="cancel"></button><button type="button" class="b p" data-modal="ok"></button></div></dialog>
+{% endblock %}
+{% block scripts %}
+<script>(function(){var m=document.getElementById('app-content');if(m)m.classList.add('dv-content');})();</script>
 <script src="{{ url_for('static', filename='js/c-hybrid.js') }}?v={{ _ver }}"></script>
 <script src="{{ url_for('static', filename='js/user-menu.js') }}?v={{ _ver }}"></script>
 <script src="{{ url_for('static', filename='js/docverify-core.js') }}?v={{ dv_ver }}"></script>
@@ -118,5 +100,28 @@
 <script src="{{ url_for('static', filename='js/docassure-review-panel.js') }}?v={{ dv_ver }}"></script>
 <script src="{{ url_for('static', filename='js/docassure-links-panel.js') }}?v={{ dv_ver }}"></script>
 <script>DV.start();</script>
-</body>
-</html>
+<script>(function(){
+  /* タブ（レビューを開いた後）とサイドバーの aria-current、作成フォームの表示、パンくずを同期する */
+  var tabs=document.getElementById('dv-da-tabs'),side=document.getElementById('dv-sidenav');if(!tabs||!side)return;
+  var form=document.getElementById('dvgNewForm'),rv=document.querySelector('section.dv-view[data-view="reviews"]');
+  function syncForm(){if(form&&rv)form.hidden=rv.hidden;}
+  if(rv)new MutationObserver(syncForm).observe(rv,{attributes:true,attributeFilter:['hidden']});syncForm();
+  var ob;
+  function curTab(){var h=location.hash||'',m=h.match(/^#assure(?:\/[^\/]*\/([\w-]+))?/);return m?(m[1]||'overview'):null;}
+  function sync(){var tab=curTab();if(ob)ob.disconnect();
+    tabs.hidden=!window.DAX_IID;
+    tabs.querySelectorAll('[data-da-tab]').forEach(function(a){var on=a.dataset.daTab===tab;a.classList.toggle('active',on);a.setAttribute('aria-selected',on?'true':'false');if(on)a.setAttribute('aria-current','page');else a.removeAttribute('aria-current');});
+    side.querySelectorAll('.dv-sec').forEach(function(a){var on=a.classList.contains('active');if(on)a.setAttribute('aria-current','page');else a.removeAttribute('aria-current');});
+    if(ob)ob.observe(side,{subtree:true,attributes:true,attributeFilter:['class']});}
+  tabs.addEventListener('click',function(e){var a=e.target.closest('[data-da-tab]');if(!a)return;e.preventDefault();var t=a.dataset.daTab;location.hash=window.DAX_IID?('#assure/'+window.DAX_IID+'/'+t):'#assure';});
+  window.addEventListener('dax:counts',function(e){var d=e.detail||{};tabs.querySelectorAll('.dv-sb__count').forEach(function(c){var v=d[c.dataset.count];if(v==null||v===''||+v===0){c.hidden=true;return;}c.textContent=v;var L=(window.DAM||{}).LABEL,k=c.dataset.count,lb=L?(k==='conf'?L.confOf(d.issues,v):k==='req'?L.reqOpen(v):L.issues(v)):(k==='conf'?'判断待ち '+d.issues+' 件のうち矛盾 ':'判断待ち ')+v+' 件';c.title=lb;c.setAttribute('aria-label',lb);c.hidden=false;});});
+  /* パンくずは「WebSpec2Doc / ドキュメント検証」。レビューを開いた後のタブ画面だけ レビュー名 / タブ名 を足す（他の画面は docverify-core.js が書く） */
+  function crumb(){var bc=document.getElementById('topbar-breadcrumb');if(!bc)return;if(!/^#assure/.test(location.hash||''))return;var cur=tabs.querySelector('[aria-current="page"] .dv-sb__label');var r=window.DV&&DV.state&&DV.state.review&&DV.state.review.name;var parts=['WebSpec2Doc','ドキュメント検証'];if(r){parts.push(r);if(cur)parts.push(cur.textContent.trim());}
+    var h=parts.map(function(t,i){var e=document.createElement('span');e.textContent=t;if(i===parts.length-1)e.setAttribute('aria-current','page');return e.outerHTML;}).join('<span class="sep">/</span>');if(bc.innerHTML!==h)bc.innerHTML=h;}
+  var bcEl=document.getElementById('topbar-breadcrumb');if(bcEl)new MutationObserver(function(){setTimeout(crumb,0);}).observe(bcEl,{childList:true,subtree:true,characterData:true});
+  window.addEventListener('dax:counts',function(){setTimeout(sync,0);setTimeout(crumb,0);});
+  window.addEventListener('hashchange',function(){setTimeout(sync,0);setTimeout(crumb,60);});
+  ob=new MutationObserver(function(){setTimeout(sync,0);});sync();setTimeout(crumb,300);
+  var rl=document.getElementById('dvgReviewsReload');if(rl)rl.addEventListener('click',function(){if(window.DV)DV.show('reviews');});
+})();</script>
+{% endblock %}

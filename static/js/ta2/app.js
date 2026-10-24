@@ -91,7 +91,7 @@
   }
 
   function bindRail() {
-    $$('.rail [data-view]').forEach(function (b) {
+    $$('.ws-rail [data-view]').forEach(function (b) {
       b.addEventListener('click', function () {
         T.setView(b.dataset.view);
         T.render();

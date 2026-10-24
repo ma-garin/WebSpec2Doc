@@ -3,6 +3,30 @@
   'use strict';
   var doc = root.document;
 
+
+  // 共通シェルの折りたたみ。保存が使えなくても画面内の操作は続けられる。
+  function initSidebar() {
+    var shell = doc.querySelector('.app-shell');
+    var button = doc.getElementById('sidebar-toggle-btn');
+    if (!shell || !button || button.dataset.sidebarBound) { return; }
+    button.dataset.sidebarBound = '1';
+    var key = 'webspec2doc.sidebar-collapsed';
+    function apply(collapsed) {
+      shell.classList.toggle('sidebar-collapsed', collapsed);
+      button.title = collapsed ? 'サイドバーを広げる' : 'サイドバーを折りたたむ';
+      button.setAttribute('aria-label', button.title);
+      button.setAttribute('aria-expanded', String(!collapsed));
+    }
+    try { apply(root.localStorage.getItem(key) === '1'); } catch (_) { apply(false); }
+    button.addEventListener('click', function () {
+      var collapsed = !shell.classList.contains('sidebar-collapsed');
+      apply(collapsed);
+      try { root.localStorage.setItem(key, collapsed ? '1' : '0'); } catch (_) { /* 表示操作は継続する */ }
+    });
+  }
+  if (doc.readyState === 'loading') { doc.addEventListener('DOMContentLoaded', initSidebar); }
+  else { initSidebar(); }
+
   function esc(s) {
     return String(s === null || s === undefined ? '' : s)
       .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
@@ -58,12 +82,24 @@
       var unmeasured = it.value === null || it.value === undefined;
       var tag = it.href ? 'a' : (typeof it.onClick === 'function' ? 'button' : 'div');
       var k = el(tag, 'c-kpi' + (it.category ? ' c-kpi--' + it.category : ''));
+      if (it.tone) { k.setAttribute('data-tone', String(it.tone)); } /* ok|ng|warn|info */
       if (tag === 'a') { k.setAttribute('href', it.href); }
       if (tag === 'button') { k.setAttribute('type', 'button'); }
       if (typeof it.onClick === 'function') {
         k.addEventListener('click', function (ev) { it.onClick(ev, it); });
       }
-      k.appendChild(el('span', 'c-kpi__label', it.label));
+      if (it.icon) {
+        /* icon は呼び出し側の固定 SVG 文字列（利用者入力を渡さない）。01 の .stat-card-head と同じ並び */
+        var head = el('span', 'c-kpi__head');
+        var ic = el('span', 'c-kpi__icon');
+        ic.setAttribute('aria-hidden', 'true');
+        ic.innerHTML = String(it.icon);
+        head.appendChild(ic);
+        head.appendChild(el('span', 'c-kpi__label', it.label));
+        k.appendChild(head);
+      } else {
+        k.appendChild(el('span', 'c-kpi__label', it.label));
+      }
       k.appendChild(el('span', 'c-kpi__value' + (unmeasured ? ' is-unmeasured' : ''), unmeasured ? '未計測' : String(it.value)));
       if (it.sub) { k.appendChild(el('span', 'c-kpi__sub', it.sub)); }
       host.appendChild(k);

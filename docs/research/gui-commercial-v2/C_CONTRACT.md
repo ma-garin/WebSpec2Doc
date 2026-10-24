@@ -45,7 +45,7 @@ Evidence バッジはピル型（`c-ev`）。形＋文字＋色の 3 つで示�
 - `WS2D.kpis(host, items)` items: [{label, value, sub?, href?, onClick?, category?}]。value が null なら「未計測」。数字はリンク（根拠の一覧へ）
 - `WS2D.state(host, {kind, title?, message, next?, retained?, actionLabel?, onAction?})` kind: loading | empty | error | partial | permission | unavailable | unverified | stale。retained=true なら「既存の結果は保持しています」を出す。エラーは「何が起きた／既存結果は保持されたか／次に何をするか」
 - `WS2D.reason(host, text, kind?)` 画面上部の「状態の理由」1 行（`c-reason`）
-- `WS2D.drawer.open({title, state, stateReason, claim, facts:[{label, value}], inferences:[...], limitations:[string], sources:[{label, value}], extra?, returnFocus})` 固定順: 1 主張 → 2 実測事実 → 3 推論 → 4 制限 → 5 出典・位置・provider・version。role=dialog・aria-modal・Esc・フォーカス閉じ込め・閉じたら returnFocus へ。1440px 以上は本文を押して並べ、未満はオーバーレイ。`WS2D.drawer.close()`
+- `WS2D.drawer.open({title, state, stateReason, claim, facts:[{label, value}], inferences:[...], limitations:[string], sources:[{label, value}], extra?, returnFocus})` 固定順: 1 主張 → 2 実測事実 → 3 推論 → 4 制限 → 5 出典 → 6 位置 → 7 Provider / version（2026-10-21採用、4b3f7aac）。role=dialog・aria-modal・Esc・フォーカス閉じ込め・閉じたら returnFocus へ。1440px 以上は本文を押して並べ、未満はオーバーレイ。`WS2D.drawer.close()`
 - `WS2D.confirm({title, message, detail?, confirmLabel, danger?})` → Promise<boolean>。破壊操作は danger=true（消えるもの・元に戻せるかを文字で）
 - `WS2D.toast(message, kind?)` aria-live=polite。kind: info | success | warning | error
 - `WS2D.modal.open({title, body(HTMLElement|string), actions:[{label, primary?, onClick}]})` / `close()`

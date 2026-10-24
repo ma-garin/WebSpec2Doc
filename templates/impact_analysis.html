@@ -1,39 +1,21 @@
-<!DOCTYPE html>
-<html lang="ja">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>影響度分析 - WebSpec2Doc</title>
-<link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
-<link rel="stylesheet" href="{{ url_for('static', filename='tokens.css') }}?v={{ _ver }}">
-<link rel="stylesheet" href="{{ url_for('static', filename='app.css') }}?v={{ _ver }}">
-<link rel="stylesheet" href="{{ url_for('static', filename='app-components.css') }}?v={{ _ver }}">
-<link rel="stylesheet" href="{{ url_for('static', filename='css/components.css') }}?v={{ _ver }}">
-<link rel="stylesheet" href="{{ url_for('static', filename='css/user-menu.css') }}?v={{ _ver }}">
-<link rel="stylesheet" href="{{ url_for('static', filename='css/batch-test.css') }}?v={{ _ver }}">
-<link rel="stylesheet" href="{{ url_for('static', filename='css/impact.css') }}?v={{ _ver }}">
-<link rel="stylesheet" href="{{ url_for('static', filename='css/c-hybrid.css') }}?v={{ _ver }}">
-<link rel="stylesheet" href="{{ url_for('static', filename='css/c-shell.css') }}?v={{ _ver }}">
-</head>
+{% extends 'layouts/system.html' %}
 {# 影響度分析（System 09・商用版）。契約は docs/lifecycle/system09-impact/03-detailed-design.md の DD-006〜DD-008。
-   骨格・部品はドキュメント作成（index.html の app-shell / sidebar / dash-hero / dashboard-section-head / dashboard-empty）と同じ。
-   本文は static/js/impact/*.js が #im-root に描く。全遷移を /impact 内で完結する（システム切替 /systems だけ例外）。 #}
-<body class="app-page im-page">
-<a href="#app-content" class="skip-link">本文へスキップ</a>
-<div class="app-shell">
-  <aside class="app-sidebar">
-    <a href="/impact" class="app-brand">
-      <span class="app-brand-mark">W</span>
-      <span class="app-brand-text"><strong>WebSpec2Doc</strong><span>影響度分析</span></span>
-    </a>
-    <a href="/systems" class="sys-switcher" title="システムを切り替える">
-      <span class="sys-switcher-label">システム</span><span class="sys-switcher-cur">影響度分析</span><span class="sys-switcher-swap">切替</span>
-    </a>
-    <button type="button" class="btn-primary sidebar-primary-action" data-act="new-sys-side">
+   骨格は共通レイアウト layouts/system.html。本文は static/js/impact/*.js が #im-root に描く。
+   全遷移を /impact 内で完結する（システム切替 /systems だけ例外）。 #}
+{% set system_key = 'impact' %}
+{% set topbar_crumb = '影響度分析' %}{% set topbar_title = '対象システム一覧' %}
+{% block title %}影響度分析 - WebSpec2Doc{% endblock %}
+{% block head_css %}  <link rel="stylesheet" href="{{ url_for('static', filename='css/user-menu.css') }}?v={{ _ver }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/batch-test.css') }}?v={{ _ver }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/impact.css') }}?v={{ _ver }}">
+{% endblock %}
+{% block body_attrs %} data-page="impact"{% endblock %}
+{% block sidebar_cta %}    <button type="button" class="btn-primary sidebar-primary-action" data-act="new-sys-side">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" width="16" height="16" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
       <span class="add-site-label">新しい対象システム</span>
     </button>
-    <nav class="app-nav" aria-label="メインナビゲーション">
+{% endblock %}
+{% block sidebar_nav %}    <nav class="app-nav" aria-label="メインナビゲーション">
       <button type="button" class="app-nav-item" data-nav="home">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M3 11.5L12 4l9 7.5"/><path d="M5.5 10v10h13V10"/></svg>
         <span class="nav-label">対象システム一覧</span>
@@ -110,26 +92,22 @@
         <span class="nav-label">ユーザーガイド</span>
       </button>
     </nav>
-    <button type="button" id="sidebar-toggle-btn" class="sidebar-toggle-btn" title="サイドバーを折りたたむ" aria-label="サイドバーを折りたたむ">
-      <svg class="icon-collapse" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>
-      <svg class="icon-expand" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg>
-      <span class="nav-label">折りたたむ</span>
-    </button>
-    <div class="app-sidebar-foot"><span>仕様の変更から、影響範囲・リスク・確かめるテストを根拠つきで出します。</span></div>
-  </aside>
-
-  <div class="app-main">
-    {% set topbar_crumb = '影響度分析' %}{% set topbar_title = '対象システム一覧' %}
-    {% include 'partials/topbar.html' %}
-    <main class="app-content" id="app-content" tabindex="-1">
-      <div class="app-content-inner">
+{% endblock %}
+{% block content %}        {# 型 C。一覧（ホーム）でだけ出す。対象システム・変更要求を開いたら app.js が hidden にする #}
+        <header class="c-page-head" id="im-page-head">
+          <div class="c-page-head__main">
+            <h2 class="c-page-head__title">仕様の変更から、テストすべき影響範囲を洗い出す</h2>
+            <p class="c-page-head__desc">対象システムごとに文書のつながりを持ち、変更要求ごとに影響・リスク・確かめるテストを根拠つきで示します。</p>
+          </div>
+          <div class="c-page-head__actions">
+            <button type="button" class="c-btn c-btn--primary" data-act="new-sys">新しい対象システム</button>
+            <button type="button" class="c-btn" data-act="sample">見本で試す <span class="c-status">文書なし</span></button>
+          </div>
+        </header>
         <div class="bt-banner" id="bt-banner" role="alert" hidden></div>
-        <div id="im-root" class="im-root"><div class="im-state" role="status">読み込み中…</div></div>
-      </div>
-    </main>
-  </div>
-</div>
-
+        <div id="im-root" class="im-root"><div class="c-state c-state--loading" role="status"><span class="c-state__spinner" aria-hidden="true"></span><p class="c-state__msg">読み込み中…</p></div></div>
+{% endblock %}
+{% block modals %}
 <div class="im-modal" id="im-modal" role="dialog" aria-modal="true" aria-labelledby="im-modal-t" hidden>
   <form class="im-modal-box" id="im-modal-form" novalidate>
     <h2 id="im-modal-t"></h2>
@@ -142,6 +120,8 @@
   </form>
 </div>
 <div class="dv-toast bt-toast" id="bt-toast" role="status" aria-live="polite" hidden></div>
+{% endblock %}
+{% block scripts %}
 <script src="{{ url_for('static', filename='js/c-hybrid.js') }}?v={{ _ver }}"></script>
 <script src="{{ url_for('static', filename='js/user-menu.js') }}?v={{ _ver }}"></script>
 <script src="{{ url_for('static', filename='js/impact/api.js') }}?v={{ _ver }}"></script>
@@ -150,5 +130,4 @@
 <script src="{{ url_for('static', filename='js/impact/rea.js') }}?v={{ _ver }}"></script>
 <script src="{{ url_for('static', filename='js/impact/system.js') }}?v={{ _ver }}"></script>
 <script src="{{ url_for('static', filename='js/impact/cr.js') }}?v={{ _ver }}"></script>
-</body>
-</html>
+{% endblock %}

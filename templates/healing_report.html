@@ -1,46 +1,32 @@
-<!DOCTYPE html>
-<html lang="ja">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>保守対応報告書 - オートヒーリング - WebSpec2Doc</title>
-  <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
-  {% set _ver = config.get('ASSET_VERSION', '1') %}
-  <link rel="stylesheet" href="{{ url_for('static', filename='tokens.css') }}?v={{ _ver }}">
-  <link rel="stylesheet" href="{{ url_for('static', filename='app.css') }}?v={{ _ver }}">
-  <link rel="stylesheet" href="{{ url_for('static', filename='app-components.css') }}?v={{ _ver }}">
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/components.css') }}?v={{ _ver }}">
+{% extends 'layouts/system.html' %}
+{#- オートヒーリング（System 05）の保守対応報告書（個票・束）。共通レイアウトに載せる。 -#}
+{% set system_key = 'heal' %}
+{% set topbar_crumb = 'オートヒーリング' %}{% set topbar_title = '保守対応報告書' %}
+{% block title %}保守対応報告書 - オートヒーリング - WebSpec2Doc{% endblock %}
+{% block head_css %}
   <link rel="stylesheet" href="{{ url_for('static', filename='css/user-menu.css') }}?v={{ _ver }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/ta2.css') }}?v={{ _ver }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/healing-reports.css') }}?v={{ _ver }}">
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/c-hybrid.css') }}?v={{ _ver }}">
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/c-shell.css') }}?v={{ _ver }}">
-</head>
-<body class="app-page hl-page-report"
-      data-report-id="{{ report_id or '' }}"
-      data-bundle-id="{{ bundle_id or '' }}"
-      data-hl-admin="{{ 'true' if (not auth_user or auth_user.role == 'admin') else 'false' }}">
-<a href="#app-content" class="skip-link">本文へスキップ</a>
-<div class="app-shell">
-
-  {% with active = 'reports' %}{% include 'partials/healing-sidebar.html' %}{% endwith %}
-
-  <div class="app-main">
-    {% set topbar_crumb = 'オートヒーリング' %}
-    {% set topbar_title = '保守対応報告書' %}
-    {% include 'partials/topbar.html' %}
-
-    <main class="app-content" id="app-content">
-      <div id="hl-error" class="hl-banner" role="alert" hidden></div>
-
+{% endblock %}
+{% block head_css_late %}  {# body の class は共通レイアウトが持つので、画面の印は html に付ける #}
+  <script>document.documentElement.classList.add('hl-page-report');</script>
+{% endblock %}
+{% block body_attrs %} data-report-id="{{ report_id or '' }}" data-bundle-id="{{ bundle_id or '' }}" data-hl-admin="{{ 'true' if (not auth_user or auth_user.role == 'admin') else 'false' }}"{% endblock %}
+{% block sidebar_cta %}{% include 'partials/healing-cta.html' %}{% endblock %}
+{% block sidebar_nav %}{% with active = 'reports' %}{% include 'partials/healing-sidebar.html' %}{% endwith %}{% endblock %}
+{% block content %}
       <header class="c-page-head hl-page-head" id="hl-page-head" hidden>
         <div class="c-page-head__main">
-          <h1 class="c-page-head__title" id="hl-page-title">保守対応報告書</h1>
+          <h2 class="c-page-head__title" id="hl-page-title">保守対応報告書</h2>
           <p class="c-page-head__desc" id="hl-page-desc">1 つの欠陥について、事象・原因・対応・検証を上から順に読み、最後に承認します。</p>
-          <div class="c-page-head__state" id="hl-ws-status"></div>
+          <div class="c-page-head__state" id="hl-ws-status" hidden></div>
+        </div>
+        <div class="c-page-head__actions">
+          <a class="c-btn" href="/healing">報告書の一覧へ</a>
         </div>
       </header>
-      <div id="hl-ws-reason"></div>
+      <div id="hl-error" class="hl-banner" role="alert" hidden></div>
+      <div id="hl-ws-reason" hidden></div>
       <div class="c-context hl-doc-context" id="hl-doc-context" hidden></div>
 
       <div class="hl-doc-wrap">
@@ -50,20 +36,19 @@
         </article>
 
         {# 右: 判断と出力。承認待ちで管理者のときだけ操作が出る。 #}
-        <aside class="hl-doc-actions" id="hl-doc-actions" hidden></aside>
+        <div class="hl-doc-actions" id="hl-doc-actions" hidden></div>
       </div>
-    </main>
-  </div>
-</div>
-
+{% endblock %}
+{% block modals %}
 <div class="hl-toast" id="hl-toast" hidden role="status"></div>
-
+{% endblock %}
+{% block scripts %}
 <script src="{{ url_for('static', filename='js/c-hybrid.js') }}?v={{ _ver }}"></script>
+<script src="{{ url_for('static', filename='js/user-menu.js') }}?v={{ _ver }}"></script>
 {# 報告書の JS は責務ごとに分割してある。共有は window.HealingReports だけ。この順に読み、healing-reports.js が最後に初期化する。 #}
 <script src="{{ url_for('static', filename='js/healing-reports-core.js') }}?v={{ _ver }}"></script>
 <script src="{{ url_for('static', filename='js/healing-reports-list.js') }}?v={{ _ver }}"></script>
 <script src="{{ url_for('static', filename='js/healing-reports-doc.js') }}?v={{ _ver }}"></script>
 <script src="{{ url_for('static', filename='js/healing-reports-bundle.js') }}?v={{ _ver }}"></script>
 <script src="{{ url_for('static', filename='js/healing-reports.js') }}?v={{ _ver }}"></script>
-</body>
-</html>
+{% endblock %}

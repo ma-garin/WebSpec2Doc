@@ -11,9 +11,9 @@
 .dax-reqseg .dax-chip { height: 30px; border: 0; border-radius: 0; border-right: 1px solid var(--dx-line); background: transparent; }
 .dax-reqseg .dax-chip:last-child { border-right: 0; }
 .dax-reqseg .dax-chip:hover { background: var(--dx-sunk); }
-.dax-reqseg .dax-chip[aria-pressed="true"] { background: var(--dx-primary, #2563eb); color: #fff; font-weight: 600; }
-.dax-reqseg .dax-chip[aria-pressed="true"] .dax-segc__n { color: #fff; }
-.dax-reqseg .dax-chip:focus-visible { outline: 2px solid var(--dx-primary, #2563eb); outline-offset: -2px; }
+.dax-reqseg .dax-chip[aria-pressed="true"] { background: var(--dx-primary, var(--color-primary)); color: var(--color-on-primary); font-weight: 600; }
+.dax-reqseg .dax-chip[aria-pressed="true"] .dax-segc__n { color: var(--color-on-primary); }
+.dax-reqseg .dax-chip:focus-visible { outline: 2px solid var(--dx-primary, var(--color-primary)); outline-offset: -2px; }
 /* 表: 行高 44px 固定 */
 .dax-reqtable th:nth-child(1), .dax-reqtable td.dax-reqidc { width: 132px; }
 .dax-reqtable th:nth-child(2) { width: auto; }
@@ -28,8 +28,8 @@
 .dax-reqtxt { display: table-cell; }
 .dax-reqsort { all: unset; cursor: pointer; font: inherit; color: inherit; }
 .dax-reqsort:hover { color: var(--dx-text); }
-.dax-reqsort:focus-visible { outline: 2px solid var(--dx-primary, #2563eb); outline-offset: 2px; border-radius: 2px; }
-.dax-reqid { font-weight: 600; color: var(--dx-primary-dark, #1d4ed8); font-variant-numeric: tabular-nums; }
+.dax-reqsort:focus-visible { outline: 2px solid var(--dx-primary, var(--color-primary)); outline-offset: 2px; border-radius: 2px; }
+.dax-reqid { font-weight: 600; color: var(--dx-primary-dark, var(--color-primary-dark)); font-variant-numeric: tabular-nums; }
 .dax-reqdoc { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; margin-left: 8px; border-radius: 4px; background: var(--dx-sunk); border: 1px solid var(--dx-line); font-size: 11px; font-weight: 600; color: var(--dx-text-2); vertical-align: 1px; }
 .dax-reqtag { display: inline-flex; align-items: center; height: 18px; margin-left: 6px; padding: 0 6px; border-radius: 4px; border: 1px solid var(--dx-line); background: var(--dx-surface); font-size: 11px; color: var(--dx-text-2); white-space: nowrap; vertical-align: 1px; }
 .dax-reqtag--cf { border-color: var(--dx-warn-line); color: var(--dx-warn-tx); background: var(--dx-warn-bg); }
@@ -38,15 +38,15 @@
 .dax-reqst--attention { color: var(--dx-text); font-weight: 600; }
 /* 重大度バッジ（赤は高のみ） */
 .dax-reqsev { display: inline-flex; align-items: center; justify-content: center; min-width: 28px; height: 20px; padding: 0 6px; margin-right: 6px; border-radius: 4px; font-size: 12px; font-weight: 600; background: var(--dx-sunk); color: var(--dx-text-2); }
-.dax-reqsev--critical, .dax-reqsev--high { background: var(--dx-err-bg, #fef3f2); color: var(--color-critical-tx, #b42318); }
-.dax-reqsev--medium { background: var(--dx-warn-bg, #fffaeb); color: var(--color-medium-tx, #b54708); }
+.dax-reqsev--critical, .dax-reqsev--high { background: var(--dx-err-bg, var(--color-critical-bg)); color: var(--color-critical-tx, var(--color-error-tx)); }
+.dax-reqsev--medium { background: var(--dx-warn-bg, var(--color-medium-bg)); color: var(--color-medium-tx, var(--color-warning-tx)); }
 .dax-reqsev--none { background: transparent; font-weight: 400; }
 .dax-reqq__n { font-variant-numeric: tabular-nums; }
-.dax-reqrow--hi td.dax-reqidc { box-shadow: inset 3px 0 0 var(--color-critical-tx, #b42318); }
+.dax-reqrow--hi td.dax-reqidc { box-shadow: inset 3px 0 0 var(--color-critical-tx, var(--color-error-tx)); }
 /* 行の操作 */
-.dax-reqtable tbody tr[tabindex]:hover .dax-reqgo { color: var(--dx-primary-dark, #1d4ed8); }
+.dax-reqtable tbody tr[tabindex]:hover .dax-reqgo { color: var(--dx-primary-dark, var(--color-primary-dark)); }
 .dax-reqtable tbody tr[tabindex]:hover .dax-reqid { text-decoration: underline; }
-.dax-reqtable tbody tr[tabindex]:focus-visible { outline: 2px solid var(--dx-primary, #2563eb); outline-offset: -2px; background: var(--dx-sunk); }
+.dax-reqtable tbody tr[tabindex]:focus-visible { outline: 2px solid var(--dx-primary, var(--color-primary)); outline-offset: -2px; background: var(--dx-sunk); }
 .dax-reqtable tbody tr[aria-current="true"] td { background: var(--dx-primary-soft); }
 @media (max-width: 1180px) {
   .dax-reqtable th, .dax-reqtable td { padding-left: 8px; padding-right: 8px; }
@@ -61,8 +61,8 @@
 .dax-reqdiff { display: inline-block; margin-right: 8px; font-size: 11px; color: var(--dx-text-2); vertical-align: 1px; }
 .dax-reqst { height: auto; padding: 0; border: 0; border-radius: 0; background: none; gap: 6px; font-size: 13px; }
 .dax-reqst::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--dx-line-strong); flex: none; }
-.dax-reqst--attention::before { background: var(--color-medium-tx, #b54708); }
-.dax-reqst--done::before { background: var(--dx-ok-tx, #067647); }
+.dax-reqst--attention::before { background: var(--color-medium-tx, var(--color-warning-tx)); }
+.dax-reqst--done::before { background: var(--dx-ok-tx, var(--color-success-tx)); }
 .dax-reqst--ok { color: var(--dx-text-2); }
 @media (max-width: 1180px) {
   .dax-reqtable th:nth-child(1), .dax-reqtable td.dax-reqidc { width: 104px; }

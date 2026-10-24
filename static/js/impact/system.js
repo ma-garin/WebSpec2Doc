@@ -6,8 +6,8 @@
   var COUNT = { documents: '文書', items: '項目', baselines: 'ベースライン', links: 'つながり', crs: '変更要求' };
 
   function head(title, copy, actions) {
-    return '<div class="dashboard-section-head"><div><h2 class="dash-section-title">' + esc(title) + '</h2>' +
-      (copy ? '<p class="dashboard-section-copy">' + esc(copy) + '</p>' : '') + '</div><div class="dashboard-section-actions">' + (actions || '') + '</div></div>';
+    return '<div class="c-section-head"><div class="c-section-head__main"><h2 class="c-section-head__title">' + esc(title) + '</h2>' +
+      (copy ? '<p class="c-section-head__desc">' + esc(copy) + '</p>' : '') + '</div><div class="c-section-head__actions">' + (actions || '') + '</div></div>';
   }
   function table(cols, rows, label) {
     return '<div class="bt-tblwrap im-tblwrap"><table class="bt-tbl" aria-label="' + esc(label) + '"><thead><tr>' +

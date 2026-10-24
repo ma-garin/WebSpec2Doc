@@ -513,3 +513,19 @@
   .hl-cell-action { text-align: left; white-space: normal; }
   .hl-cell-when { white-space: normal; }
 }
+
+/* ── 共通レイアウト（layouts/system.html）への載せ替え ─────────── */
+.hl-page-reports .app-content-inner, .hl-page-report .app-content-inner {
+  flex: 1 1 auto; min-height: 0; width: 100%; max-width: none;
+  display: flex; flex-direction: column; gap: 12px;
+}
+.hl-page-head .c-page-head__actions { display: flex; align-items: center; gap: 8px; }
+.hl-page-head .c-page-head__actions .hl-filter-label { font-size: 12px; color: var(--color-text-secondary); white-space: nowrap; }
+/* 0 件のときは表のカードごと隠し、空状態（c-state）だけを出す。巨大な白カードを残さない。 */
+.hl-page-reports .hl-table-wrap:has(> table[hidden]) { display: none; }
+.hl-reports-state { flex: 0 0 auto; }
+.hl-reports-state[hidden] { display: none; }
+/* 一覧の読み方は折りたたみ（既定で閉じる）。 */
+details.hl-legend { font-size: 12px; }
+details.hl-legend > summary { cursor: pointer; color: var(--color-text-secondary); }
+details.hl-legend > p { margin: 4px 0 0; line-height: 1.6; }

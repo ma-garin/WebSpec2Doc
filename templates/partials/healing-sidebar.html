@@ -1,17 +1,7 @@
 {# オートヒーリングのサイドバー。報告書と設定の 2 項目だけ。
    毎日開くのは「今日出す報告書があるか」で、設定は月に一度しか触らない。
-   active に 'reports' か 'settings' を渡す。 #}
-<aside class="app-sidebar">
-  <a href="/systems" class="app-brand">
-    <span class="app-brand-mark">W</span>
-    <span class="app-brand-text"><strong>WebSpec2Doc</strong><span>オートヒーリング</span></span>
-  </a>
-  <a href="/systems" class="sys-switcher" title="システムを切り替える">
-    <span class="sys-switcher-label">システム</span>
-    <span class="sys-switcher-cur">オートヒーリング</span>
-    <span class="sys-switcher-swap">切替</span>
-  </a>
-
+   active に 'reports' か 'settings' を渡す。
+   共通レイアウト（layouts/system.html）の sidebar_nav に入れる。ブランド・切替・折りたたみ・foot はレイアウト側。 #}
   <nav class="app-nav" aria-label="メインナビゲーション">
     <div class="app-nav-group">オートヒーリング</div>
     <a class="app-nav-item{% if active == 'reports' %} active{% endif %}" href="/healing">
@@ -25,4 +15,3 @@
       <span class="nav-label">設定</span>
     </a>
   </nav>
-</aside>

@@ -44,7 +44,7 @@ def test_preview_system_marked_as_trial():
 
 def test_cli_page_uses_registry_numbers():
     html = _client().get("/cli", headers=H).get_data(as_text=True)
-    assert f'<div class="sysselect-kicker">{system("cli").label}</div>' in html
+    assert f'<span>{system("cli").label} {system("cli").name}</span>' in html
     assert system("cli").label == "System 04"
     assert system("autorun").number == "03"
     assert f"{system('autorun').number} AutoRun" in html

@@ -58,9 +58,22 @@
 
   /* ---------- 帯・KPI ---------- */
 
+  /* KPI は 4 枚 × 3 段（PLAN D-4）: ①状態 ②根拠の 3 区分＋正常 ③今日。部品は c-kpis（c-hybrid.js） */
+  var IC = {
+    site: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M3 12h18"/></svg>',
+    ng: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M15 9l-6 6M9 9l6 6"/></svg>',
+    human: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>',
+    doc: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/></svg>',
+    fact: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 12l5 5 9-10"/></svg>',
+    infer: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 4h7v16H4zM13 4h7v16h-7z"/></svg>',
+    unv: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.7M12 17h.01"/></svg>',
+    ok: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M8 12l3 3 5-6"/></svg>',
+    clock: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 8v5l3 2"/></svg>'
+  };
+  function tone(n, t) { return n ? t : undefined; }
+
   function renderSplit() {
-    var host = $('ch-split');
-    clear(host);
+    var c = data.counts || {};
     var sum = { fact: 0, inference: 0, unverified: 0 };
     var any = false;
     (data.sites || []).forEach(function (s) {
@@ -69,32 +82,42 @@
         sum.fact += s.evidence.fact; sum.inference += s.evidence.inference; sum.unverified += s.evidence.unverified;
       }
     });
-    [['fact', '事実（実測・記録）'], ['inference', '推論（文書・静的・推論）'], ['unverified', '未確認（曖昧・未確認・利用不可）']].forEach(function (c) {
-      var cell = el('div', 'c-split__cell c-split__cell--' + c[0]);
-      cell.appendChild(el('span', 'c-split__label', c[1]));
-      cell.appendChild(el('span', 'c-split__value', any ? String(sum[c[0]]) : '未計測'));
-      host.appendChild(cell);
-    });
+    function go(v) { return function () { setView(v, true); var b = $('ch-body'); if (b) { b.focus(); } }; }
+    W.kpis($('ch-split'), [
+      { label: '事実', icon: IC.fact, value: any ? sum.fact : null, sub: '事実（実測・記録）' },
+      { label: '推論', icon: IC.infer, value: any ? sum.inference : null, sub: '推論（文書・静的・推論）' },
+      { label: '未確認', icon: IC.unv, value: c.unverified, tone: tone(c.unverified, 'warn'),
+        onClick: go('unverified'),
+        sub: '未確認（根拠の件数・解析結果があるサイトのみ）' + (c.unanalyzed ? '。未解析 ' + c.unanalyzed + ' サイト' : '') },
+      { label: '正常', icon: IC.ok, value: c.ok, tone: tone(c.ok, 'ok'), sub: '完了のみ。一部完了は含めない' }
+    ]);
   }
 
   function renderKpis() {
     var c = data.counts || {};
     function go(v) { return function () { setView(v, true); var b = $('ch-body'); if (b) { b.focus(); } }; }
-    var items = [
-      { label: '全サイト', value: c.sites, onClick: go('all') },
-      { label: '正常', value: c.ok, sub: '完了のみ。一部完了は含めない' },
-      { label: '実行中', value: c.running },
-      { label: '失敗', value: c.failed, onClick: go('failed') },
-      { label: '人の対応待ち', value: c.human_action, onClick: go('human') },
-      { label: '承認待ち', value: c.awaiting_approval, sub: '修正案の報告書', onClick: go('human') },
-      { label: '未確認', value: c.unverified, category: 'unverified', onClick: go('unverified'),
-        sub: '根拠の件数（解析結果があるサイトのみ）' + (c.unanalyzed ? '。未解析 ' + c.unanalyzed + ' サイト' : '') },
-      { label: '今日の変更', value: c.changes_today, sub: '集計元なし' },
-      { label: '今日のテスト', value: c.tests_today, sub: '実行の回数' },
-      { label: '今日の修正', value: c.fixes_today, sub: '直す工程の回数' },
-      { label: '今日の報告', value: c.reports_today }
-    ];
-    W.kpis($('ch-kpis'), items);
+    W.kpis($('ch-kpis'), [
+      { label: '全サイト', icon: IC.site, value: c.sites, onClick: go('all'),
+        sub: (c.running === null || c.running === undefined) ? '実行中 未計測' : '実行中 ' + c.running },
+      { label: '失敗', icon: IC.ng, value: c.failed, tone: tone(c.failed, 'ng'), onClick: go('failed') },
+      { label: '人の対応待ち', icon: IC.human, value: c.human_action, tone: tone(c.human_action, 'warn'), onClick: go('human') },
+      { label: '承認待ち', icon: IC.doc, value: c.awaiting_approval, tone: tone(c.awaiting_approval, 'info'),
+        sub: '修正案の報告書', onClick: go('human') }
+    ]);
+    W.kpis($('ch-kpis-today'), [
+      { label: '今日の変更', icon: IC.clock, value: c.changes_today, sub: '集計元なし' },
+      { label: '今日のテスト', icon: IC.clock, value: c.tests_today, sub: '実行の回数' },
+      { label: '今日の修正', icon: IC.clock, value: c.fixes_today, sub: '直す工程の回数' },
+      { label: '今日の報告', icon: IC.clock, value: c.reports_today }
+    ]);
+  }
+
+  /* 情報バナーは topbar 直下の #page-reason（PLAN D-3）。旧 #ch-reason があればそちらへ */
+  function showReason(text, kind) {
+    var host = $('page-reason') || $('ch-reason');
+    if (!host) { return; }
+    W.reason(host, text, kind);
+    host.hidden = false;
   }
 
   function renderReason() {
@@ -111,7 +134,7 @@
       if (!c.failed && !c.human_action) { parts.push('失敗・対応待ちはありません'); }
       text = parts.join(' ／ ') + '（' + fmtAt(data.updated_at) + ' 時点）';
     }
-    W.reason($('ch-reason'), text, (data.partial_errors || []).length ? 'warning' : undefined);
+    showReason(text, (data.partial_errors || []).length ? 'warning' : undefined);
   }
 
   function renderBanner(errorInfo) {
@@ -332,7 +355,7 @@
       .then(function (body) { data = body; render(); })
       .catch(function (err) {
         if (data) { renderBanner(String(err.message || err)); return; }
-        W.reason($('ch-reason'), '状態を取得できていません。数字は未計測です。', 'warning');
+        showReason('状態を取得できていません。数字は未計測です。', 'warning');
         W.state($('ch-body'), { kind: 'error', message: String(err.message || err),
           next: '再読み込みを押してください。', actionLabel: '再読み込み', onAction: load });
       });
@@ -343,8 +366,8 @@
     view = viewFromLocation();
     if (!IS_ADMIN) {
       /* サイト追加は管理者だけ（押しても 403 になる操作を出さない） */
-      var add = document.querySelector('.c-page-head__actions a[href*="mode=detail"]');
-      if (add && add.parentNode) { add.parentNode.removeChild(add); }
+      var add = document.querySelectorAll('.sidebar-primary-action[href*="mode=detail"], .c-page-head__actions a[href*="mode=detail"]');
+      Array.prototype.forEach.call(add, function (a) { a.hidden = true; a.style.display = 'none'; });
     }
     renderTabs();
     $('ch-reload').addEventListener('click', load);

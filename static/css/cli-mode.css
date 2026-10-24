@@ -1,69 +1,50 @@
-/* CLI / API 画面。シェルは他 System と共通（c-shell.css）。ここは本文の部品だけ。 */
-.cli-page .app { grid-template-columns: 240px 1fr; }
-.cli-content { overflow-y: auto; min-height: 0; padding: 8px 24px 64px; max-width: 1100px; width: 100%; box-sizing: border-box; }
-.cli-first { font-size: var(--text-md, 15px); color: var(--color-text); margin: 0; }
+/* CLI / API 画面。シェルは layouts/system.html ＋ c-shell.css。ここは本文の部品だけ。
+   型 C（.c-page-head 内のコマンドビルダー）・型 D（.c-section-head）・型 F（.c-table-wrap）は共通部品に任せる。 */
+.cli-first { margin: 6px 0 0; }
 
-.cli-section { margin-top: 28px; }
-.cli-section h2 { font-size: 15px; font-weight: 700; color: var(--color-text); margin: 0 0 6px; padding-bottom: 7px; border-bottom: 1px solid var(--color-border); }
-.cli-lead { margin: 0 0 12px; font-size: var(--text-sm); color: var(--color-text-secondary); }
-.cli-hint { margin: 8px 0 0; font-size: var(--text-xs); color: var(--color-text-secondary); }
+.cli-section { margin-top: var(--space-6); }
+.cli-hint { margin: var(--space-2) 0 0; font-size: var(--text-xs); color: var(--color-text-secondary); }
 
-.cli-builder {
-  display: flex; flex-wrap: wrap; gap: 12px 16px; align-items: flex-end;
-  padding: var(--space-4); background: var(--surface); border: 1px solid var(--border);
-  border-radius: var(--radius-md); box-shadow: var(--shadow-sm);
-}
-.cli-field { display: flex; flex-direction: column; gap: 5px; flex: 1 1 240px; min-width: 0; }
-.cli-field.cli-narrow { flex: 0 0 140px; }
-.cli-field > span { font-size: var(--text-xs); font-weight: 700; color: var(--color-text-secondary); }
-.cli-field select, .cli-field input {
-  height: 38px; padding: 0 10px; border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm); background: var(--color-surface); font-size: var(--text-sm);
-  color: var(--color-text); min-width: 0;
-}
-.cli-check { display: flex; align-items: center; gap: 7px; font-size: var(--text-sm); flex: 1 1 100%; }
+/* 型 C のカード内で全幅に折り返し、入力を縦に積む */
+.cli-builder { flex: 1 1 100%; display: grid; gap: var(--space-3); max-width: 720px; min-width: 0; }
+.cli-field.cli-narrow { max-width: 200px; }
 .cli-hidden { display: none; }
+.cli-json { display: flex; align-items: center; gap: 7px; font-size: var(--text-sm); }
 
+/* 生成コマンドの黒いコード枠（背景は許可リストの 1 件） */
 .cli-out {
-  display: flex; align-items: center; gap: 12px; margin-top: 12px;
+  display: flex; align-items: center; gap: var(--space-3);
   padding: 14px 16px; border-radius: var(--radius-lg);
   background: #1F2937; color: var(--color-border); overflow-x: auto;
 }
-.cli-out code {
-  font-family: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, monospace);
-  font-size: 13px; white-space: pre; flex: 1;
-}
+.cli-out code { font-family: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, monospace); font-size: 13px; white-space: pre; flex: 1; }
 .cli-copy { flex: none; }
-.cli-out-label { margin: 12px 0 0; font-size: var(--text-xs); font-weight: 700; color: var(--color-text-secondary); }
-.cli-out-label + .cli-out { margin-top: 6px; }
+.cli-out-label { margin: var(--space-2) 0 -6px; font-size: var(--text-xs); font-weight: 700; color: var(--color-text-secondary); }
 .cli-out code.is-incomplete { opacity: .75; }
-.cli-check { margin: 8px 0 0; padding: 6px 10px; border-radius: var(--radius-sm); font-size: var(--text-sm); border-left: 3px solid var(--color-border); }
-.cli-check[hidden] { display: none; }
-.cli-check--error { border-left-color: var(--color-error); background: var(--color-error-bg); color: var(--color-error-tx); }
-.cli-check--note { border-left-color: var(--color-warning); background: var(--color-warning-bg); color: var(--color-warning-tx); }
 .cli-copy.is-selected, .cli-out code.is-selected { outline: 2px solid var(--color-primary); }
 
-.cli-table code, .cli-notes code, .cli-hint code, .cli-lead code {
+/* 入力の不足・注意（JS が className を cli-check / --error / --note に差し替える） */
+p.cli-check { margin: 0; padding: 6px 10px; border-radius: var(--radius-sm); font-size: var(--text-sm); border-left: 3px solid var(--color-border); }
+p.cli-check[hidden] { display: none; }
+.cli-check--error { border-left-color: var(--color-error); background: var(--color-error-bg); color: var(--color-error-tx); }
+.cli-check--note { border-left-color: var(--color-warning); background: var(--color-warning-bg); color: var(--color-warning-tx); }
+
+.cli-table code, .cli-ready-table code, .cli-notes code, .cli-hint code, .c-section-head__desc code {
   background: var(--color-surface-3); border-radius: var(--radius-sm); padding: 1px 6px; font-size: 12.5px;
   font-family: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, monospace);
 }
 .cli-table th { white-space: nowrap; }
 .cli-table td { height: auto; padding-top: 8px; padding-bottom: 8px; }
 .cli-table-narrow { max-width: 640px; }
-.c-table-wrap { max-height: none; overflow-x: auto; }
+.cli-section .c-table-wrap { max-height: none; overflow-x: auto; }
 .cli-table td code { overflow-wrap: anywhere; word-break: break-all; }
 
 .cli-notes { margin: 0; padding-left: 1.2em; font-size: var(--text-sm); line-height: 1.9; }
 .cli-notes li { margin-bottom: 6px; }
-.cli-dev { margin-top: 28px; border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-surface); padding: 10px 16px; }
+.cli-dev { margin-top: var(--space-6); border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-surface); padding: 10px 16px; }
 .cli-dev summary { cursor: pointer; font-weight: 700; font-size: var(--text-sm); }
 .cli-dev summary:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
 
 @media (max-width: 816px) {
-  .cli-page .app { grid-template-columns: 1fr; }
-  .cli-page .app-sidebar { display: none; }
-  .cli-content { padding: 8px 14px 48px; }
-  .cli-field.cli-narrow { flex: 1 1 140px; }
+  .cli-field.cli-narrow { max-width: none; }
 }
-
-.cli-page .sysselect-kicker { font-size: var(--text-xs); font-weight: 700; letter-spacing: .04em; color: var(--color-primary-dark); margin-bottom: 4px; }

@@ -133,9 +133,9 @@
     const ws = window.WS2D;
     if (!info) return;
     const own = view === 'assure';  // System06 は自前のヘッダ 1 段だけを出す
-    ['#dv-pagehead', '#dv-reason'].forEach((q) => { const n = $(q); if (n) n.hidden = own; });
+    ['#dv-pagehead', '#page-reason'].forEach((q) => { const n = $(q); if (n) n.hidden = own; });
     if (own) return;
-    const t = $('#dv-ph-title'), d = $('#dv-ph-desc'), st = $('#dv-ph-state'), rs = $('#dv-reason');
+    const t = $('#dv-ph-title'), d = $('#dv-ph-desc'), st = $('#dv-ph-state'), rs = $('#page-reason');
     if (t) t.textContent = info[0];
     if (d) d.textContent = info[1];
     const r = DV.state.review;
@@ -167,7 +167,7 @@
     const crumb = $('#topbar-breadcrumb');
     if (crumb) {
       const r = DV.state.review;
-      crumb.innerHTML = `<span>Document Assurance</span>`
+      crumb.innerHTML = `<span>WebSpec2Doc</span><span class="sep">/</span><span>ドキュメント検証</span>`
         + (r && REVIEW_VIEWS.includes(view) ? `<span class="sep">/</span><span>${esc(r.name)}</span>` : '');
     }
     DV.current = view;

@@ -4,7 +4,7 @@
 
 1. コンソールエラー 0 件（type == "error" と pageerror の両方）
 2. 1440×900 / 1280×800 でページスクロールが出ない（縦・横とも）
-3. レールの強調（`.rail [data-view].on`）がちょうど 1 個
+3. レールの強調（`.ws-rail [data-view].on`）がちょうど 1 個
 
 「要素があるか」はブラウザ無しで分かるので tests/test_ui_contract.py が見る。
 ここはブラウザでしか壊れ方が見えないもの（レイアウトのはみ出し・JS の実行時
@@ -124,5 +124,5 @@ class TestWorkspaceShell:
     def test_exactly_one_rail_item_is_active(self, sized_page: Page, path: str) -> None:
         """現在地の表示は 1 箇所だけ（二重点灯・消灯のどちらも不可）。"""
         _open(sized_page, path)
-        active = sized_page.locator(".rail [data-view].on")
+        active = sized_page.locator(".ws-rail [data-view].on")
         assert active.count() == 1, f"{path} のレール強調が {active.count()} 個"

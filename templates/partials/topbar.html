@@ -6,7 +6,6 @@
            指定が無い画面は旧シェル（ドキュメント作成）なので、そのまま既定値を使う。
            JS（core.js）が実行時に上書きする画面もあるため、id は変えない。 #}
         <div class="app-breadcrumb" id="topbar-breadcrumb"><span>WebSpec2Doc</span><span class="sep">/</span><span>{{ topbar_crumb or 'ホーム' }}</span></div>
-        <p class="c-reason" id="page-reason" hidden></p>
         <h1 class="app-topbar-title" id="topbar-title">{{ topbar_title or 'QAドキュメント生成' }}</h1>
       </div>
       <div class="app-topbar-right">
@@ -92,3 +91,5 @@
         </div>
       </div>
     </header>
+    {# 状態の理由（WS2D.reason が #page-reason に入れる）。lead の中だと幅が足りず切れるので、トップバーの下に全幅 1 行で置く #}
+    <p class="c-reason" id="page-reason" hidden></p>

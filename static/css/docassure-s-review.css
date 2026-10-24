@@ -113,12 +113,12 @@
 .dar-sum { gap: 12px; align-items: center; }
 .dar-flow li { background: var(--dx-surface); border-color: var(--dx-line); }
 .dar-ico { width: 20px; height: 20px; background: none; color: var(--dx-primary-dark); font-size: 20px; line-height: 20px; font-weight: 600; }
-.dar-role { font-size: 13px; color: #4b5563; }
+.dar-role { font-size: 13px; color: var(--color-text-secondary); }
 .dar-list .dap-item { padding: 16px 20px; }
 /* 数字ステッパー */
 .dar-flow { counter-reset: none; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0; margin: 4px 0 8px; }
 .dar-flow li { position: relative; display: grid; grid-template-columns: 22px minmax(0, 1fr); align-items: start; gap: 10px; padding: 6px 16px 6px 0; border: 0; background: none; font-size: 14px; line-height: 1.7; color: var(--dx-text); }
 .dar-flow li + li::before { content: ""; position: absolute; top: 17px; left: -16px; width: 12px; height: 1px; background: var(--dx-line-strong); }
 .dar-flow li::after { content: ""; position: absolute; top: 17px; right: 4px; left: calc(22px + 10px + 100%); }
-.dar-ico { display: inline-grid; place-items: center; width: 22px; height: 22px; margin-top: 1px; border-radius: 50%; background: #eef2ff; color: #1d4ed8; font-size: 13px; font-weight: 600; line-height: 1; }
+.dar-ico { display: inline-grid; place-items: center; width: 22px; height: 22px; margin-top: 1px; border-radius: 50%; background: var(--color-primary-light); color: var(--color-primary-dark); font-size: 13px; font-weight: 600; line-height: 1; }
 .dar-sub { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

@@ -278,7 +278,7 @@
   function setView(v) {
     state.view = v;
     var rail = RAIL_OF[v] || v;
-    $$('.rail [data-view]').forEach(function (b) { b.classList.toggle('on', b.dataset.view === rail); });
+    $$('.ws-rail [data-view]').forEach(function (b) { b.classList.toggle('on', b.dataset.view === rail); });
     /* 非表示のビューは class だけでなく hidden も落とす。
        display:none だけだと将来のレイアウト用 display に負けて中身が
        innerText・支援技術・Playwright の可視判定に漏れる（検証ループ1 B-4）。 */

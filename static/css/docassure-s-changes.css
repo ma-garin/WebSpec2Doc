@@ -6,20 +6,20 @@
 .dac-summary { margin: 0; }
 .dac .dax-md__left > .dax-md__list { flex: 1 1 auto; min-height: 0; overflow-y: auto; }
 .dac .dax-item__title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.dac-ch--created { color: var(--dx-ok-tx, #146c43); }
-.dac-ch--removed { color: var(--dx-err-tx, #b42318); }
-.dac-ch--modified, .dac-ch--split, .dac-ch--merged { color: var(--dx-warn-tx, #8a5300); }
+.dac-ch--created { color: var(--dx-ok-tx, var(--color-success-tx)); }
+.dac-ch--removed { color: var(--dx-err-tx, var(--color-error-tx)); }
+.dac-ch--modified, .dac-ch--split, .dac-ch--merged { color: var(--dx-warn-tx, var(--color-medium-tx)); }
 .dac-imp { display: inline-flex; align-items: center; height: 22px; padding: 0 8px; border-radius: 999px; font-size: 12px; font-weight: 600; border: 1px solid var(--dx-line); color: var(--dx-text-2); background: var(--dx-surface); white-space: nowrap; }
-.dac-imp--high { color: var(--dx-err-tx, #b42318); border-color: var(--dx-err-line, #f3b8b2); background: var(--dx-err-bg, #fef3f2); }
-.dac-imp--mid { color: var(--dx-warn-tx, #8a5300); border-color: var(--dx-warn-line, #f5d38a); background: var(--dx-warn-bg, #fffaeb); }
+.dac-imp--high { color: var(--dx-err-tx, var(--color-error-tx)); border-color: var(--dx-err-line, var(--color-critical-border)); background: var(--dx-err-bg, var(--color-critical-bg)); }
+.dac-imp--mid { color: var(--dx-warn-tx, var(--color-medium-tx)); border-color: var(--dx-warn-line, var(--color-warning-border)); background: var(--dx-warn-bg, var(--color-medium-bg)); }
 .dac-imp--low { color: var(--dx-text-2); }
 .dac-imp--none, .dac-imp--na { font-weight: 400; }
 .dac-ba { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; }
 .dac-side { min-width: 0; display: grid; align-content: start; gap: 6px; }
 .dac-side__h { margin: 0; font-size: 12px; font-weight: 600; color: var(--dx-text-2); }
 .dac-text { margin: 0; padding: 10px 12px; border: 1px solid var(--dx-line); border-radius: var(--dx-r, 6px); background: var(--dx-sunk); font-size: 14px; line-height: 1.7; white-space: pre-wrap; overflow-wrap: anywhere; max-height: 240px; overflow-y: auto; }
-.dac-del { background: var(--dx-err-bg, #fef3f2); color: var(--dx-err-tx, #b42318); text-decoration: line-through; }
-.dac-ins { background: var(--dx-ok-bg, #ecfdf3); color: var(--dx-ok-tx, #146c43); text-decoration: underline; text-underline-offset: 2px; }
+.dac-del { background: var(--dx-err-bg, var(--color-critical-bg)); color: var(--dx-err-tx, var(--color-error-tx)); text-decoration: line-through; }
+.dac-ins { background: var(--dx-ok-bg, var(--color-surface-2)); color: var(--dx-ok-tx, var(--color-success-tx)); text-decoration: underline; text-underline-offset: 2px; }
 .dac-legend { margin: 6px 0 0; }
 .dac-val { display: inline-flex; align-items: center; gap: 8px; margin: 4px 0; font-family: var(--font-mono); font-size: 14px; }
 .dac-val__b { text-decoration: line-through; color: var(--dx-text-2); }
@@ -67,7 +67,7 @@
 .dac-empty.dax-state { margin: 14vh auto 0; }
 .dac-empty__msg { text-align: left; max-width: 34em; margin: 0; }
 /* 第4版 */
-.dac { --dac-add-bg: var(--dx-ok-bg, #ecfdf3); --dac-add-tx: var(--dx-ok-tx, #146c43); --dac-del-bg: var(--dx-err-bg, #fef3f2); --dac-del-tx: var(--dx-err-tx, #b42318); }
+.dac { --dac-add-bg: var(--dx-ok-bg, var(--color-surface-2)); --dac-add-tx: var(--dx-ok-tx, var(--color-success-tx)); --dac-del-bg: var(--dx-err-bg, var(--color-critical-bg)); --dac-del-tx: var(--dx-err-tx, var(--color-error-tx)); }
 .dac-ins { text-decoration: none; border-radius: 2px; padding: 0 1px; }
 .dac-del { text-decoration: line-through; border-radius: 2px; padding: 0 1px; }
 .dac-head { flex-wrap: nowrap; }

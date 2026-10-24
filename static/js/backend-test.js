@@ -82,7 +82,7 @@
   }
   function noneRow(tbody, cols, msg) {
     var tr = document.createElement('tr'), td = document.createElement('td');
-    td.colSpan = cols; td.className = 'bs-none'; td.textContent = msg; tr.appendChild(td); tbody.innerHTML = ''; tbody.appendChild(tr);
+    td.colSpan = cols; td.className = 'bs-none'; var st = document.createElement('div'); st.className = 'c-state'; st.setAttribute('data-kind', 'empty'); var sm = document.createElement('p'); sm.className = 'c-state__msg'; sm.textContent = msg; st.appendChild(sm); td.appendChild(st); tr.appendChild(td); tbody.innerHTML = ''; tbody.appendChild(tr);
   }
   /* KPI は System 01 と同じ部品（アイコン・見出し・数・補足）。k = [数, 見出し, 'ok'|'wa'|'ng'|'', 補足, アイコン名] */
   var ICONS = {
@@ -105,11 +105,12 @@
   function kpis(el, list) {
     el.innerHTML = '';
     list.forEach(function (k) {
-      var d = document.createElement('div'), tone = k[2] === 'ok' ? ' is-ok' : k[2] ? ' is-warn' : '';
-      d.className = 'stat-card';
-      d.innerHTML = '<div class="stat-card-head"><span class="stat-card-icon' + tone + '"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
-        + (ICONS[k[4]] || ICONS.list) + '</svg></span><span class="stat-card-label"></span></div><div class="stat-card-num"></div><div class="stat-card-sub"></div>';
-      $('.stat-card-label', d).textContent = k[1]; $('.stat-card-num', d).textContent = k[0]; $('.stat-card-sub', d).textContent = k[3] || '';
+      var d = document.createElement('div'), tone = k[2] === 'ok' ? 'ok' : k[2] === 'ng' ? 'ng' : k[2] ? 'warn' : '';
+      d.className = 'c-kpi';
+      if (tone) d.setAttribute('data-tone', tone);
+      d.innerHTML = '<div class="c-kpi__head"><span class="c-kpi__icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
+        + (ICONS[k[4]] || ICONS.list) + '</svg></span><span class="c-kpi__label"></span></div><div class="c-kpi__value"></div><div class="c-kpi__sub"></div>';
+      $('.c-kpi__label', d).textContent = k[1]; $('.c-kpi__value', d).textContent = k[0]; $('.c-kpi__sub', d).textContent = k[3] || '';
       el.appendChild(d);
     });
   }
@@ -316,6 +317,7 @@
   function setView(v, navKey) {
     state.view = v;
     $$('.s8-view').forEach(function (s) { s.classList.toggle('is-active', s.id === 'view-' + v); });
+    var hero = $('#hero'); if (hero) hero.hidden = v !== 'home';
     var nav = navKey || (v === 'job' ? 'jobs' : v);
     $$('.app-nav-item[data-nav]').forEach(function (a) {
       var on = a.dataset.nav === nav;

@@ -1,0 +1,65 @@
+{#- 全 System の共通レイアウト（シェル）。子テンプレートは {% set system_key = '<registry の key>' %} を置いて extends する。
+    サイドバーの「折りたたむ」と app-sidebar-foot はここに固定で置く（System 側で消せない）。
+    共通 CSS の順序もここで固定: tokens → app → app-components → css/components → head_css → user-menu → c-hybrid → c-shell -#}
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+  <title>{% block title %}{{ sysreg(system_key).name }} - WebSpec2Doc{% endblock %}</title>
+  <!-- Google Fonts はローカル専用の CSP（style-src 'self'）でブロックされ読み込まれないため撤去。
+       描画は --font-main / --font-mono のシステムフォント・フォールバックで確定する。 -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='tokens.css') }}?v={{ _ver }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='app.css') }}?v={{ _ver }}">
+{% block head_css_pre %}{% endblock %}  <link rel="stylesheet" href="{{ url_for('static', filename='app-components.css') }}?v={{ _ver }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/components.css') }}?v={{ _ver }}">
+{% block head_css %}{% endblock %}  {#- トップバーのユーザーメニューは共通部品なので共通 CSS に置く #}
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/user-menu.css') }}?v={{ _ver }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/c-hybrid.css') }}?v={{ _ver }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/c-shell.css') }}?v={{ _ver }}">
+{% block head_css_late %}{% endblock %}</head>
+<body class="app-page"{% block body_attrs %}{% endblock %}>
+<a href="#app-content" class="skip-link">本文へスキップ</a>
+<div class="app-shell">
+
+  <aside class="app-sidebar">
+    <a href="/" class="app-brand">
+      <span class="app-brand-mark">W</span>
+      {# 副題はシステムごとに違う。docs のままだとテスト自動化でも「QAドキュメント生成」と
+         名乗ってしまい、どのシステムにいるのか名前が嘘をつく。 #}
+      <span class="app-brand-text"><strong>WebSpec2Doc</strong>
+{% block sidebar_brand_sub %}        <span>{{ sysreg(system_key).short_name }}</span>
+{% endblock %}      </span>
+    </a>
+    <a href="/systems" class="sys-switcher" id="sys-switcher-link" aria-label="システムを切り替える" title="システムを切り替える">
+      <span class="sys-switcher-label">システム</span>
+      <span class="sys-switcher-cur" id="sys-current-name">{{ sysreg(system_key).short_name }}</span>
+      <span class="sys-switcher-swap">切替</span>
+    </a>
+{% block sidebar_cta %}{% endblock %}
+{% block sidebar_nav %}{% include 'partials/nav.html' %}{% endblock %}
+    <button type="button" id="sidebar-toggle-btn" class="sidebar-toggle-btn" title="サイドバーを折りたたむ">
+      <svg class="icon-collapse" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
+      <svg class="icon-expand"  viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+      <span class="nav-label">折りたたむ</span>
+    </button>
+    <div class="app-sidebar-foot">
+{% block sidebar_foot %}      <span>{{ sysreg(system_key).description|striptags }}</span>
+{% endblock %}    </div>
+  </aside>
+
+  <div class="app-main">
+{% include 'partials/topbar.html' %}
+
+    <main class="app-content" id="app-content" tabindex="-1">
+      <div class="app-content-inner">
+{% block content %}{% endblock %}
+      </div>
+    </main>
+  </div>
+</div>
+{% block modals %}{% endblock %}
+{% block scripts %}{% endblock %}
+</body>
+</html>

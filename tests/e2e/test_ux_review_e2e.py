@@ -64,10 +64,10 @@ def _crawl_with_ux_review_in_thread(url: str) -> Any:
         os.environ["WEBSPEC2DOC_ALLOW_LOCAL"] = "1"
         from crawler.page_crawler import _browser_page, crawl_page
 
-        ux_axe_results: dict[str, tuple[Any, ...]] = {}
+        ux_axe_results: dict[str, Any] = {}
 
-        def on_ux_result(page_url: str, violations: tuple[Any, ...]) -> None:
-            ux_axe_results[page_url] = violations
+        def on_ux_result(page_url: str, result: Any) -> None:
+            ux_axe_results[page_url] = result
 
         try:
             with _browser_page(None) as page:
@@ -93,12 +93,13 @@ class TestAxeDetectsViolations:
         url = f"{demo_site}/ux_bad.html"
         page_data, ux_axe_results = _crawl_with_ux_review_in_thread(url)
 
-        violations = ux_axe_results.get(page_data.url, ())
+        result = ux_axe_results[page_data.url]
+        assert result.error is None, result.error
+        violations = result.violations()
         rule_ids = {v.rule_id for v in violations}
-        assert violations, "axe 検査が違反を1件も検出しなかった"
-        assert any("image-alt" in rid or "label" in rid for rid in rule_ids), rule_ids
-        assert all(v.confidence == 1.0 for v in violations)
-        assert all(v.evidence.selector for v in violations)
+        assert {"name.image", "name.form-field"} <= rule_ids, rule_ids
+        assert all(v.status.value == "violation" for v in violations)
+        assert all(v.selector for v in violations)
 
     def test_axe_review_completes_without_external_network(self, demo_site: str) -> None:
         """axe 検査（同梱ファイルのみ使用）が外部ネットワークなしで完走する（AC-2）。"""

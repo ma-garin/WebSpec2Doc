@@ -1,56 +1,25 @@
-<!DOCTYPE html>
-<html lang="ja">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
-  <title>オートヒーリング - WebSpec2Doc</title>
-  {# 読み込む CSS と順序は index.html（ドキュメント作成 / AutoRun）と同じにする。
-     ここだけ独自の順序にすると、同じクラス名なのに見え方が変わる。
-     ta2.css は workspace.html と同じく user-menu.css の直後に読む。
-     --line / --sf / --tx / --ac などの色トークンはここの :root にしかなく、
-     読まないと healing.css の var(--line) が全部無効になり入力欄の枠線が消える。
-     healing.css は最後に読み、この画面固有の差分だけを足す。 #}
-  <link rel="stylesheet" href="{{ url_for('static', filename='tokens.css') }}?v={{ _ver }}">
-  <link rel="stylesheet" href="{{ url_for('static', filename='app.css') }}?v={{ _ver }}">
-  <link rel="stylesheet" href="{{ url_for('static', filename='app-components.css') }}?v={{ _ver }}">
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/components.css') }}?v={{ _ver }}">
+{% extends 'layouts/system.html' %}
+{#- オートヒーリング（System 05）の設定画面（/healing/settings）。共通レイアウトに載せる。
+    起動時にどのビューを開くかはサーバが決める。接続先の一覧が入口で、実行の直リンク（/healing/runs/<id>）だけが実行ビューで開く。
+    web/routes/healing.py は接続の作成/変更/削除・実行の開始/中止・PR 作成・判断に require_admin() を掛けている。
+    押しても 403 になる操作はそもそも描画しない。閲覧は誰でもできるので残す。 -#}
+{% set system_key = 'heal' %}
+{% set topbar_crumb = 'オートヒーリング' %}{% set topbar_title = 'オートヒーリング' %}
+{% set hl_admin = (not auth_user or auth_user.role == 'admin') %}
+{% block title %}オートヒーリング - WebSpec2Doc{% endblock %}
+{% block head_css %}
+  {# ta2.css の :root トークン（--line 等）を healing.css が使う。読まないと入力欄の枠線が消える。 #}
   <link rel="stylesheet" href="{{ url_for('static', filename='css/user-menu.css') }}?v={{ _ver }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/ta2.css') }}?v={{ _ver }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/healing.css') }}?v={{ _ver }}">
   {# サイドバー共通部品（件数バッジ）のためだけに読む。順序は healing.css の後。 #}
   <link rel="stylesheet" href="{{ url_for('static', filename='css/healing-reports.css') }}?v={{ _ver }}">
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/c-hybrid.css') }}?v={{ _ver }}">
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/c-shell.css') }}?v={{ _ver }}">
-</head>
-{# 起動時にどのビューを開くかはサーバが決める。設定画面（/healing/settings）は
-   接続先の一覧が入口で、実行の直リンク（/healing/runs/<id>）だけが実行ビューで開く。
-   属性が無い場合の既定は healing.js 側で「実行」。 #}
-<body class="app-page" data-default-view="{{ 'run' if focus_run_id else 'projects' }}" data-focus-run-id="{{ focus_run_id or '' }}" data-hl-admin="{{ 'true' if (not auth_user or auth_user.role == 'admin') else 'false' }}">
-{# web/routes/healing.py は接続の作成/変更/削除・実行の開始/中止・PR 作成・判断に
-   require_admin() を掛けている。押しても 403 になる操作はそもそも描画しない
-   （system-select.html と同じ分岐の形）。閲覧は誰でもできるので残す。 #}
-{% set hl_admin = (not auth_user or auth_user.role == 'admin') %}
-<a href="#app-content" class="skip-link">本文へスキップ</a>
-<div class="app-shell">
-
-  {# サイドバーは index.html と同じ骨格・同じクラス。副題とナビだけがヒーリング用。
-     index.html を共用しないのは、ヒーリングが独立システムで、view 切替機構
-     （data-system / switchView）に相乗りすると入口とナビが混ざるため
-     （テスト自動化が workspace.html を別に持つのと同じ判断）。 #}
-  {# サイドバーは報告書一覧と共通。ここは設定画面なので active='settings'。
-     旧「実行 / 接続先 / 実行履歴」はナビから外し、下のビューは残す
-     （実行の直リンク /healing/runs/<id> がまだ生きているため）。 #}
-  {% with active = 'settings' %}{% include 'partials/healing-sidebar.html' %}{% endwith %}
-
-  <div class="app-main">
-    {% set topbar_crumb = 'オートヒーリング' %}
-    {% set topbar_title = 'オートヒーリング' %}
-    {% include 'partials/topbar.html' %}
-
-    <main class="app-content" id="app-content">
-
-      <div id="hl-error" class="hl-banner" role="alert" hidden></div>
+{% endblock %}
+{% block body_attrs %} data-default-view="{{ 'run' if focus_run_id else 'projects' }}" data-focus-run-id="{{ focus_run_id or '' }}" data-hl-admin="{{ 'true' if hl_admin else 'false' }}"{% endblock %}
+{% block sidebar_cta %}{% include 'partials/healing-cta.html' %}{% endblock %}
+{# 旧「実行 / 接続先 / 実行履歴」はナビから外し、下のビューは残す（実行の直リンク /healing/runs/<id> がまだ生きているため）。 #}
+{% block sidebar_nav %}{% with active = 'settings' %}{% include 'partials/healing-sidebar.html' %}{% endwith %}{% endblock %}
+{% block content %}
 
       {# 何の画面か・いまの状態・主操作は先頭に 1 つずつ。状態は WS2D.status、理由は WS2D.reason が描く。 #}
       <header class="c-page-head hl-page-head" id="hl-page-head">
@@ -63,6 +32,7 @@
           <a class="c-btn c-btn--secondary" href="/healing">報告書を見る</a>
         </div>
       </header>
+      <div id="hl-error" class="hl-banner" role="alert" hidden></div>
       <div id="hl-run-reason" class="hl-run-reason"></div>
 
       <!-- ═══════════ 実行 ═══════════ -->
@@ -202,7 +172,7 @@
             <div class="hl-loop-scroll">
               <section class="card hl-loop-card">
                 <div id="hl-loop"></div>
-                <div class="hl-empty" id="hl-loop-empty" hidden>
+                <div class="c-state c-state--empty" data-kind="empty" id="hl-loop-empty" hidden>
                   まだ実行がありません。
                 </div>
               </section>
@@ -295,7 +265,7 @@
             <tbody id="hl-projects"></tbody>
           </table>
         </div>
-        <div class="hl-empty" id="hl-projects-empty" hidden>
+        <div class="c-state c-state--empty" data-kind="empty" id="hl-projects-empty" hidden>
           まだ接続したコードベースがありません。<br>
           検証コマンドが通るリポジトリを 1 つ登録してください。
           {# 【JS 担当へ】この空状態のボタンにも #hl-add-project-2 と同じ showConnectForm(null) を配線すること。 #}
@@ -320,18 +290,15 @@
             <tbody id="hl-runs"></tbody>
           </table>
         </div>
-        <div class="hl-empty" id="hl-runs-empty" hidden>
+        <div class="c-state c-state--empty" data-kind="empty" id="hl-runs-empty" hidden>
           まだ実行がありません。<br>
           「実行」で対象のコードベースを選び、ヒーリングを開始してください。
         </div>
         <div id="hl-runs-state"></div>
         <div class="hl-more-row"><button type="button" class="btn-outline-sm" id="hl-runs-more" hidden>もっと見る</button></div>
       </section>
-
-    </main>
-  </div>
-</div>
-
+{% endblock %}
+{% block scripts %}
 <script src="{{ url_for('static', filename='js/c-hybrid.js') }}?v={{ _ver }}"></script>
 <script src="{{ url_for('static', filename='js/user-menu.js') }}?v={{ _ver }}"></script>
 {# healing.js は責務ごとに分割してある。共有は window.HealingApp だけ。この順に読み、healing.js が最後に初期化する。 #}
@@ -342,5 +309,4 @@
 <script src="{{ url_for('static', filename='js/healing-actions.js') }}?v={{ _ver }}"></script>
 <script src="{{ url_for('static', filename='js/healing-history.js') }}?v={{ _ver }}"></script>
 <script src="{{ url_for('static', filename='js/healing.js') }}?v={{ _ver }}"></script>
-</body>
-</html>
+{% endblock %}

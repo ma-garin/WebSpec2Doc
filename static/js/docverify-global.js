@@ -14,7 +14,7 @@
   function sevChip(s) { var v = SEV[s] || [s || '-', '']; return '<span class="chip ' + v[1] + '">' + esc(v[0]) + '</span>'; }
   function loading(el) { el.innerHTML = '<p class="mut">読み込み中…</p>'; }
   function failed(el) { el.innerHTML = '<p class="mut">読み込めませんでした。画面を開き直してください。</p>'; }
-  function empty(el, msg) { el.innerHTML = '<p class="mut dvg-empty">' + esc(msg) + '</p>'; }
+  function empty(el, msg) { el.innerHTML = '<div class="c-state" data-kind="empty"><p class="c-state__msg">' + esc(msg) + '</p></div>'; }
   function lbl(map, k) { return esc(map[k] || k || '-'); }
   function load(el, path, render) {
     loading(el);
@@ -151,7 +151,12 @@
     fillChecklistSelect($('dvgNewChecklist'), true).catch(function () {});
     load(el, '/api/docverify/inspections', function (d) {
       var list = Array.isArray(d) ? d : (d.inspections || d.items || []);
-      if (!list.length) return empty(el, 'レビューはまだありません。上の欄から作成してください。');
+      if (!list.length) {
+        empty(el, 'レビューはまだありません。上の欄から作成してください。');
+        var st = el.querySelector('.c-state');
+        if (st) { st.insertAdjacentHTML('beforeend', '<button type="button" class="c-btn c-btn--primary c-btn--sm" data-dv-empty-new>＋ 新しいレビュー</button>'); st.querySelector('[data-dv-empty-new]').addEventListener('click', startNew); }
+        return;
+      }
       el.innerHTML = table(['レビュー', '工程', '期限', '指摘'], list.map(function (r) {
         return '<tr data-id="' + esc(r.id) + '" data-key-open><td>' + esc(r.name || r.id) + '</td><td>' + lbl(PHASE, r.phase) +
           '</td><td>' + esc(r.due || '-') + '</td><td>' + esc(r.findings_count != null ? r.findings_count : (r.findings || []).length) + '</td></tr>';

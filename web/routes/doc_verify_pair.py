@@ -7,8 +7,9 @@ from __future__ import annotations
 
 import logging
 
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, Response, jsonify, request
 
+from web.services.docverify import pair_cases as pc
 from web.services.docverify import pair_review as pr
 
 bp = Blueprint("doc_verify_pair", __name__)
@@ -70,7 +71,38 @@ def analyze(iid):
     return _call(lambda: pr.analyze(iid, pr.current_user()))
 
 
+def cases_list():
+    return _call(lambda: {"cases": pc.cases()})
+
+
+def cases_create():
+    fs = request.files
+    req, design = fs.get("requirements"), fs.get("design")
+    if not req or not design:
+        return _err(400, "files_required", "要件定義書と基本設計書の 2 つのファイルを選んでください。")
+    f = request.form
+    return _call(lambda: pc.create(f.get("name", ""), req.read(), design.read(), f.get("due", ""), pr.current_user()), status=201)
+
+
+def summary(iid):
+    return _call(pc.summary, iid)
+
+
+def report_md(iid):
+    try:
+        md = pc.report_md(iid)
+    except pr.PairError as e:
+        return _err(e.status, e.code, e.message)
+    except Exception:
+        log.exception("指摘書の出力に失敗")
+        return _err(500, "internal", "指摘書を作れませんでした。時間をおいてもう一度出力してください。")
+    return Response(md, content_type="text/markdown; charset=utf-8",
+                    headers={"Content-Disposition": f"attachment; filename=findings-{pr.resolve_iid(iid)}.md"})
+
+
 _RULES = (
+    ("/summary", summary, ["GET"]),
+    ("/report.md", report_md, ["GET"]),
     ("/findings", findings, ["GET"]),
     ("/findings/<fid>/decide", decide, ["POST"]),
     ("/findings/<fid>/revoke", revoke, ["POST"]),
@@ -85,6 +117,8 @@ _RULES = (
 def register(target: Blueprint) -> None:
     for path, fn, methods in _RULES:
         target.add_url_rule(_P + path, f"pair_{fn.__name__}", fn, methods=methods)
+    target.add_url_rule("/api/docverify/pair/cases", "pair_cases_list", cases_list, methods=["GET"])
+    target.add_url_rule("/api/docverify/pair/cases", "pair_cases_create", cases_create, methods=["POST"])
 
 
 register(bp)

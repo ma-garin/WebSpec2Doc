@@ -13,6 +13,7 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='css/docverify-trace-report.css') }}?v={{ dv_ver }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/docverify-process.css') }}?v={{ dv_ver }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/docverify-pair.css') }}?v={{ dv_ver }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/docverify-cases.css') }}?v={{ dv_ver }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/docverify-settings.css') }}?v={{ dv_ver }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/docassure.css') }}?v={{ dv_ver }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/docassure-trace-panel.css') }}?v={{ dv_ver }}">
@@ -60,7 +61,9 @@
       <div class="dv-toast" id="dv-toast" role="status" hidden></div>
       {% include 'docverify/_global.html' %}
       {% include 'docverify/_review.html' %}
+      {% include 'docverify/_cases.html' %}
       {% include 'docverify/_pair.html' %}
+      {% include 'docverify/_gate.html' %}
       {% include 'docverify/_trace.html' %}
       <section class="dv-view da" data-view="assure" hidden>
         {# レビューを開いた後のタブ。dv-sb / dv-sb__item / dv-sb__label / dv-sb__count は docassure.js が参照する #}
@@ -97,6 +100,7 @@
 <script src="{{ url_for('static', filename='js/docverify-trace-report.js') }}?v={{ dv_ver }}"></script>
 <script src="{{ url_for('static', filename='js/docverify-process.js') }}?v={{ dv_ver }}"></script>
 <script src="{{ url_for('static', filename='js/docverify-pair.js') }}?v={{ dv_ver }}"></script>
+<script src="{{ url_for('static', filename='js/docverify-cases.js') }}?v={{ dv_ver }}"></script>
 <script src="{{ url_for('static', filename='js/docverify-accuracy.js') }}?v={{ dv_ver }}"></script>
 <script src="{{ url_for('static', filename='js/docassure-vocab.js') }}?v={{ dv_ver }}"></script>
 <script src="{{ url_for('static', filename='js/docassure.js') }}?v={{ dv_ver }}"></script>

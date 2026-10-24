@@ -4,7 +4,7 @@
   'use strict';
   const REVIEW_VIEWS = ['pair', 'plan', 'read', 'triage', 'questions', 'followup', 'screen', 'gate'];
   const TITLES = {
-    home: 'ホーム', mine: '自分の担当', reviews: 'レビュー一覧', findings: '指摘一覧',
+    home: 'ホーム', mine: '自分の担当', reviews: 'レビュー一覧', cases: '案件一覧', findings: '指摘一覧',
     pair: '対検査', plan: '計画', read: '文書を読む', triage: '指摘の検討', questions: '質問票', followup: '修正版の確認',
     screen: '実画面との照合', gate: '判定と記録', trace: 'トレーサビリティ', assure: 'ドキュメント品質保証', checklists: '検証観点', metrics: '履歴', accuracy: '精度', settings: '設定',
   };
@@ -73,7 +73,7 @@
   // サイドの管理群は レビュー一覧・観点・履歴 の 3 つ＋設定。根拠（screen）は履歴の中のタブ。
   // 指摘=「指摘の検討」、根拠=「実画面との照合」の既存画面に対応付ける（新画面は作らない）。
   const SECTIONS = {
-    doc: ['home', 'mine', 'reviews', 'findings', 'pair', 'plan', 'read', 'questions', 'followup', 'gate'],
+    doc: ['home', 'mine', 'reviews', 'cases', 'findings', 'pair', 'plan', 'read', 'questions', 'followup', 'gate'],
     qa: ['assure'], trace: ['trace'], find: ['triage'], hist: ['metrics', 'screen'], vp: ['checklists', 'accuracy'], set: ['settings'],
   };
   // ドキュメント検証はレビュー一覧 1 画面。ホーム・自分の担当・指摘一覧は廃止（タブ不要・2026-10-18）。
@@ -97,7 +97,7 @@
       // 根拠は「履歴」画面の中のタブ（ナビには出さない）
       html = [['metrics', '履歴'], ['screen', '根拠']].map(([v, l]) => `<a href="#${v}" data-nav="${v}" class="${v === view ? 'active' : ''}"${v === view ? ' aria-current="page"' : ''}>${l}</a>`).join('');
     } else if (STEPS.includes(view) && r) {
-      html = `<a href="#reviews" data-nav="reviews" class="dv-back">← レビュー一覧</a><span class="dv-subtabs-name">${esc(r.name)}</span>`
+      html = `<a href="#cases" data-nav="cases" class="dv-back">← 案件一覧</a><span class="dv-subtabs-name">${esc(r.name)}</span>`
         + STEPS.map((v) => tab(v, view)).join('');
     } else if (sectionOf(view) === 'doc') {
       html = '';
@@ -113,6 +113,7 @@
   // 画面の頭（何の画面か 1 文・現在の状態・状態の理由 1 行）。語は c-hybrid の WS2D 語彙に合わせる
   const PAGE = {
     reviews: ['レビュー', 'レビューを作り、文書の検査から判定までを進めます。', 'AI の自動検出は「候補」です。人が「指摘にする」を押すまで、確定した指摘にはなりません。'],
+    cases: ['案件一覧', 'レビューごとに工程・期限・指摘・判定を並べます。行を選ぶと対検査を開きます。', '重大の未解消・要確認・設計に対応の無い要件が残る案件は不合格です。'],
     pair: ['対検査', '要件定義書と基本設計書を突き合わせ、指摘の採否と判定・承認を記録します。', '指摘を選ぶと両文書の該当箇所が光ります。全体が合格のときだけ承認できます。'],
     plan: ['計画', 'レビューの目的・参加者・期限・終了基準を決めます。', '計画を保存して「個別レビューを始める」を押すと、文書を読む工程に進みます。'],
     read: ['文書を読む', '本文を読み、指摘の候補を確かめて指摘にします。', '自動で見つけたものは候補です。本文に戻って確かめてから指摘にしてください。'],
@@ -157,9 +158,9 @@
 
   function show(view) {
     view = String(view || '').split('/')[0];   // #assure/<iid>/<tab> の深いリンクは先頭だけで画面を決める
-    if (!TITLES[view] || DOC_GONE.includes(view)) view = 'reviews';
+    if (!TITLES[view] || DOC_GONE.includes(view) || view === 'reviews') view = 'cases';
     const needReview = REVIEW_VIEWS.includes(view) && !DV.state.review;
-    if (needReview) view = 'reviews';
+    if (needReview) view = 'cases';
     document.querySelectorAll('.dv-view').forEach((v) => { v.hidden = v.dataset.view !== view; });
     const sec = needReview && location.hash.slice(1) === 'setcheck' ? 'trace' : sectionOf(view);
     document.querySelectorAll('.dv-sec').forEach((a) => a.classList.toggle('active', a.dataset.sec === sec));
@@ -207,7 +208,7 @@
     });
     const sync = () => {
       const d = location.hash.slice(1).split('/'), h = d[0];
-      if (h === 'assure' && d[1] && (!DV.state.review || DV.state.review.id !== decodeURIComponent(d[1]))) { openReview(decodeURIComponent(d[1]), 'assure').catch(() => show('reviews')); return; }
+      if (h === 'assure' && d[1] && (!DV.state.review || DV.state.review.id !== decodeURIComponent(d[1]))) { openReview(decodeURIComponent(d[1]), 'assure').catch(() => show('cases')); return; }
       if (h && h !== DV.current) show(h);
     };
     window.addEventListener('hashchange', sync);
@@ -217,7 +218,7 @@
     const deep = location.hash.slice(1).split('/');
     if (deep[0] === 'assure' && deep[1]) saved = decodeURIComponent(deep[1]);   // #assure/<iid> からレビューを復元する
     if (saved) { try { await openReview(saved, deep[0] || 'read'); return; } catch (e) { banner(''); } }
-    show(location.hash.slice(1) || 'reviews');
+    show(location.hash.slice(1) || 'cases');
   }
 
   const NO_SCORE = '— 文書を取り込むと表示されます。';

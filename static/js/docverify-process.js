@@ -229,6 +229,6 @@
     DV.on('plan', guard(showPlan));
     DV.on('triage', guard(showTriage));
     DV.on('questions', showQuestions);
-    DV.on('gate', guard(showGate));
+    // 判定と記録は対検査の Gate API に一本化した（docverify-cases.js・S06 r2）。旧来の独自判定は描かない
   });
 })();

@@ -180,6 +180,9 @@ def create_app() -> Flask:
     app.register_blueprint(impact_api.bp)
     # 指揮者（O2）。5 システムを 1 本の実行として束ねる API。
     app.register_blueprint(orchestration.bp)
+    # 共通 API v1（案件・対象版・参照）。
+    from web.routes import common_api  # noqa: E402
+    app.register_blueprint(common_api.bp)
 
     from web.services.viewpoint_store import get_viewpoint_store
 

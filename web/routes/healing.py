@@ -20,6 +20,7 @@ from web.audit_context import record_admin_event
 from web.auth import require_admin
 from web.config import OUTPUT_DIR
 from web.services.healing import agents as healing_agents
+from web.services.healing import trace as healing_trace
 from web.services.healing import (
     autorun_bridge,
     orchestrator,
@@ -846,6 +847,23 @@ def api_get_run(run_id: str):
         return _error_response(exc)
     except Exception:
         logger.exception("healing: get_run に失敗しました")
+        return {"error": "処理に失敗しました"}, 500
+
+
+@bp.get("/api/healing/runs/<run_id>/trace")
+def api_get_run_trace(run_id: str):
+    """工程バーと欠陥ごとの 根拠・修正差分・再検証・判断（web/services/healing/trace.py）。"""
+    if not _ID_RE.match(run_id):
+        return {"error": "run_id が不正です。"}, 400
+    try:
+        run = orchestrator.get_run(_out(), run_id)
+        if run is None:
+            return {"error": "実行が見つかりません。一覧から開き直してください。"}, 404
+        return {"trace": healing_trace.build_trace(run_store.run_to_dict(run))}
+    except HealingError as exc:
+        return _error_response(exc)
+    except Exception:
+        logger.exception("healing: build_trace に失敗しました")
         return {"error": "処理に失敗しました"}, 500
 
 

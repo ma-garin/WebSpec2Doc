@@ -267,12 +267,22 @@ def _missing_links(d: Path, changed_req: set | None) -> list[dict]:
     return uniq
 
 
-def _judge(findings: list[dict], missing: list[dict]) -> dict:
-    crit = [f["id"] for f in findings if f["severity"] == "重大" and f.get("status") not in RESOLVED]
-    review = [f["id"] for f in findings if f.get("status") == "要確認"]
-    unverified = [f["id"] for f in findings if f.get("status") is None]
-    return {"pass": not crit and not review and not missing, "unresolved_critical": crit,
-            "missing_links": missing, "unverified": unverified, "needs_review": review}
+def _judge(findings: list[dict], missing: list[dict], scope: str = "overall") -> dict:
+    """出口基準は設定（settings_store）の上限に従う。未検証（status None）は解消に数えない（固定）。"""
+    from web.services.docverify import settings_store as ss
+    cfg = ss.effective()
+    limits = dict(cfg["exit"]["max_open"])
+    if scope == "changed" and cfg["exit"]["changed_rule"] == "zero":
+        limits = {k: 0 for k in ss.SEV_KEYS}
+    on = [f for f in findings if cfg["types"].get(f.get("type"), True)]
+    open_by = {k: [f["id"] for f in on if ss.PAIR_SEV.get(f["severity"]) == k and f.get("status") not in RESOLVED] for k in ss.SEV_KEYS}
+    over = {k: len(v) for k, v in open_by.items() if limits.get(k) is not None and len(v) > limits[k]}
+    crit = open_by["critical"]
+    review = [f["id"] for f in on if f.get("status") == "要確認"]
+    unverified = [f["id"] for f in on if f.get("status") is None]
+    return {"pass": not over and not review and not missing, "unresolved_critical": crit,
+            "missing_links": missing, "unverified": unverified, "needs_review": review,
+            "over_limit": over, "limits": limits, "labels": cfg["labels"]}
 
 
 def _reasons(o: dict) -> list[str]:
@@ -280,8 +290,9 @@ def _reasons(o: dict) -> list[str]:
         tail = f"未判定の指摘が {len(o['unverified'])} 件残っていますが、合否には影響しません。" if o["unverified"] else "未判定の指摘はありません。"
         return ["重大な未解決の指摘・要確認・対応の抜けはありません。", tail, "承認できます。"]
     parts = []
-    if o["unresolved_critical"]:
-        parts.append(f"重大な指摘が {len(o['unresolved_critical'])} 件未解決です")
+    lab = o.get("labels") or {}
+    for k, n in (o.get("over_limit") or {}).items():
+        parts.append(f"未対応の{lab.get(k, k)}が {n} 件で上限 {o['limits'][k]} 件を超えています")
     if o["needs_review"]:
         parts.append(f"要確認が {len(o['needs_review'])} 件あります")
     if o["missing_links"]:
@@ -295,7 +306,7 @@ def gate(iid: str) -> dict:
     meta = _read(d / "docs" / "meta.json", {})
     overall = _judge(findings, _missing_links(d, None))
     changed_req = set((meta.get("changed_sections") or {}).get("requirements") or [])
-    changed = _judge([f for f in findings if f.get("changed_in_current")], _missing_links(d, changed_req))
+    changed = _judge([f for f in findings if f.get("changed_in_current")], _missing_links(d, changed_req), "changed")
     return {"overall": overall, "changed": changed, "reasons": _reasons(overall)}
 
 

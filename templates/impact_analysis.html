@@ -58,6 +58,10 @@
         <span class="nav-label">監査</span>
       </button>
       <div class="app-nav-group" data-scope="cr" hidden id="im-nav-crname">変更要求</div>
+      <button type="button" class="app-nav-item" data-scope="cr" data-tab="decision" hidden>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 12l5 5L20 6"/></svg>
+        <span class="nav-label">判断</span>
+      </button>
       <button type="button" class="app-nav-item" data-scope="cr" data-tab="changes" hidden>
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 7h11M4 12h16M4 17h8"/><path d="M18 4l3 3-3 3"/></svg>
         <span class="nav-label">変更内容</span>
@@ -130,4 +134,5 @@
 <script src="{{ url_for('static', filename='js/impact/rea.js') }}?v={{ _ver }}"></script>
 <script src="{{ url_for('static', filename='js/impact/system.js') }}?v={{ _ver }}"></script>
 <script src="{{ url_for('static', filename='js/impact/cr.js') }}?v={{ _ver }}"></script>
+<script src="{{ url_for('static', filename='js/impact/decision.js') }}?v={{ _ver }}"></script>
 {% endblock %}

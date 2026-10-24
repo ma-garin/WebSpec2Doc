@@ -3,7 +3,7 @@
 (function () {
   'use strict';
   var IM = window.IM, api = IM.api, ui = IM.ui, esc = ui.esc, $ = ui.$, $$ = ui.$$;
-  var TITLE = { changes: '変更内容', impacts: '影響', graph: '関係図', matrix: 'マトリクス', tests: 'テスト', approval: '承認', review: '改修後レビュー' };
+  var TITLE = { decision: '判断', changes: '変更内容', impacts: '影響', graph: '関係図', matrix: 'マトリクス', tests: 'テスト', approval: '承認', review: '改修後レビュー' };
   var STAGE = { queued: '開始を待っています', changes: '変更箇所を作っています', candidates: '影響の候補を集めています', llm: 'LLM で判定しています', risk: 'リスクを計算しています', save: '結果を保存しています' };
   var CHG = { add: '追加', modify: '変更', 'delete': '削除', text: '文章' };
   var EVI = { link: 'つながり', semantic: '意味検索', keyword: '語の一致', llm: 'LLM 判定' };
@@ -108,7 +108,7 @@
     var s = cr.summary || {}, e = cr.engine || {};
     var k = [['total', '影響の候補'], ['p1', 'P1'], ['p2', 'P2'], ['p3', 'P3'], ['open', '要確認'], ['retest', '再テスト'], ['test_gap', 'テストの抜け']];
     var degraded = e.mode && e.mode !== 'llm' && e.mode !== 'embedding';
-    return '<div class="im-crhead"><div class="im-crtitle"><code>' + esc(cr.code) + '</code><h2>' + esc(cr.title) + '</h2>' + ui.statusBadge(cr.status, cr) + '</div>' +
+    return '<div class="im-crhead"><div class="im-crtitle"><code>' + esc(cr.code) + '</code><h2>' + esc(cr.title) + '</h2>' + ui.statusBadge(cr.status, cr) + (cr.source && cr.source.kind === 'docverify' ? '<span class="im-recv">' + esc(cr.source.label) + '</span>' : '') + '</div>' +
       '<div class="im-cracts">' + actions(cr, ctx) + '</div></div>' +
       '<div class="kpis im-kpis7">' + k.map(function (x) { return '<div class="kpi' + ((x[0] === 'p1' || x[0] === 'test_gap' || x[0] === 'open') && Number(s[x[0]]) > 0 ? ' ng' : '') + '"><b>' + esc(s[x[0]] || 0) + '</b><span>' + x[1] + '</span></div>'; }).join('') + '</div>' +
       (degraded || e.reason ? '<div class="bt-sample im-engine" role="note"><b>' + (degraded ? '縮退して分析しました' : '分析の方式') + '</b>: ' + esc(e.reason || e.mode) +
@@ -315,9 +315,9 @@
     }, function (e) { ui.failed(box, e); });
   }
 
-  var TABS = { changes: tabChanges, impacts: tabImpacts, graph: tabGraph, matrix: tabMatrix, tests: tabTests, approval: tabApproval, review: tabReview };
+  var TABS = { decision: function (el, cr, ctx) { IM.decision.render(el, cr, ctx); }, changes: tabChanges, impacts: tabImpacts, graph: tabGraph, matrix: tabMatrix, tests: tabTests, approval: tabApproval, review: tabReview };
   function render(root, ctx) {
-    var tab = TABS[ctx.tab] ? ctx.tab : 'changes';
+    var tab = TABS[ctx.tab] ? ctx.tab : 'decision';
     ui.setTitle(ctx.system.name + ' / ' + ctx.cr, TITLE[tab]);
     ui.loading(root);
     api.cr(ctx.sid, ctx.cr).then(function (d) {

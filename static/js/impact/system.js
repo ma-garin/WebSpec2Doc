@@ -232,7 +232,7 @@
       if (!rows.length) { box.innerHTML = ui.empty({ title: status ? 'この状態の変更要求はありません' : 'まだ変更要求がありません', desc: '題名・理由・変更内容を入れて起票し、「分析する」を押します。' }); return; }
       box.innerHTML = table(['ID', '題名', '状態', '影響', 'P1', '起票'], rows.map(function (r) {
         var s = r.summary || {};
-        return '<tr><td><button type="button" class="im-link" data-cr="' + esc(r.code) + '">' + esc(r.code) + '</button></td><td>' + esc(r.title) + '</td><td>' + ui.statusBadge(r.status, r) + '</td>' +
+        return '<tr><td><button type="button" class="im-link" data-cr="' + esc(r.code) + '">' + esc(r.code) + '</button></td><td>' + esc(r.title) + (r.source && r.source.kind === 'docverify' ? ' <span class="im-recv">' + esc(r.source.label) + '</span>' : '') + '</td><td>' + ui.statusBadge(r.status, r) + '</td>' +
           '<td class="num">' + num(s.total) + '</td><td class="num">' + num(s.p1) + '</td><td>' + ui.fmtDate(r.created_at) + ' ' + esc(r.created_by || '') + '</td></tr>'; }), '変更要求');
       on(box, '[data-cr]', function (b) { IM.app.go({ sid: ctx.sid, cr: b.dataset.cr }); });
     }, function (e) { ui.failed(box, e, function () { crTable(box, ctx, status, limit); }); });

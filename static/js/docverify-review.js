@@ -251,7 +251,7 @@
     var list = (d && d.sections) || [];
     return '<article class="p1-doc" aria-label="' + esc(label) + '"><header class="p1-doc-t">' + esc(label) + ' <span class="p1-doc-v">' + (d && d.version ? '第 ' + esc(d.version) + ' 版' : '') + '</span></header>' +
       '<div class="p1-doc-s" data-r2doc="' + side + '" tabindex="0">' + (list.length ? list.map(function (s) {
-        return '<section class="p1-sec" data-sec-id="' + esc(s.id) + '"><h4 class="p1-doc-h">' + esc(s.heading || s.id) + '</h4><p class="p1-doc-b">' + esc(s.text) + '</p></section>'; }).join('')
+        return '<section class="p1-sec" data-sec-id="' + esc(s.id) + '"><h4 class="p1-doc-h">' + esc(s.heading || s.id) + ' <button type="button" class="p1-btn r2-pick" data-r2-pick="' + side + '" data-r2-sec="' + esc(s.id) + '">この章で指摘</button></h4><p class="p1-doc-b">' + esc(s.text) + '</p></section>'; }).join('')
         : '<p class="p1-empty">この文書には読める章がありません。修正版の確認で文書を取り込んでください。</p>') + '</div></article>';
   }
   function renderRead2(view) {
@@ -262,7 +262,7 @@
         '<aside class="p1-side r2-side" aria-label="指摘にする"><div class="r2-sec-t">選んだ本文</div><blockquote class="r2-quote" data-r2-quote>文書の本文をドラッグで選ぶと、ここに入ります。</blockquote>' +
         '<label class="r2-k" for="r2-title">指摘の内容</label><input type="text" id="r2-title" maxlength="80" placeholder="例: タイムアウトが要件60秒・設計30秒で食い違う">' +
         '<label class="r2-k" for="r2-sev">重大度</label><select id="r2-sev">' + R2_SEV.map(function (s) { return '<option' + (s === '警告' ? ' selected' : '') + '>' + s + '</option>'; }).join('') + '</select>' +
-        '<div class="r2-actions"><button type="button" class="p1-btn is-primary" data-act="add" disabled>指摘にする</button></div>' +
+        '<div class="r2-actions"><button type="button" class="p1-btn is-primary" data-act="add" disabled>指摘にする</button> <span class="r2-need" data-r2-need>本文を選ぶと押せます</span></div>' +
         '<p class="r2-hint">採否（採用／不採用／要確認／解消済み）は対検査で決めます。</p></aside></div>';
       if (!n) r2State(view, 'empty', '読める文書がまだありません。修正版の確認で基準文書と確認する文書を取り込んでください。');
       var body = part(view, 'body'), btn = body.querySelector('[data-act="add"]');
@@ -274,8 +274,16 @@
         var sec = node.closest('[data-sec-id]');
         r2.sel = { side: box.getAttribute('data-r2doc'), section: sec ? sec.getAttribute('data-sec-id') : '', quote: t.slice(0, 300) };
         body.querySelector('[data-r2-quote]').textContent = (r2.sel.side === 'req' ? '基準文書' : '確認する文書') + '：' + r2.sel.quote;
-        btn.disabled = false;
+        btn.disabled = false; var nd = body.querySelector('[data-r2-need]'); if (nd) nd.hidden = true;
       };
+      body.addEventListener('click', function (ev) {
+        var pk = ev.target.closest('[data-r2-pick]'); if (!pk) return;
+        var sec = pk.closest('[data-sec-id]'), side = pk.getAttribute('data-r2-pick');
+        var txt = (sec.querySelector('.p1-doc-b') || {}).textContent || pk.getAttribute('data-r2-sec');
+        r2.sel = { side: side, section: pk.getAttribute('data-r2-sec'), quote: txt.trim().slice(0, 300) };
+        body.querySelector('[data-r2-quote]').textContent = (side === 'req' ? '基準文書' : '確認する文書') + '：' + r2.sel.quote;
+        btn.disabled = false; var nd = body.querySelector('[data-r2-need]'); if (nd) nd.hidden = true;
+      });
       btn.onclick = function () {
         var title = body.querySelector('#r2-title').value.trim();
         if (!r2.sel) { msg(view, '先に文書の本文を選んでください。', true); return; }
@@ -379,12 +387,14 @@
         var xs = d[k[0]] || []; if (!xs.length) return '';
         return '<h3 style="font-size:13px">' + k[1] + '</h3>' + xs.map(function (x) { return '<div class="f">' + esc(diffText(x)) + '</div>'; }).join('');
       }).join('');
-    part(view, 'body').innerHTML = '<div class="dv-panel" style="margin:0 0 12px">現在 第 ' + esc(r.document ? r.document.version : '-') + ' 版。新しい版: <input type="file" accept=".txt,.md,.docx,.xlsx,.pdf" data-file> <button type="button" class="b p" data-act="up">新しい版を取り込む</button></div>' +
+    part(view, 'body').innerHTML = '<div class="dv-panel" style="margin:0 0 12px">現在 第 ' + esc(r.document ? r.document.version : '-') + ' 版。新しい版: <input type="file" accept=".txt,.md,.docx,.xlsx,.pdf" data-file> <button type="button" class="b p" data-act="up" disabled>新しい版を取り込む</button> <span class="r2-need" data-r2-need>ファイルを選ぶと押せます</span></div>' +
       '<div class="wrap"><section class="card"><h3>版の差分</h3><div class="dvr-scroll" style="padding:10px 14px">' + diffHtml + '</div></section>' +
       '<section class="card"><h3>修正済みの指摘の確認 <span class="role">' + fixed.length + ' 件</span></h3><div class="dvr-scroll">' +
       (fixed.length ? fixed.map(function (f) {
         return findingCard(f, false).replace(/<\/div>$/, '<div class="act"><button class="b p" data-ok="' + esc(f.id) + '">確認済にする</button><button class="b" data-ng="' + esc(f.id) + '">未対応に戻す</button></div></div>');
       }).join('') : empty('確認待ちの修正済み指摘はありません。')) + '</div></section></div>';
+    (function () { var bd = part(view, 'body'), fi = bd.querySelector('[data-file]'), ub = bd.querySelector('[data-act="up"]'), nd = bd.querySelector('[data-r2-need]');
+      if (fi && ub) fi.onchange = function () { ub.disabled = !fi.files.length; if (nd) nd.hidden = !!fi.files.length; }; })();
     part(view, 'body').onclick = function (ev) {
       var b = ev.target.closest('button'); if (!b) return;
       if (b.getAttribute('data-act') === 'up') {

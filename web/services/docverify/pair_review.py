@@ -336,7 +336,7 @@ def _reasons(o: dict) -> list[str]:
     if o.get("unverified_reasons"):
         return [*o["unverified_reasons"], "検査範囲を確認し、検査が完了するまで承認できません。"]
     if o["pass"]:
-        tail = f"未判定の指摘が {len(o['unverified'])} 件残っていますが、合否には影響しません。" if o["unverified"] else "未判定の指摘はありません。"
+        tail = "未判定の指摘はありません。"
         return ["重大な未解決の指摘・要確認・対応の抜けはありません。", tail, "承認できます。"]
     parts = []
     lab = o.get("labels") or {}

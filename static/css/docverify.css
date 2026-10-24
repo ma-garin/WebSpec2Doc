@@ -67,7 +67,7 @@
 .dvr-view{display:flex;flex-direction:column;min-height:0;height:100%}
 .dvr-view[hidden]{display:none}
 .dvr-head{display:flex;align-items:center;gap:12px;margin-bottom:8px}
-.dvr-title{font-size:16px;margin:0}
+.dvr-title{font-size:15px;margin:0}
 .dvr-head-right{margin-left:auto;display:flex;gap:8px;align-items:center}
 .dvr-body{flex:1;min-height:0;overflow:auto}
 .dvr-msg:empty{display:none}
@@ -112,7 +112,7 @@
 .dvr-view .doc .ln .no { color: var(--color-text-secondary); font-family: var(--font-mono); font-size: 11px; }
 .dvr-view .doc .ln.hit { background: var(--color-high-bg); }
 .dvr-view .doc mark { background: var(--color-high-border); border-bottom: 2px solid var(--color-high); }
-.dvr-view .doc .pin { display: inline-block; font-size: 10px; font-weight: 700; background: var(--color-primary-dark); color: var(--color-surface); border-radius: 999px; padding: 0 6px; margin-left: 6px; }
+.dvr-view .doc .pin { display: inline-block; font-size: 11px; font-weight: 700; background: var(--color-primary-dark); color: var(--color-surface); border-radius: 999px; padding: 0 6px; margin-left: 6px; }
 .dvr-view .f { padding: 10px 14px; border-bottom: 1px solid var(--color-divider); font-size: 13px; }
 .dvr-view .f .top { display: flex; gap: 6px; align-items: center; margin-bottom: 4px; }
 .dvr-view .chip { font-size: 11px; border-radius: 5px; padding: 1px 7px; font-weight: 700; }

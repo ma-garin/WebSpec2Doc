@@ -424,3 +424,27 @@
     crumb: { set: crumbSet, normalize: crumbNormalize }
   };
 })(window);
+
+/* C0（2026-10-24）: 右パネル（共通契約 §2.1）の開閉と保持。layouts/system.html が #app-rpanel を出した画面だけで動く。
+   保持は System ごと（localStorage）。中身の描画は System 側の責任。 */
+(function () {
+  var panel = document.getElementById('app-rpanel');
+  var btn = document.getElementById('app-rpanel-toggle');
+  if (!panel || !btn || panel.getAttribute('data-bound') === '1') return;
+  panel.setAttribute('data-bound', '1');
+  var key = 'ws2d.rpanel.' + (panel.getAttribute('data-system') || 'default');
+  function apply(collapsed) {
+    panel.classList.toggle('is-collapsed', collapsed);
+    btn.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+    btn.textContent = collapsed ? '開く' : '閉じる';
+    btn.title = collapsed ? '右パネルを開く' : '右パネルを閉じる';
+  }
+  var saved = null;
+  try { saved = window.localStorage.getItem(key); } catch (e) { saved = null; }
+  apply(saved === 'collapsed');
+  btn.addEventListener('click', function () {
+    var next = !panel.classList.contains('is-collapsed');
+    apply(next);
+    try { window.localStorage.setItem(key, next ? 'collapsed' : 'open'); } catch (e) { /* 保存できなくても開閉は効く */ }
+  });
+})();

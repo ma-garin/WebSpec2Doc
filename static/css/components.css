@@ -2731,3 +2731,81 @@
 }
 .rpt-shot-missing strong { color: var(--text); font-size: var(--text-base); }
 .rpt-shot-missing span { font-size: var(--text-sm); line-height: 1.7; }
+
+/* ======================================================================
+   C0 追加（2026-10-24）: 状態 9 種の表示と基準デザイン（proposal-1/3/5）の部品。
+   既存クラスは変更しない。ここより上のクラスに依存しない。値は tokens.css / css/tokens.css の変数のみ。
+   ====================================================================== */
+/* --- 状態バナー。本文コンテナの data-state で出し分ける（共通契約 §2.3） --- */
+.ui-state-banner { display: none; align-items: center; gap: var(--sp-8); flex-wrap: wrap; border-radius: 6px; padding: 6px var(--sp-12); font-size: var(--fs-13); border: 1px solid var(--color-border); background: var(--color-surface-2); color: var(--color-text); }
+.ui-state-banner b { font-weight: 700; }
+.ui-state-banner .ui-state-next { color: var(--color-text-secondary); }
+[data-state="loading"]   .ui-state-banner--loading,
+[data-state="empty"]     .ui-state-banner--empty,
+[data-state="no-match"]  .ui-state-banner--no-match,
+[data-state="error"]     .ui-state-banner--error,
+[data-state="forbidden"] .ui-state-banner--forbidden,
+[data-state="dirty"]     .ui-state-banner--dirty,
+[data-state="conflict"]  .ui-state-banner--conflict,
+[data-state="restored"]  .ui-state-banner--restored { display: flex; }
+.ui-state-banner--loading, .ui-state-banner--empty, .ui-state-banner--no-match, .ui-state-banner--restored { background: var(--color-info-bg); border-color: var(--color-info-border); color: var(--color-info-tx); }
+.ui-state-banner--error, .ui-state-banner--forbidden { background: var(--state-ng-bg); border-color: var(--state-ng-border); color: var(--state-ng-tx); }
+.ui-state-banner--dirty, .ui-state-banner--conflict { background: var(--state-hold-bg); border-color: var(--state-hold-border); color: var(--state-hold-tx); }
+/* 状態ごとに隠す・出す領域（System は対象領域に付けるだけ） */
+.ui-state-only { display: none; }
+[data-state="loading"] .ui-state-only--loading, [data-state="empty"] .ui-state-only--empty,
+[data-state="no-match"] .ui-state-only--no-match, [data-state="error"] .ui-state-only--error,
+[data-state="forbidden"] .ui-state-only--forbidden { display: block; }
+[data-state="loading"] .ui-state-hide-loading, [data-state="error"] .ui-state-hide-error,
+[data-state="forbidden"] .ui-state-hide-forbidden, [data-state="empty"] .ui-state-hide-empty { display: none; }
+.ui-skeleton-line { display: block; height: 10px; margin: var(--sp-8) 0; border-radius: 4px; background: var(--color-surface-2); animation: ui-skel-pulse 1.2s ease-in-out infinite; }
+@keyframes ui-skel-pulse { 50% { opacity: .45; } }
+@media (prefers-reduced-motion: reduce) { .ui-skeleton-line { animation: none; } }
+
+/* --- 指摘カード（proposal-1 .p1-card） --- */
+.finding-card { border: 1px solid var(--color-border); border-left: 4px solid var(--color-border-strong); border-radius: 6px; padding: 6px var(--sp-8); background: var(--color-surface); font-size: var(--fs-13); cursor: pointer; min-width: 0; }
+.finding-card.is-selected { box-shadow: 0 0 0 2px var(--color-primary); }
+.finding-card:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 1px; }
+.finding-card--critical { border-left-color: var(--color-critical); }
+.finding-card--high { border-left-color: var(--color-high); }
+.finding-card--medium { border-left-color: var(--color-medium); }
+.finding-card--low { border-left-color: var(--color-low); }
+.finding-card__head { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+.finding-card__id { font-weight: 700; font-size: var(--fs-11); }
+.finding-card__tag { font-size: var(--fs-11); border: 1px solid var(--color-border); border-radius: 3px; padding: 0 5px; white-space: nowrap; }
+.finding-card__tag--accepted { background: var(--state-ok-bg); color: var(--state-ok-tx); border-color: var(--state-ok-border); }
+.finding-card__tag--rejected { background: var(--color-surface-2); color: var(--color-text-secondary); }
+.finding-card__tag--pending { background: var(--state-hold-bg); color: var(--state-hold-tx); border-color: var(--state-hold-border); }
+.finding-card__body { margin: 4px 0 2px; line-height: 1.5; }
+.finding-card__ref, .finding-card__who { font-size: var(--fs-11); color: var(--color-text-secondary); line-height: 1.45; }
+.finding-card__acts { display: none; gap: 4px; margin-top: 5px; flex-wrap: wrap; }
+.finding-card.is-selected .finding-card__acts { display: flex; }
+
+/* --- 判定帯（proposal-1 .p1-gate / proposal-5）。「全体」と「今回の変更分」は別の行 --- */
+.verdict-band { display: flex; flex-direction: column; gap: 6px; font-size: var(--fs-13); min-width: 0; }
+.verdict-band__row { display: grid; grid-template-columns: 120px auto minmax(0, 1fr); align-items: start; gap: var(--sp-8); min-width: 0; }
+.verdict-band__scope { font-weight: 700; white-space: nowrap; }
+.verdict-band__verdict { border-radius: 4px; padding: 0 var(--sp-8); white-space: nowrap; border: 1px solid var(--color-border); font-weight: 700; }
+.verdict-band__verdict--ok { background: var(--state-ok-bg); color: var(--state-ok-tx); border-color: var(--state-ok-border); }
+.verdict-band__verdict--ng { background: var(--state-ng-bg); color: var(--state-ng-tx); border-color: var(--state-ng-border); }
+.verdict-band__verdict--hold { background: var(--state-hold-bg); color: var(--state-hold-tx); border-color: var(--state-hold-border); }
+.verdict-band__verdict--none { background: var(--color-surface-2); color: var(--color-text-secondary); }
+.verdict-band__items { margin: 0; padding-left: 16px; line-height: 1.5; min-width: 0; overflow-wrap: anywhere; }
+.verdict-band__items .k { font-weight: 700; }
+
+/* --- 証跡行（proposal-3。誰が・いつ・何を） --- */
+.evidence-row { display: grid; grid-template-columns: auto auto minmax(0, 1fr); gap: var(--sp-8); align-items: baseline; padding: 4px 0; border-bottom: 1px solid var(--color-divider); font-size: var(--fs-11); line-height: 1.5; min-width: 0; }
+.evidence-row:last-child { border-bottom: 0; }
+.evidence-row__who { font-weight: 700; color: var(--color-text); white-space: nowrap; }
+.evidence-row__when { color: var(--color-text-secondary); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.evidence-row__what { min-width: 0; overflow-wrap: anywhere; }
+.evidence-row--signed .evidence-row__who::before { content: ""; display: inline-block; width: 8px; height: 8px; border: 1.5px solid currentColor; border-radius: 2px; margin-right: 4px; }
+
+/* --- 工程バー（仕様評価→リスク→設計→実行→欠陥→判断） --- */
+.step-bar { display: flex; align-items: stretch; gap: 2px; margin: 0; padding: 0; list-style: none; font-size: var(--fs-11); min-width: 0; overflow: hidden; }
+.step-bar__step { flex: 1 1 0; min-width: 0; padding: 4px var(--sp-8); background: var(--color-surface-2); color: var(--color-text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: center; }
+.step-bar__step:first-child { border-radius: 4px 0 0 4px; }
+.step-bar__step:last-child { border-radius: 0 4px 4px 0; }
+.step-bar__step.is-done { background: var(--state-ok-bg); color: var(--state-ok-tx); }
+.step-bar__step.is-current { background: var(--color-primary); color: var(--color-on-primary); font-weight: 700; }
+.step-bar__step.is-blocked { background: var(--state-ng-bg); color: var(--state-ng-tx); }

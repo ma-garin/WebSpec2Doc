@@ -261,3 +261,41 @@
 #page-reason.c-reason:not(.c-reason--warning):not(.c-reason--error) {
   display: none;
 }
+
+/* ===== C0（2026-10-24）: システム切替の折れ防止をすべての殻の変種へ（.app-sidebar 外の .rail・旧シェルも含む） ===== */
+.sys-switcher { min-width: 0; }
+.sys-switcher .sys-switcher-label,
+.sys-switcher .sys-switcher-swap { flex: none; white-space: nowrap; word-break: keep-all; }
+.sys-switcher .sys-switcher-cur { flex: 1 1 auto; min-width: 0; }
+@media (min-width: 861px) {
+  /* 1024 幅でも横並び 1 行。名前だけを 2 行まで折り、それ以上は省略（全文は title） */
+  .app-sidebar .sys-switcher { flex-wrap: nowrap; }
+  .app-sidebar .sys-switcher-cur { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+}
+
+/* ===== C0: 領域スロット（共通契約 §2.1）。.app-body は右パネルがある画面だけに出る ===== */
+.app-body { flex: 1 1 auto; min-height: 0; min-width: 0; display: flex; }
+.app-body > .app-content { flex: 1 1 auto; min-width: 0; }
+.app-rpanel {
+  flex: 0 0 var(--rpanel-w); width: var(--rpanel-w); min-width: var(--rpanel-w-min); max-width: var(--rpanel-w-max);
+  min-height: 0; display: flex; flex-direction: column;
+  background: var(--color-surface); border-left: 1px solid var(--color-border);
+}
+.app-rpanel-head { display: flex; align-items: center; gap: var(--sp-8); padding: var(--sp-8) var(--sp-12); border-bottom: 1px solid var(--color-divider); }
+.app-rpanel-title { flex: 1 1 auto; min-width: 0; font-size: var(--fs-13); font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.app-rpanel-toggle { font: inherit; font-size: var(--fs-11); border: 1px solid var(--color-border); background: var(--color-surface); border-radius: 4px; padding: 2px 8px; cursor: pointer; white-space: nowrap; }
+.app-rpanel-toggle:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 1px; }
+.app-rpanel-body { flex: 1 1 auto; min-height: 0; overflow: auto; padding: var(--sp-8) var(--sp-12); font-size: var(--fs-13); }
+.app-rpanel.is-collapsed { flex-basis: 36px; width: 36px; min-width: 36px; }
+.app-rpanel.is-collapsed .app-rpanel-title,
+.app-rpanel.is-collapsed .app-rpanel-body { display: none; }
+.app-rpanel.is-collapsed .app-rpanel-head { flex-direction: column; padding: var(--sp-8) 2px; }
+.app-verdict-band { flex: none; border-top: 1px solid var(--color-border); background: var(--color-surface); padding: var(--sp-8) var(--sp-12); max-height: 30vh; overflow: auto; }
+@media (max-width: 1100px) { .app-rpanel { flex-basis: var(--rpanel-w-min); width: var(--rpanel-w-min); } }
+
+/* ===== C0: 上部バーの案件・版（§2.2） ===== */
+.app-topbar-ctx { display: inline-flex; align-items: center; gap: 4px; min-width: 0; max-width: 360px; overflow: hidden; white-space: nowrap; font-size: var(--fs-11); color: var(--color-text-secondary); border: 1px solid var(--color-border); border-radius: 4px; padding: 1px 8px; }
+.app-topbar-ctx b { color: var(--color-text); font-weight: 600; overflow: hidden; text-overflow: ellipsis; }
+.app-topbar-ctx-k { flex: none; }
+.app-topbar-ctx.is-unset { border-style: dashed; }
+@media (max-width: 1100px) { .app-topbar-ctx { max-width: 200px; } }

@@ -1,0 +1,6 @@
+{#- 状態: empty。親に class="ui-state-root" data-state="..." を付け、その直下に include する。文言は UIStates.set の opts で上書きする。 -#}
+<section class="ui-state-pane" data-pane="empty" role="status">
+  <p class="ui-state-title">{{ state_title|default('まだ登録がありません') }}</p>
+  <p class="ui-state-message">{{ state_message|default('この一覧に表示できるものがありません。') }}</p>
+  <p class="ui-state-next">{{ state_next|default('右上の追加から最初の 1 件を登録してください。') }}</p>
+</section>

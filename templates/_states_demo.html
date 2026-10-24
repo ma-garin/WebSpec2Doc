@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>状態の見本（開発用）</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='tokens.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='app-components.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/components.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/ui-states.css') }}">
+  <style>
+    body { margin: 0; font-family: var(--font-main, sans-serif); background: var(--color-bg, #f5f6f8); }
+    .demo-top { display: flex; flex-wrap: wrap; gap: 6px; padding: 12px 16px; background: var(--color-surface, #fff); border-bottom: 1px solid var(--color-border, #ddd); }
+    .demo-top button[aria-pressed="true"] { font-weight: 700; outline: 2px solid var(--color-primary, #2563eb); }
+    .demo-main { padding: 16px; max-width: 1200px; margin: 0 auto; box-sizing: border-box; }
+    .demo-card { background: var(--color-surface, #fff); border: 1px solid var(--color-border, #ddd); border-radius: 8px; min-height: 240px; }
+    .demo-table { width: 100%; border-collapse: collapse; font-size: 13px; table-layout: fixed; }
+    .demo-table th, .demo-table td { padding: 8px 12px; border-bottom: 1px solid var(--color-divider, #eee); text-align: left; overflow-wrap: anywhere; }
+    .demo-filter { display: flex; flex-wrap: wrap; gap: 8px; padding: 12px; }
+  </style>
+</head>
+<body>
+  <nav class="demo-top" aria-label="状態の切替">
+    {% for s in states %}<button type="button" class="btn-outline-sm" data-demo-state="{{ s }}">{{ s }}</button>{% endfor %}
+    <button type="button" class="btn-outline-sm" id="demo-toast">トースト（完了）</button>
+    <button type="button" class="btn-outline-sm" id="demo-toast-err">トースト（失敗）</button>
+  </nav>
+  <main class="demo-main" id="demo-band-area">
+    <div class="demo-card ui-state-root" id="demo-root" data-state="normal">
+      {% include 'partials/states/empty.html' %}
+      {% include 'partials/states/search-empty.html' %}
+      {% include 'partials/states/loading.html' %}
+      {% include 'partials/states/error.html' %}
+      {% include 'partials/states/forbidden.html' %}
+      {% include 'partials/states/unsaved.html' %}
+      {% include 'partials/states/conflict.html' %}
+      {% include 'partials/states/restored.html' %}
+      <div class="demo-filter"><label>検索 <input id="demo-q" value="ログイン"></label></div>
+      <table class="demo-table">
+        <thead><tr><th>ID</th><th>テストケース</th><th>結果</th></tr></thead>
+        <tbody>
+          <tr><td>TC-001</td><td>正しいパスワードでログインできる</td><td>合格</td></tr>
+          <tr><td>TC-002</td><td>誤ったパスワードでは入れず理由が出る</td><td>不合格</td></tr>
+          <tr><td>TC-003</td><td>ロック後は 30 分間ログインできない</td><td>未判定</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </main>
+  <script src="{{ url_for('static', filename='js/ui-states.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/notify.js') }}"></script>
+  <script>
+    (function () {
+      const root = document.getElementById('demo-root');
+      const area = document.getElementById('demo-band-area');
+      const reload = () => { Notify.toast('最新の内容を読み直しました。', { kind: 'success' }); show('normal'); };
+      const opts = {
+        'empty': { onAction: () => Notify.toast('追加の画面を開きます。', { kind: 'info' }), actionLabel: '最初の 1 件を追加' },
+        'no-match': { conditions: '「ログイン」を含む・結果が合格', onClear: () => show('normal') },
+        'error': { message: '保存先に接続できませんでした。', onRetry: () => show('loading') },
+        'forbidden': { role: 'テスト責任者' },
+        'dirty': { onSave: () => { Notify.toast('保存しました。', { kind: 'success' }); show('normal'); } },
+        'conflict': { onReload: reload, onKeep: () => { Notify.band(area, '自分の変更を保持しています。', { kind: 'warning', id: 'keep', next: '最新と見比べてから保存してください。', dismissible: true }); show('dirty'); } },
+        'restored': { onDiscard: () => show('normal') },
+      };
+      function show(s) {
+        UIStates.set(root, s, opts[s] || {});
+        document.querySelectorAll('[data-demo-state]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.demoState === s)));
+        if (s === 'error') Notify.band(area, '一部の内容を読み込めませんでした。', { kind: 'error', id: 'err', next: '「もう一度読み込む」を押してください。' });
+        else Notify.clearBand(area, 'err');
+      }
+      document.querySelectorAll('[data-demo-state]').forEach((b) => b.addEventListener('click', () => show(b.dataset.demoState)));
+      document.getElementById('demo-toast').addEventListener('click', () => Notify.toast('テストケースを 3 件保存しました。', { kind: 'success' }));
+      document.getElementById('demo-toast-err').addEventListener('click', () => Notify.toast('保存できませんでした。', { kind: 'error', next: '通信を確かめてからもう一度保存してください。' }));
+      show({{ initial_state|tojson }});
+    })();
+  </script>
+</body>
+</html>

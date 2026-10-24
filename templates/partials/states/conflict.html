@@ -1,0 +1,6 @@
+{#- 状態: conflict。親に class="ui-state-root" data-state="..." を付け、その直下に include する。文言は UIStates.set の opts で上書きする。 -#}
+<section class="ui-state-pane" data-pane="conflict" role="alert">
+  <p class="ui-state-title">{{ state_title|default('ほかの人が先に更新しました') }}</p>
+  <p class="ui-state-message">{{ state_message|default('あなたが編集している間に、同じ内容が更新されています。') }}</p>
+  <p class="ui-state-next">{{ state_next|default('最新を読み直すか、自分の変更を保持して見比べてください。') }}</p>
+</section>

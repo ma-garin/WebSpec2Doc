@@ -1,0 +1,5 @@
+{#- 状態: loading。スケルトン型。親に class="ui-state-root" を付けて直下に include する。 -#}
+<section class="ui-state-pane" data-pane="loading" role="status" aria-busy="true">
+  <div class="ui-skeleton" aria-hidden="true"><div class="ui-skeleton-row is-wide"></div><div class="ui-skeleton-row"></div><div class="ui-skeleton-row"></div><div class="ui-skeleton-row"></div></div>
+  <p class="ui-state-sr">{{ state_message|default('読み込み中です') }}</p>
+</section>

@@ -12,6 +12,15 @@
   const handlers = {};
   const $ = (s) => document.querySelector(s);
 
+  // 保存は UTC。表示は日本時間「2026-10-24 18:17」（対検査・判定と記録で共通）
+  const JST_FMT = new Intl.DateTimeFormat('ja-JP', { timeZone: 'Asia/Tokyo', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
+  function fmtJst(v) {
+    if (!v) return '';
+    const t = String(v), d = new Date(/(Z|[+-]\d\d:?\d\d)$/i.test(t) ? t : `${t}Z`);
+    if (Number.isNaN(d.getTime())) return t.replace('T', ' ').slice(0, 16);
+    const p = Object.fromEntries(JST_FMT.formatToParts(d).map((x) => [x.type, x.value]));
+    return `${p.year}-${p.month}-${p.day} ${p.hour}:${p.minute}`;
+  }
   const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
   function banner(msg) {
@@ -129,7 +138,6 @@
     settings: ['設定', '出口基準・言葉・役割・AI の送信先を決めます。保存すると次の判定から反映されます。', 'AI に文書を送る前には、必ず送る内容の確認が出ます。'],
     accuracy: ['精度', '自動検出の規則ごとの適合率・再現率を、評価セットでの測定値で示します。', '測定値は評価セットでの結果です。あなたの文書での正しさを保証するものではありません。'],
   };
-  const PHASE_STATUS = { plan: ['preparing', '計画'], individual: ['running', '個別レビュー'], triage: ['waiting_review', '指摘の検討'], rework: ['running', '修正'], followup: ['waiting_review', '修正版の確認'], closed: ['done', '判定と記録'] };
   function renderPageHead(view) {
     const info = PAGE[view];
     const ws = window.WS2D;
@@ -144,11 +152,33 @@
     if (st) {
       st.innerHTML = '';
       if (r && REVIEW_VIEWS.includes(view)) {
-        const ps = PHASE_STATUS[r.phase] || ['not_started', ''];
-        st.innerHTML = (ws && ws.status ? ws.status.html(ps[0]) : '') + `<span>${esc(r.name)} ・ ${esc(ps[1])}</span>`;
+        const pc = (DV.state.pairChip && DV.state.pairChip.iid === r.id) ? DV.state.pairChip : { txt: '準備中', cls: '' };
+        st.innerHTML = `<span class="p1-chip ${esc(pc.cls)}" data-dv-state-chip>${esc(pc.txt)}</span><span>${esc(r.name)}</span>`;
       }
     }
     if (rs) { if (ws && ws.reason) ws.reason(rs, info[2]); else rs.textContent = info[2]; }
+  }
+
+  // 状態チップ（見出しに 1 か所）: 承認済み／全体合格=判定可／採否 1 件以上=検討中／それ以外=準備中
+  function pairChipOf(findings, gate, trail) {
+    if ((trail || []).some((t) => t.action === 'approved')) return ['承認済み', 'is-done'];
+    if (gate && gate.overall && gate.overall.pass) return ['判定可', 'is-ok'];
+    if ((findings || []).some((f) => f.status)) return ['検討中', 'is-mid'];
+    return ['準備中', ''];
+  }
+  function setPairChip(iid, findings, gate, trail) {
+    const [txt, cls] = pairChipOf(findings, gate, trail);
+    DV.state.pairChip = { iid, txt, cls };
+    const el = $('#dv-ph-state [data-dv-state-chip]');
+    if (el) { el.textContent = txt; el.className = `p1-chip ${cls}`.trim(); }
+  }
+  async function loadPairChip(iid) {
+    const b = `/api/docverify/${encodeURIComponent(iid)}/pair`;
+    try {
+      const [f, t] = await Promise.all([api(`${b}/findings`), api(`${b}/trail`).catch(() => [])]);
+      if (!DV.state.review || DV.state.review.id !== iid) return;
+      setPairChip(iid, f.findings || [], f.gate || null, Array.isArray(t) ? t : (t.trail || []));
+    } catch (e) { /* 対検査が未作成なら「準備中」のまま */ }
   }
 
   function renderReviewNav() {
@@ -189,6 +219,7 @@
     try { sessionStorage.setItem('dv-review', iid); } catch (e) { /* 保存できない環境では復元しないだけ */ }
     renderReviewNav();
     show(view);
+    loadPairChip(iid);
   }
 
   function setReview(data) {
@@ -335,7 +366,7 @@
   }
 
   window.DV = {
-    api, esc, show, toast, openReview, setReview, start, banner,
+    api, esc, fmtJst, setPairChip, show, toast, openReview, setReview, start, banner,
     busy, modal, download, emptyFindings, scoreText, scoreClass, scoreBar, keyOpen, NO_SCORE,
     state: { review: null, summary: null },
     on(view, fn) { (handlers[view] = handlers[view] || []).push(fn); },

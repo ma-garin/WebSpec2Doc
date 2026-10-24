@@ -258,7 +258,7 @@ td.dvg-bl + td { width: 360px; }
 .dv-sidenav .dv-sec.active small { color: var(--color-primary-dark); opacity: .8; }
 /* 各項目の中の画面切り替え（上部タブ） */
 .dv-subtabs { display: flex; align-items: center; gap: 2px; border-bottom: 1px solid var(--color-border); margin: 0 0 16px; overflow-x: auto; white-space: nowrap; }
-.dv-subtabs a { display: inline-flex; align-items: center; gap: 6px; padding: 10px 14px; color: var(--color-text-secondary); text-decoration: none; font-weight: 600; border-bottom: 2px solid transparent; margin-bottom: -1px; }
+.dv-subtabs a { display: inline-flex; align-items: center; gap: 6px; padding: 10px 8px; color: var(--color-text-secondary); text-decoration: none; font-weight: 600; border-bottom: 2px solid transparent; margin-bottom: -1px; }
 .dv-subtabs a:hover { color: var(--color-text); }
 .dv-subtabs a.active { color: var(--color-primary); border-bottom-color: var(--color-primary); }
 .dv-subtabs .dv-back { color: var(--color-primary); font-weight: 500; }

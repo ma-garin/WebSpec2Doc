@@ -12,7 +12,7 @@
   const sec = (v) => document.querySelector(`section.dv-view[data-view="${v}"]`);
   const ACT = { review_started: 'レビュー開始', finding_decided: '採否を記録', finding_revoked: '採否を取り消し', approved: '承認', rejected: '差し戻し' };
   const who = (u) => ({ _none: '未ログインの利用者', _seed: '取り込み' }[u] || u);
-  const when = (v) => (v ? String(v).replace('T', ' ').slice(0, 16) : '');
+  const when = (v) => window.DV.fmtJst(v);   // 対検査と同じ日本時間の整形（docverify-core.js）
 
   async function call(url, opts = {}) {
     let res;

@@ -235,3 +235,10 @@ button.im-btn-danger.btn-danger{background:var(--ng-tx);color:var(--color-surfac
 
 /* サイドの「新しい対象システム」は副ボタン。主ボタンは本文の 1 個だけ（G-2） */
 .app-shell .im-side-new { width: 100%; justify-content: center; }
+/* 空状態: アイコンは 48px（既定の幅トークン未定義で 432px に拡大していた）。手順は 3 つを 1 行に収める */
+[data-page="impact"] .ui-state__icon,[data-page="impact"] .ui-state>svg{width:48px;height:48px;flex:none}
+[data-page="impact"] .ui-state:has(.onboard-steps){max-width:760px}
+[data-page="impact"] .onboard-steps{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr) auto minmax(0,1fr);align-items:center;gap:8px;width:100%;margin:8px 0 0;text-align:left}
+[data-page="impact"] .onboard-step{display:flex;flex-direction:column;gap:2px;min-width:0;font-size:12px;color:var(--color-text-secondary)}
+[data-page="impact"] .onboard-step strong{font-size:13px;color:var(--color-text)}
+[data-page="impact"] .onboard-num{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:var(--color-surface-2);font-weight:700;font-size:12px;color:var(--color-text)}

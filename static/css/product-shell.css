@@ -1,5 +1,4 @@
 /* Shared product shell: context bar, one page heading, then the task workspace. */
-.app-shell:not(.sidebar-collapsed){--sidebar-w:216px}
 .app-shell .app-main{display:flex;flex-direction:column;min-height:0;min-width:0}
 .app-shell .app-topbar{flex:none;height:44px;min-height:44px;padding:var(--space-2) var(--space-5);border-bottom:1px solid var(--color-border)}
 .app-shell .app-topbar-lead{display:block;min-width:0}

@@ -9,7 +9,7 @@ from pathlib import Path
 from flask import Response, jsonify, request
 
 from web.routes.impact_api import body, bp, guard, open_db, actor
-from web.services.impact import db, jobs
+from web.services.impact import db, decision, jobs
 from web.services.impact.repo import actuals, approvals, baselines, crs, documents, impacts, links, systems
 from web.services.impact.repo.errors import ImpactError
 
@@ -25,7 +25,8 @@ def _cr(conn, sid: str, code: str) -> dict:
 def list_crs(sid: str):
     with open_db() as conn:
         guard(conn, sid, "view")
-        return jsonify(crs=crs.list(conn, sid, request.args.get("status") or None))
+        rows = crs.list(conn, sid, request.args.get("status") or None)
+        return jsonify(crs=[dict(c, source=decision.source(c)) for c in rows])
 
 
 @bp.post("/systems/<sid>/crs")
@@ -45,7 +46,16 @@ def get_cr(sid: str, code: str):
     with open_db() as conn:
         guard(conn, sid, "view")
         cr = _cr(conn, sid, code)
-        return jsonify(cr=_with_status(conn, cr), summary=impacts.summary(conn, cr["id"]))
+        return jsonify(cr=dict(_with_status(conn, cr), source=decision.source(cr)), summary=impacts.summary(conn, cr["id"]))
+
+
+@bp.get("/systems/<sid>/crs/<code>/decision")
+def get_decision(sid: str, code: str):
+    """影響範囲（リスク順）→ 再テスト対象 → 判定（全体／今回の変更分）を 1 応答で返す。"""
+    with open_db() as conn:
+        guard(conn, sid, "view")
+        cr = _with_status(conn, _cr(conn, sid, code))
+        return jsonify(cr=cr, **decision.build(conn, sid, cr))
 
 
 def _with_status(conn, cr: dict) -> dict:

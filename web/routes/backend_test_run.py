@@ -18,6 +18,7 @@ from flask import Response, jsonify, request
 from web.routes.backend_test import actor as _actor  # 作成者を members に入れる案件ルートと同じ規則
 from web.routes.backend_test import body as _body
 from web.routes.backend_test import bp
+from web.services.backendtest import gate as verdict_gate
 from web.services.backendtest import dbconn, export, judge, results, run_prep, runner, stages, store
 
 log = logging.getLogger(__name__)
@@ -345,6 +346,7 @@ def judge_job(jid):
     except ValueError:
         return _err("実行の記録が読めません。再実行してから判定してください。", 409)
     cases = job.get("cases") or []
+    previous = job.get("judgement")
     found = [{**d, "id": f"BUG-{i:03d}"} for i, d in enumerate(judge.defects(merged, cases), 1)]
     summary = judge.summarize(merged)
     try:
@@ -352,7 +354,9 @@ def judge_job(jid):
                                    reopen=run_prep.report_stale(job))
     except store.StoreError as exc:
         return _err(str(exc), 409)
-    job = {**job, "judgement": {**judge.verdict(summary), "summary": summary, "at": store.now(), "by": actor}}
+    job = {**job, "judgement": {**judge.verdict(summary), "summary": summary, "at": store.now(), "by": actor,
+                                "bands": verdict_gate.bands(merged, cases, previous),
+                                "case_ids": [str(c.get("id")) for c in cases]}}
     job = store.audit(job, "judge", REPORT_STAGE, job["judgement"]["verdict"], actor)
     saved, err = _save(job)
     if err:

@@ -1,4 +1,4 @@
-{# オートヒーリングのサイドバー。報告書と設定の 2 項目だけ。
+{# オートヒーリングのサイドバー。報告書と設定の 2 項目だけ。件数バッジは置かない（固定メニュー。共通契約 §2.1）。
    毎日開くのは「今日出す報告書があるか」で、設定は月に一度しか触らない。
    active に 'reports' か 'settings' を渡す。
    共通レイアウト（layouts/system.html）の sidebar_nav に入れる。ブランド・切替・折りたたみ・foot はレイアウト側。 #}
@@ -7,8 +7,6 @@
     <a class="app-nav-item{% if active == 'reports' %} active{% endif %}" href="/healing">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M9 13h6"/><path d="M9 17h4"/></svg>
       <span class="nav-label">報告書</span>
-      {# 承認待ちの件数。JS が入れるまでは出さない（0 と書いて嘘にしない）。 #}
-      <span class="hl-nav-count" id="hl-nav-count" hidden></span>
     </a>
     <a class="app-nav-item{% if active == 'settings' %} active{% endif %}" href="/healing/settings">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>

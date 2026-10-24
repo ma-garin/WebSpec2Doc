@@ -2,11 +2,12 @@
 {#- 指揮（cond）。共通シェルは layouts/system.html。mode=home は指揮ホーム、それ以外は個別実行詳細 -#}
 {% set system_key = 'cond' %}
 {% set topbar_crumb = '指揮' %}
-{% set topbar_title = '指揮ホーム' if mode == 'home' else '個別実行詳細' %}
+{% set topbar_title = '案件概況' if mode == 'home' else '個別実行詳細' %}
 {% block title %}指揮 - WebSpec2Doc{% endblock %}
 {% block head_css %}  <link rel="stylesheet" href="{{ url_for('static', filename='css/user-menu.css') }}?v={{ _ver }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/ta2.css') }}?v={{ _ver }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/orchestration.css') }}?v={{ _ver }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/orchestration-cases.css') }}?v={{ _ver }}">
 {% endblock %}
 {% block body_attrs %} data-sys="cond" data-mode="{{ mode }}" data-site="{{ site }}" data-hl-admin="{{ 'true' if (not auth_user or auth_user.role == 'admin') else 'false' }}"{% endblock %}
 {% block sidebar_cta %}    <a class="btn-primary sidebar-primary-action" id="ch-add-site" href="/orchestration?mode=detail">
@@ -18,14 +19,45 @@
 {% if mode == 'home' %}
         <header class="c-page-head">
           <div class="c-page-head__main">
-            <h2 id="ch-title" class="c-page-head__title">指揮ホーム</h2>
-            <p class="c-page-head__desc">全サイトの状態と、人の対応が必要なものを 1 画面で。</p>
+            <h2 id="ch-title" class="c-page-head__title">案件概況</h2>
+            <p class="c-page-head__desc">QA 案件ごとに、仕様評価 → リスク → テスト設計 → 実行 → 欠陥 → 判定 のどこまで進み、何が止めているかを示します。</p>
           </div>
           <div class="c-page-head__actions">
-            <button type="button" class="c-btn" id="ch-reload">再読み込み</button>
+            <label class="cs-search"><span class="cs-sr">案件を絞り込む</span>
+              <input id="cs-q" type="search" class="hl-input" placeholder="案件名で絞り込む" autocomplete="off"></label>
+            <button type="button" class="c-btn" id="cs-reload">再読み込み</button>
           </div>
         </header>
-        <section id="ch-home" class="ch-home" aria-labelledby="ch-title">
+        <div class="cs-statebar" role="group" aria-label="表示状態の確認用切替">
+          <span class="cs-statebar__lbl">表示確認</span>
+          {% for k, v in [('normal','通常'),('loading','読込中'),('empty','0件'),('no-match','検索0件'),('error','失敗'),('forbidden','権限不足'),('dirty','未保存'),('conflict','競合'),('restored','復元')] %}<button type="button" class="cs-statebtn" data-force="{{ k }}">{{ v }}</button>{% endfor %}
+        </div>
+        <section id="cs-root" class="cs-root" data-state="loading" aria-labelledby="ch-title">
+          <div id="cs-banner" class="cs-banner" role="status" aria-live="polite"></div>
+          <div class="cs-grid">
+            <div class="cs-list" aria-label="QA 案件の一覧">
+              <table class="cs-table">
+                <thead><tr><th scope="col">案件</th><th scope="col">いまの段</th><th scope="col">名指し</th></tr></thead>
+                <tbody id="cs-rows"></tbody>
+              </table>
+              <div id="cs-empty" class="cs-empty"></div>
+            </div>
+            <div class="cs-detail" id="cs-detail" aria-live="polite">
+              <ol id="cs-stages" class="cs-stages" aria-label="段と状態"></ol>
+              <div id="cs-stage-body" class="cs-stage-body"></div>
+            </div>
+            <aside class="cs-panel" aria-label="未解消の重大・欠落・未検証">
+              <h3 class="cs-panel__title">止めているもの</h3>
+              <div id="cs-named" class="cs-named"></div>
+              <h3 class="cs-panel__title">記録</h3>
+              <div id="cs-evidence" class="cs-evidence"></div>
+            </aside>
+          </div>
+        </section>
+        <details class="cs-legacy" id="ch-legacy">
+          <summary>サイト別の運用状況（実行・報告書の件数）</summary>
+        <section id="ch-home" class="ch-home" aria-label="サイト別の運用状況">
+          <button type="button" class="c-btn" id="ch-reload" hidden>再読み込み</button>
           <div id="ch-banner"></div>
           <div id="ch-kpis" class="c-kpis" aria-label="状態"></div>
           <div id="ch-split" class="c-kpis" aria-label="根拠の 3 区分と正常"></div>
@@ -41,6 +73,7 @@
           </div>
           <div id="ch-body" role="tabpanel" aria-live="polite" tabindex="-1"></div>
         </section>
+        </details>
 {% else %}
         <header class="c-page-head">
           <div class="c-page-head__main">
@@ -94,5 +127,12 @@
 {% block scripts %}<script src="{{ url_for('static', filename='js/c-hybrid.js') }}?v={{ _ver }}"></script>
 <script src="{{ url_for('static', filename='js/user-menu.js') }}?v={{ _ver }}"></script>
 {% if mode == 'home' %}<script src="{{ url_for('static', filename='js/orchestration-home.js') }}?v={{ _ver }}"></script>
+<script src="{{ url_for('static', filename='js/orchestration-cases.js') }}?v={{ _ver }}"></script>
 {% else %}<script src="{{ url_for('static', filename='js/orchestration.js') }}?v={{ _ver }}"></script>{% endif %}
+{% endblock %}
+{% block verdict_band %}
+          <footer class="cs-gate" aria-label="判定">
+            <div class="cs-gate__row" id="cs-gate-all"><span class="cs-gate__lbl">全体</span><span class="cs-gate__val">未判定</span><span class="cs-gate__why"></span></div>
+            <div class="cs-gate__row" id="cs-gate-chg"><span class="cs-gate__lbl">今回の変更分</span><span class="cs-gate__val">未判定</span><span class="cs-gate__why"></span></div>
+          </footer>
 {% endblock %}

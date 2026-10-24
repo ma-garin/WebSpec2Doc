@@ -1,0 +1,17 @@
+# 変更要求の適用（wave B）
+- CR-C3-001: web/__init__.py に dev_states.bp を登録。/dev/states?state=empty 200
+- C2 common_decisions_api: web/__init__.py に登録（common_api の直後）。/api/common/v1/cases 200
+- CR-00-001: /api/common/v1/cases は既存 common_api で 200。新規作業なし
+- CR-00-002: orchestration.html の cs-gate を {% block verdict_band %} へ移設。#app-verdict-band 出力を確認
+- CR-08-1: backend_test.html の #s8-verdict-band を {% block verdict_band %} へ移設。#app-verdict-band 出力を確認
+- CR-01-1: SystemInfo.prototype を追加し app に True。system-select の主一覧から除外。/systems に /doc-app リンク 0、/doc-app 200
+- CR-02-001: pages.workspace_page で docassure-<iid> かつ ta2/tests.json があれば report.json 無しでも表示（実データでの 200 は未検証）
+- S06-1: web/__init__.py に doc_verify_pair.bp を登録し、doc_verify.py 末尾の暫定登録 3 行を削除。smoke OK=22/NG=0
+- S01-1 / S02-1 / S08-1 の CR 本文は上記に包含
+- CR-09-001（S09-1）: links_sys09.submit_changes で同 system・同 title の draft/analyzing CR があれば 409 duplicate_cr（実行未検証）
+- CR-10-1: _SETTINGS_TABS に criteria/taxonomy/roles/approval を追加。/settings/approval 200
+- CR-10-2: approval_policy.self_approval_note() を追加し、C2 decisions.approve と S06 pair_review.approve の本人承認判定で使用。既定は禁止（403 のまま）
+- S05: healing.api_record_decision で run.status != awaiting_human なら 409 not_awaiting（実行未検証）
+- S09 サイドバー: data-scope=sys/cr の項目を常時表示にし、未選択時は disabled＋aria-disabled（hidden の出し入れを廃止）
+- S10 タブ折返し: components.css に 1279px 以下で .set-tab を --fs-13・nowrap（1024 幅の目視は未検証）
+- S04: api_v1.py・api_v1_schedule.py の install(bp)・api_error を外し旧形式 {"error": "..."} に戻した（重複投入は旧形式で 409）。tests 2 件の assert を戻した。画面・job_queue・openapi・api_v1_format.py はそのまま

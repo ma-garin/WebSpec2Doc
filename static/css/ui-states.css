@@ -1,0 +1,94 @@
+/* 状態 9 種・通知の共通スタイル（C3 所有）。値は tokens.css を使う。 */
+.ui-state-root { position: relative; min-width: 0; }
+.ui-state-root > .ui-state-pane { display: none; }
+/* 本文を置き換える状態: 中身を隠してパネルだけ出す */
+.ui-state-root:is([data-state="empty"],[data-state="no-match"],[data-state="loading"],[data-state="error"],[data-state="forbidden"],[data-state="conflict"]) > :not(.ui-state-pane):not(.notify-band) { display: none; }
+.ui-state-root[data-state="empty"] > [data-pane="empty"],
+.ui-state-root[data-state="no-match"] > [data-pane="no-match"],
+.ui-state-root[data-state="loading"] > [data-pane="loading"],
+.ui-state-root[data-state="error"] > [data-pane="error"],
+.ui-state-root[data-state="forbidden"] > [data-pane="forbidden"],
+.ui-state-root[data-state="conflict"] > [data-pane="conflict"],
+.ui-state-root[data-state="dirty"] > [data-pane="dirty"],
+.ui-state-root[data-state="restored"] > [data-pane="restored"] { display: block; }
+
+.ui-state-pane {
+  box-sizing: border-box; max-width: 100%; overflow-wrap: anywhere;
+  padding: var(--space-6, 24px); text-align: center;
+  color: var(--color-text, #1f2933); font-size: var(--text-sm, 13px);
+}
+.ui-state-title { margin: 0 0 var(--space-2, 8px); font-size: var(--text-md, 15px); font-weight: 600; }
+.ui-state-message { margin: 0 0 var(--space-1, 4px); color: var(--color-text-secondary, #52606d); }
+.ui-state-next { margin: var(--space-2, 8px) 0 0; font-weight: 600; }
+.ui-state-actions { display: flex; flex-wrap: wrap; gap: var(--space-2, 8px); justify-content: center; margin-top: var(--space-4, 16px); }
+.ui-state-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+
+/* 失敗系は枠付きで区別する（0件と見分けがつくように） */
+.ui-state-pane[data-pane="error"],
+.ui-state-pane[data-pane="forbidden"] {
+  border: 1px solid var(--color-error-border, #f5b5b5); background: var(--color-error-bg, #fdf0f0);
+  border-radius: var(--radius-md, 8px); margin: var(--space-4, 16px);
+}
+.ui-state-pane[data-pane="error"] .ui-state-title,
+.ui-state-pane[data-pane="forbidden"] .ui-state-title { color: var(--color-error-tx, #9b1c1c); }
+.ui-state-pane[data-pane="conflict"] {
+  border: 1px solid var(--color-warning-border, #f0c36d); background: var(--color-warning-bg, #fff8e6);
+  border-radius: var(--radius-md, 8px); margin: var(--space-4, 16px);
+}
+.ui-state-pane[data-pane="conflict"] .ui-state-title { color: var(--color-warning-tx, #7a4b00); }
+.ui-state-pane[data-pane="loading"] { text-align: left; padding: 0; }
+
+/* 帯として出す状態（本文は隠さない） */
+.ui-state-pane:is([data-pane="dirty"],[data-pane="restored"]) {
+  text-align: left; padding: var(--space-3, 12px) var(--space-4, 16px);
+  border-bottom: 1px solid var(--color-border, #d9dee5);
+  display: none;
+}
+.ui-state-root[data-state="dirty"] > [data-pane="dirty"],
+.ui-state-root[data-state="restored"] > [data-pane="restored"] { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-1, 4px) var(--space-3, 12px); }
+.ui-state-pane[data-pane="dirty"] { background: var(--color-warning-bg, #fff8e6); }
+.ui-state-pane[data-pane="restored"] { background: var(--color-info-bg, #eef6ff); }
+.ui-state-pane:is([data-pane="dirty"],[data-pane="restored"]) .ui-state-title { margin: 0; font-size: var(--text-sm, 13px); }
+.ui-state-pane:is([data-pane="dirty"],[data-pane="restored"]) .ui-state-next { margin: 0; }
+.ui-state-pane:is([data-pane="dirty"],[data-pane="restored"]) .ui-state-actions { margin: 0 0 0 auto; }
+
+/* スケルトン（report-v2.css に依存しない） */
+.ui-state-pane .ui-skeleton { padding: 16px; display: grid; gap: 10px; }
+.ui-state-pane .ui-skeleton-row, .ui-state-pane .ui-skeleton-block {
+  border-radius: var(--radius-sm, 4px);
+  background: linear-gradient(90deg, var(--color-surface-2, #f1f3f6) 0%, var(--color-surface-3, #e4e7eb) 50%, var(--color-surface-2, #f1f3f6) 100%);
+  background-size: 200% 100%; animation: ui-state-shimmer 1.4s ease infinite;
+}
+.ui-state-pane .ui-skeleton-row { height: 14px; }
+.ui-state-pane .ui-skeleton-row.is-wide { height: 20px; width: 40%; }
+.ui-state-pane .ui-skeleton-block { height: 120px; }
+@keyframes ui-state-shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
+@media (prefers-reduced-motion: reduce) { .ui-state-pane .ui-skeleton-row, .ui-state-pane .ui-skeleton-block { animation: none; } }
+
+/* 通知: 右上トースト */
+.notify-stack {
+  position: fixed; top: 64px; right: 16px; z-index: 9000;
+  display: flex; flex-direction: column; gap: 8px; width: min(360px, calc(100vw - 32px));
+}
+.notify-toast, .notify-band {
+  box-sizing: border-box; display: flex; align-items: flex-start; gap: 12px;
+  padding: 10px 12px; border: 1px solid var(--color-border, #d9dee5); border-left-width: 4px;
+  border-radius: var(--radius-md, 8px); background: var(--color-surface, #fff);
+  font-size: var(--text-sm, 13px); color: var(--color-text, #1f2933); overflow-wrap: anywhere;
+}
+.notify-toast { box-shadow: var(--shadow-md, 0 4px 12px rgba(0,0,0,.12)); }
+.notify-band { margin: 0 0 var(--space-3, 12px); border-radius: var(--radius-sm, 4px); }
+.notify-text { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.notify-label { font-weight: 700; font-size: var(--text-xs, 11px); }
+.notify-next { font-weight: 600; }
+.notify-close { flex: none; border: 0; background: none; cursor: pointer; font-size: var(--text-xs, 11px); color: var(--color-text-secondary, #52606d); padding: 2px 4px; }
+.notify-close:focus-visible { outline: 2px solid var(--color-primary, #2563eb); }
+.is-success { border-left-color: var(--color-success, #16a34a); }
+.is-info { border-left-color: var(--color-info, #2563eb); }
+.is-warning { border-left-color: var(--color-warning, #d97706); background: var(--color-warning-bg, #fff8e6); }
+.is-error { border-left-color: var(--color-error, #dc2626); background: var(--color-error-bg, #fdf0f0); }
+.is-success .notify-label { color: var(--color-success-tx, #166534); }
+.is-error .notify-label { color: var(--color-error-tx, #9b1c1c); }
+.is-warning .notify-label { color: var(--color-warning-tx, #7a4b00); }
+/* 常時表示ログ: 高さ固定で内側だけスクロール。折りたたまない */
+.notify-log { display: block; max-height: 240px; overflow: auto; font-family: var(--font-mono, monospace); font-size: var(--text-xs, 11px); white-space: pre-wrap; }

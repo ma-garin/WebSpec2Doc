@@ -605,3 +605,4 @@ def metrics_api():
     except Exception:
         log.exception("メトリクスの集計に失敗")
         return _err("メトリクスを集計できませんでした。時間をおいて再読み込みしてください。", 500)
+

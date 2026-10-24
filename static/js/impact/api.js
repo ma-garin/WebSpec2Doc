@@ -100,6 +100,7 @@
     analyze: function (sid, code, confirmSend) { return post(C(sid, code) + '/analyze', { confirm_send: !!confirmSend }); },
     job: function (id) { return get('/jobs/' + enc(id)); },
     cancelJob: function (id) { return post('/jobs/' + enc(id) + '/cancel'); },
+    decision: function (sid, code) { return get(C(sid, code) + '/decision'); },
     impacts: function (sid, code, q) { return get(C(sid, code) + '/impacts', q); },
     impact: function (id) { return get('/impacts/' + enc(id)); },
     resolve: function (id, state, reason) { return post('/impacts/' + enc(id) + '/resolve', { state: state, reason: reason }); },

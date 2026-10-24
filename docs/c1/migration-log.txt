@@ -1,0 +1,24 @@
+== 類型1 同名異テナント
+t1 POST /cases -> 201 {"data": {"constraints": [], "created": {"at": "2026-10-24T17:47:41+09:00", "by": "_anonymous"}, "current_version": null, "id": "cs_318b19712cdc", "question": "", "refs": [], "rev": 1, "schema": "common.case/1", "scope": {"in": []
+t2 POST /cases -> 201 {"data": {"constraints": [], "created": {"at": "2026-10-24T17:47:41+09:00", "by": "_anonymous"}, "current_version": null, "id": "cs_290c23ba6bdb", "question": "", "refs": [], "rev": 1, "schema": "common.case/1", "scope": {"in": []
+同じ Idempotency-Key でもテナント別に作成: True
+t1 POST /cases/cs_318b19712cdc/refs -> 201 {"data": {"constraints": [], "created": {"at": "2026-10-24T17:47:41+09:00", "by": "_anonymous"}, "current_version": null, "id": "cs_318b19712cdc", "question": "", "refs": [{"basis": "document", "id": "ed12f6a55845", "pinned": {"at
+t1 POST /cases/cs_318b19712cdc/refs -> 201 {"data": {"constraints": [], "created": {"at": "2026-10-24T17:47:41+09:00", "by": "_anonymous"}, "current_version": null, "id": "cs_318b19712cdc", "question": "", "refs": [{"basis": "document", "id": "ed12f6a55845", "pinned": {"at
+t2 POST /cases/cs_290c23ba6bdb/refs -> 201 {"data": {"constraints": [], "created": {"at": "2026-10-24T17:47:41+09:00", "by": "_anonymous"}, "current_version": null, "id": "cs_290c23ba6bdb", "question": "", "refs": [{"basis": "observed", "id": "20261024-170000", "pinned": {
+t1 POST /cases/cs_318b19712cdc/refs -> 404 {"error": {"code": "not_found", "message": "参照先が見つかりません。対象を選び直してください。", "retryable": false}, "schema": "common.error/1"}
+t1 POST /cases/cs_318b19712cdc/refs -> 404 {"error": {"code": "not_found", "detail": {"id": "6e0ba6d32814", "type": "docverify.inspection"}, "message": "参照先が見つかりません。対象を選び直してください。", "retryable": false}, "schema": "common.error/1"}
+t1 POST /cases/cs_318b19712cdc/refs -> 404 {"error": {"code": "not_found", "detail": {"id": "572e1a11e134", "type": "docverify.inspection"}, "message": "参照先が見つかりません。対象を選び直してください。", "retryable": false}, "schema": "common.error/1"}
+t2 GET /cases/cs_318b19712cdc -> 404 {"error": {"code": "not_found", "message": "案件が見つかりません。一覧から選び直してください。", "retryable": false}, "schema": "common.error/1"}
+t1 GET /cases -> 200 {"data": {"items": [{"constraints": [], "created": {"at": "2026-10-24T17:47:41+09:00", "by": "_anonymous"}, "current_version": null, "id": "cs_318b19712cdc", "question": "", "refs": [{"basis": "document", "id": "ed12f6a55845", "pi
+t2 GET /cases -> 200 {"data": {"items": [{"constraints": [], "created": {"at": "2026-10-24T17:47:41+09:00", "by": "_anonymous"}, "current_version": null, "id": "cs_290c23ba6bdb", "question": "", "refs": [{"basis": "observed", "id": "20261024-170000", 
+_none GET /cases -> 200 {"data": {"items": [{"constraints": ["本番データ不可"], "created": {"at": "2026-10-24T17:47:07+09:00", "by": "_anonymous"}, "current_version": "tv_f29facd2bf33", "id": "cs_9f5cc411bb4a", "question": "更新後の問い", "refs": [{"basis": "document
+一覧: t1=['cs_318b19712cdc'] t2=['cs_290c23ba6bdb'] _none=1件（t1/t2 を含まない: True）
+t1 GET /cases/cs_318b19712cdc/refs/resolve -> 200 {"data": {"case": "cs_318b19712cdc", "items": [{"basis": "document", "current": {"mtime": 1792831661, "sha256": "3eba6bf6423a254008fe5c69563b8819637e2c14af405a43c68a6949f5441e98"}, "ref": {"basis": "document", "id": "ed12f6a55845"
+t2 GET /cases/cs_290c23ba6bdb/refs/resolve -> 200 {"data": {"case": "cs_290c23ba6bdb", "items": [{"basis": "observed", "current": {"mtime": 1792831661, "sha256": "c6d7e4f2412970dfd14a88d00b7afbd476ef03c66af9ae01b71bb7f9f8598979"}, "ref": {"basis": "observed", "id": "20261024-1700
+run の sha256 が別物: True
+== 類型3 欠けた参照
+t1 GET /cases/cs_318b19712cdc/refs/resolve -> 207 {"data": {"case": "cs_318b19712cdc", "items": [{"basis": "document", "current": null, "ref": {"basis": "document", "id": "ed12f6a55845", "pinned": {"at": "2026-10-24T17:47:41+09:00", "mtime": 1792831661, "sha256": "3eba6bf6423a254
+退避後: summary={'forbidden': 0, 'missing': 2, 'ok': 0, 'stale': 0} partial=True current=[None, None]
+t1 POST /cases/cs_318b19712cdc/versions -> 207 {"data": {"failed": [{"message": "参照先が見つからないため固定できませんでした。", "ref": {"basis": "document", "id": "ed12f6a55845", "sub": {}, "tenant": "t1", "type": "docverify.inspection"}, "status": "missing"}, {"message": "参照先が見つからないため固定できませんでした。"
+t1 GET /cases/cs_318b19712cdc/refs/resolve -> 200 {"data": {"case": "cs_318b19712cdc", "items": [{"basis": "document", "current": {"mtime": 1792831661, "sha256": "3eba6bf6423a254008fe5c69563b8819637e2c14af405a43c68a6949f5441e98"}, "ref": {"basis": "document", "id": "ed12f6a55845"
+戻した後: summary={'forbidden': 0, 'missing': 0, 'ok': 2, 'stale': 0}

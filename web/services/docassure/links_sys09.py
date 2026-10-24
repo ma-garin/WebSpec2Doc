@@ -146,6 +146,10 @@ def submit_changes(iid: str, diff_items: list[dict], units: list, system_id: str
         try:
             roles.require(conn, sid, actor, "analyze")
             system = systems.get(conn, sid)
+            dup = conn.execute("SELECT code FROM change_requests WHERE system_id=? AND title=? AND status IN ('draft','analyzing')",
+                               (sid, f"System06 要件変更 {iid}")).fetchone()
+            if dup:
+                raise Sys09Error(f"同じ検査の変更要求 {dup[0]} が未完了のまま残っています。そちらを開いて確認してください。", 409, "duplicate_cr")
             cr = crs.create(conn, sid, f"System06 要件変更 {iid}", "System06 の意味差分から自動起票", text,
                             None, None, None, actor)
             res = run.analyze(conn, sid, cr["code"], actor, allow_send=False)

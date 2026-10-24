@@ -69,7 +69,7 @@ _TESTLAB_VIEWS = frozenset(
 # 設定画面のタブ（templates/partials/view-settings.html の data-tab と対応）。
 # タブごとに URL を持たせ、共有・ブックマーク・ブラウザの戻るを効かせる。
 _SETTINGS_TABS = frozenset(
-    {"api", "crawl", "notify", "integrations", "operations", "data", "audit", "test-design"}
+    {"api", "crawl", "notify", "integrations", "operations", "data", "audit", "test-design", "criteria", "taxonomy", "roles", "approval"}
 )
 
 
@@ -134,7 +134,9 @@ def site_workspace(domain: str, ws: str) -> str | Response:
     if not _may_use_testlab():
         # 存在は隠さず 403 にする。404 にすると権限の問題か綴り違いか切り分けられない。
         return _forbidden_page()
-    if not (scoped_output_dir(OUTPUT_DIR) / domain / "report.json").is_file():
+    _site = scoped_output_dir(OUTPUT_DIR) / domain
+    _docassure = domain.startswith("docassure-") and (_site / "ta2" / "tests.json").is_file()
+    if not (_site / "report.json").is_file() and not _docassure:
         return redirect("/")
     return render_template("workspace.html", ws=ws, domain=domain, mode="full")
 

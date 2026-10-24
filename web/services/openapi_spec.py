@@ -18,6 +18,51 @@ API_PREFIX = "/api/v1"
 OPENAPI_VERSION = "3.0.3"
 API_VERSION = "1.0"
 
+_ERROR_REF = {"$ref": "#/components/schemas/Error"}
+
+# 全応答に共通する項目（web/services/api_v1_format.py が付与する）。
+COMPONENTS: dict[str, Any] = {
+    "schemas": {
+        "Meta": {
+            "type": "object",
+            "description": "対象・版・出所。どの対象について、どの版の API が、どこから読んだ値か。",
+            "required": ["target", "version", "source"],
+            "properties": {
+                "target": {"type": "string", "nullable": True, "description": "対象（サイト名またはジョブ ID）"},
+                "version": {"type": "string", "description": "API の版", "example": API_VERSION},
+                "source": {"type": "string", "description": "値の出所"},
+            },
+        },
+        "Error": {
+            "type": "object",
+            "required": ["error"],
+            "properties": {
+                "error": {
+                    "type": "object",
+                    "required": ["code", "message"],
+                    "properties": {
+                        "code": {
+                            "type": "string",
+                            "enum": [
+                                "bad_request", "unauthorized", "forbidden", "not_found",
+                                "conflict", "too_large", "internal_error", "upstream_failed",
+                            ],
+                        },
+                        "message": {"type": "string", "description": "利用者向けの日本語と次の行動"},
+                    },
+                },
+                "meta": {"$ref": "#/components/schemas/Meta"},
+            },
+        },
+        "Success": {
+            "type": "object",
+            "required": ["meta"],
+            "properties": {"meta": {"$ref": "#/components/schemas/Meta"}},
+            "additionalProperties": True,
+        },
+    }
+}
+
 _EXCLUDED_METHODS = frozenset({"HEAD", "OPTIONS"})
 _PATH_PARAM_RE = re.compile(r"<(?:[^:<>]+:)?([^<>]+)>")
 
@@ -64,6 +109,7 @@ def build_openapi_spec(app: Flask) -> dict[str, Any]:
         "servers": [{"url": "/"}],
         "tags": _tags(paths),
         "paths": dict(sorted(paths.items())),
+        "components": COMPONENTS,
     }
 
 
@@ -75,7 +121,7 @@ def _operation(app: Flask, endpoint: str, path: str, method: str) -> dict[str, A
         "operationId": endpoint.replace(".", "_"),
         "summary": summary,
         "tags": [_tag_for(path)],
-        "responses": _responses(method),
+        "responses": _responses(method, path),
     }
     parameters = _path_parameters(path)
     if parameters:
@@ -88,17 +134,25 @@ def _operation(app: Flask, endpoint: str, path: str, method: str) -> dict[str, A
     return operation
 
 
-def _responses(method: str) -> dict[str, Any]:
+def _err(description: str) -> dict[str, Any]:
+    return {"description": description, "content": {"application/json": {"schema": _ERROR_REF}}}
+
+
+def _responses(method: str, path: str = "") -> dict[str, Any]:
+    if path.endswith("/openapi.json") or path.endswith("/docs"):
+        return {"200": {"description": "成功"}}
+    ok = {"content": {"application/json": {"schema": {"$ref": "#/components/schemas/Success"}}}}
     responses: dict[str, Any] = {
-        "200": {
-            "description": "成功",
-            "content": {"application/json": {"schema": {"type": "object"}}},
-        },
-        "400": {"description": "入力が不正"},
+        ("202" if path.endswith("/crawl") else "200"): {"description": "成功", **ok},
+        "400": _err("入力が不正"),
+        "401": _err("認証が必要"),
     }
     if method in {"POST", "PUT", "PATCH", "DELETE"}:
-        responses["403"] = {"description": "権限が不足している"}
-    responses["404"] = {"description": "対象が存在しない"}
+        responses["403"] = _err("権限が不足している")
+    responses["404"] = _err("対象が存在しない")
+    if path.endswith("/crawl"):
+        responses["409"] = _err("同じ対象のジョブが待機中または実行中")
+    responses["500"] = _err("サーバ内部の失敗")
     return responses
 
 

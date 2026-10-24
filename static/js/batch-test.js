@@ -176,9 +176,9 @@
           : old.length ? exportNames(old) + ' は書き出した後でケースまたはコードが変わりました。もう一度書き出してください'
           : '書き出しの記録はまだありません' },
       { key: 'executed', code: ran ? 'done' : 'not_started', label: ran ? '実行済み' : '未実行',
-        note: ran ? j.results.length + ' 件の実行結果を取り込み済み' : 'この画面ではテストを実行しません。書き出したコードを手元の pytest で実行してください（結果の取り込みは未対応）' },
+        note: ran ? j.results.length + ' 件の実行結果を取り込み済み' : 'この画面ではテストを実行しません。書き出したコードを手元で実行し、結果ファイルを「判定」から取り込んでください' },
       { key: 'verified', code: ver ? 'done' : 'unverified', label: ver ? '確認済み' : '未確認',
-        note: ver ? '人が結果を確認済み' : '実行結果を取り込めないため、この画面では確認済みになりません' }
+        note: ver ? '人が結果を確認済み' : '結果を取り込んだあと、人が判定を確かめるまで確認済みにしません' }
     ];
   }
   function renderStages() {
@@ -275,13 +275,28 @@
     $('#bt-analyze').disabled = !j.files.some(function (x) { return x.kind === 'script'; });
   }
 
+  var STATE_PILL = { '合格': 'p-pass', '不合格': 'p-fail', '要確認': 'p-flaky', '手動確認': 'p-flaky' };
+  function renderVerdict() {
+    var v = state.job.verdict || {}, scopes = [v.overall, v.changed].filter(Boolean);
+    $('#bt-verdict-at').textContent = v.results_at ? '実行結果の取り込み ' + fmtTime(v.results_at) : '実行結果は未取り込み（合否は未判定）';
+    $('#bt-verdict-scopes').innerHTML = scopes.map(function (s) {
+      return '<div class="bt-scope" data-verdict="' + esc(s.verdict) + '"><div class="bt-scope__h"><b>' + esc(s.label) + '</b><span class="bt-scope__v">' + esc(s.verdict) + '</span></div>'
+        + '<p>' + esc(s.reason) + '</p><p class="bt-mut">' + s.total + ' 件中 合格 ' + s.passed + '・不合格 ' + s.failed + '・未実行 ' + s.unrun + '・要確認 ' + s.ask + '・手動確認 ' + s.manual + '</p></div>';
+    }).join('');
+    var unv = v.unverified || [], miss = v.missing_obs || [];
+    $('#bt-verdict-unv').innerHTML = (miss.length ? '<p class="bt-warn">既定の観点が足りません: ' + esc(miss.join('・')) + '。スクリプトと仕様書を見直して作り直してください。</p>' : '')
+      + (unv.length ? '<details' + (unv.length <= 6 ? ' open' : '') + '><summary>未検証 ' + unv.length + ' 件（名指し）</summary><ul>' + unv.map(function (u) {
+        return '<li><b>' + esc(u.id) + '</b> ' + esc(u.obs) + '（' + esc(u.state) + '）: ' + esc(u.pre) + '</li>';
+      }).join('') + '</ul></details>' : (state.job.cases.length ? '<p>未検証のケースはありません。</p>' : ''));
+  }
   function renderCases() {
+    renderVerdict();
     var all = state.job.cases, ask = all.filter(function (c) { return c.ask; }).length;
     var obsList = [];
     all.forEach(function (c) { if (obsList.indexOf(c.obs) < 0) obsList.push(c.obs); });
     if (state.obs && obsList.indexOf(state.obs) < 0) state.obs = '';
     var kpi = function (v, l, tone, sub) { return '<div class="c-kpi"' + (tone ? ' data-tone="' + tone + '"' : '') + '><span class="c-kpi__label">' + esc(l) + '</span><span class="c-kpi__value">' + esc(v) + '</span>' + (sub ? '<span class="c-kpi__sub">' + esc(sub) + '</span>' : '') + '</div>'; };
-    $('#bt-kpis').innerHTML = kpi(all.length, '生成したケース数', '', '合格／失敗は未実行（実行結果を取り込むと表示）') + kpi(obsList.length, '観点') + kpi(ask, '要確認（仕様に記載なし）', ask ? 'warn' : '') + kpi(all.length - ask, '根拠つき（生成済み）');
+    $('#bt-kpis').innerHTML = kpi(all.length, '生成したケース数', '', (state.job.results || []).length ? '実行結果 ' + state.job.results.length + ' 件を取り込み済み' : '合格／失敗は未実行（実行結果を取り込むと表示）') + kpi(obsList.length, '観点') + kpi(ask, '要確認（仕様に記載なし）', ask ? 'warn' : '') + kpi(all.length - ask, '根拠つき（生成済み）');
     $('#bt-obs').innerHTML = all.length ? ['すべて'].concat(obsList).map(function (o) {
       var key = o === 'すべて' ? '' : o, n = key ? all.filter(function (c) { return c.obs === key; }).length : all.length;
       return '<span class="fchip' + (state.obs === key ? ' on' : '') + '" role="button" tabindex="0" aria-pressed="' + (state.obs === key) + '" data-obs="' + esc(key) + '">' + esc(o) + ' <em>' + n + '</em></span>';
@@ -297,13 +312,20 @@
       }
       return '<tr class="' + (c.ask ? 'ask' : '') + '"><td>' + esc(c.id) + '</td><td>' + esc(c.obs) + '</td><td>' + esc(c.tech) + '</td><td>' + esc(c.pre)
         + '</td><td><code>' + esc(c.run) + '</code></td><td>' + exp + '</td><td>' + esc(c.src) + '</td><td>'
-        + (c.ask ? '<span class="pill p-flaky">要確認</span>' : '<span class="pill p-new">' + (c.origin === 'manual' ? '追加' : '根拠あり') + '・未実行</span>') + '</td></tr>';
+        + (function () { var st = ((state.job.verdict || {}).states || {})[c.id] || (c.ask ? '要確認' : '未実行');
+          return '<span class="pill ' + (STATE_PILL[st] || 'p-new') + '">' + esc(st) + '</span>' + (c.changed ? ' <span class="pill p-new" title="前回の作成から変わったケース">変更分</span>' : ''); })() + '</td></tr>';
     }).join('') : '<tr><td colspan="8" class="bt-none">ケースはまだありません。「取り込み」で読み取ってから「観点とケース表を作る」を押してください。</td></tr>';
     $('#bt-ask-note').textContent = ask ? '要確認の ' + ask + ' 件は期待結果を推測で埋めていません。「期待結果を書く」で決めるか、質問票で確かめてください。' : '';
     var bd = $('#bt-bd-ask'); bd.textContent = ask; bd.hidden = !ask;
     $('#bt-make-code').disabled = !all.length;
     paintNotice('bt-cases-state', null);
   }
+
+  document.addEventListener('change', function (e) {
+    if (!e.target || e.target.id !== 'bt-results-file' || !e.target.files.length || !state.job) return;
+    var fd = new FormData(); fd.append('file', e.target.files[0]); e.target.value = '';
+    run($('label[for="bt-results-file"]'), api('POST', API + '/' + state.job.id + '/results', fd), '実行結果を取り込みました', '実行結果を取り込めませんでした', '最新のテストコードで実行した結果ファイルを選んでください。');
+  });
 
   function renderCode() {
     var srcs = state.job.sources;

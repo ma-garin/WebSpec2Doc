@@ -22,6 +22,7 @@ class SystemInfo:
     role: str = ""  # 空なら全員。"admin" なら管理者のみカードを出す
     badge: str = ""
     open_label: str = ""
+    prototype: bool = False  # True ならシステム選択の主一覧に出さない（URL は残す）
 
     @property
     def label(self) -> str:
@@ -50,7 +51,7 @@ SYSTEMS: tuple[SystemInfo, ...] = (
         key="app", number="01 · app", name="ドキュメント作成(app)", short_name="ドキュメント作成(app)", url="/doc-app",
         description="スマホアプリ向けの画面の流れを、サンプルデータで再生する試作です（APK・.app の実解析はまだ行いません）",
         chips=("画面仕様書", "遷移図", "フォーム定義"),
-        status="preview", badge="試作（サンプルデータ）", open_label="ドキュメント作成(app)を開く →",
+        status="preview", badge="試作（サンプルデータ）", open_label="ドキュメント作成(app)を開く →", prototype=True,
     ),
     SystemInfo(
         key="test", number="02", name="テスト自動化", short_name="テスト自動化", url="/test-automation",

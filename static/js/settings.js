@@ -47,7 +47,7 @@ const SETTINGS_TAB_LOADERS = {
   operations: () => loadOperationalSites(),
   integrations: () => loadIntegrations(),
   data: () => loadDataManagement(),
-  audit: () => loadAdminAudit(),
+  audit: () => { loadApprovalPolicy(); loadAdminAudit(); },
 };
 
 async function loadSettingsTabData(tab) {
@@ -859,79 +859,243 @@ const _auditActionLabels = {
   'viewpoint.exported': '観点出力',
 };
 let _auditNextOffset = null;
+Object.assign(_auditActionLabels, {
+  'decision.draft': '判断の起票',
+  'decision.approve': '判断の承認',
+  'decision.revoke': '判断の取消',
+  'review.adopt': '採用',
+  'review.reject': '却下',
+  'review.hold': '保留',
+  'policy.approval_updated': '承認規則の変更',
+  'audit.exported': '監査ログの出力',
+  'settings.key_cleared': 'APIキーの削除',
+});
+const _AUDIT_FIELD_LABELS = {
+  forbid_self_approval: '職務分離', small_tenant_exception: '少人数の例外',
+  small_tenant_max_members: '例外の人数上限', exception_reason: '例外の理由',
+};
+const _AUDIT_FILTER_IDS = { action: 'audit-action', outcome: 'audit-outcome', actor: 'audit-actor',
+  since: 'audit-since', until: 'audit-until', case: 'audit-case', query: 'audit-query' };
+
+function _auditParams() {
+  const params = new URLSearchParams();
+  Object.entries(_AUDIT_FILTER_IDS).forEach(([key, id]) => {
+    const value = document.getElementById(id)?.value?.trim() || '';
+    if (value) params.set(key, key === 'until' ? `${value}T23:59:59` : value);
+  });
+  return params;
+}
+
+function _auditDetailText(event) {
+  const detail = { ...(event.detail || {}) };
+  const parts = [];
+  delete detail.reason; delete detail.case;
+  if ('rev_before' in detail || 'rev_after' in detail) { parts.push(`版 ${detail.rev_before}→${detail.rev_after}`); delete detail.rev_before; delete detail.rev_after; }
+  if (event.reason) parts.push(`理由: ${event.reason}`);
+  if (Array.isArray(detail.changed_fields)) { parts.push(`変更: ${detail.changed_fields.map(f => _AUDIT_FIELD_LABELS[f] || f).join('・') || 'なし'}`); delete detail.changed_fields; }
+  if (Object.keys(detail).length) parts.push(JSON.stringify(detail));
+  return parts.join(' / ') || '—';
+}
 
 async function loadAdminAudit({append = false} = {}) {
   const body = document.getElementById('admin-audit-events');
   if (!body) return;
-  const params = new URLSearchParams({ limit: '100' });
+  const params = _auditParams();
+  const filtered = [...params.keys()].length > 0;
+  params.set('limit', '100');
   if (append && _auditNextOffset != null) params.set('offset', String(_auditNextOffset));
-  const action = document.getElementById('audit-action')?.value || '';
-  const outcome = document.getElementById('audit-outcome')?.value || '';
-  const query = document.getElementById('audit-query')?.value?.trim() || '';
-  if (action) params.set('action', action);
-  if (outcome) params.set('outcome', outcome);
-  if (query) params.set('query', query);
-  if (!append) body.innerHTML = '<tr><td colspan="6">読み込み中...</td></tr>';
+  if (!append) { body.dataset.state = 'loading'; body.innerHTML = '<tr><td colspan="7">読み込み中です。</td></tr>'; }
+  const auditMsg = document.getElementById('audit-msg');
+  if (auditMsg) { auditMsg.textContent = ''; auditMsg.className = 'settings-msg'; }
   try {
     const data = await _adminRequest(`/api/admin/audit?${params.toString()}`);
     const events = Array.isArray(data.events) ? data.events : [];
     const rows = events.map(event => {
       const target = [event.target_type, event.target_id].filter(Boolean).join(': ') || '—';
-      const detail = event.detail && Object.keys(event.detail).length
-        ? JSON.stringify(event.detail)
-        : '—';
       const success = event.outcome === 'success';
       return `<tr>
         <td>${escHtml(event.at || '')}</td>
-        <td>${escHtml(event.actor_email || event.actor_id || 'system')}</td>
+        <td>${escHtml(event.actor_email || event.actor_id || 'システム')}</td>
         <td>${escHtml(_auditActionLabels[event.action] || event.action || '')}</td>
+        <td>${escHtml(event.case || '—')}</td>
         <td>${escHtml(target)}</td>
         <td><span class="audit-outcome ${success ? 'is-success' : 'is-failure'}">${success ? '成功' : '失敗'}</span></td>
-        <td class="audit-detail">${escHtml(detail)}</td>
+        <td class="audit-detail">${escHtml(_auditDetailText(event))}</td>
       </tr>`;
     }).join('');
     if (append && rows) body.insertAdjacentHTML('beforeend', rows);
-    else body.innerHTML = rows || '<tr><td colspan="6">条件に一致する監査ログはありません。</td></tr>';
-    _auditNextOffset = data.has_more && Number.isInteger(data.next_offset)
-      ? data.next_offset
-      : null;
+    else if (rows) { body.innerHTML = rows; body.dataset.state = 'normal'; }
+    else if (filtered) {
+      body.dataset.state = 'no-match';
+      body.innerHTML = '<tr><td colspan="7">条件に一致する記録はありません。「条件を解除」で全件に戻せます。</td></tr>';
+    } else {
+      body.dataset.state = 'empty';
+      body.innerHTML = '<tr><td colspan="7">まだ記録がありません。設定の変更や承認を行うとここに残ります。</td></tr>';
+    }
+    _auditNextOffset = data.has_more && Number.isInteger(data.next_offset) ? data.next_offset : null;
     const more = document.getElementById('audit-load-more');
     if (more) more.hidden = _auditNextOffset == null;
   } catch (error) {
-    body.innerHTML = '<tr><td colspan="6">監査ログを取得できませんでした。</td></tr>';
+    const forbidden = /403|権限/.test(error.message || '');
+    body.dataset.state = forbidden ? 'forbidden' : 'error';
+    body.innerHTML = `<tr><td colspan="7">${forbidden
+      ? '監査ログを見るには管理者の役割が必要です。管理者に依頼してください。'
+      : '監査ログを取得できませんでした。「再読み込み」を押してください。'}</td></tr>`;
     _adminMessage('audit-msg', error.message || '監査ログを取得できませんでした。', true);
   }
 }
 
-document.getElementById('save-api')?.addEventListener('click', saveApiKey);
-document.getElementById('test-connection')?.addEventListener('click', testConnection);
-document.getElementById('clear-api-key')?.addEventListener('click', clearApiKey);
-// /settings へ直接遷移した場合もナビ経由と同じく保存済み設定を復元する
-if (document.getElementById('llm-seg')) loadServerSettings();
-document.getElementById('save-slack')?.addEventListener('click', saveSlackWebhook);
-document.getElementById('test-slack')?.addEventListener('click', testSlackWebhook);
-document.getElementById('save-jira')?.addEventListener('click', saveJiraIntegration);
-document.getElementById('test-jira')?.addEventListener('click', testJiraIntegration);
-document.getElementById('save-webhook')?.addEventListener('click', saveGenericWebhook);
-document.getElementById('save-teams')?.addEventListener('click', saveTeamsIntegration);
-document.getElementById('test-teams')?.addEventListener('click', testTeamsIntegration);
-document.getElementById('save-notion')?.addEventListener('click', saveNotionIntegration);
-document.getElementById('test-notion')?.addEventListener('click', testNotionIntegration);
-document.getElementById('save-confluence')?.addEventListener('click', saveConfluenceIntegration);
-document.getElementById('test-confluence')?.addEventListener('click', testConfluenceIntegration);
-document.getElementById('save-qf')?.addEventListener('click', saveQualityForwardIntegration);
-document.getElementById('test-qf')?.addEventListener('click', testQualityForwardIntegration);
-document.getElementById('ci-goto-account')?.addEventListener('click', () => {
-  if (typeof switchView === 'function') switchView('account');
+// ---- 承認規則（職務分離） ----
+let _apSaved = null;
+
+function _apForm() {
+  return {
+    forbid_self_approval: document.querySelector('input[name="ap-self"]:checked')?.value !== 'allow',
+    small_tenant_exception: !!document.getElementById('ap-exception')?.checked,
+    small_tenant_max_members: Number.parseInt(document.getElementById('ap-members')?.value || '', 10),
+    exception_reason: (document.getElementById('ap-reason')?.value || '').trim(),
+  };
+}
+
+function _apSetState(state, text) {
+  const form = document.getElementById('approval-policy');
+  if (!form) return;
+  form.dataset.state = state;
+  const label = document.getElementById('ap-state');
+  if (label) label.textContent = text;
+  const busy = state === 'loading' || state === 'saving';
+  const dirty = state === 'dirty' || state === 'invalid';
+  document.getElementById('ap-save').disabled = busy || !dirty || state === 'forbidden';
+  document.getElementById('ap-cancel').disabled = busy || !dirty;
+}
+
+function _apFieldError(field, message) {
+  ['ap-members-err', 'ap-reason-err'].forEach(id => { const el = document.getElementById(id); if (el) { el.hidden = true; el.textContent = ''; } });
+  const id = field === 'small_tenant_max_members' ? 'ap-members-err' : field === 'exception_reason' ? 'ap-reason-err' : '';
+  const el = id && document.getElementById(id);
+  if (el && message) { el.hidden = false; el.textContent = message; }
+}
+
+function _apValidate(values) {
+  if (!values.forbid_self_approval && values.small_tenant_exception) {
+    return ['small_tenant_exception', '同一を許可している場合、少人数の例外は不要です。どちらかを選び直してください。'];
+  }
+  if (values.small_tenant_exception) {
+    if (!Number.isInteger(values.small_tenant_max_members) || values.small_tenant_max_members < 1 || values.small_tenant_max_members > 5) {
+      return ['small_tenant_max_members', '人数は 1〜5 人の整数で入力してください。'];
+    }
+    if (values.exception_reason.length < 10) {
+      return ['exception_reason', '例外を有効にするには理由を 10 文字以上で入力してください。'];
+    }
+  }
+  return null;
+}
+
+function _apRender(policy) {
+  _apSaved = policy;
+  document.querySelectorAll('input[name="ap-self"]').forEach(input => {
+    input.checked = (input.value === 'forbid') === !!policy.forbid_self_approval;
+  });
+  document.getElementById('ap-exception').checked = !!policy.small_tenant_exception;
+  document.getElementById('ap-members').value = String(policy.small_tenant_max_members || 2);
+  document.getElementById('ap-reason').value = policy.exception_reason || '';
+  document.getElementById('ap-exception-body').hidden = !policy.small_tenant_exception;
+  document.getElementById('ap-exception-field').hidden = !policy.forbid_self_approval;
+  document.getElementById('ap-conflict').hidden = true;
+  _apFieldError('', '');
+  const meta = document.getElementById('ap-meta');
+  if (meta) meta.textContent = policy.updated_at
+    ? `最終保存: ${policy.updated_at}（${policy.updated_by || '—'}）・版 ${policy.rev}`
+    : '未保存の既定値です（起票者と承認者の同一を禁止）。';
+}
+
+function _apOnInput() {
+  if (!_apSaved) return;
+  const exceptionBox = document.getElementById('ap-exception');
+  if (document.querySelector('input[name="ap-self"]:checked')?.value === 'allow' && exceptionBox) exceptionBox.checked = false;
+  const values = _apForm();
+  document.getElementById('ap-exception-body').hidden = !values.small_tenant_exception;
+  document.getElementById('ap-exception-field').hidden = !values.forbid_self_approval;
+  const changed = values.forbid_self_approval !== _apSaved.forbid_self_approval
+    || values.small_tenant_exception !== _apSaved.small_tenant_exception
+    || (values.small_tenant_exception && (values.small_tenant_max_members !== _apSaved.small_tenant_max_members
+      || values.exception_reason !== (_apSaved.exception_reason || '')));
+  const problem = changed ? _apValidate(values) : null;
+  _apFieldError(problem?.[0] || '', problem?.[1] || '');
+  if (!changed) _apSetState('normal', '保存済みの値です。');
+  else if (problem) _apSetState('invalid', '入力を直すと保存できます。');
+  else _apSetState('dirty', '未保存の変更があります。');
+}
+
+async function loadApprovalPolicy({restored = false} = {}) {
+  if (!document.getElementById('approval-policy')) return;
+  _apSetState('loading', '読み込み中です。');
+  try {
+    const data = await _adminRequest('/api/admin/approval-policy');
+    _apRender(data.policy || {});
+    _apSetState(restored ? 'restored' : 'normal', restored ? '最新の値を読み込みました。必要なら変更し直してください。' : '保存済みの値です。');
+  } catch (error) {
+    const forbidden = /403|権限/.test(error.message || '');
+    _apSetState(forbidden ? 'forbidden' : 'error', forbidden
+      ? '承認規則の確認と変更には管理者の役割が必要です。'
+      : '承認規則を読み込めませんでした。タブを開き直してください。');
+  }
+}
+
+async function saveApprovalPolicy(event) {
+  event?.preventDefault();
+  if (!_apSaved) return;
+  const values = _apForm();
+  const problem = _apValidate(values);
+  if (problem) { _apFieldError(problem[0], problem[1]); _apSetState('invalid', '入力を直すと保存できます。'); return; }
+  _apSetState('saving', '保存中です。');
+  try {
+    const response = await fetch('/api/admin/approval-policy', {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...values, rev: _apSaved.rev }),
+    });
+    let data = {};
+    try { data = await response.json(); } catch (_) { data = {}; }
+    if (response.status === 409) {
+      _apSetState('conflict', '保存できませんでした（競合）。入力は残っています。');
+      const latest = data.policy || {};
+      document.getElementById('ap-conflict-detail').textContent =
+        `${latest.forbid_self_approval ? '同一を禁止' : '同一を許可'}・例外${latest.small_tenant_exception ? 'あり' : 'なし'}（${latest.updated_by || '—'}、${latest.updated_at || '—'}）`;
+      document.getElementById('ap-conflict').hidden = false;
+      return;
+    }
+    if (!response.ok) {
+      _apFieldError(data.field || '', data.error || '');
+      _apSetState('invalid', data.error || `保存できませんでした（${response.status}）。入力は残っています。`);
+      if (response.status === 403) _apSetState('forbidden', '承認規則の変更には管理者の役割が必要です。');
+      return;
+    }
+    _apRender(data.policy || {});
+    _apSetState('normal', '保存しました。監査ログに記録しました。');
+    loadAdminAudit();
+  } catch (_) {
+    _apSetState('error', '保存できませんでした。通信を確認してもう一度保存してください。入力は残っています。');
+    document.getElementById('ap-save').disabled = false;
+  }
+}
+
+document.getElementById('approval-policy')?.addEventListener('input', _apOnInput);
+document.getElementById('approval-policy')?.addEventListener('change', _apOnInput);
+document.getElementById('approval-policy')?.addEventListener('submit', saveApprovalPolicy);
+document.getElementById('ap-cancel')?.addEventListener('click', () => { if (_apSaved) { _apRender(_apSaved); _apSetState('normal', '保存済みの値に戻しました。'); } });
+document.getElementById('ap-reload')?.addEventListener('click', () => loadApprovalPolicy({restored: true}));
+window.addEventListener('beforeunload', (event) => {
+  const state = document.getElementById('approval-policy')?.dataset.state;
+  if (state === 'dirty' || state === 'invalid' || state === 'conflict') { event.preventDefault(); event.returnValue = ''; }
 });
-document.getElementById('allow-local-toggle')?.addEventListener('change', saveAllowLocal);
-document.getElementById('save-test-design')?.addEventListener('click', saveTestDesignSettings);
-document.getElementById('ops-site')?.addEventListener('change', (e) => loadOperationalConfig(e.target.value));
-document.getElementById('ops-save')?.addEventListener('click', saveOperationalConfig);
-document.getElementById('ops-test-notify')?.addEventListener('click', testOperationalNotification);
-document.getElementById('data-refresh')?.addEventListener('click', loadDataManagement);
-document.getElementById('retention-mode')?.addEventListener('change', updateRetentionFields);
-document.getElementById('retention-save')?.addEventListener('click', saveRetentionPolicy);
+document.getElementById('audit-clear')?.addEventListener('click', () => {
+  Object.values(_AUDIT_FILTER_IDS).forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+  loadAdminAudit();
+});
+document.getElementById('audit-export')?.addEventListener('click', () => {
+  window.location.href = `/api/admin/audit.csv?${_auditParams().toString()}`;
+});
+
 document.getElementById('audit-refresh')?.addEventListener('click', () => loadAdminAudit());
 document.getElementById('audit-search')?.addEventListener('click', () => loadAdminAudit());
 document.getElementById('audit-load-more')?.addEventListener('click', () => loadAdminAudit({append: true}));

@@ -1,0 +1,41 @@
+{# 修正版の確認（S06 版差分と再レビュー）。_review.html の同名ビューの代わりに表示する（旧節は docverify-followup.css で非表示）。描画は static/js/docverify-followup.js #}
+<section class="dv-view dvf" data-view="followup" data-state="loading" hidden aria-labelledby="dvf-title">
+  <div class="dvf-head">
+    <h2 id="dvf-title" class="dvf-title">修正版の確認</h2>
+    <span class="dvf-ver" data-f-ver></span>
+    <span class="dvf-sp"></span>
+    <span class="dvf-msg" role="status" aria-live="polite" data-f-msg></span>
+    <button type="button" class="p1-btn" data-f-act="reload">再読み込み</button>
+  </div>
+  <div class="dvf-body">
+    <form class="dvf-card dvf-up" data-f-form aria-labelledby="dvf-up-t">
+      <h3 id="dvf-up-t" class="dvf-sec-t">1. 新しい版をアップロード</h3>
+      <p class="dvf-hint">直した文書だけを選べば足ります。旧版は履歴に残り、章ごとの差分を出します。</p>
+      <div class="dvf-files">
+        <label class="dvf-file"><span class="dvf-lbl">要件定義書（.md）</span><input type="file" name="requirements" accept=".md,.markdown,text/markdown,text/plain"></label>
+        <label class="dvf-file"><span class="dvf-lbl">基本設計書（.md）</span><input type="file" name="design" accept=".md,.markdown,text/markdown,text/plain"></label>
+      </div>
+      <div class="dvf-row"><span class="dvf-err" role="alert" data-f-up-err></span><button type="submit" class="p1-btn is-primary" data-f-act="upload" disabled>新しい版を取り込む</button></div>
+    </form>
+    <div class="dvf-statebox" data-f-statebox>
+      <div class="dvf-skel" aria-hidden="true"><i></i><i></i><i></i></div>
+      <p class="dvf-state-msg" data-f-state-msg>修正版の内容を読み込んでいます。</p>
+      <button type="button" class="p1-btn is-primary" data-f-act="reload">もう一度読み込む</button>
+    </div>
+    <section class="dvf-card" data-f-diffbox aria-labelledby="dvf-diff-t">
+      <h3 id="dvf-diff-t" class="dvf-sec-t">2. 変わった章</h3>
+      <p class="dvf-sum" data-f-summary></p>
+      <div class="dvf-legend" aria-hidden="true"><span class="dvf-tag is-mod">変更</span><span class="dvf-tag is-add">追加</span><span class="dvf-tag is-del">削除</span></div>
+      <ol class="dvf-secs" data-f-secs></ol>
+    </section>
+    <section class="dvf-card" data-f-rebox aria-labelledby="dvf-re-t">
+      <h3 id="dvf-re-t" class="dvf-sec-t">3. 再レビューが必要な指摘 <span class="dvf-n" data-f-n>0</span> 件</h3>
+      <ul class="dvf-list" data-f-list></ul>
+      <div class="dvf-row"><span class="dvf-hint">採否は対検査で決め直します。</span><button type="button" class="p1-btn is-primary" data-f-act="to-pair">対検査で「今回の変更分」を開く</button></div>
+    </section>
+  </div>
+  <div class="dvf-gate" aria-label="判定">
+    <div class="dvf-gates" data-f-gates></div>
+    <p class="dvf-why" data-f-why></p>
+  </div>
+</section>

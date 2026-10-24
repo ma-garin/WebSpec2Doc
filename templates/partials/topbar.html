@@ -6,7 +6,6 @@
            指定が無い画面は旧シェル（ドキュメント作成）なので、そのまま既定値を使う。
            JS（core.js）が実行時に上書きする画面もあるため、id は変えない。 #}
         <div class="app-breadcrumb" id="topbar-breadcrumb"><span>WebSpec2Doc</span><span class="sep">/</span><span>{{ topbar_crumb or 'ホーム' }}</span></div>
-        <h1 class="app-topbar-title" id="topbar-title">{{ topbar_title or 'QAドキュメント生成' }}</h1>
       </div>
       <div class="app-topbar-right">
         {#- 案件と対象版（共通契約 §2.2。URL の ?case=&tv= が正）。表示名の解決は共通 API v1（§3）接続後に置き換える -#}
@@ -28,7 +27,6 @@
           <span class="app-topbar-tenant-swap" aria-hidden="true">切替</span>
         </a>
         {% endif %}
-        <div class="app-topbar-actions" id="topbar-actions"></div>
         {# 認証オフ（未ログイン）でもプレースホルダのゲストアバターを常に出す。
            auth_user が None のときだけ消えると開発時に「無い」ように見えるため。 #}
         {% set u = auth_user or {'name': 'ゲスト', 'email': '', 'role': ''} %}
@@ -98,4 +96,3 @@
       </div>
     </header>
     {# 状態の理由（WS2D.reason が #page-reason に入れる）。lead の中だと幅が足りず切れるので、トップバーの下に全幅 1 行で置く #}
-    <p class="c-reason" id="page-reason" hidden></p>

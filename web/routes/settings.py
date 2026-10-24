@@ -11,13 +11,18 @@ from flask import Blueprint, request
 
 from web.audit_context import record_admin_event
 from web.config import DEFAULT_OPENAI_MODEL
-from web.env_store import _mask_key, _read_env, _write_env
+from web.env_store import _read_env, _write_env
 from web.services.openai_qa import test_openai_connection
 from web.services.test_design_settings import (
     get_test_design_settings,
     save_test_design_settings,
 )
 from web.validation import _sanitize
+
+
+def _mask_key(value: str) -> str:
+    """保存済みの秘密値は一部も返さない（S10: 画面・API 応答に出さない）。"""
+    return "保存済み" if value else ""
 
 logger = logging.getLogger(__name__)
 

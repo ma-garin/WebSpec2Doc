@@ -21,7 +21,7 @@ from werkzeug.wrappers import Response as BaseResponse
 
 from web.audit_context import record_admin_event
 from web.config import OUTPUT_DIR
-from web.env_store import _mask_key, _read_env, _write_env
+from web.env_store import _read_env, _write_env
 from web.services import defect_store
 from web.services.jira_client import (
     DEFAULT_ISSUE_TYPE,
@@ -39,6 +39,11 @@ from web.services.jira_client import (
 )
 from web.tenancy import scoped_output_dir
 from web.validation import _valid_domain
+
+
+def _mask_key(value: str) -> str:
+    """保存済みの秘密値は一部も返さない（S10: 画面・API 応答に出さない）。"""
+    return "保存済み" if value else ""
 
 logger = logging.getLogger(__name__)
 

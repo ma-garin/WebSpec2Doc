@@ -39,6 +39,13 @@
   function applyListMode(view) {
     var m = modeOf(view || S.view);
 
+    /* 3 ペイン廃止後: ホームは本文のサイト表（#ws-home-sec）、他は作業領域（#ws-body）。
+       左列（.list）はテスト・画面の一覧が要る画面だけ出す。対象サイトの要約は c-context が持つ */
+    setHidden('#ws-home-sec', m !== 'home');
+    setHidden('#ws-body', m === 'home');
+    setHidden('#ws-list-col', m === 'home' || m === 'ctx');
+    var wb = $('#ws-body');
+    if (wb) wb.classList.toggle('ws-nolist', m === 'home' || m === 'ctx');
     setHidden('#site-items', m !== 'home');
     setHidden('#site-search', m !== 'home');
     setHidden('#list-f-home', m !== 'home');
@@ -150,7 +157,7 @@
    * 'view' イベントではなくクリックで判定するのは、他モジュールの setView() を
    * 勝手なページ遷移に化けさせないため。 */
   function bindRailFromHome() {
-    var rail = document.querySelector('.rail');
+    var rail = document.querySelector('.ws-rail');
     if (!rail) return;
     rail.addEventListener('click', function (e) {
       var b = e.target.closest && e.target.closest('[data-view]');
@@ -172,7 +179,7 @@
 
   /* System 02「実行と結果」への入口。ワークスペースの左レールは SPA 切替、こちらは別画面へ移る */
   function addRunLink() {
-    var test = document.querySelector('.rail [data-view="test"]');
+    var test = document.querySelector('.ws-rail [data-view="test"]');
     if (!test || document.getElementById('rail-run')) return;
     var a = document.createElement('a');
     a.className = 'app-nav-item rail-link';

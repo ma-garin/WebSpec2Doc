@@ -120,6 +120,12 @@
   /** 絞り込み欄は #site-items の直前に差し込む。#q はテスト一覧のものなので使わない */
   function ensureFilter() {
     if (filterMounted) return;
+    var fixed = $('#site-q');
+    if (fixed) {
+      fixed.addEventListener('input', function () { query = fixed.value.trim(); renderList(); });
+      filterMounted = true;
+      return;
+    }
     var box = $('#site-items');
     if (!box || !box.parentNode) return;
     var wrap = document.createElement('div');
@@ -137,19 +143,53 @@
     filterMounted = true;
   }
 
+  /** 本文のサイト表（型 F）の 1 行。操作は 開く・再解析・削除 */
+  function tableRow(it) {
+    var d = encodeURIComponent(it.domain);
+    var href = '/sites/' + d + '/' + ((document.body.dataset.mode || 'full') === 'test-only' ? 'tests' : 'spec');
+    var on = it.domain === selected;
+    return '<tr' + (on ? ' class="is-selected"' : '') + '>'
+      + '<td><button type="button" class="ws-site-pick" data-domain="' + esc(it.domain) + '" aria-current="' + (on ? 'true' : 'false') + '">'
+      + '<b>' + esc(it.domain) + '</b>' + (it.site_url ? '<small>' + esc(it.site_url) + '</small>' : '') + '</button></td>'
+      + '<td class="is-num">' + esc(it.screens || 0) + '</td>'
+      + '<td>' + esc(it.updated || '—') + '</td>'
+      + '<td class="ws-ops"><a class="c-btn c-btn--primary c-btn--sm" href="' + href + '">開く</a>'
+      + '<button type="button" class="c-btn c-btn--sm" data-reanalyze="' + esc(it.site_url || '') + '"'
+      + (it.site_url ? '' : ' disabled title="対象 URL の記録がないため再解析できません"') + '>再解析</button>'
+      + '<button type="button" class="c-btn c-btn--sm" data-del="' + esc(it.domain) + '"'
+      + ' aria-label="「' + esc(it.domain) + '」の解析結果を削除">削除</button></td></tr>';
+  }
+
+  function renderTable(live, dead) {
+    var rows = $('#site-rows'), deadRows = $('#site-rows-dead');
+    if (rows) rows.innerHTML = live.map(tableRow).join('');
+    if (deadRows) deadRows.innerHTML = dead.map(tableRow).join('');
+    var e1 = $('#site-rows-empty');
+    if (e1) {
+      e1.hidden = live.length > 0;
+      var t1 = e1.querySelector('.c-state__title');
+      if (t1) t1.textContent = itemsOf().length ? '該当するサイトはありません' : 'まだ解析したサイトはありません';
+    }
+    var dw = $('#site-dead-wrap');
+    if (dw) dw.hidden = !dead.length;
+    var e2 = $('#site-dead-empty');
+    if (e2) e2.hidden = dead.length > 0;
+  }
+
   function renderList() {
     var box = $('#site-items');
-    if (!box) return;
     ensureFilter();
     var all = itemsOf();
-    if (!all.length) { box.innerHTML = ''; return; }
     var items = all.filter(matchQuery);
+    var live = items.filter(hasScreens).sort(byRecency);
+    var dead = items.filter(function (it) { return !hasScreens(it); }).sort(byRecency);
+    renderTable(live, dead);
+    if (!box) return;
+    if (!all.length) { box.innerHTML = ''; return; }
     if (!items.length) {
       box.innerHTML = '<p class="list-empty">該当なし</p>';
       return;
     }
-    var live = items.filter(hasScreens).sort(byRecency);
-    var dead = items.filter(function (it) { return !hasScreens(it); }).sort(byRecency);
     var html = '';
     if (live.length) {
       html += groupHead('解析できたサイト', live.length);
@@ -173,7 +213,7 @@
       kpis.innerHTML =
         kpi(it.screens, '画面') +
         kpi(it.fields, '入力項目') +
-        kpi(it.snapshot_count, '解析した回数') +
+        kpi(it.snapshot_count, '解析回数') +
         kpi(it.has_diff ? '要確認' : 'なし', '前回からの変更', it.has_diff ? 'wa' : '');
     }
     setHref('#home-cta-spec', '/sites/' + encodeURIComponent(it.domain) + '/spec');
@@ -195,36 +235,35 @@
     var host = $('#home-next');
     if (!host) return;
     var d = encodeURIComponent(it.domain);
-    host.innerHTML = '<div class="next-grid" id="next-grid"></div>';
-    var grid = $('#next-grid', host);
-    var cards = [
-      card('分析・設計', '/sites/' + d + '/spec',
-           it.screens + ' 画面の仕様と、そこから設計したテストケース',
-           'ページ要素・入力項目・制約・遷移。テストケースは表で直せます'),
-      card('自動化', '/sites/' + d + '/tests',
-           '設計したケースを実行できるコードにして走らせる',
-           '失敗は理由・止まったステップ・証跡まで残ります'),
-      card('変更', '/sites/' + d + '/changes',
-           it.has_diff ? '前回の解析から変わった箇所があります' : '前回の解析からの差分',
-           '壊れる前に、影響するテストをまとめて直せます', it.has_diff ? 'wa' : ''),
-      card('報告', '/sites/' + d + '/report',
-           'このツールが無くても開ける 1 枚の HTML',
-           '成功率・失敗・カバレッジ・変更・削減工数')
+    var mode = document.body.dataset.mode || 'full';
+    var tabs = [
+      ['分析・設計', 'spec', it.screens + ' 画面の仕様と、そこから設計したテストケース'],
+      ['自動化', 'tests', '設計したケースを実行できるコードにして走らせる'],
+      ['変更', 'changes', it.has_diff ? '前回の解析から変わった箇所があります' : '前回の解析からの差分'],
+      ['報告', 'report', 'このツールが無くても開ける 1 枚の HTML']
     ];
-    grid.innerHTML = cards.join('');
+    host.innerHTML = '<nav class="c-tabs" role="tablist" aria-label="このサイトでできること">'
+      + tabs.map(function (t) {
+        var cur = mode === 'test-only' ? t[1] === 'tests' : t[1] === 'spec';
+        return '<a role="tab" href="/sites/' + d + '/' + t[1] + '" title="' + esc(t[2]) + '" aria-selected="' + (cur ? 'true' : 'false') + '">' + esc(t[0]) + '</a>';
+      }).join('')
+      + '<span class="ws-tabs-meta">最終解析 ' + esc(it.updated || '—') + '</span></nav>';
   }
 
-  function card(title, href, lead, sub, cls) {
-    return '<a class="next-card ' + (cls || '') + '" href="' + href + '">'
-      + '<b>' + esc(title) + '</b>'
-      + '<span class="lead">' + esc(lead) + '</span>'
-      + '<span class="sub">' + esc(sub) + '</span>'
-      + '<span class="go">開く →</span></a>';
-  }
-
+  var KPI_ICON = {
+    '画面': '<path d="M5 4h14v16H5z"/><path d="M8 8h8M8 12h8M8 16h5"/>',
+    '入力項目': '<path d="M4 6h16M4 12h10M4 18h7"/>',
+    '解析回数': '<circle cx="12" cy="12" r="9"/><path d="M12 8v5l3 2"/>',
+    '前回からの変更': '<circle cx="6" cy="6" r="2.5"/><circle cx="6" cy="18" r="2.5"/><circle cx="18" cy="12" r="2.5"/><path d="M6 8.5v7M8.5 6h4a3 3 0 0 1 3 3v1M8.5 18h4a3 3 0 0 0 3-3v-1"/>'
+  };
+  /** KPI は共通部品 c-kpi で描く（アイコンは固定 SVG。利用者入力を入れない） */
   function kpi(value, label, cls) {
-    return '<div class="kpi' + (cls ? ' ' + cls : '') + '"><b>' + esc(value) + '</b>'
-      + '<span>' + esc(label) + '</span></div>';
+    var ic = KPI_ICON[label];
+    var head = ic
+      ? '<span class="c-kpi__head"><span class="c-kpi__icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">' + ic + '</svg></span><span class="c-kpi__label">' + esc(label) + '</span></span>'
+      : '<span class="c-kpi__label">' + esc(label) + '</span>';
+    return '<div class="c-kpi"' + (cls ? ' data-tone="' + cls + '"' : '') + '>' + head
+      + '<span class="c-kpi__value">' + esc(value) + '</span></div>';
   }
   function setHref(sel, href) { var a = $(sel); if (a) a.href = href; }
 
@@ -642,6 +681,28 @@
     }
     var cancel = $('#home-cancel');
     if (cancel) cancel.addEventListener('click', cancelIngest);
+
+    ['site-rows', 'site-rows-dead'].forEach(function (id) {
+      var tb = document.getElementById(id);
+      if (!tb) return;
+      tb.addEventListener('click', function (e) {
+        if (!e.target.closest) return;
+        var del = e.target.closest('[data-del]');
+        if (del) { doDelete(del.dataset.del, del); return; }
+        var re = e.target.closest('[data-reanalyze]');
+        if (re) {
+          var u = re.dataset.reanalyze;
+          var inp = $('#home-url');
+          if (!u) return;
+          if (inp) inp.value = u;
+          updateUrlHint();
+          ingest(u);
+          return;
+        }
+        var pk = e.target.closest('[data-domain]');
+        if (pk) pick(pk.dataset.domain);
+      });
+    });
 
     var list = $('#site-items');
     if (list) {

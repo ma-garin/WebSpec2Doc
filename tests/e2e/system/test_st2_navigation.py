@@ -50,9 +50,9 @@ class TestStNavigation:
         """
         login(page, system_server, MEMBER)
         page.goto(f"{system_server}/team")
-        expect(page.locator('.rail [data-view="home"]')).to_be_visible()
-        assert page.locator(".rail [data-view]").count() == 7
-        assert page.locator(".rail [data-view].on").count() == 1
+        expect(page.locator('.ws-rail [data-view="home"]')).to_be_visible()
+        assert page.locator(".ws-rail [data-view]").count() == 7
+        assert page.locator(".ws-rail [data-view].on").count() == 1
 
     def test_st008_autorun_intake_is_reachable(self, page: Page, system_server: str) -> None:
         """ST-008: AutoRun の受付画面へ到達できる。

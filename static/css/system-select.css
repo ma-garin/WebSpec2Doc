@@ -2,11 +2,11 @@
 
 /* ここで :root を再定義しない（ws.css 冒頭の規約）。ta2.css に無い System 02/03/04 の
    識別色は、変数を増やさず各規則にリテラル値で置く。
-     System 01 ドキュメント作成 = ta2 の --ac 系（#2563EB / #EFF4FF / #1D4ED8）
+     System 01 ドキュメント作成 = ta2 の --ac 系（var(--color-primary) / var(--color-primary-light) / var(--color-primary-dark)）
      System 02 テスト自動化     = #6D4AC4 / #EDE7FB / #4A2E93
-     System 03 AutoRun          = #0E9C7A / #DCF5EE / #0A7359
-     System 04 CLI・API         = #4B5563 / #E5E7EB / #1F2937
-     System 05 オートヒーリング = #B45309 / #FEF3C7 / #92400E
+     System 03 AutoRun          = #0E9C7A / var(--color-low-bg) / var(--color-low)
+     System 04 CLI・API         = var(--color-text-secondary) / var(--color-border) / var(--color-text)
+     System 05 オートヒーリング = var(--color-high) / #FEF3C7 / var(--color-high)
      System 01·app ドキュメント作成(app) = #0891B2 / #CFFAFE / #155E75（01 の派生。青系で近づけつつ区別） */
 
 .sysselect-body {
@@ -76,10 +76,10 @@
 .syscard-run .syscard-accent { background: #0E9C7A; }
 .syscard-test:hover { border-color: #6D4AC4; }
 .syscard-test .syscard-accent { background: #6D4AC4; }
-.syscard-cli:hover { border-color: #4B5563; }
-.syscard-cli .syscard-accent { background: #4B5563; }
-.syscard-heal:hover { border-color: #B45309; }
-.syscard-heal .syscard-accent { background: #B45309; }
+.syscard-cli:hover { border-color: var(--color-text-secondary); }
+.syscard-cli .syscard-accent { background: var(--color-text-secondary); }
+.syscard-heal:hover { border-color: var(--color-high); }
+.syscard-heal .syscard-accent { background: var(--color-high); }
 .syscard-app:hover { border-color: #0891B2; }
 .syscard-app .syscard-accent { background: #0891B2; }
 
@@ -88,19 +88,19 @@
   display: grid; place-items: center; margin-top: 4px;
 }
 .syscard-doc .syscard-icon { background: var(--ac-bg); color: var(--ac-dk); }
-.syscard-run .syscard-icon { background: #DCF5EE; color: #0A7359; }
+.syscard-run .syscard-icon { background: var(--color-low-bg); color: var(--color-low); }
 .syscard-test .syscard-icon { background: #EDE7FB; color: #4A2E93; }
-.syscard-cli .syscard-icon { background: #E5E7EB; color: #1F2937; }
-.syscard-heal .syscard-icon { background: #FEF3C7; color: #92400E; }
+.syscard-cli .syscard-icon { background: var(--color-border); color: var(--color-text); }
+.syscard-heal .syscard-icon { background: #FEF3C7; color: var(--color-high); }
 
 .syscard-no {
   font-size: 11px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase;
 }
 .syscard-doc .syscard-no { color: var(--ac-dk); }
-.syscard-run .syscard-no { color: #0A7359; }
+.syscard-run .syscard-no { color: var(--color-low); }
 .syscard-test .syscard-no { color: #4A2E93; }
-.syscard-cli .syscard-no { color: #1F2937; }
-.syscard-heal .syscard-no { color: #92400E; }
+.syscard-cli .syscard-no { color: var(--color-text); }
+.syscard-heal .syscard-no { color: var(--color-high); }
 .syscard-app .syscard-icon { background: #CFFAFE; color: #155E75; }
 .syscard-app .syscard-no { color: #155E75; }
 
@@ -124,12 +124,12 @@
   font-size: 12.5px; font-weight: 800;
 }
 .syscard-doc .syscard-open { color: var(--ac-dk); }
-.syscard-run .syscard-open { color: #0A7359; }
+.syscard-run .syscard-open { color: var(--color-low); }
 .syscard-test .syscard-open { color: #4A2E93; }
 /* CLI / API だけ .syscard-open の色指定が無く、本文と同じ色で沈んでいた。4 枚を並べると
    ここだけ導線に見えないので、他の 3 枚と同じ規則を与える。 */
-.syscard-cli .syscard-open { color: #1F2937; }
-.syscard-heal .syscard-open { color: #92400E; }
+.syscard-cli .syscard-open { color: var(--color-text); }
+.syscard-heal .syscard-open { color: var(--color-high); }
 .syscard-app .syscard-open { color: #155E75; }
 /* ドキュメント検証（System 06）= #BE185D / #FCE7F3 / #9D174D。既存のどの識別色とも重ならない。 */
 .syscard-dv:hover { border-color: #BE185D; }
@@ -138,11 +138,11 @@
 .syscard-dv .syscard-no { color: #9D174D; }
 .syscard-dv .syscard-open { color: #9D174D; }
 /* System 07 バッチ・スクリプトのテスト。既存の識別色と重ならない緑。 */
-.syscard-batch:hover { border-color: #4D7C0F; }
-.syscard-batch .syscard-accent { background: #4D7C0F; }
-.syscard-batch .syscard-icon { background: #ECFCCB; color: #3F6212; }
-.syscard-batch .syscard-no { color: #3F6212; }
-.syscard-batch .syscard-open { color: #3F6212; }
+.syscard-batch:hover { border-color: var(--color-low); }
+.syscard-batch .syscard-accent { background: var(--color-low); }
+.syscard-batch .syscard-icon { background: var(--color-low-bg); color: var(--color-low); }
+.syscard-batch .syscard-no { color: var(--color-low); }
+.syscard-batch .syscard-open { color: var(--color-low); }
 /* System 08 バッチ・バックエンドのテスト。ドキュメント作成と同じアクセント系トークンを使う。 */
 .syscard-backend:hover { border-color: var(--ac); }
 .syscard-backend .syscard-accent { background: var(--ac); }
@@ -181,8 +181,8 @@
 /* ta2.css の html,body{overflow:hidden} で 2 段目が切れる（8 枚になって 1440x900 に収まらない）。この画面だけ縦スクロールを許す */
 html:has(body.sysselect-body), body.sysselect-body { overflow-y: auto; height: auto; }
 /* System 08 影響度分析。既存の識別色と重ならない橙。 */
-.syscard-impact:hover { border-color: #C2410C; }
-.syscard-impact .syscard-accent { background: #C2410C; }
-.syscard-impact .syscard-icon { background: #FFEDD5; color: #9A3412; }
-.syscard-impact .syscard-no { color: #9A3412; }
-.syscard-impact .syscard-open { color: #9A3412; }
+.syscard-impact:hover { border-color: var(--color-critical); }
+.syscard-impact .syscard-accent { background: var(--color-critical); }
+.syscard-impact .syscard-icon { background: var(--color-high-bg); color: var(--color-critical); }
+.syscard-impact .syscard-no { color: var(--color-critical); }
+.syscard-impact .syscard-open { color: var(--color-critical); }

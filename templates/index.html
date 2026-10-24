@@ -1,71 +1,32 @@
-<!DOCTYPE html>
-<html lang="ja">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
-  <title>{{ 'ドキュメント作成(app)［試作］ - WebSpec2Doc' if app_mode else 'WebSpec2Doc' }}</title>
-  <!-- Google Fonts はローカル専用の CSP（style-src 'self'）でブロックされ読み込まれないため撤去。
-       描画は --font-main / --font-mono のシステムフォント・フォールバックで確定する。 -->
-  <link rel="stylesheet" href="{{ url_for('static', filename='tokens.css') }}?v={{ _ver }}">
-  <link rel="stylesheet" href="{{ url_for('static', filename='app.css') }}?v={{ _ver }}">
-  <link rel="stylesheet" href="{{ url_for('static', filename='app-report.css') }}?v={{ _ver }}">
-  <link rel="stylesheet" href="{{ url_for('static', filename='app-components.css') }}?v={{ _ver }}">
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/components.css') }}?v={{ _ver }}">
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/autorun-document.css') }}?v={{ _ver }}">
+{% extends 'layouts/system.html' %}
+{#- System 01（ドキュメント作成）と 03（AutoRun）の旧シェル。共通シェルは layouts/system.html。data-system で docs/autorun を切り替える -#}
+{% set system_key = 'doc' %}
+{% block title %}{{ 'ドキュメント作成(app)［試作］ - WebSpec2Doc' if app_mode else 'WebSpec2Doc' }}{% endblock %}
+{% block head_css_pre %}  <link rel="stylesheet" href="{{ url_for('static', filename='app-report.css') }}?v={{ _ver }}">
+{% endblock %}
+{% block head_css %}  <link rel="stylesheet" href="{{ url_for('static', filename='css/autorun-document.css') }}?v={{ _ver }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/autorun-review.css') }}?v={{ _ver }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/autorun-static-routes.css') }}?v={{ _ver }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/settings-admin.css') }}?v={{ _ver }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/report-v2.css') }}?v={{ _ver }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/testcase-grid.css') }}?v={{ _ver }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='viewpoints.css') }}?v={{ _ver }}">
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/user-menu.css') }}?v={{ _ver }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/account-view.css') }}?v={{ _ver }}">
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/c-hybrid.css') }}?v={{ _ver }}">
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/c-shell.css') }}?v={{ _ver }}">
-{% if app_mode %}  <link rel="stylesheet" href="{{ url_for('static', filename='css/doc-app.css') }}?v={{ _ver }}">
-{% endif %}</head>
-<body class="app-page"{% if app_mode %} data-app-mode="1"{% endif %}>
-<a href="#app-content" class="skip-link">本文へスキップ</a>
-<div class="app-shell">
-
-  <aside class="app-sidebar">
-    <a href="/" class="app-brand">
-      <span class="app-brand-mark">W</span>
-      {# 副題はシステムごとに違う。docs のままだとテスト自動化でも「QAドキュメント生成」と
-         名乗ってしまい、どのシステムにいるのか名前が嘘をつく。 #}
-      <span class="app-brand-text"><strong>WebSpec2Doc</strong>
-        <span data-system="docs">{{ 'QAドキュメント生成（app）' if app_mode else 'QAドキュメント生成' }}</span>
+{% endblock %}
+{% block head_css_late %}{% if app_mode %}  <link rel="stylesheet" href="{{ url_for('static', filename='css/doc-app.css') }}?v={{ _ver }}">
+{% endif %}{% endblock %}
+{% block body_attrs %}{% if app_mode %} data-app-mode="1"{% endif %}{% endblock %}
+{% block sidebar_brand_sub %}        <span data-system="docs">{{ 'QAドキュメント生成（app）' if app_mode else 'QAドキュメント生成' }}</span>
         <span data-system="autorun">AutoRun</span>
-      </span>
-    </a>
-    <a href="/systems" class="sys-switcher" id="sys-switcher-link" title="システムを切り替える">
-      <span class="sys-switcher-label">システム</span>
-      <span class="sys-switcher-cur" id="sys-current-name">ドキュメント作成</span>
-      <span class="sys-switcher-swap">切替</span>
-    </a>
-    <button type="button" class="btn-primary sidebar-primary-action" id="add-site-btn" data-system="docs">
+{% endblock %}
+{% block sidebar_cta %}    <button type="button" class="btn-primary sidebar-primary-action" id="add-site-btn" data-system="docs">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" width="16" height="16"><path d="M12 5v14M5 12h14"/></svg>
       <span class="add-site-label">新規解析</span>
-    </button>
-{% include 'partials/nav.html' %}
-    <button type="button" id="sidebar-toggle-btn" class="sidebar-toggle-btn" title="サイドバーを折りたたむ">
-      <svg class="icon-collapse" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
-      <svg class="icon-expand"  viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
-      <span class="nav-label">折りたたむ</span>
-    </button>
-    <div class="app-sidebar-foot">
-      <span data-system="docs">{{ 'サンプルデータで画面仕様書の形を確かめる試作です（実解析は未対応）' if app_mode else 'URLから画面仕様書・テスト設計・画面遷移図を生成します。' }}</span>
+    </button>{% endblock %}
+{% block sidebar_foot %}      <span data-system="docs">{{ 'サンプルデータで画面仕様書の形を確かめる試作です（実解析は未対応）' if app_mode else 'URLから画面仕様書・テスト設計・画面遷移図を生成します。' }}</span>
       <span data-system="autorun">受領から実行完了レポートの納品までを止めずに回します。</span>
-    </div>
-  </aside>
-
-  <div class="app-main">
-{% include 'partials/topbar.html' %}
-
-    <main class="app-content" id="app-content" tabindex="-1">
-      <div class="app-content-inner">
-
+{% endblock %}
+{% block content %}
 {% include 'partials/view-generate.html' %}
 
 {% include 'partials/view-dashboard.html' %}
@@ -91,12 +52,8 @@
 {% include 'partials/view-settings.html' %}
 
 {% include 'partials/result-panel.html' %}
-
-      </div>
-    </main>
-  </div>
-</div>
-  <!-- 実行完了ポップアップ -->
+{% endblock %}
+{% block modals %}  <!-- 実行完了ポップアップ -->
   <div id="completion-overlay" class="completion-overlay hidden" role="dialog" aria-modal="true" aria-label="{{ 'サンプルの再生が完了' if app_mode else '生成完了' }}">
     <div class="completion-card">
       <div class="completion-icon">✅</div>
@@ -180,8 +137,8 @@
 {% include 'partials/modal-file-preview.html' %}
 {% include 'partials/modal-autorun-login.html' %}
 {% include 'partials/modal-user-admin.html' %}
-{% include 'partials/modal-tenant-admin.html' %}
-
+{% include 'partials/modal-tenant-admin.html' %}{% endblock %}
+{% block scripts %}
   <script src="{{ url_for('static', filename='js/c-hybrid.js') }}?v={{ _ver }}"></script>
   <script src="{{ url_for('static', filename='js/core.js') }}?v={{ _ver }}"></script>
   <script src="{{ url_for('static', filename='js/table-utils.js') }}?v={{ _ver }}"></script>
@@ -236,6 +193,4 @@
 {% if app_mode %}
   <script src="{{ url_for('static', filename='js/doc-app-mode.js') }}?v={{ _ver }}"></script>
 {% endif %}
-
-</body>
-</html>
+{% endblock %}

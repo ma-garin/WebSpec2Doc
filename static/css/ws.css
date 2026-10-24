@@ -472,3 +472,34 @@ a.btn{text-decoration:none}
 .main .kpis .kpi b,.main .rep-kpi b{
   font-size:calc(var(--text-2xl) - var(--space-1)/4);
 }
+
+/* ===== 共通レイアウト（layouts/system.html）への移行（3 ペイン廃止）=====
+   ホーム: c-page-head → c-kpis → サイトの表（型 F）。サイトを開いた後: c-context → c-tabs → 作業領域。
+   作業領域（#ws-body）は左列（.list: テスト・画面の一覧）＋右（.main: エディタと各 panel）。 */
+#ws-page-head[hidden], #ws-context[hidden], #ws-tabs[hidden], #ws-home-sec[hidden],
+#ws-body[hidden], #ws-list-col[hidden], #site-dead-wrap[hidden], .ws-lead[hidden] { display: none; }
+.ws-urlform { display: flex; gap: var(--space-2); margin-top: var(--space-4); max-width: 640px; }
+.ws-urlform input { flex: 1; min-width: 0; height: 40px; padding: 0 var(--space-3); border: 1px solid var(--color-border-strong); border-radius: var(--radius-md); font: inherit; background: var(--color-surface); color: var(--color-text); }
+.ws-steps { display: flex; flex-wrap: wrap; gap: var(--space-4); margin: var(--space-3) 0 0; padding: 0; list-style: none; color: var(--color-text-secondary); font-size: var(--text-sm); }
+.ws-steps b { display: inline-grid; place-items: center; width: 20px; height: 20px; margin-right: 4px; border-radius: 50%; background: var(--color-primary-bg); color: var(--color-primary-dark); font-size: 11px; }
+.ws-home { display: grid; gap: var(--space-5); }
+.ws-home > .c-kpis { margin: 0; }
+.ws-stage { display: grid; gap: var(--space-3); padding: var(--space-4); border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-surface); }
+.ws-muted { color: var(--color-text-secondary); font-size: var(--text-sm); }
+.ws-sec-head { display: flex; align-items: flex-end; justify-content: space-between; gap: var(--space-3); margin-bottom: var(--space-2); }
+.ws-sec-head h3 { margin: 0; font-size: var(--text-base); font-weight: 700; color: var(--color-text); }
+.ws-sec-head p { margin: 2px 0 0; color: var(--color-text-secondary); font-size: var(--text-sm); }
+.ws-filter { width: 260px; height: 32px; padding: 0 var(--space-3); border: 1px solid var(--color-border-strong); border-radius: var(--radius-md); font: inherit; background: var(--color-surface); }
+.ws-site-pick { display: grid; gap: 2px; padding: 0; border: 0; background: none; text-align: left; color: var(--color-text); cursor: pointer; font: inherit; }
+.ws-site-pick small { color: var(--color-text-secondary); font-size: var(--text-xs, 11px); }
+.c-table tr.is-selected { background: var(--color-primary-bg); }
+.ws-ops { white-space: nowrap; }
+.ws-ops .c-btn + .c-btn { margin-left: var(--space-1); }
+.ws-lead { margin: 0 0 var(--space-3); color: var(--color-text-secondary); font-size: var(--text-sm); }
+.ws-body { display: grid; grid-template-columns: 280px minmax(0, 1fr); height: calc(100vh - 230px); min-height: 560px; border: 1px solid var(--color-border); border-radius: var(--radius-md); overflow: hidden; background: var(--color-surface); }
+.ws-body.ws-nolist { grid-template-columns: minmax(0, 1fr); }
+.ws-body > .list { min-height: 0; overflow: auto; }
+.ws-body > .main { min-height: 0; }
+/* c-tabs 右端の最終解析。.c-table a（文字色＝濃い青）が c-btn--primary の白文字を上書きするため、操作列で戻す */
+.c-tabs .ws-tabs-meta { margin-left: auto; align-self: center; color: var(--color-text-secondary); font-size: var(--text-xs, 11px); }
+.c-table .ws-ops a.c-btn--primary, .c-table .ws-ops a.c-btn--primary:hover { color: var(--color-on-primary); text-decoration: none; opacity: 1; }

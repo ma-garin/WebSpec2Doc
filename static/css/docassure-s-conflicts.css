@@ -56,7 +56,7 @@ label.dax-h3 { display: block; margin-top: 4px; }
 .dax-cf .dax-item__req { white-space: nowrap; }
 .dax-cf__tabs .dax-segc__opt { display: inline-flex; align-items: center; justify-content: center; gap: 4px; }
 .dax-cf__tabs .dax-segc__n { display: inline-flex; align-items: center; justify-content: center; min-width: 18px; height: 18px; padding: 0 5px; margin: 0; border-radius: 999px; background: var(--dx-sunk); border: 1px solid var(--dx-line); font-size: 11px; box-sizing: border-box; }
-.dax-cf__tabs .dax-segc__opt[aria-selected="true"] .dax-segc__n { background: var(--dx-primary); border-color: var(--dx-primary); color: var(--color-on-primary, #fff); }
+.dax-cf__tabs .dax-segc__opt[aria-selected="true"] .dax-segc__n { background: var(--dx-primary); border-color: var(--dx-primary); color: var(--color-on-primary, var(--color-on-primary)); }
 .dax-cf__lhead { grid-template-columns: minmax(0, 1fr); min-width: 0; }
 .dax-cf .dax-cf__tabs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); width: 100%; min-width: 0; }
 .dax-cf .dax-cf__tabs .dax-segc__opt { min-width: 0; padding: 0 2px; font-size: 12px; overflow: hidden; }

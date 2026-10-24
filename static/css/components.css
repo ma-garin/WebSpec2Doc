@@ -708,7 +708,8 @@
 
 /* URL入力と事前確認ボタン */
 .autorun-url-row { display: flex; gap: 8px; align-items: center; }
-.autorun-url-row .url-input { flex: 1; min-width: 0; }
+.autorun-url-row .url-input,
+.autorun-url-row .c-input { flex: 1; min-width: 0; }
 .autorun-preflight-btn { flex: 0 0 auto; white-space: nowrap; }
 
 /* 仕様3: 選択中の生成モードを明示する */
@@ -949,22 +950,8 @@
 .autorun-chat-scrim.is-open { display: block; }
 
 /* 呼び出しボタン。常設はこれ1つだけ */
-.autorun-chat-fab {
-  position: fixed;
-  right: 22px;
-  bottom: 22px;
-  z-index: 58;
-  border: 0;
-  border-radius: 999px;
-  padding: 10px 18px;
-  background: var(--color-primary);
-  color: #fff;
-  font-size: var(--text-sm);
-  font-weight: 700;
-  cursor: pointer;
-  box-shadow: 0 3px 12px rgba(0, 0, 0, .22);
-}
-.autorun-chat-fab:hover { filter: brightness(1.05); }
+/* 呼び出しボタンは c-page-head__actions の副操作（c-btn）。固定配置しない */
+.autorun-chat-fab { position: static; }
 
 .autorun-chat-close {
   margin-left: auto;
@@ -1124,13 +1111,6 @@
   padding: var(--space-4);
 }
 
-.autorun-intake .btn-primary:disabled {
-  background: var(--primary);
-  color: var(--color-on-primary);
-  opacity: .5;
-  cursor: not-allowed;
-  box-shadow: none;
-}
 
 .autorun-intake-lead .btn-outline-sm {
   display: inline-flex;

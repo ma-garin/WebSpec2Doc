@@ -8,19 +8,12 @@
 
 /* ── hidden 属性を必ず勝たせる ─────────────────────────────
    このファイルの他の規則が同じ要素に display を指定しても、
-   .cw-page [hidden] の詳細度（0,2,0）が単一クラス規則（0,1,0）を上回るため、
+   [data-sys="cond"] [hidden] の詳細度（0,2,0）が単一クラス規則（0,1,0）を上回るため、
    強制上書き修飾子なしで hidden が常に勝つ。 */
-.cw-page [hidden] { display: none; }
+[data-sys="cond"] [hidden] { display: none; }
 
-/* ── 1 画面に収める ──────────────────────────────── */
-.cw-page .app-content {
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-  gap: 12px;
-  padding: 16px 20px;
-}
+/* ── 個別実行詳細の縦並び（スクロールは共通シェルの app-content） ── */
+.cw-detail { display: flex; flex-direction: column; gap: 12px; min-height: 0; }
 
 /* ── ヘッダー行（サイト切替・周回・最初から） ─────────── */
 .cw-head {
@@ -317,27 +310,11 @@ textarea.cw-input { height: auto; padding: 7px 9px; resize: vertical; }
 }
 
 /* ── 指揮ホーム（日常運用）。部品は c-hybrid.css。ここは配置だけ ── */
-.cw-home .app-content { overflow: auto; display: block; }
-.ch-home { max-width: 1280px; margin: 0 auto; padding-bottom: var(--space-6, 24px); }
-.ch-home .c-kpis { margin: var(--space-3, 12px) 0; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: var(--space-2, 8px); }
-/* 日常運用ホーム: KPI は System 01 のスタットカードに合わせる */
-.ch-home .c-kpi,
-.ch-home .c-kpi:hover {
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  padding: var(--space-4) calc((var(--space-4) + var(--space-5)) / 2);
-}
-.ch-home .c-kpi__label {
-  font-size: calc((var(--text-sm) + var(--space-3)) / 2);
-  font-weight: 700;
-  color: var(--color-text-secondary);
-}
-.ch-home .c-kpi .c-kpi__value {
-  font-size: calc(var(--text-2xl) - var(--space-1) / 4);
-  font-weight: 800;
-  color: var(--color-text);
-}
-.ch-home .c-kpi__sub { font-size: var(--text-xs, 11px); }
+.ch-home { padding-bottom: var(--space-6, 24px); }
+/* KPI 3 段（部品は c-kpis。見た目は c-hybrid.css のまま。ここは段の間隔だけ） */
+.ch-home .c-kpis + .c-kpis { margin-top: var(--space-3, 12px); }
+/* 節見出しの右側に置くタブ: 見出し行の中なので下線と外側の余白を持たせない */
+.ch-home .c-section-head__actions .c-tabs { margin: 0; border-bottom: 0; }
 /* サイト一覧: 名前を潰さず、操作リンクと日時を折り返さない（はみ出しは表の内側だけでスクロール） */
 .ch-home .c-table td:first-child { min-width: 200px; }
 .ch-home .c-table td[data-label="最終実行"] { white-space: nowrap; }
@@ -347,7 +324,6 @@ textarea.cw-input { height: auto; padding: 7px 9px; resize: vertical; }
 /* 押せる大きさ 24px 以上（WCAG 2.2 2.5.8） */
 .ch-site .ch-links a, .ch-site .ch-link-off { display: inline-flex; align-items: center; min-height: 24px; min-width: 24px; padding: 0 var(--space-1, 4px); }
 .ch-cap { caption-side: top; padding: var(--space-2, 8px) var(--space-3, 12px); text-align: left; font-size: var(--text-xs, 12px); color: var(--color-text-secondary, var(--color-text-secondary)); }
-.ch-crumb { font-size: var(--text-sm, 13px); color: var(--color-text-secondary, var(--color-text-secondary)); margin: 0 0 var(--space-2, 8px); }
 .ch-ev { display: inline-flex; flex-wrap: wrap; gap: var(--space-1, 4px); }
 .ch-links { display: inline-flex; flex-wrap: wrap; gap: var(--space-2, 8px); align-items: center; }
 .ch-links a { color: var(--color-primary, var(--color-primary)); font-weight: 600; text-decoration: underline; text-underline-offset: 2px; }

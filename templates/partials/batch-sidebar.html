@@ -1,0 +1,27 @@
+{#- System 07 バッチ・スクリプトのテスト のサイドバー。data-step は batch-test.js が .bt-rail [data-step] で拾う（段階の切替・現在位置）。 -#}
+    <nav class="app-nav bt-rail" aria-label="工程">
+      <div class="app-nav-group">つくる</div>
+      <button type="button" class="app-nav-item" data-step="intake" title="スクリプトと仕様書を取り込む">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5"/><path d="M4 17v3h16v-3"/></svg>
+        <span class="nav-label">取り込み</span>
+      </button>
+      <button type="button" class="app-nav-item" data-step="cases" title="観点とケース表">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M4 10h16M10 10v10"/></svg>
+        <span class="nav-label">観点とケース表</span>
+        <span class="bd wa" id="bt-bd-ask" hidden>0</span>
+      </button>
+      <button type="button" class="app-nav-item" data-step="code" title="生成したテストコード">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M8 8l-4 4 4 4M16 8l4 4-4 4M13.5 5l-3 14"/></svg>
+        <span class="nav-label">テストコード</span>
+      </button>
+      <div class="app-nav-group">わたす</div>
+      <button type="button" class="app-nav-item" data-step="export" title="ケース表・テストコード・質問票を書き出す">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 15V4M7 9l5-5 5 5"/><path d="M4 17v3h16v-3"/></svg>
+        <span class="nav-label">書き出し</span>
+      </button>
+      <div class="app-nav-group">サポート</div>
+      <a class="app-nav-item" href="/user-guide" title="使い方">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.6 9.4a2.5 2.5 0 1 1 3.2 2.4c-.6.2-.8.7-.8 1.4"/><path d="M12 16.6h.01"/></svg>
+        <span class="nav-label">使い方</span>
+      </a>
+    </nav>

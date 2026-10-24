@@ -86,15 +86,22 @@
     });
     $('#bt-cnt').textContent = state.jobs.length;
     var cur = state.job && state.job.id;
+    var stage = function (j) {
+      if (j.case_count) return j.case_count + ' ケース（生成済み・未実行）' + (j.ask_count ? '・要確認 ' + j.ask_count : '');
+      return j.files.length ? '取り込み済み・ケース未作成' : 'スクリプト未取り込み';
+    };
     $('#bt-jobs').innerHTML = jobs.length ? jobs.map(function (j) {
       var script = (j.files.filter(function (f) { return f.kind === 'script'; })[0] || {}).name || 'スクリプト未取り込み';
-      var foot = j.case_count ? j.case_count + ' ケース（生成済み・未実行）' + (j.ask_count ? '・要確認 ' + j.ask_count : '') : 'ケース未作成';
       var on = j.id === cur;
-      return '<div class="it' + (on ? ' on' : '') + '" role="listitem"><button type="button" class="it-main" data-job="' + esc(j.id) + '" aria-current="' + on + '">'
-        + '<i class="' + (j.case_count ? (j.ask_count ? 'i-flaky' : 'i-new') : 'i-new') + '"></i>'
-        + '<span class="grow"><b>' + esc(j.name) + '</b><small>' + esc(script) + '</small><small>' + esc(foot) + ' · ' + esc(fmtTime(j.updated_at)) + '</small></span></button>'
-        + '<button type="button" class="del" data-deljob="' + esc(j.id) + '" title="「' + esc(j.name) + '」を削除" aria-label="「' + esc(j.name) + '」を削除">✕</button></div>';
-    }).join('') : (state.listErr && !state.jobs.length ? '<div class="it empty" role="alert">案件の一覧を読めませんでした。<br><button type="button" class="btn sm" id="bt-reload">もう一度読み込む</button></div>' : '<div class="it empty">' + (state.jobs.length ? '一致する案件はありません' : 'まだ案件がありません') + '</div>');
+      return '<tr' + (on ? ' class="on" aria-current="true"' : '') + '><td><b>' + esc(j.name) + '</b><br><small class="bt-mut">' + esc(script) + '</small></td>'
+        + '<td>' + esc(stage(j)) + '</td><td>' + esc(fmtTime(j.updated_at)) + '</td>'
+        + '<td class="bt-ops"><button type="button" class="c-btn c-btn--primary c-btn--sm" data-job="' + esc(j.id) + '">開く</button> '
+        + '<button type="button" class="c-btn c-btn--sm" data-deljob="' + esc(j.id) + '" aria-label="「' + esc(j.name) + '」を削除">削除</button></td></tr>';
+    }).join('') : (state.listErr && !state.jobs.length ? '<tr><td colspan="4" role="alert">案件の一覧を読めませんでした。 <button type="button" class="c-btn c-btn--sm" id="bt-reload">もう一度読み込む</button></td></tr>'
+      : (state.jobs.length ? '<tr><td colspan="4" class="bt-mut">一致する案件はありません</td></tr>' : ''));
+    var none = !state.jobs.length && !state.listErr;
+    $('#bt-empty').hidden = !none;
+    $('#bt-jobs-wrap').hidden = none;
   }
   /* URL は ?job=<id>#<step>。案件を開く・段階を変えるのは pushState、起動時と戻る・進むの復元は積まない */
   function syncUrl(push) {
@@ -133,13 +140,16 @@
     } : {};
     $('#bt-steps').innerHTML = STEPS.map(function (s, i) {
       var cls = i === idx ? ' on' : (done[s.id] ? ' done' : '');
-      return '<button type="button" class="bt-step' + cls + '" role="tab" aria-selected="' + (i === idx) + '" data-go="' + s.id + '"' + (j ? '' : ' disabled') + '>'
-        + '<b>' + (done[s.id] && i !== idx ? '✓' : i + 1) + '</b><span>' + esc(s.name) + '</span><small>' + esc(notes[s.id] || '') + '</small></button>';
+      var li = i === idx ? ' class="is-current" aria-current="step"' : (done[s.id] ? ' class="is-done"' : '');
+      return '<li' + li + '><button type="button" class="bt-step' + cls + '" data-go="' + s.id + '"' + (j ? '' : ' disabled') + '>'
+        + '<span>' + esc(s.name) + '</span>' + (notes[s.id] ? '<small>' + esc(notes[s.id]) + '</small>' : '') + '</button></li>';
     }).join('');
-    document.querySelectorAll('.rail [data-step]').forEach(function (b) {
+    document.querySelectorAll('.bt-rail [data-step]').forEach(function (b) {
       b.classList.toggle('on', !!j && b.dataset.step === state.step); b.disabled = !j;
     });
-    $('#bt-empty').hidden = !!j;
+    $('#bt-home').hidden = !!j;
+    $('#bt-context').hidden = !j;
+    if (j) { $('#bt-ctx-name').textContent = j.name; $('#bt-ctx-step').textContent = STEPS[idx].name; $('#bt-ctx-time').textContent = fmtTime(j.updated_at); }
     document.querySelectorAll('.bt-panel').forEach(function (p) { p.hidden = !j || p.dataset.panel !== state.step; });
     $('#topbar-title').textContent = j ? j.name + ' · ' + STEPS[idx].name : '案件を選ぶ';
     renderHead();
@@ -205,8 +215,8 @@
     renderStages(); renderReason();
   }
   function renderReason() {
-    var j = state.job, host = $('#bt-reason'), msg, kind;
-    if (!j) { msg = '案件が選ばれていません。左の一覧から選ぶか、「＋ 新しい案件」で作ってください。'; }
+    var j = state.job, host = $('#page-reason'), msg, kind;
+    if (!j) { msg = '案件が選ばれていません。一覧の「開く」で選ぶか、「＋ 新しい案件」で作ってください。この画面ではテストを実行しません。'; }
     else if (!j.files.length) { msg = 'ファイルが取り込まれていません。スクリプトを 1 本取り込むと読み取れます。'; }
     else if (!j.facts) { msg = 'スクリプトを取り込みました。「読み取る」で引数・終了コード・入出力を取り出します。'; }
     else if (!j.cases.length) { msg = '読み取り済みです。「観点とケース表を作る」でケースを生成します。'; }
@@ -215,6 +225,8 @@
     else if (exportedKinds(j).length) { msg = '書き出し済み（未実行）です。この画面では実行していないので、実行済み・確認済みとは扱いません。'; kind = 'warning'; }
     else { msg = '生成済み（未実行）です。実行結果が無いため、合否は出していません。書き出して手元の環境で実行してください。'; }
     if (state.notice[failHostId()]) { msg = '直前の操作が失敗しました。既存の結果は保持しています。画面内の案内に従ってください。'; kind = 'error'; }
+    if (!host) return;
+    host.hidden = false;
     if (W) W.reason(host, msg, kind); else host.textContent = msg;
   }
   function failHostId() { return ({ intake: 'bt-intake-state', cases: 'bt-cases-state', code: 'bt-code-state', export: 'bt-export-state' })[state.step]; }
@@ -268,8 +280,8 @@
     var obsList = [];
     all.forEach(function (c) { if (obsList.indexOf(c.obs) < 0) obsList.push(c.obs); });
     if (state.obs && obsList.indexOf(state.obs) < 0) state.obs = '';
-    var kpi = function (v, l, cls) { return '<div class="kpi' + (cls ? ' ' + cls : '') + '"><b>' + esc(v) + '</b><span>' + esc(l) + '</span></div>'; };
-    $('#bt-kpis').innerHTML = kpi(all.length, '生成したケース数') + kpi(obsList.length, '観点') + kpi(ask, '要確認（仕様に記載なし）', ask ? 'wa' : '') + kpi(all.length - ask, '根拠つき（生成済み）') + kpi('未実行', '合格／失敗（実行結果を取り込むと表示）', 'nr');
+    var kpi = function (v, l, tone, sub) { return '<div class="c-kpi"' + (tone ? ' data-tone="' + tone + '"' : '') + '><span class="c-kpi__label">' + esc(l) + '</span><span class="c-kpi__value">' + esc(v) + '</span>' + (sub ? '<span class="c-kpi__sub">' + esc(sub) + '</span>' : '') + '</div>'; };
+    $('#bt-kpis').innerHTML = kpi(all.length, '生成したケース数', '', '合格／失敗は未実行（実行結果を取り込むと表示）') + kpi(obsList.length, '観点') + kpi(ask, '要確認（仕様に記載なし）', ask ? 'warn' : '') + kpi(all.length - ask, '根拠つき（生成済み）');
     $('#bt-obs').innerHTML = all.length ? ['すべて'].concat(obsList).map(function (o) {
       var key = o === 'すべて' ? '' : o, n = key ? all.filter(function (c) { return c.obs === key; }).length : all.length;
       return '<span class="fchip' + (state.obs === key ? ' on' : '') + '" role="button" tabindex="0" aria-pressed="' + (state.obs === key) + '" data-obs="' + esc(key) + '">' + esc(o) + ' <em>' + n + '</em></span>';
@@ -433,7 +445,7 @@
   });
   /* ---- 操作 ---- */
   document.addEventListener('click', function (e) {
-    var t = e.target.closest('[data-go],[data-step],[data-obs],[data-src],[data-job],[data-deljob],[data-delfile],[data-edit],#bt-new,#bt-newcancel,#bt-analyze,#bt-make-cases,#bt-redesign,#bt-make-code,#bt-add-open,#bt-add-cancel,#bt-dl-cases,#bt-dl-code,#bt-dl-q');
+    var t = e.target.closest('[data-go],[data-step],[data-obs],[data-src],[data-job],[data-deljob],[data-delfile],[data-edit],#bt-new,#bt-back,#bt-newcancel,#bt-analyze,#bt-make-cases,#bt-redesign,#bt-make-code,#bt-add-open,#bt-add-cancel,#bt-dl-cases,#bt-dl-code,#bt-dl-q');
     if (!t || t.disabled) return;
     var j = state.job;
     if (t.id && t.id.indexOf('bt-dl-') === 0) { e.preventDefault(); return exportFile(t); }
@@ -472,7 +484,8 @@
       });
     }
     switch (t.id) {
-      case 'bt-new': $('#bt-newform').hidden = false; $('#bt-newname').focus(); return;
+      case 'bt-new': if (state.job) backToList(); $('#bt-newform').hidden = false; $('#bt-newname').focus(); return;
+      case 'bt-back': return backToList();
       case 'bt-newcancel': $('#bt-newform').hidden = true; return;
       case 'bt-analyze':
         return run(t, api('POST', API + '/' + j.id + '/analyze'), '読み取りました', '読み取れませんでした', 'スクリプトの種類が「スクリプト」になっているか確かめてください。').then(function (d) {
@@ -545,6 +558,8 @@
     go(state.step, true);
   }
   window.addEventListener('popstate', restore);
+  /* 案件一覧へ戻る（URL から ?job を外して積む） */
+  function backToList() { state.job = null; history.pushState(null, '', location.pathname); renderAll(); }
 
   var h0 = location.hash.slice(1);
   state.step = STEPS.some(function (s) { return s.id === h0; }) ? h0 : 'intake';

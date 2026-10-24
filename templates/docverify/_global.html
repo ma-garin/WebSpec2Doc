@@ -9,7 +9,7 @@
     <div><h2 class="dash-section-title">レビュー</h2><p class="dashboard-section-copy">進行中のレビューと品質スコアを確認できます。</p></div>
     <div class="dashboard-section-actions"><button type="button" class="btn-outline-sm" id="dvgHomeReload">再読み込み</button><button type="button" class="btn-outline-sm" id="dvgHomeNew">＋ 新しいレビュー</button></div>
   </div>
-  <div class="stat-cards" id="dvgHomeStats" aria-live="polite"></div>
+  <div class="c-kpis" id="dvgHomeStats" aria-live="polite"></div>
   <div class="dv-grid2">
     <section class="dv-card" id="dvgHomeQuality"></section>
     <section class="dv-card" id="dvgHomeTodo"></section>
@@ -24,16 +24,12 @@
 </section>
 
 <section class="dv-view" data-view="reviews" hidden>
-  <h2 class="dvg-h">レビュー一覧</h2>
-  <form id="dvgNewForm" class="card dvg-form">
-    <strong>新しいレビューを作る</strong>
-    <label>レビュー名 <input name="name" required maxlength="100" placeholder="例: 会員登録 要求仕様 第 1.2 版"></label>
-    <label>対象の文書 <input name="file" type="file" title="" required></label>
-    <label>観点チェックリスト <select name="checklist_id" id="dvgNewChecklist"><option value="">使わない</option></select></label>
-    <label>期限 <input name="due" type="date"></label>
-    <button class="btn btn-primary" type="submit">作成して開く</button>
-  </form>
-  <div id="dvgReviews"></div>
+  {# 作成フォーム（#dvgNewForm）は本文先頭の c-page-head の中（doc_verify.html）。ここは型 D の節見出し＋型 F の一覧 #}
+  <div class="dv-section-head dashboard-section-head">
+    <div><h2 class="dash-section-title">レビュー一覧</h2><p class="dashboard-section-copy">行を押すとそのレビューを開きます。</p></div>
+    <div class="dashboard-section-actions"><button type="button" class="c-btn" id="dvgReviewsReload">再読み込み</button></div>
+  </div>
+  <div class="c-table-wrap"><div id="dvgReviews"></div></div>
 </section>
 
 <section class="dv-view" data-view="findings" hidden>

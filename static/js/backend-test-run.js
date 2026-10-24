@@ -282,7 +282,7 @@
       [(c.not_run || 0) + (c.error || 0), '未実行・実行エラー', '', '実行していない・途中で止まった', 'minus'], [candidates.length, '不具合候補', candidates.length ? 'wa' : '', '記録を検討する不一致', 'flag']];
     var box = $('#bs-result-kpis'), bt = window.BackendTest;
     if (bt && bt.kpis) return bt.kpis(box, tiles);
-    box.innerHTML = ''; tiles.forEach(function (t) { var d = document.createElement('div'); d.className = 'stat-card'; d.textContent = t[1] + ' ' + t[0]; box.appendChild(d); }); }
+    box.innerHTML = ''; tiles.forEach(function (t) { var d = document.createElement('div'); d.className = 'c-kpi'; d.textContent = t[1] + ' ' + t[0]; box.appendChild(d); }); }
   function renderFacts(latest) { var f = $('#bs-judge-facts'), h = $('#bs-judge-human'); f.innerHTML = ''; h.innerHTML = '';
     var last = (S.job.runs || []).slice(-1)[0];
     var add = function (ul, text) { var li = document.createElement('li'); li.textContent = text; ul.appendChild(li); };

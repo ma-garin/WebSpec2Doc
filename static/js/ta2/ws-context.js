@@ -42,7 +42,10 @@
     // 共通ヘッダーの見出しも作業名に合わせる（どの System のどの作業かを上端で読めるように）
     var top = document.getElementById('topbar-title');
     if (top && v !== 'home' && task[0]) top.textContent = v === 'run' ? task[0] + ' · 実行と結果' : task[0];
-    if (lead) lead.textContent = task[1];
+    if (lead) { lead.textContent = task[1]; lead.hidden = v === 'home' || !task[1]; }
+    var head = document.getElementById('ws-page-head');
+    if (head) head.hidden = v !== 'home';
+    renderContext(v);
     if (!crumb) return;
 
     var parts = [];
@@ -59,6 +62,36 @@
     crumb.innerHTML = parts.join('<span aria-hidden="true">/</span>');
   }
 
+  /* 対象サイトの表示（c-context）と、サイト内の作業の切替（c-tabs）。ホームでは出さない */
+  var GROUP_TABS = [['spec', '仕様', 'spec'], ['test', '自動化', 'tests'], ['drift', '変更', 'changes'], ['report', '報告', 'report']];
+  function renderContext(v) {
+    var box = document.getElementById('ws-context');
+    var tabs = document.getElementById('ws-tabs');
+    var show = v !== 'home' && !!S.domain;
+    if (box) box.hidden = !show;
+    if (tabs) tabs.hidden = !show;
+    if (!show) return;
+    var it = T.historyItem ? T.historyItem(S.domain) : null;
+    var fails = 0;
+    (S.tests || []).forEach(function (t) { if (t.status === 'fail') fails++; });
+    var st = !it ? '解析結果を読み込んでいます'
+      : (Number(it.screens) > 0 ? (fails ? '失敗 ' + fails + ' 件' : '解析済み') : '画面 0（解析できていません）');
+    if (box) {
+      box.innerHTML = '<span class="c-context__item">対象サイト <b>' + esc(S.domain) + '</b></span>'
+        + '<span class="c-context__item">最終解析 <b>' + esc((it && it.updated) || '—') + '</b></span>'
+        + '<span class="c-context__item">状態 <b>' + esc(st) + '</b></span>';
+    }
+    if (tabs) {
+      var d = encodeURIComponent(S.domain);
+      tabs.innerHTML = GROUP_TABS.map(function (g) {
+        var cur = v === g[0] || (g[0] === 'test' && v === 'run') || (g[0] === 'spec' && v === 'site');
+        return '<a role="tab" href="/sites/' + d + '/' + g[2] + '" aria-selected="' + (cur ? 'true' : 'false') + '">' + g[1] + '</a>';
+      }).join('');
+    }
+  }
+
+  T.on('history', render);
+  T.on('tests', render);
   T.on('view', render);
   T.on('boot', render);
   T.on('render', render);

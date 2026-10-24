@@ -120,6 +120,14 @@
   font-weight: 600;
 }
 .app-sidebar-foot, .app-sidebar .app-sidebar-foot { font-size: 11.5px; color: var(--color-text-secondary); }
+/* 説明は最大 2 行で切る（registry の description は長い）。display は子の span にだけ与える:
+   foot 本体に display を書くと折りたたみ・細いレールの display:none を上書きしてしまう。
+   data-system の切替（system-scope.js）はインラインの display:none なのでこちらより強い */
+.app-sidebar-foot > span { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+/* CTA のアイコンは System 側で width/height を書き忘れても 16px に固定する */
+.sidebar-primary-action svg { width: 16px; height: 16px; flex: 0 0 16px; }
+/* CTA を <a> で書いた System でも下線を出さない（01 の <button> 版は元々出ない） */
+.sidebar-primary-action, .sidebar-primary-action:hover { text-decoration: none; }
 
 /* ---- トップバー（templates/partials/topbar.html: .app-topbar） ---- */
 .app-topbar {
@@ -158,8 +166,13 @@
 }
 .app-topbar-right { display: flex; align-items: center; gap: 8px; margin-left: auto; font-size: 12.5px; white-space: nowrap; }
 
-/* パンくず右の「状態の理由」スロット（中身は WS2D.reason が入れる） */
-.app-topbar .c-reason { margin: 0 0 0 4px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* 「状態の理由」（#page-reason。中身は WS2D.reason が入れる）は header.app-topbar の直後（app-main の子）に
+   全幅 1 行の帯で出す。hidden・空のときは c-reason[hidden] / :empty で消え、高さ 0 */
+.app-topbar + .c-reason {
+  display: block; flex: none; box-sizing: border-box; width: 100%; height: 32px; margin: 0;
+  padding: 0 var(--s5, 20px); border-radius: 0; border-bottom: 1px solid var(--color-border);
+  font-size: 13px; line-height: 31px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
 
 /* テナント・ヘルプ・ユーザーのチップ */
 .app-topbar-tenant {
@@ -233,7 +246,7 @@
   }
   .app-sidebar .sys-switcher-swap { margin: 0; padding: 1px 4px; font-size: 11px; }
   .app-topbar { padding: 6px var(--s3, 12px); }
-  .app-topbar .c-reason { display: none; }
+  .app-topbar + .c-reason { padding: 0 var(--s3, 12px); }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -243,3 +256,8 @@
 
 /* 旧ダッシュボードの KPI 補足（.stat-card-sub）も AA を満たす色に揃える（--text-subtle は白地で 2.68:1） */
 .app-shell .stat-card-sub { color: var(--color-text-secondary); }
+
+/* 常設の説明帯は画面名と主操作を圧迫するため表示しない。警告・失敗は保持する。 */
+#page-reason.c-reason:not(.c-reason--warning):not(.c-reason--error) {
+  display: none;
+}

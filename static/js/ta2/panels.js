@@ -240,16 +240,16 @@
       // 実行中は今回の実行だけを数える（帯と同じ値）。前回の結果と混ぜない。
       // 不安定は実行の完了後にしか判定できないので、0 ではなく「—」にする。
       kpis.innerHTML =
-        '<div class="kpi ok"><b>' + (rs.passed || 0) + '</b><span>成功（今回）</span></div>' +
-        '<div class="kpi ng"><b>' + (rs.failed || 0) + '</b><span>失敗（今回）</span></div>' +
-        '<div class="kpi wa"><b>—</b><span>不安定（完了後に判定）</span></div>' +
-        '<div class="kpi"><b>' + Math.max(0, (Number(rs.total) || 0) - (Number(rs.done) || 0)) + '</b><span>実行待ち</span></div>';
+        '<div class="c-kpi" data-tone="ok"><span class="c-kpi__label">成功（今回）</span><span class="c-kpi__value">' + (rs.passed || 0) + '</span></div>' +
+        '<div class="c-kpi" data-tone="ng"><span class="c-kpi__label">失敗（今回）</span><span class="c-kpi__value">' + (rs.failed || 0) + '</span></div>' +
+        '<div class="c-kpi" data-tone="wa"><span class="c-kpi__label">不安定（完了後に判定）</span><span class="c-kpi__value">—</span></div>' +
+        '<div class="c-kpi"><span class="c-kpi__label">実行待ち</span><span class="c-kpi__value">' + Math.max(0, (Number(rs.total) || 0) - (Number(rs.done) || 0)) + '</span></div>';
     } else if (kpis) {
       kpis.innerHTML =
-        '<div class="kpi ok"><b>' + c.pass + '</b><span>成功</span></div>' +
-        '<div class="kpi ng"><b>' + c.fail + '</b><span>失敗</span></div>' +
-        '<div class="kpi wa"><b>' + c.flaky + '</b><span>不安定（再試行で回復）</span></div>' +
-        '<div class="kpi"><b>' + (c.fixed + c.new) + '</b><span>未実行（新規・修正済）</span></div>';
+        '<div class="c-kpi" data-tone="ok"><span class="c-kpi__label">成功</span><span class="c-kpi__value">' + c.pass + '</span></div>' +
+        '<div class="c-kpi" data-tone="ng"><span class="c-kpi__label">失敗</span><span class="c-kpi__value">' + c.fail + '</span></div>' +
+        '<div class="c-kpi" data-tone="wa"><span class="c-kpi__label">不安定（再試行で回復）</span><span class="c-kpi__value">' + c.flaky + '</span></div>' +
+        '<div class="c-kpi"><span class="c-kpi__label">未実行（新規・修正済）</span><span class="c-kpi__value">' + (c.fixed + c.new) + '</span></div>';
     }
 
     var r = state().run || {};

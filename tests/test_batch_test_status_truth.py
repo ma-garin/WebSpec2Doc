@@ -14,7 +14,9 @@ def test_no_pass_color_for_generated_items():
 
 
 def test_no_pass_wording():
-    assert "合格" not in re.sub(r"合格／失敗（実行結果を取り込むと表示）", "", JS)
+    caption = "合格／失敗は未実行（実行結果を取り込むと表示）"
+    assert caption in JS
+    assert "合格" not in JS.replace(caption, "")
 
 
 def test_generated_is_labeled_not_executed():
@@ -55,6 +57,10 @@ def test_states_and_confirm_use_ws2d():
 
 
 def test_page_header_present():
-    html = (ROOT / "templates/batch_test.html").read_text(encoding="utf-8")
-    for token in ('class="c-page-head', 'id="bt-reason"', 'id="bt-stages"', 'id="bt-head-primary"'):
+    from app import app
+
+    response = app.test_client().get("/batch-test")
+    assert response.status_code == 200
+    html = response.get_data(as_text=True)
+    for token in ('class="c-page-head', 'id="page-reason"', 'id="bt-stages"', 'id="bt-head-primary"'):
         assert token in html

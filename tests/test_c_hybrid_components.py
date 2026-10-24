@@ -135,7 +135,9 @@ def test_drawer_order_focus_trap_escape_and_return(browser):
     d = page.locator(".c-drawer")
     assert d.get_attribute("role") == "dialog" and d.get_attribute("aria-modal") == "true"
     heads = page.locator(".c-drawer__sec h3").all_text_contents()
-    assert heads == ["1. 主張", "2. 実測事実", "3. 推論", "4. 制限", "5. 出典・位置・provider・version"]
+    assert heads == ["1. 主張", "2. 実測事実", "3. 推論", "4. 制限", "5. 出典", "6. 位置", "7. Provider / version"]
+    # 2026-10-21採用の7節構成。解析元の値が専用の節に残ることも確認する。
+    assert "rea" in page.locator(".c-drawer__sec").nth(6).inner_text()
     assert "静的解析の候補です" in page.locator(".c-drawer__state").inner_text()
     assert page.evaluate("() => document.activeElement.textContent") == "閉じる"
     # 「閉じる」が 1 行に収まる（縦に割れない）
@@ -257,3 +259,54 @@ def test_loading_spinner_stops_with_reduced_motion(browser):
     assert page.evaluate("() => getComputedStyle(document.querySelector('.c-state__spinner')).animationName") == "none"
     assert page.locator(".c-state").get_attribute("aria-busy") == "true"
     page.close()
+
+
+@pytest.mark.parametrize("storage_blocked", [False, True])
+def test_sidebar_toggle_and_reload(browser, storage_blocked):
+    """共通シェル: 折りたたみ・復元と、保存拒否時の操作継続を確認する。"""
+    page = browser.new_page()
+    try:
+        page.route(
+            "http://sidebar.test/**",
+            lambda route: route.fulfill(
+                content_type="text/html",
+                body='<div class="app-shell"><button id="sidebar-toggle-btn">折りたたむ</button></div>',
+            ),
+        )
+        script = JS.read_text(encoding="utf-8")
+        if storage_blocked:
+            script = (
+                "Object.defineProperty(window, 'localStorage', {get() {"
+                " throw new Error('保存を拒否'); }});\n" + script
+            )
+        page.add_init_script(script=script)
+        page.goto("http://sidebar.test/")
+        button = page.locator("#sidebar-toggle-btn")
+        button.click()
+        assert page.locator(".sidebar-collapsed").count() == 1
+        assert button.get_attribute("aria-expanded") == "false"
+        page.reload()
+        assert page.locator(".sidebar-collapsed").count() == (0 if storage_blocked else 1)
+        button.click()
+        assert page.locator(".sidebar-collapsed").count() == (1 if storage_blocked else 0)
+        assert button.get_attribute("aria-expanded") == ("false" if storage_blocked else "true")
+    finally:
+        page.close()
+
+
+@pytest.mark.parametrize("kind,visible", [("info", False), ("warning", True), ("error", True)])
+def test_topbar_explanation_hidden_but_warnings_retained(browser, kind, visible):
+    """常設説明帯は隠し、警告と失敗の次の行動は読める状態を保つ。"""
+    page = _page(browser)
+    try:
+        page.add_style_tag(path=str(ROOT / "static" / "css" / "c-shell.css"))
+        page.evaluate("""(kind) => {
+          const host = document.createElement('p');
+          host.id = 'page-reason';
+          document.body.appendChild(host);
+          WS2D.reason(host, '内容を確認して再実行してください。', kind);
+        }""", kind)
+        assert page.locator('#page-reason').is_visible() == visible
+        assert page.locator('#page-reason').text_content() == '内容を確認して再実行してください。'
+    finally:
+        page.close()

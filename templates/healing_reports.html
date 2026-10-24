@@ -1,54 +1,45 @@
-<!DOCTYPE html>
-<html lang="ja">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>報告書 - オートヒーリング - WebSpec2Doc</title>
-  <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
-  {% set _ver = config.get('ASSET_VERSION', '1') %}
-  <link rel="stylesheet" href="{{ url_for('static', filename='tokens.css') }}?v={{ _ver }}">
-  <link rel="stylesheet" href="{{ url_for('static', filename='app.css') }}?v={{ _ver }}">
-  <link rel="stylesheet" href="{{ url_for('static', filename='app-components.css') }}?v={{ _ver }}">
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/components.css') }}?v={{ _ver }}">
+{% extends 'layouts/system.html' %}
+{#- オートヒーリング（System 05）の入口＝報告書一覧。共通レイアウトに載せる。 -#}
+{% set system_key = 'heal' %}
+{% set topbar_crumb = 'オートヒーリング' %}{% set topbar_title = '報告書' %}
+{% block title %}報告書 - オートヒーリング - WebSpec2Doc{% endblock %}
+{% block head_css %}
   <link rel="stylesheet" href="{{ url_for('static', filename='css/user-menu.css') }}?v={{ _ver }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/ta2.css') }}?v={{ _ver }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/healing-reports.css') }}?v={{ _ver }}">
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/c-hybrid.css') }}?v={{ _ver }}">
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/c-shell.css') }}?v={{ _ver }}">
-</head>
-<body class="app-page hl-page-reports" data-hl-admin="{{ 'true' if (not auth_user or auth_user.role == 'admin') else 'false' }}">
-<a href="#app-content" class="skip-link">本文へスキップ</a>
-<div class="app-shell">
-
-  {% with active = 'reports' %}{% include 'partials/healing-sidebar.html' %}{% endwith %}
-
-  <div class="app-main">
-    {% set topbar_crumb = 'オートヒーリング' %}
-    {% set topbar_title = '報告書' %}
-    {% include 'partials/topbar.html' %}
-
-    <main class="app-content" id="app-content">
-      <div id="hl-error" class="hl-banner" role="alert" hidden></div>
-
+{% endblock %}
+{% block head_css_late %}  {# body の class は共通レイアウトが持つので、画面の印は html に付ける（CSS は子孫セレクタのみ） #}
+  <script>document.documentElement.classList.add('hl-page-reports');</script>
+{% endblock %}
+{% block body_attrs %} data-hl-admin="{{ 'true' if (not auth_user or auth_user.role == 'admin') else 'false' }}"{% endblock %}
+{% block sidebar_cta %}{% include 'partials/healing-cta.html' %}{% endblock %}
+{% block sidebar_nav %}{% with active = 'reports' %}{% include 'partials/healing-sidebar.html' %}{% endwith %}{% endblock %}
+{% block content %}
       <header class="c-page-head hl-page-head" id="hl-page-head">
         <div class="c-page-head__main">
-          <h1 class="c-page-head__title" id="hl-page-title">報告書</h1>
+          <h2 class="c-page-head__title" id="hl-page-title">報告書</h2>
           <p class="c-page-head__desc" id="hl-page-desc">修正案の報告書を、要確認のものから順に読んで判断します。</p>
-          <div class="c-page-head__state" id="hl-ws-status"></div>
+          <details class="hl-legend">
+            <summary>一覧の読み方</summary>
+            <p>1 行は画面 × 観点で束ねた単位。開くと個票（1 欠陥 = 1 報告書）が並びます。「直っていません」は、機械が直せなかったもの。原因の報告書だけが下書きされ、対応は人が書きます。</p>
+          </details>
+          {# 状態は topbar の #page-reason に 1 行で出す（healing-reports-core.js renderHead）。id は互換のため残す。 #}
+          <div class="c-page-head__state" id="hl-ws-status" hidden></div>
+        </div>
+        <div class="c-page-head__actions">
+          <label class="hl-filter-label" for="hl-project-filter">案件</label>
+          <select id="hl-project-filter" class="hl-select c-input">
+            <option value="">すべて</option>
+          </select>
         </div>
       </header>
-      <div id="hl-ws-reason"></div>
+      <div id="hl-error" class="hl-banner" role="alert" hidden></div>
+      <div id="hl-ws-reason" hidden></div>
       {# 指揮からの deep link（?site=）の結果。一致しないときは推測しない旨をここに出す。 #}
       <div id="hl-site-notice" hidden></div>
 
-
       <div class="hl-list-head">
         <div class="hl-chips" id="hl-chips" role="group" aria-label="状態で絞り込む"></div>
-        <span class="hl-spacer"></span>
-        <label class="hl-filter-label" for="hl-project-filter">案件</label>
-        <select id="hl-project-filter" class="hl-select">
-          <option value="">すべて</option>
-        </select>
       </div>
 
       <div class="hl-table-wrap c-table-wrap">
@@ -67,20 +58,17 @@
           </thead>
           <tbody id="hl-reports-body"></tbody>
         </table>
-        <div class="hl-empty" id="hl-reports-empty" hidden>承認待ちの報告書はありません。</div>
       </div>
-
-      <p class="hl-legend">1 行は画面 × 観点で束ねた単位。開くと個票（1 欠陥 = 1 報告書）が並びます。「直っていません」は、機械が直せなかったもの。原因の報告書だけが下書きされ、対応は人が書きます。</p>
-    </main>
-  </div>
-</div>
-
+      {# 0 件・失敗は WS2D.state が中に c-state を描く。 #}
+      <div class="hl-reports-state" id="hl-reports-empty" hidden></div>
+{% endblock %}
+{% block scripts %}
 <script src="{{ url_for('static', filename='js/c-hybrid.js') }}?v={{ _ver }}"></script>
+<script src="{{ url_for('static', filename='js/user-menu.js') }}?v={{ _ver }}"></script>
 {# 報告書の JS は責務ごとに分割してある。共有は window.HealingReports だけ。この順に読み、healing-reports.js が最後に初期化する。 #}
 <script src="{{ url_for('static', filename='js/healing-reports-core.js') }}?v={{ _ver }}"></script>
 <script src="{{ url_for('static', filename='js/healing-reports-list.js') }}?v={{ _ver }}"></script>
 <script src="{{ url_for('static', filename='js/healing-reports-doc.js') }}?v={{ _ver }}"></script>
 <script src="{{ url_for('static', filename='js/healing-reports-bundle.js') }}?v={{ _ver }}"></script>
 <script src="{{ url_for('static', filename='js/healing-reports.js') }}?v={{ _ver }}"></script>
-</body>
-</html>
+{% endblock %}

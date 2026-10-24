@@ -1,99 +1,98 @@
-<!DOCTYPE html>
-<html lang="ja">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>指揮 - WebSpec2Doc</title>
-  <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
-  {% set _ver = config.get('ASSET_VERSION', '1') %}
-  <link rel="stylesheet" href="{{ url_for('static', filename='tokens.css') }}?v={{ _ver }}">
-  <link rel="stylesheet" href="{{ url_for('static', filename='app.css') }}?v={{ _ver }}">
-  <link rel="stylesheet" href="{{ url_for('static', filename='app-components.css') }}?v={{ _ver }}">
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/components.css') }}?v={{ _ver }}">
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/user-menu.css') }}?v={{ _ver }}">
+{% extends 'layouts/system.html' %}
+{#- 指揮（cond）。共通シェルは layouts/system.html。mode=home は指揮ホーム、それ以外は個別実行詳細 -#}
+{% set system_key = 'cond' %}
+{% set topbar_crumb = '指揮' %}
+{% set topbar_title = '指揮ホーム' if mode == 'home' else '個別実行詳細' %}
+{% block title %}指揮 - WebSpec2Doc{% endblock %}
+{% block head_css %}  <link rel="stylesheet" href="{{ url_for('static', filename='css/user-menu.css') }}?v={{ _ver }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/ta2.css') }}?v={{ _ver }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/orchestration.css') }}?v={{ _ver }}">
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/c-hybrid.css') }}?v={{ _ver }}">
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/c-shell.css') }}?v={{ _ver }}">
-</head>
-<body class="app-page cw-page{% if mode == 'home' %} cw-home{% endif %}" data-mode="{{ mode }}" data-site="{{ site }}" data-hl-admin="{{ 'true' if (not auth_user or auth_user.role == 'admin') else 'false' }}">
-<a href="#app-content" class="skip-link">本文へスキップ</a>
-<div class="app-shell">
-
-  {% with active = 'site' %}{% include 'partials/conductor-sidebar.html' %}{% endwith %}
-
-  <div class="app-main">
-    {% set topbar_crumb = '指揮' %}
-    {% set topbar_title = '指揮ホーム' if mode == 'home' else '個別実行詳細' %}
-    {% include 'partials/topbar.html' %}
-
-    <main class="app-content" id="app-content">
-      {% if mode == 'home' %}
-      <section id="ch-home" class="ch-home" aria-labelledby="ch-title">
+{% endblock %}
+{% block body_attrs %} data-sys="cond" data-mode="{{ mode }}" data-site="{{ site }}" data-hl-admin="{{ 'true' if (not auth_user or auth_user.role == 'admin') else 'false' }}"{% endblock %}
+{% block sidebar_cta %}    <a class="btn-primary sidebar-primary-action" id="ch-add-site" href="/orchestration?mode=detail">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" width="16" height="16" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+      <span class="nav-label">サイトを追加</span>
+    </a>{% endblock %}
+{% block sidebar_nav %}{% with active = 'site' %}{% include 'partials/conductor-nav.html' %}{% endwith %}{% endblock %}
+{% block content %}
+{% if mode == 'home' %}
         <header class="c-page-head">
           <div class="c-page-head__main">
             <h2 id="ch-title" class="c-page-head__title">指揮ホーム</h2>
             <p class="c-page-head__desc">全サイトの状態と、人の対応が必要なものを 1 画面で。</p>
           </div>
           <div class="c-page-head__actions">
-            <a class="c-btn c-btn--secondary" href="/orchestration?mode=detail">サイトを追加</a>
-            <button type="button" class="c-btn c-btn--ghost" id="ch-reload">再読み込み</button>
+            <button type="button" class="c-btn" id="ch-reload">再読み込み</button>
           </div>
         </header>
-        <div id="ch-reason" class="c-reason" role="status" aria-live="polite"></div>
-        <div id="ch-banner"></div>
-        <div id="ch-split" class="c-split" aria-label="根拠の 3 区分"></div>
-        <div id="ch-kpis" aria-label="全体の数字"></div>
-        <div id="ch-tabs" class="c-tabs" role="tablist" aria-label="保存ビュー"></div>
-        <div id="ch-body" role="tabpanel" aria-live="polite" tabindex="-1"></div>
-      </section>
-      {% else %}
-      <p class="ch-crumb"><a href="/orchestration">← 指揮ホームへ戻る</a></p>
-      {% endif %}
-      <div id="cw-detail"{% if mode == 'home' %} hidden{% endif %}>
-      <header class="cw-head">
-        <select id="cw-site" class="hl-select" hidden></select>
-        <span id="cw-rounds" class="cw-rounds"></span>
-        <a id="cw-restart" class="cw-link" href="/orchestration" hidden>最初から</a>
-      </header>
+        <section id="ch-home" class="ch-home" aria-labelledby="ch-title">
+          <div id="ch-banner"></div>
+          <div id="ch-kpis" class="c-kpis" aria-label="状態"></div>
+          <div id="ch-split" class="c-kpis" aria-label="根拠の 3 区分と正常"></div>
+          <div id="ch-kpis-today" class="c-kpis" aria-label="今日の動き"></div>
+          <div class="c-section-head">
+            <div class="c-section-head__main">
+              <h3 class="c-section-head__title">サイト一覧</h3>
+              <p class="c-section-head__desc">行の「なぜ」から状態の根拠を開けます。</p>
+            </div>
+            <div class="c-section-head__actions">
+              <div id="ch-tabs" class="c-tabs" role="tablist" aria-label="保存ビュー"></div>
+            </div>
+          </div>
+          <div id="ch-body" role="tabpanel" aria-live="polite" tabindex="-1"></div>
+        </section>
+{% else %}
+        <header class="c-page-head">
+          <div class="c-page-head__main">
+            <h2 class="c-page-head__title">個別実行詳細</h2>
+            <p class="c-page-head__desc">1 サイトを 解析 → テスト設計 → 実行 → 直す → 判断 の順に進めます。</p>
+          </div>
+          <div class="c-page-head__actions">
+            <a class="c-btn ch-crumb" href="/orchestration">← 指揮ホームへ戻る</a>
+          </div>
+        </header>
+{% endif %}
+        <div id="cw-detail" class="cw-detail"{% if mode == 'home' %} hidden{% endif %}>
+          <header class="cw-head">
+            <select id="cw-site" class="hl-select" hidden></select>
+            <span id="cw-rounds" class="cw-rounds"></span>
+            <a id="cw-restart" class="cw-link" href="/orchestration" hidden>最初から</a>
+          </header>
 
-      <ol id="cw-stepper" class="cw-stepper" aria-label="工程">
-        <li class="cw-step" data-key="analyze" data-state="todo">
-          <span class="cw-step-no">1</span><span class="cw-step-label">解析</span><span class="cw-step-state"></span>
-        </li>
-        <li class="cw-step" data-key="design" data-state="todo">
-          <span class="cw-step-no">2</span><span class="cw-step-label">テスト設計</span><span class="cw-step-state"></span>
-        </li>
-        <li class="cw-step" data-key="run" data-state="todo">
-          <span class="cw-step-no">3</span><span class="cw-step-label">実行</span><span class="cw-step-state"></span>
-        </li>
-        <li class="cw-step" data-key="fix" data-state="todo">
-          <span class="cw-step-no">4</span><span class="cw-step-label">分析して直す</span><span class="cw-step-state"></span>
-        </li>
-        <li class="cw-step" data-key="decide" data-state="todo">
-          <span class="cw-step-no">5</span><span class="cw-step-label">判断</span><span class="cw-step-state"></span>
-        </li>
-      </ol>
+          <ol id="cw-stepper" class="cw-stepper" aria-label="工程">
+            <li class="cw-step" data-key="analyze" data-state="todo">
+              <span class="cw-step-no">1</span><span class="cw-step-label">解析</span><span class="cw-step-state"></span>
+            </li>
+            <li class="cw-step" data-key="design" data-state="todo">
+              <span class="cw-step-no">2</span><span class="cw-step-label">テスト設計</span><span class="cw-step-state"></span>
+            </li>
+            <li class="cw-step" data-key="run" data-state="todo">
+              <span class="cw-step-no">3</span><span class="cw-step-label">実行</span><span class="cw-step-state"></span>
+            </li>
+            <li class="cw-step" data-key="fix" data-state="todo">
+              <span class="cw-step-no">4</span><span class="cw-step-label">分析して直す</span><span class="cw-step-state"></span>
+            </li>
+            <li class="cw-step" data-key="decide" data-state="todo">
+              <span class="cw-step-no">5</span><span class="cw-step-label">判断</span><span class="cw-step-state"></span>
+            </li>
+          </ol>
 
-      <section id="cw-card" class="cw-card" aria-live="polite">
-        <div class="cw-card-head">
-          <h2 id="cw-card-title" class="cw-card-title"></h2>
-          <span id="cw-card-src" class="cw-src" hidden></span>
+          <section id="cw-card" class="cw-card" aria-live="polite">
+            <div class="cw-card-head">
+              <h2 id="cw-card-title" class="cw-card-title"></h2>
+              <span id="cw-card-src" class="cw-src" hidden></span>
+            </div>
+            <p id="cw-card-text" class="cw-card-text">読み込み中…</p>
+            <div id="cw-card-body" class="cw-card-body"></div>
+            <p id="cw-card-error" class="cw-card-error" hidden></p>
+            <div id="cw-card-actions" class="cw-card-actions"></div>
+          </section>
+
+          <div id="cw-toast" class="cw-toast" hidden></div>
         </div>
-        <p id="cw-card-text" class="cw-card-text">読み込み中…</p>
-        <div id="cw-card-body" class="cw-card-body"></div>
-        <p id="cw-card-error" class="cw-card-error" hidden></p>
-        <div id="cw-card-actions" class="cw-card-actions"></div>
-      </section>
-
-      <div id="cw-toast" class="cw-toast" hidden></div>
-      </div>
-    </main>
-  </div>
-</div>
-
-<script src="{{ url_for('static', filename='js/c-hybrid.js') }}?v={{ _ver }}"></script>
+{% endblock %}
+{% block scripts %}<script src="{{ url_for('static', filename='js/c-hybrid.js') }}?v={{ _ver }}"></script>
+<script src="{{ url_for('static', filename='js/user-menu.js') }}?v={{ _ver }}"></script>
 {% if mode == 'home' %}<script src="{{ url_for('static', filename='js/orchestration-home.js') }}?v={{ _ver }}"></script>
 {% else %}<script src="{{ url_for('static', filename='js/orchestration.js') }}?v={{ _ver }}"></script>{% endif %}
-</body>
-</html>
+{% endblock %}

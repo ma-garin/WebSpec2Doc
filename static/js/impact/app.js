@@ -41,10 +41,10 @@
   }
   function priBadge(p) { return p ? '<span class="im-pri p' + esc(p) + '">P' + esc(p) + '</span>' : '<span class="im-pri p0">—</span>'; }
 
-  function loading(el, msg) { el.innerHTML = '<div class="im-state" role="status" aria-live="polite"><span class="im-spin" aria-hidden="true"></span>' + esc(msg || '読み込み中…') + '</div>'; }
+  function loading(el, msg) { el.innerHTML = '<div class="c-state c-state--loading" role="status" aria-live="polite"><span class="c-state__spinner" aria-hidden="true"></span><p class="c-state__msg">' + esc(msg || '読み込み中…') + '</p></div>'; }
   function failed(el, err, retry) {
-    el.innerHTML = '<div class="im-state im-state-ng" role="alert"><b>読み込めませんでした</b><p>' + esc(err && err.message || err) +
-      '</p>' + (retry ? '<button type="button" class="btn-outline-sm" data-retry>もう一度読み込む</button>' : '') + '</div>';
+    el.innerHTML = '<div class="c-state c-state--error" role="alert"><p class="c-state__title">読み込めませんでした</p><p class="c-state__msg">' + esc(err && err.message || err) +
+      '</p>' + (retry ? '<button type="button" class="c-btn" data-retry>もう一度読み込む</button>' : '') + '</div>';
     if (retry) $('[data-retry]', el).addEventListener('click', retry);
   }
   function empty(o) {
@@ -52,8 +52,8 @@
       return (i ? '<div class="onboard-arrow" aria-hidden="true">→</div>' : '') +
         '<div class="onboard-step"><span class="onboard-num">' + (i + 1) + '</span><strong>' + esc(s[0]) + '</strong><span>' + esc(s[1]) + '</span></div>';
     }).join('');
-    return '<div class="dashboard-empty"><div class="dashboard-empty-title">' + esc(o.title) + '</div>' +
-      '<div class="dashboard-empty-desc">' + esc(o.desc || '') + '</div>' +
+    return '<div class="c-state" data-kind="empty" role="status"><p class="c-state__title">' + esc(o.title) + '</p>' +
+      '<p class="c-state__msg">' + esc(o.desc || '') + '</p>' +
       (steps ? '<div class="onboard-steps">' + steps + '</div>' : '') + (o.actions || '') + '</div>';
   }
   function toast(msg) {
@@ -158,6 +158,7 @@
     banner('');
     if (IM.cr && IM.cr.leave) IM.cr.leave(state.sid, state.cr);
     syncNav();
+    var ph = $('#im-page-head'); if (ph) ph.hidden = !!(state.view === 'guide' || state.sid);
     if (state.view === 'guide') { renderGuide(root); return; }
     if (!state.sid) { renderHome(root); return; }
     loading(root);
@@ -182,10 +183,10 @@
       } });
   }
   function trySample(btn) {
-    btn.disabled = true; btn.textContent = '見本を作っています…';
+    var html0 = btn.innerHTML; btn.disabled = true; btn.textContent = '見本を作っています…';
     api.sample().then(function (d) {
       var s = api.obj(d, 'system'), cr = (d && d.cr) || {}; toast('見本の対象システムを作り、分析を始めました'); go({ sid: s.id || s.system_id, cr: cr.code, tab: cr.code ? 'impacts' : '' });
-    }, function (e) { btn.disabled = false; btn.textContent = '見本で試す'; banner(e.message); });
+    }, function (e) { btn.disabled = false; btn.innerHTML = html0; banner(e.message); });
   }
   function sysCard(s) {
     var c = s.counts || {};
@@ -195,19 +196,11 @@
       '<span>文書 ' + (c.documents || 0) + '</span><span>変更要求 ' + (c.crs || 0) + '</span><span>' + fmtDate(s.updated_at || s.created_at) + '</span></span>' +
       '</button></li>';
   }
-  function heroHtml() {
-    return '<div class="dash-hero"><div class="dash-hero-main"><h1 class="dash-hero-title">仕様の変更から、テストすべき影響範囲を洗い出す</h1>' +
-      '<p class="dash-hero-sub">対象システムごとに文書・ベースライン・項目のつながりを持ち、変更要求ごとに影響・リスク・確かめるテストを根拠つきで示します。</p>' +
-      '<div class="dash-hero-steps" aria-label="影響度分析の流れ"><span class="dash-hero-step"><b>1</b> 文書を取り込む</span><span class="dash-hero-arrow" aria-hidden="true">→</span>' +
-      '<span class="dash-hero-step"><b>2</b> 変更要求を起票して分析</span><span class="dash-hero-arrow" aria-hidden="true">→</span><span class="dash-hero-step"><b>3</b> 影響を解消して承認</span></div>' +
-      '<div class="im-hero-actions"><button type="button" class="btn-primary dash-hero-start" data-act="new-sys">新しい対象システム</button>' +
-      '<button type="button" class="btn-sample-report" data-act="sample">見本で試す<span class="sample-zero">文書なし</span></button></div></div></div>';
-  }
   function renderHome(root) {
     setTitle('', '対象システム一覧');
-    root.innerHTML = heroHtml() + '<div class="dashboard-section-head"><div><h2 class="dash-section-title">対象システム</h2>' +
-      '<p class="dashboard-section-copy">役割を持っている対象システムだけを表示します。</p></div><div class="dashboard-section-actions">' +
-      '<button type="button" class="btn-outline-sm" data-act="reload">再読み込み</button></div></div><div id="im-home-body"></div>';
+    root.innerHTML = '<div class="c-section-head"><div class="c-section-head__main"><h2 class="c-section-head__title">対象システム</h2>' +
+      '<p class="c-section-head__desc">役割を持っている対象システムだけを表示します。</p></div><div class="c-section-head__actions">' +
+      '<button type="button" class="c-btn" data-act="reload">再読み込み</button></div></div><div id="im-home-body"></div>';
     bindHome(root);
     var body = $('#im-home-body'); loading(body);
     api.systems().then(function (d) {
@@ -216,8 +209,7 @@
       if (!rows.length) {
         body.innerHTML = empty({ title: 'まだ対象システムがありません', desc: '対象システムを作って文書を取り込むと、変更要求ごとに影響を分析できます。',
           steps: [['対象システムを作る', '名前と説明を入れる'], ['文書を取り込む', '要件・設計書・テストケース'], ['変更要求を分析する', '影響とテストを確認']],
-          actions: '<button type="button" class="btn-primary im-bigbtn" data-act="new-sys">新しい対象システム</button>' +
-            '<button type="button" class="btn-sample-report" data-act="sample">見本で試す<span class="sample-zero">文書なし</span></button>' });
+          actions: '<button type="button" class="c-btn c-btn--primary" data-act="new-sys">新しい対象システム</button>' });
         if (site) body.insertBefore(siteCandidates(site, rows), body.firstChild);
         bindHome(body); return;
       }
@@ -276,12 +268,9 @@
       });
     });
     $('[data-act=new-sys-side]').addEventListener('click', newSystem);
+    bindHome($('#im-page-head'));
     $('#im-modal-cancel').addEventListener('click', closeModal);
     $('#im-modal').addEventListener('click', function (e) { if (e.target.id === 'im-modal') closeModal(); });
-    var KEY = 'webspec2doc.sidebar-collapsed', shell = $('.app-shell'), tg = $('#sidebar-toggle-btn');
-    var apply = function (c) { shell.classList.toggle('sidebar-collapsed', c); tg.title = c ? 'サイドバーを広げる' : 'サイドバーを折りたたむ'; tg.setAttribute('aria-label', tg.title); tg.setAttribute('aria-expanded', String(!c)); };
-    try { apply(localStorage.getItem(KEY) === '1'); } catch (_) { apply(false); }
-    tg.addEventListener('click', function () { var c = !shell.classList.contains('sidebar-collapsed'); apply(c); try { localStorage.setItem(KEY, c ? '1' : '0'); } catch (_) { /* 保存できなくても表示は切り替える */ } });
     window.addEventListener('popstate', render);
   }
 

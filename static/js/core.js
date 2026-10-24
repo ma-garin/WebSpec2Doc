@@ -1,19 +1,5 @@
 
 const SETTINGS_KEY = 'webspec2doc.settings';
-const SIDEBAR_KEY  = 'webspec2doc.sidebar-collapsed';
-
-// ---- サイドバー折りたたみ（全画面共通・localStorage 永続） ----
-function _applySidebarCollapsed(collapsed) {
-  document.querySelector('.app-shell').classList.toggle('sidebar-collapsed', collapsed);
-  const btn = document.getElementById('sidebar-toggle-btn');
-  if (btn) btn.title = collapsed ? 'サイドバーを広げる' : 'サイドバーを折りたたむ';
-}
-_applySidebarCollapsed(localStorage.getItem(SIDEBAR_KEY) === '1');
-document.getElementById('sidebar-toggle-btn')?.addEventListener('click', () => {
-  const collapsed = !document.querySelector('.app-shell').classList.contains('sidebar-collapsed');
-  _applySidebarCollapsed(collapsed);
-  localStorage.setItem(SIDEBAR_KEY, collapsed ? '1' : '0');
-});
 const VIEW_HEADER = {
   dashboard: { trail: ['WebSpec2Doc', 'ダッシュボード'], title: 'QAドキュメント生成' },
   generate: { trail: ['ダッシュボード', 'サイトを追加'], title: 'サイトを追加 / 再解析' },

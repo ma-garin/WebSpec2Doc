@@ -1025,3 +1025,11 @@ table.hl-projects-table td { padding-top: 6px; padding-bottom: 6px; }
 
 /* 接続先の一覧: 名前は省略せず折り返して読めるようにする（全文は title にも出る） */
 .hl-projects-table td .hl-proj-name { white-space: normal; overflow-wrap: anywhere; overflow: visible; text-overflow: clip; }
+
+/* 共通レイアウト（layouts/system.html）の .app-content-inner も縦の flex にし、
+   ビュー（#hl-view-*）が残りの高さを取れるようにする。 */
+.app-content > .app-content-inner {
+  flex: 1 1 auto; min-height: 0; width: 100%; max-width: none;
+  display: flex; flex-direction: column;
+}
+.app-content-inner > .hl-banner { flex: 0 0 auto; }

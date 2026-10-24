@@ -1,39 +1,39 @@
 /* 影響度分析（System 09）。骨格・部品は app.css / app-components.css（ドキュメント作成と同じ）、
    カード・表は batch-test.css を共用し、ここは差分だけ。識別色は var(--color-critical) / var(--color-high-bg) / var(--color-critical)。
    文字色は白地で 4.5:1 以上（--tx3 var(--color-text-secondary) = 4.8:1）。CSP のため style 属性は使わない。 */
-.im-page{--bg:var(--color-bg);--sf:var(--color-surface);--line:var(--color-border);--line2:var(--color-border-strong);--tx:var(--color-text);--tx2:var(--color-text-secondary);--tx3:var(--color-text-secondary);
+[data-page="impact"]{--bg:var(--color-bg);--sf:var(--color-surface);--line:var(--color-border);--line2:var(--color-border-strong);--tx:var(--color-text);--tx2:var(--color-text-secondary);--tx3:var(--color-text-secondary);
   --ok-bg:var(--color-low-bg);--ok-tx:var(--color-low);--ng:var(--color-critical);--ng-bg:var(--color-critical-bg);--ng-tx:var(--color-critical);--wa-bg:var(--color-high-bg);--wa-tx:var(--color-high);
   --im:var(--color-critical);--im-bg:var(--color-high-bg);--im-tx:var(--color-critical);--mono:'JetBrains Mono',ui-monospace,monospace}
-.im-page [hidden],.app-nav-item[hidden],.app-nav-group[hidden]{display:none!important}
+[data-page="impact"] [hidden],.app-nav-item[hidden],.app-nav-group[hidden]{display:none!important}
 /* 共通シェルの群見出しは淡色で 2.68:1（WCAG AA 未満）。共通 CSS は編集しないため本画面だけ濃くする */
-.im-page .app-sidebar .app-nav-group{color:var(--color-text-secondary)}
+[data-page="impact"] .app-sidebar .app-nav-group{color:var(--color-text-secondary)}
 /* 装飾の矢印（aria-hidden）も 3:1 以上にする（共通の淡色は 2.59:1） */
-.im-page .dash-hero-arrow,.im-page .onboard-arrow{color:var(--color-text-secondary)}
+[data-page="impact"] .dash-hero-arrow,[data-page="impact"] .onboard-arrow{color:var(--color-text-secondary)}
 .im-site-cand{margin:0 0 16px;padding:12px 16px}
 .im-site-cand-list{display:flex;flex-wrap:wrap;gap:8px;list-style:none;margin:8px 0 0;padding:0}
 .im-site-cand code{overflow-wrap:anywhere}
-.im-page .sp{flex:1}
-.im-page :focus-visible{outline:2px solid var(--im);outline-offset:2px}
+[data-page="impact"] .sp{flex:1}
+[data-page="impact"] :focus-visible{outline:2px solid var(--im);outline-offset:2px}
 .im-root,.im-view{display:flex;flex-direction:column;gap:16px;min-width:0}
-.im-page .num{text-align:right;font-variant-numeric:tabular-nums}
-.im-page code{font-family:var(--mono);font-size:11.5px;color:var(--tx2)}
-.im-page small{display:block;color:var(--tx3);font-size:11.5px;margin-top:2px}
-.im-page del{color:var(--ng-tx);background:var(--ng-bg);text-decoration:line-through;border-radius:4px;padding:0 4px}
-.im-page ins{color:var(--ok-tx);background:var(--ok-bg);text-decoration:none;border-radius:4px;padding:0 4px}
+[data-page="impact"] .num{text-align:right;font-variant-numeric:tabular-nums}
+[data-page="impact"] code{font-family:var(--mono);font-size:11.5px;color:var(--tx2)}
+[data-page="impact"] small{display:block;color:var(--tx3);font-size:11.5px;margin-top:2px}
+[data-page="impact"] del{color:var(--ng-tx);background:var(--ng-bg);text-decoration:line-through;border-radius:4px;padding:0 4px}
+[data-page="impact"] ins{color:var(--ok-tx);background:var(--ok-bg);text-decoration:none;border-radius:4px;padding:0 4px}
 .im-ok{color:var(--ok-tx)}.im-ng{color:var(--ng-tx)}
 .im-h3{font-size:14px;margin:4px 0 0}
 
 /* KPI・バッジ・絞り込み */
-.im-page .kpis{display:grid;gap:12px;margin:0}
+[data-page="impact"] .kpis{display:grid;gap:12px;margin:0}
 .im-kpis2{grid-template-columns:repeat(2,minmax(0,1fr))}.im-kpis4{grid-template-columns:repeat(4,minmax(0,1fr))}
 .im-kpis5{grid-template-columns:repeat(5,minmax(0,1fr))}.im-kpis7{grid-template-columns:repeat(7,minmax(0,1fr))}
-.im-page .kpi{background:var(--sf);border:1px solid var(--line);border-radius:12px;padding:12px 14px;min-width:0}
-.im-page .kpi b{display:block;font-size:24px;font-weight:700;letter-spacing:-.02em;font-variant-numeric:tabular-nums;line-height:1.2}
-.im-page .kpi span{display:block;font-size:11.5px;color:var(--tx3)}
-.im-page .kpi.ng b{color:var(--ng-tx)}
-.im-page .pill{display:inline-block;font-size:11px;padding:3px 9px;border-radius:999px;font-weight:600;white-space:nowrap}
-.im-page .p-fail{background:var(--ng-bg);color:var(--ng-tx)}.im-page .p-pass{background:var(--ok-bg);color:var(--ok-tx)}
-.im-page .p-warn{background:var(--wa-bg);color:var(--wa-tx)}.im-page .p-new{background:var(--color-surface-2);color:var(--tx2)}
+[data-page="impact"] .kpi{background:var(--sf);border:1px solid var(--line);border-radius:12px;padding:12px 14px;min-width:0}
+[data-page="impact"] .kpi b{display:block;font-size:24px;font-weight:700;letter-spacing:-.02em;font-variant-numeric:tabular-nums;line-height:1.2}
+[data-page="impact"] .kpi span{display:block;font-size:11.5px;color:var(--tx3)}
+[data-page="impact"] .kpi.ng b{color:var(--ng-tx)}
+[data-page="impact"] .pill{display:inline-block;font-size:11px;padding:3px 9px;border-radius:999px;font-weight:600;white-space:nowrap}
+[data-page="impact"] .p-fail{background:var(--ng-bg);color:var(--ng-tx)}[data-page="impact"] .p-pass{background:var(--ok-bg);color:var(--ok-tx)}
+[data-page="impact"] .p-warn{background:var(--wa-bg);color:var(--wa-tx)}[data-page="impact"] .p-new{background:var(--color-surface-2);color:var(--tx2)}
 .im-st{display:inline-block;font-size:11.5px;font-weight:700;padding:3px 10px;border-radius:999px;white-space:nowrap;background:var(--color-surface-2);color:var(--tx2)}
 .im-st.st-analyzing{background:var(--color-primary-light);color:var(--color-primary)}.im-st.st-review{background:var(--wa-bg);color:var(--wa-tx)}
 .im-st.st-approved,.im-st.st-verified{background:var(--ok-bg);color:var(--ok-tx)}.im-st.st-implemented{background:var(--color-low-bg);color:var(--color-low)}
@@ -41,9 +41,9 @@
 .im-pri{display:inline-block;font-family:var(--mono);font-size:11.5px;font-weight:700;border-radius:6px;padding:2px 7px}
 .im-pri.p1{background:var(--ng-bg);color:var(--ng-tx)}.im-pri.p2{background:var(--wa-bg);color:var(--wa-tx)}
 .im-pri.p3,.im-pri.p0{background:var(--bg);color:var(--tx2)}
-.im-page .fchips{display:flex;gap:4px;flex-wrap:wrap}
-.im-page .fchip{font-size:12px;padding:4px 10px;border-radius:999px;border:1px solid var(--line2);background:var(--color-surface);color:var(--tx2);font-weight:500;cursor:pointer}
-.im-page .fchip.on{background:var(--tx);color:var(--color-surface);border-color:var(--tx)}
+[data-page="impact"] .fchips{display:flex;gap:4px;flex-wrap:wrap}
+[data-page="impact"] .fchip{font-size:12px;padding:4px 10px;border-radius:999px;border:1px solid var(--line2);background:var(--color-surface);color:var(--tx2);font-weight:500;cursor:pointer}
+[data-page="impact"] .fchip.on{background:var(--tx);color:var(--color-surface);border-color:var(--tx)}
 .im-filters{display:flex;gap:16px;flex-wrap:wrap}
 
 /* 状態（処理中・失敗）・トースト */
@@ -53,16 +53,16 @@
 .im-spin{display:inline-block;width:16px;height:16px;border:2px solid var(--line2);border-top-color:var(--im);border-radius:50%;animation:im-rot .8s linear infinite;vertical-align:-3px;margin-right:6px}
 @keyframes im-rot{to{transform:rotate(360deg)}}
 @media (prefers-reduced-motion:reduce){.im-spin{animation:none}}
-.im-page .bt-toast{background:var(--color-text);color:var(--color-surface);box-shadow:0 8px 24px rgba(15,23,42,.2)}
-.im-page .bt-x{border:0;background:none;color:var(--tx2);padding:2px 8px;border-radius:6px;cursor:pointer;font-size:12px}
-.im-page .bt-x:hover{background:var(--ng-bg);color:var(--ng-tx)}
+[data-page="impact"] .bt-toast{background:var(--color-text);color:var(--color-surface);box-shadow:0 8px 24px rgba(15,23,42,.2)}
+[data-page="impact"] .bt-x{border:0;background:none;color:var(--tx2);padding:2px 8px;border-radius:6px;cursor:pointer;font-size:12px}
+[data-page="impact"] .bt-x:hover{background:var(--ng-bg);color:var(--ng-tx)}
 .im-btn-danger{color:var(--ng-tx)!important;border-color:var(--color-critical-border)!important}
 button.im-btn-danger.btn-danger{background:var(--ng-tx);color:var(--color-surface)!important;border:1px solid var(--ng-tx);border-radius:8px;padding:0 16px;height:36px;font-weight:600;cursor:pointer}
 
 /* 入力 */
 .im-ta{width:100%;padding:7px 10px;border:1px solid var(--line2);border-radius:8px;font:inherit;font-size:13px;color:var(--tx);resize:vertical}
-.im-page .bt-field input,.im-page .bt-field select{font:inherit;font-size:13px}
-.im-page select{padding:5px 8px;border:1px solid var(--line2);border-radius:6px;font-size:12.5px;background:var(--color-surface);color:var(--tx)}
+[data-page="impact"] .bt-field input,[data-page="impact"] .bt-field select{font:inherit;font-size:13px}
+[data-page="impact"] select{padding:5px 8px;border:1px solid var(--line2);border-radius:6px;font-size:12.5px;background:var(--color-surface);color:var(--tx)}
 .im-row{display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap}
 .im-row .bt-field{flex:1;min-width:140px;margin:0}
 .im-grow{flex:3!important}
@@ -70,8 +70,6 @@ button.im-btn-danger.btn-danger{background:var(--ng-tx);color:var(--color-surfac
 .im-radios legend{font-size:12.5px;font-weight:600;color:var(--tx2);margin-bottom:6px;width:100%}
 .im-radios label{display:inline-flex;gap:6px;align-items:center;cursor:pointer}
 .im-link{border:0;background:none;color:var(--primary,var(--color-primary));padding:0;font:inherit;font-weight:600;cursor:pointer;text-decoration:underline}
-.im-bigbtn{height:44px;padding:0 28px;font-size:15px;margin-top:8px}
-.im-hero-actions{display:flex;gap:12px;align-items:center;margin-top:14px;flex-wrap:wrap}
 .im-danger{border-color:var(--color-critical-border)}
 .im-danger h3{color:var(--ng-tx)}
 

@@ -1,48 +1,32 @@
-<!DOCTYPE html>
-<html lang="ja">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+{#- System 02 テスト自動化／ワークスペース（mode="full"・"test-only" の両方）。共通レイアウトを継承する。
+    3 ペインは廃止: サイト一覧は本文の表、テスト・画面の一覧は作業領域（#ws-body）の左列。
+    JS（ta2/*.js）が参照する id・data-view・.list/.main/.panel は残す。サイドバーの data-view は .ws-rail で拾う。 -#}
+{% extends 'layouts/system.html' %}
+{% set system_key = 'test' %}
+{% set mode = mode or "full" %}
 {%- set _ws_title = {'home': 'サイト一覧', 'spec': '分析・設計', 'tests': '自動化', 'changes': '変更', 'schedule': '定期実行', 'report': '報告', 'team': 'チーム'} -%}
-<title>{{ _ws_title.get(ws, 'サイト一覧') }}{{ ' - ' ~ domain if domain else '' }} - {{ 'テスト自動化' if mode == 'test-only' else 'ワークスペース' }} - WebSpec2Doc</title>
-<!-- Google Fonts はこのアプリの CSP（style-src 'self' 'unsafe-inline'）でブロックされ、
-     読み込まれないまま console エラーだけが残るため置かない。
-     描画は ta2.css の --sans / --mono のフォールバック（system-ui 等）で確定する。 -->
-{# 共通ヘッダー（partials/topbar.html）のデザイン基盤を先に読む。
-   app.css は :root で --bg / --ok / --ok-bg を再定義しており、これを後に読むと
-   ta2.css が WCAG 2.2 AA 実測で調整した同名トークンを上書きして色が崩れる。
-   ta2.css / ws.css を最後に置き、ワークスペース側のトークンを勝たせる。 #}
-<link rel="stylesheet" href="{{ url_for('static', filename='tokens.css') }}?v={{ _ver }}">
-<link rel="stylesheet" href="{{ url_for('static', filename='app.css') }}?v={{ _ver }}">
-<link rel="stylesheet" href="{{ url_for('static', filename='css/user-menu.css') }}?v={{ _ver }}">
-<link rel="stylesheet" href="{{ url_for('static', filename='css/ta2.css') }}?v={{ _ver }}">
-<link rel="stylesheet" href="{{ url_for('static', filename='css/ws.css') }}?v={{ _ver }}">
-<link rel="stylesheet" href="{{ url_for('static', filename='css/c-hybrid.css') }}?v={{ _ver }}">
-<link rel="stylesheet" href="{{ url_for('static', filename='css/c-shell.css') }}?v={{ _ver }}">
-</head>
-{# data-mode は state.js が URL の書き換え先を決めるのに使う。
-   test-only のとき "/" に書き換えると、リロードで /dashboard に着地して
-   テスト自動化の画面に戻れなくなる。 #}
-<body data-ws="{{ ws }}" data-domain="{{ domain }}" data-mode="{{ mode or 'full' }}">
-<div class="app">
-  {# 認証オフ（未ログイン）でもゲストとして出す。topbar.html と同じ項目・同じ並び #}
-  {% set u = auth_user or {'name': 'ゲスト', 'email': '', 'role': ''} %}
-  {% set mode = mode or "full" %}
-  {# サイドバーは他画面（partials/nav.html）と同じ app-sidebar / app-nav-item 体系で書く。
-     ここだけアイコン列のレールだと、同じ製品なのに別アプリに見える。
-     JS（app.js / ws-shell.js / state.js）が `.rail [data-view]` を見ているため
-     外側に rail クラスも残す。data-view の 7 つと順序は変えない。 #}
-  <aside class="app-sidebar rail">
-    <a class="app-brand" href="{{ '/systems' if mode == 'test-only' else '/' }}" title="{{ 'システム選択に戻る' if mode == 'test-only' else 'ホーム（サイト一覧）' }}">
-      <span class="app-brand-mark">W</span>
-      <span class="app-brand-text"><strong>WebSpec2Doc</strong>
-        <span>{{ 'テスト自動化' if mode == 'test-only' else 'ワークスペース' }}</span>
-      </span>
-    </a>
-    <a href="/systems" class="sys-switcher" title="システムを切り替える" aria-label="システムを切り替える"><span class="sys-switcher-label">システム</span><span class="sys-switcher-cur">{{ 'テスト自動化' if mode == 'test-only' else 'ワークスペース' }}</span><span class="sys-switcher-swap">切替</span></a>
+{% set topbar_crumb = 'テスト自動化' if mode == 'test-only' else 'ワークスペース' %}
+{% set topbar_title = 'テスト自動化' if mode == 'test-only' else 'ワークスペース' %}
 
-    <nav class="app-nav" aria-label="メインナビゲーション">
+{% block title %}{{ _ws_title.get(ws, 'サイト一覧') }}{{ ' - ' ~ domain if domain else '' }} - {{ 'テスト自動化' if mode == 'test-only' else 'ワークスペース' }} - WebSpec2Doc{% endblock %}
+
+{% block head_css %}  <link rel="stylesheet" href="{{ url_for('static', filename='css/user-menu.css') }}?v={{ _ver }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/ta2.css') }}?v={{ _ver }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/testcase-grid.css') }}?v={{ _ver }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/reverse-analysis.css') }}?v={{ _ver }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/ws.css') }}?v={{ _ver }}">
+{% endblock %}
+
+{# data-mode は state.js が URL の書き換え先を決めるのに使う（test-only で "/" に書き換えるとリロードで /dashboard に着地する） #}
+{% block body_attrs %} data-ws="{{ ws }}" data-domain="{{ domain }}" data-mode="{{ mode }}"{% endblock %}
+
+{% block sidebar_cta %}    <button type="button" class="btn-primary sidebar-primary-action" id="home-add" title="URL を入れて新しいサイトを解析する">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+      <span class="nav-label">サイトを追加</span>
+    </button>
+{% endblock %}
+
+{% block sidebar_nav %}    <nav class="app-nav ws-rail" aria-label="メインナビゲーション">
       <button type="button" class="app-nav-item" data-view="home" title="サイト一覧">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M3 11.5L12 4l9 7.5"/><path d="M5.5 10v10h13V10M9.5 20v-6h5v6"/></svg>
         <span class="nav-label">ホーム</span>
@@ -79,11 +63,6 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="9" cy="8" r="3"/><path d="M3 19c0-3.3 2.7-5 6-5s6 1.7 6 5"/><path d="M16 5.2A3 3 0 0 1 16 11M17 14.2c2.4.5 4 2.1 4 4.8"/></svg>
         <span class="nav-label">チーム</span>
       </button>
-    </nav>
-
-    <div class="sp"></div>
-
-    <nav class="app-nav" aria-label="サポート">
       <div class="app-nav-group">サポート</div>
       <a class="app-nav-item rail-link" id="rail-settings" href="/settings/crawl" title="設定">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6L7 7M17 17l1.4 1.4M18.4 5.6L17 7M7 17l-1.4 1.4"/></svg>
@@ -94,30 +73,83 @@
         <span class="nav-label">使い方</span>
       </button>
     </nav>
+{% endblock %}
 
-    <div class="ta-user" id="ta-user">
-      <button type="button" class="app-nav-item" id="user-btn" aria-haspopup="true" aria-expanded="false" aria-controls="user-pop"
-              title="{{ 'アカウントメニュー（' + u.email + '）' if auth_user else 'アカウントメニュー（未ログイン）' }}">
-        <span class="ava">{{ u.name[:1] | upper }}</span><span class="nav-label">{{ u.name }}</span>
-      </button>
-      <div class="upop" id="user-pop" role="menu" aria-labelledby="user-btn" hidden>
-        <div class="uhead">
-          <span class="ava lg" aria-hidden="true">{{ u.name[:1] | upper }}</span>
-          <span class="utxt"><b>{{ u.name }}</b><small>{{ u.email if auth_user else '未ログイン（認証オフ）' }}</small></span>
-        </div>
-        <div class="usep" role="none"></div>
-        {% if auth_user %}<a class="uitem" role="menuitem" href="/account">個人設定</a>{% endif %}
-        <a class="uitem" role="menuitem" href="/user-guide">ユーザーガイド</a>
-        <a class="uitem" role="menuitem" href="/feedback">フィードバック</a>
-        {% if auth_user %}
-        <div class="usep" role="none"></div>
-        <form method="post" action="/auth/logout"><button type="submit" class="uitem danger" role="menuitem">ログアウト</button></form>
-        {% endif %}
-      </div>
+{% block content %}
+<section class="c-page-head" id="ws-page-head" aria-labelledby="ws-page-title"{{ ' hidden' if ws != 'home' else '' }}>
+  <div class="c-page-head__main">
+    <h2 class="c-page-head__title" id="ws-page-title">テスト自動化</h2>
+    <p class="c-page-head__desc">URL を入れると、画面と入力項目を見つけて仕様をつくり、そのままテストの自動化まで進めます。</p>
+    <form id="home-form" class="ws-urlform">
+      <input id="home-url" type="url" placeholder="https://example.com/" aria-label="解析するサイトの URL" required>
+      <button type="submit" class="c-btn c-btn--primary" id="home-go">自動化を始める</button>
+    </form>
+    <p class="url-hint" id="home-url-hint" role="status" hidden></p>
+    <ol class="ws-steps"><li><b>1</b> URL を入れる</li><li><b>2</b> 画面と仕様をつくる</li><li><b>3</b> テストにする</li></ol>
+    <p class="c-page-head__desc">ログインが必要なサイトは <a href="/generate">詳細設定</a> から認証情報を登録できます。</p>
+  </div>
+</section>
+
+<div class="c-context" id="ws-context" aria-label="対象サイト" hidden></div>
+<nav class="c-tabs" id="ws-tabs" role="tablist" aria-label="このサイトでできること" hidden></nav>
+<nav class="ws-crumb" id="ws-crumb" aria-label="現在地" hidden></nav>
+<p class="ws-lead" id="ws-lead" hidden></p>
+
+<section class="ws-home" id="ws-home-sec"{{ ' hidden' if ws != 'home' else '' }}>
+  <div class="c-kpis" id="home-site-kpis" aria-label="選択中のサイト">
+    <div class="c-kpi"><span class="c-kpi__head"><span class="c-kpi__icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M5 4h14v16H5z"/><path d="M8 8h8M8 12h8M8 16h5"/></svg></span><span class="c-kpi__label">画面</span></span><span class="c-kpi__value">—</span></div>
+    <div class="c-kpi"><span class="c-kpi__head"><span class="c-kpi__icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 6h16M4 12h10M4 18h7"/></svg></span><span class="c-kpi__label">入力項目</span></span><span class="c-kpi__value">—</span></div>
+    <div class="c-kpi"><span class="c-kpi__head"><span class="c-kpi__icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 8v5l3 2"/></svg></span><span class="c-kpi__label">解析回数</span></span><span class="c-kpi__value">—</span></div>
+    <div class="c-kpi"><span class="c-kpi__head"><span class="c-kpi__icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="6" cy="6" r="2.5"/><circle cx="6" cy="18" r="2.5"/><circle cx="18" cy="12" r="2.5"/><path d="M6 8.5v7M8.5 6h4a3 3 0 0 1 3 3v1M8.5 18h4a3 3 0 0 0 3-3v-1"/></svg></span><span class="c-kpi__label">前回からの変更</span></span><span class="c-kpi__value">—</span></div>
+  </div>
+
+  <div id="home-empty" hidden></div>
+
+  <div id="home-stage" class="ws-stage" hidden>
+    <div class="stage-head">
+      <b id="home-stage-title">解析しています</b>
+      <span class="pill p-running" id="home-stage-pill">実行中</span>
+      <span id="home-stage-time" class="ws-muted"></span>
+      <div class="sp"></div>
+      <button type="button" class="c-btn" id="home-cancel">停止</button>
     </div>
-  </aside>
+    <div class="c-kpis" id="home-kpis"></div>
+    <div class="prog on" id="home-prog"><i style="width:0"></i></div>
+    <div class="stage-wrap">
+      <div id="home-shot-wrap">
+        <div class="ph2"><span>いま見ている画面</span><span id="home-shot-path"></span></div>
+        <div id="home-shot">スクリーンショットを取得中…</div>
+      </div>
+      <div class="logbox" id="home-log"></div>
+    </div>
+  </div>
 
-  <aside class="list">
+  <div id="home-summary" hidden>
+    <div id="home-next"></div>
+  </div>
+
+  <section class="ws-sec" aria-labelledby="ws-sites-h">
+    <div class="ws-sec-head"><div><h3 id="ws-sites-h">解析できたサイト</h3><p>行の「開く」でそのサイトの作業へ進みます。</p></div>
+      <input id="site-q" class="ws-filter" type="search" placeholder="サイト名・URL で絞り込み" aria-label="サイトの絞り込み"></div>
+    <div class="c-table-wrap"><table class="c-table">
+      <thead><tr><th>サイト</th><th class="is-num">画面数</th><th>最終解析</th><th>操作</th></tr></thead>
+      <tbody id="site-rows"></tbody>
+    </table></div>
+    <div class="c-state" data-kind="empty" id="site-rows-empty" hidden><p class="c-state__title">まだ解析したサイトはありません</p><p class="c-state__msg">上の欄に URL を入れて「自動化を始める」を押してください。</p></div>
+  </section>
+
+  <section class="ws-sec" aria-labelledby="ws-dead-h">
+    <div class="ws-sec-head"><div><h3 id="ws-dead-h">解析できていないサイト</h3><p>画面が 1 件も保存されていません。もう一度解析するか、削除できます。</p></div></div>
+    <div class="c-table-wrap" id="site-dead-wrap" hidden><table class="c-table">
+      <thead><tr><th>サイト</th><th class="is-num">画面数</th><th>最終解析</th><th>操作</th></tr></thead>
+      <tbody id="site-rows-dead"></tbody>
+    </table></div>
+    <div class="c-state" data-kind="empty" id="site-dead-empty"><p class="c-state__title">解析できていないサイトはありません</p></div>
+  </section>
+</section>
+
+<div class="ws-body" id="ws-body"{{ ' hidden' if ws == 'home' else '' }}>
+  <div class="list" id="ws-list-col">
     <div class="list-h">
       <h2 class="list-title"><span id="site-name">—</span> <span id="cnt-all"></span></h2>
       <p id="list-sub"></p>
@@ -142,23 +174,9 @@
     </div>
     <div class="items" id="items" tabindex="-1" role="listbox" aria-label="テスト一覧"></div>
     <div class="list-f" id="list-f-tests"><button class="btn pri" style="flex:1" id="new-btn">＋ 新しいテスト</button><button class="btn" id="run-all-btn" data-scope="all" title="このサイトのテストを全件実行" aria-label="このサイトのテストを全件実行">▶ 全件</button></div>
-    <div class="list-f" id="list-f-home" hidden><button class="btn pri" style="flex:1;justify-content:center" id="home-add">＋ サイトを追加</button></div>
-  </aside>
+  </div>
 
-  <main class="main">
-    {# 製品名・現在地・作業名を常に出す。アイコンのレールだけだと、
-       いま何のツールの、どの作業をしているのかが読めない。 #}
-    {# ヘッダーは他画面（index.html）と同じ共通パーツを使う。
-       ここだけ独自ヘッダーだと、同じ製品なのに別アプリに見える。
-       作業名（ws-task）は共通ヘッダーの #topbar-title を JS が更新する。 #}
-    {% set topbar_crumb = 'テスト自動化' if mode == 'test-only' else 'ワークスペース' %}
-    {% set topbar_title = 'テスト自動化' if mode == 'test-only' else 'ワークスペース' %}
-    {% include 'partials/topbar.html' %}
-    <div class="ws-top-main" style="padding:10px 20px 0">
-      <h1 class="ws-task" id="ws-task" hidden>ホーム</h1>
-      <p class="ws-lead" id="ws-lead"></p>
-    </div>
-    <nav class="ws-crumb" id="ws-crumb" aria-label="現在地" hidden></nav>
+  <div class="main">
     <div class="ed-h" id="ed-h"></div>
     <div class="ed-b">
       <div class="steps" id="steps"></div>
@@ -180,57 +198,8 @@
       </div>
     </div>
 
-    <!-- ホーム -->
-    <section class="panel{{ ' on' if ws == 'home' else '' }}" id="p-home" style="grid-template-rows:1fr">
-      <div class="pb" style="padding:0;overflow:hidden;display:grid">
-
-        <div id="home-empty" hidden>
-          <div class="hero">
-            <h2>既存サイトの仕様書が、3 分で出ます。</h2>
-            <p>URL を入れるだけ。画面仕様・遷移図・項目定義を自動でつくり、そのままテストの自動化まで進めます。</p>
-            <form id="home-form">
-              <input id="home-url" type="url" placeholder="https://example.com/" aria-label="解析するサイトの URL" required>
-              <button type="submit" class="btn pri" id="home-go">仕様書をつくる</button>
-            </form>
-            <p class="url-hint" id="home-url-hint" role="status" hidden></p>
-            <div class="steps"><b>1</b> 画面を見つける <span>→</span> <b>2</b> 仕様をつくる <span>→</span> <b>3</b> テストにする</div>
-            <div class="foot">ログインが必要なサイトは <a href="/generate">詳細設定</a> から認証情報を登録できます。</div>
-          </div>
-        </div>
-
-        <div id="home-stage" hidden style="padding:20px 22px;display:grid;grid-template-rows:auto auto auto 1fr;gap:0;min-height:0">
-          <div class="stage-head">
-            <b id="home-stage-title">解析しています</b>
-            <span class="pill p-running" id="home-stage-pill">実行中</span>
-            <span id="home-stage-time" style="color:var(--tx3);font-size:12px"></span>
-            <div class="sp"></div>
-            <button type="button" class="btn" id="home-cancel">停止</button>
-          </div>
-          <div class="kpis" id="home-kpis" style="grid-template-columns:repeat(4,1fr)"></div>
-          <div class="prog on" id="home-prog" style="margin:0 0 16px"><i style="width:0"></i></div>
-          <div class="stage-wrap">
-            <div id="home-shot-wrap">
-              <div class="ph2"><span>いま見ている画面</span><span id="home-shot-path"></span></div>
-              <div id="home-shot">スクリーンショットを取得中…</div>
-            </div>
-            <div class="logbox" id="home-log"></div>
-          </div>
-        </div>
-
-        <div id="home-summary" hidden style="padding:20px 22px;overflow:auto">
-          <div class="kpis" id="home-site-kpis"></div>
-          <div class="cta-row">
-            <a class="btn pri" id="home-cta-spec" href="/">仕様を見る</a>
-            <a class="btn" id="home-cta-tests" href="/">テストを自動化する</a>
-            <a class="btn" id="home-cta-drift" href="/">変更を確認する</a>
-            <span class="why" id="home-cta-why"></span>
-          </div>
-          {# サイトを選んだだけでは画面の大半が空く。何ができるかをここで見せる。 #}
-          <div id="home-next"></div>
-        </div>
-
-      </div>
-    </section>
+    <!-- ホーム（中身は本文の #ws-home-sec。app.js の panel 切替のため id だけ残す） -->
+    <section class="panel{{ ' on' if ws == 'home' else '' }}" id="p-home"></section>
 
     <!-- 仕様 -->
     <section class="panel" id="p-spec">
@@ -260,7 +229,7 @@
         <button class="btn" id="rerun-fail-btn">失敗のみ再実行</button><button class="btn pri" id="run-all-btn2">▶ 全件実行</button></div>
       <div class="pb">
         <p id="run-reason" hidden></p>
-        <div class="kpis" id="kpis"></div>
+        <div class="c-kpis" id="kpis"></div>
         <div class="prog" id="prog"><i></i></div>
         <div id="run-reaview" class="rt-run" role="region" aria-label="テスト候補の由来と実行"></div>
         <div class="tbl"><table><thead><tr><th style="width:34px"></th><th style="width:86px">ID</th><th>テスト</th><th style="width:130px">画面</th><th style="width:150px">直近 10 回</th><th style="width:70px;text-align:right">所要</th><th style="width:220px">結果</th></tr></thead><tbody id="run-rows"></tbody></table></div>
@@ -407,9 +376,11 @@
         </div>
       </div>
     </section>
-  </main>
+  </div>
 </div>
+{% endblock %}
 
+{% block modals %}
 <!-- modals（中身は modals.js が実データで埋める） -->
 <div class="ov" id="ov-new"><div class="md">
   <div class="mh"><h3>新しいテスト</h3><div class="sp"></div><button class="btn ghost" data-close>✕</button></div>
@@ -445,8 +416,9 @@
 </div></div>
 
 <div class="toasts" id="toasts"></div>
+{% endblock %}
 
-{# 共通ヘッダーのユーザーメニュー・テナントチップを動かす（index.html と同じもの） #}
+{% block scripts %}
 <script src="{{ url_for('static', filename='js/c-hybrid.js') }}?v={{ _ver }}"></script>
 <script src="{{ url_for('static', filename='js/user-menu.js') }}?v={{ _ver }}"></script>
 <script src="{{ url_for('static', filename='js/ta2/state.js') }}?v={{ _ver }}"></script>
@@ -459,8 +431,6 @@
 <script src="{{ url_for('static', filename='js/ta2/ws-home.js') }}?v={{ _ver }}"></script>
 <!-- ws modules -->
 <!-- 仕様 WS: テストケース表（#spec-cases）とその依存。core.js は旧シェル専用のため読み込まない -->
-<link rel="stylesheet" href="{{ url_for('static', filename='css/testcase-grid.css') }}?v={{ _ver }}">
-<link rel="stylesheet" href="{{ url_for('static', filename='css/reverse-analysis.css') }}?v={{ _ver }}">
 <script src="{{ url_for('static', filename='js/table-utils.js') }}?v={{ _ver }}"></script>
 <script src="{{ url_for('static', filename='js/ui-states.js') }}?v={{ _ver }}"></script>
 <script src="{{ url_for('static', filename='js/view-utils.js') }}?v={{ _ver }}"></script>
@@ -477,5 +447,4 @@
 <script src="{{ url_for('static', filename='js/ta2/ws-tech.js') }}?v={{ _ver }}"></script>
 <script src="{{ url_for('static', filename='js/ta2/ws-context.js') }}?v={{ _ver }}"></script>
 <script src="{{ url_for('static', filename='js/ta2/app.js') }}?v={{ _ver }}"></script>
-</body>
-</html>
+{% endblock %}

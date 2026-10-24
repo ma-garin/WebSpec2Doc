@@ -2,10 +2,10 @@
  * 各画面は docverify-global.js / docverify-review.js が DV.on(view, fn) で描く。 */
 (() => {
   'use strict';
-  const REVIEW_VIEWS = ['plan', 'read', 'triage', 'questions', 'followup', 'screen', 'gate'];
+  const REVIEW_VIEWS = ['pair', 'plan', 'read', 'triage', 'questions', 'followup', 'screen', 'gate'];
   const TITLES = {
     home: 'ホーム', mine: '自分の担当', reviews: 'レビュー一覧', findings: '指摘一覧',
-    plan: '計画', read: '文書を読む', triage: '指摘の検討', questions: '質問票', followup: '修正版の確認',
+    pair: '対検査', plan: '計画', read: '文書を読む', triage: '指摘の検討', questions: '質問票', followup: '修正版の確認',
     screen: '実画面との照合', gate: '判定と記録', trace: 'トレーサビリティ', assure: 'ドキュメント品質保証', checklists: '検証観点', metrics: '履歴', accuracy: '精度', settings: '設定',
   };
   const NET_ERR = 'サーバに接続できませんでした。少し待ってから、もう一度お試しください。';
@@ -73,12 +73,12 @@
   // サイドの管理群は レビュー一覧・観点・履歴 の 3 つ＋設定。根拠（screen）は履歴の中のタブ。
   // 指摘=「指摘の検討」、根拠=「実画面との照合」の既存画面に対応付ける（新画面は作らない）。
   const SECTIONS = {
-    doc: ['home', 'mine', 'reviews', 'findings', 'plan', 'read', 'questions', 'followup', 'gate'],
+    doc: ['home', 'mine', 'reviews', 'findings', 'pair', 'plan', 'read', 'questions', 'followup', 'gate'],
     qa: ['assure'], trace: ['trace'], find: ['triage'], hist: ['metrics', 'screen'], vp: ['checklists', 'accuracy'], set: ['settings'],
   };
   // ドキュメント検証はレビュー一覧 1 画面。ホーム・自分の担当・指摘一覧は廃止（タブ不要・2026-10-18）。
   const DOC_GONE = ['home', 'mine', 'findings'];
-  const STEPS = ['plan', 'read', 'triage', 'questions', 'followup', 'gate', 'screen'];
+  const STEPS = ['pair', 'plan', 'read', 'triage', 'questions', 'followup', 'gate', 'screen'];
   const COUNT = { mine: 'mine', findings: 'open red', read: 'candidates', triage: 'adopted' };
   // 検証観点の精度は観点の行に表示する予定のため、上部のタブには出さない（2026-10-18 保守者指示）
   const NO_TAB = ['accuracy'];
@@ -113,6 +113,7 @@
   // 画面の頭（何の画面か 1 文・現在の状態・状態の理由 1 行）。語は c-hybrid の WS2D 語彙に合わせる
   const PAGE = {
     reviews: ['レビュー', 'レビューを作り、文書の検査から判定までを進めます。', 'AI の自動検出は「候補」です。人が「指摘にする」を押すまで、確定した指摘にはなりません。'],
+    pair: ['対検査', '要件定義書と基本設計書を突き合わせ、指摘の採否と判定・承認を記録します。', '指摘を選ぶと両文書の該当箇所が光ります。全体が合格のときだけ承認できます。'],
     plan: ['計画', 'レビューの目的・参加者・期限・終了基準を決めます。', '計画を保存して「個別レビューを始める」を押すと、文書を読む工程に進みます。'],
     read: ['文書を読む', '本文を読み、指摘の候補を確かめて指摘にします。', '自動で見つけたものは候補です。本文に戻って確かめてから指摘にしてください。'],
     triage: ['指摘', '見つかった指摘を採用・却下・保留に仕分けます。', '指摘ごとの「根拠」で、文書にある内容か、推論か、未確認かを確かめられます。'],
@@ -180,6 +181,7 @@
   }
 
   async function openReview(iid, view = 'read') {
+    if (view === 'read' && location.hash.slice(1).split('/')[0] !== 'read') view = 'pair';   // 一覧から開くと対検査を最初に出す（S06）
     const data = await api(`/api/docverify/inspections/${encodeURIComponent(iid)}`);
     DV.state.review = data.inspection;
     DV.state.summary = data.summary; DV.state.can = data.can || null;

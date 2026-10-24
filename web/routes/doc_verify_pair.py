@@ -12,6 +12,7 @@ from flask import Blueprint, Response, jsonify, request
 from web.services.docverify import pair_cases as pc
 from web.services.docverify import pair_report as prep
 from web.services.docverify import pair_review as pr
+from web.services.docverify import pair_versions as pv
 
 bp = Blueprint("doc_verify_pair", __name__)
 log = logging.getLogger(__name__)
@@ -90,6 +91,17 @@ def cases_create():
     return _call(lambda: pc.create(f.get("name", ""), req.read(), design.read(), f.get("due", ""), pr.current_user()), status=201)
 
 
+def versions(iid):
+    fs = request.files
+    files = {k: fs[k].read() for k in ("requirements", "design") if fs.get(k) and fs[k].filename}
+    return _call(lambda: pv.upload(iid, files, pr.current_user(), request.form.get("rev") or None))
+
+
+def diff(iid):
+    a = request.args
+    return _call(lambda: pv.diff(iid, a.get("from"), a.get("to")))
+
+
 def summary(iid):
     return _call(pc.summary, iid)
 
@@ -144,6 +156,8 @@ _RULES = (
     ("/approve/revoke", revoke_approval, ["POST"]),
     ("/docs", docs, ["GET"]),
     ("/analyze", analyze, ["POST"]),
+    ("/versions", versions, ["POST"]),
+    ("/diff", diff, ["GET"]),
 )
 
 

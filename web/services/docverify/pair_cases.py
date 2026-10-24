@@ -140,6 +140,7 @@ def report_md(iid: str) -> str:
          f"- 対象: {s['baseline_name']} 第 {s['req_version']} 版 ⇔ {s['target_name']} 第 {s['design_version']} 版",
          f"- 検査目的: {s['purpose']}",
          f"- 検査範囲: {(s.get('assessment') or {}).get('baseline_units', 0)} 要素 ⇔ {(s.get('assessment') or {}).get('target_units', 0)} 要素・比較 {(s.get('assessment') or {}).get('compared_pairs', 0)} 組",
+         *([f"- {g['overall']['ai_scope']}"] if g["overall"].get("ai_scope") else []),
          f"- 工程: {s['stage']} ／ 判定（全体）: {s['verdict']} ／ 今回の変更分: {g['changed'].get('verdict', '判定不能')}",
          f"- 指摘: {len(findings)} 件（重大の未解消 {s['critical_open']} 件・未解消 {s['unresolved']} 件）",
          f"- 判定の根拠: {' '.join(g['reasons'])}", "",

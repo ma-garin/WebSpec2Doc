@@ -157,6 +157,14 @@ def load() -> dict:
             "fixed": {"unverified_counts_as_pass": False}, "history": history()}
 
 
+AI_SCOPE_NOTE = "AI 検査は設定により範囲外（ルール検査のみで判定）"
+
+
+def ai_provider() -> str:
+    """AI の送信先設定（none / openai / ollama）。読み取り専用。"""
+    return str((effective().get("ai") or {}).get("provider") or "none")
+
+
 def _int_or_none(v, name: str):
     if v is None or v == "":
         return None

@@ -212,7 +212,7 @@
     const scope = q('[data-pair-assessment]');
     const purposes = {consistency:'記述の整合性',coverage:'基準への対応',legacy_requirement_design:'要件の設計への反映'};
     scope.classList.toggle('is-unverified', DV.verdict(g.overall) === '判定不能');
-    scope.innerHTML = `<b>${esc(purposes[S.meta.purpose] || '検査範囲')}</b><span>基準の要素 ${Number(a.baseline_units) || 0} · 対象の要素 ${Number(a.target_units) || 0} · 比較した組 ${Number(a.compared_pairs) || 0}</span><span>${esc((g.overall && g.overall.unverified_reasons || []).join(' '))}</span><small>数値・条件などの規則による候補検出です。意味の整合性全体は未検証です。</small>`;
+    scope.innerHTML = `<b>${esc(purposes[S.meta.purpose] || '検査範囲')}</b><span>基準の要素 ${Number(a.baseline_units) || 0} · 対象の要素 ${Number(a.target_units) || 0} · 比較した組 ${Number(a.compared_pairs) || 0}</span><span>${esc((g.overall && g.overall.unverified_reasons || []).join(' '))}</span>${g.overall && g.overall.ai_scope ? `<span>${esc(g.overall.ai_scope)}</span>` : ''}<small>数値・条件などの規則による候補検出です。意味の整合性全体は未検証です。</small>`;
     const pass = !!(g.overall && g.overall.pass);
     q('[data-pair-approve-hint]').textContent = pass ? '全体が合格です。理由を書いて承認できます。起票した人は承認できません。'
       : DV.verdict(g.overall) === '判定不能' ? '検査範囲に未確認の項目があるため承認できません。判定理由を確認し、文書と目的を見直して再検査してください。' : '全体が不合格のため、まだ承認できません。未解消の指摘を確認してください。';

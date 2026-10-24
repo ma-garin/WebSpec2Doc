@@ -104,7 +104,7 @@
 /* r3: ページ本体はスクロールさせない（内側の二面ビューアと指摘パネルだけ overflow:auto） */
 .dv-content:has(> .dvp:not([hidden])),.dv-content:has(.dvp:not([hidden])){overflow:hidden}
 .dvp{min-height:0;overflow:hidden}
-.dvp .p1-chip{flex:none;font-size:11.5px;padding:1px 8px;border-radius:999px;border:1px solid var(--color-border-strong,#c9ced6);color:var(--color-text-secondary,#57606a);white-space:nowrap}
-.dvp .p1-chip.is-mid{border-color:var(--color-warning,#b26a00);color:var(--color-warning,#b26a00)}
-.dvp .p1-chip.is-ok{border-color:var(--color-primary,#2563eb);color:var(--color-primary,#2563eb)}
-.dvp .p1-chip.is-done{border-color:var(--color-success,#1a7f37);background:var(--color-success-light,#e8f5e9);color:var(--color-success,#1a7f37)}
+.dvp .p1-chip,#dv-ph-state .p1-chip{flex:none;font-size:11.5px;padding:1px 8px;border-radius:999px;border:1px solid var(--color-border-strong,#c9ced6);color:var(--color-text-secondary,#57606a);white-space:nowrap}
+.dvp .p1-chip.is-mid,#dv-ph-state .p1-chip.is-mid{border-color:var(--color-warning,#b26a00);color:var(--color-warning,#b26a00)}
+.dvp .p1-chip.is-ok,#dv-ph-state .p1-chip.is-ok{border-color:var(--color-primary,#2563eb);color:var(--color-primary,#2563eb)}
+.dvp .p1-chip.is-done,#dv-ph-state .p1-chip.is-done{border-color:var(--color-success,#1a7f37);background:var(--color-success-light,#e8f5e9);color:var(--color-success,#1a7f37)}

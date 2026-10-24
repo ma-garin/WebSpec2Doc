@@ -160,22 +160,6 @@
     return E().api(base() + '/findings/' + encodeURIComponent(fid), json('POST', body)).then(setReview);
   }
 
-  /* 工程表示（全画面共通） */
-  function renderSteps(view) {
-    var ph = rv().phase || 'plan', idx = 0;
-    PHASES.forEach(function (p, i) { if (p[0] === ph) idx = i; });
-    var ps = rv().participants || [];
-    var revs = ps.filter(function (p) { return p.role === 'reviewer'; });
-    var done = revs.filter(function (p) { return p.done; }).length;
-    part(view, 'steps').innerHTML = PHASES.map(function (p, i) {
-      var label = p[1];
-      if (p[0] === 'individual' && revs.length) label += '（' + done + '/' + revs.length + ' 人）';
-      if (i < idx || ph === 'closed') return '<span class="done">✓ ' + esc(label) + '</span>';
-      if (i === idx) return '<span class="now">● ' + esc(label) + '</span>';
-      return '<span>' + esc(label) + '</span>';
-    }).join('');
-  }
-
   /* 画面を開いたときの共通処理 */
   function open(view, render) {
     return function () {
@@ -184,12 +168,11 @@
       r2State(view, 'loading', '読み込んでいます。');
       part(view, 'headright').innerHTML = '';
       Promise.all([reload(), settings()]).then(function () {
-        renderSteps(view);
         return render(view);
       }).catch(function (e) { failed(view, e); r2State(view, 'error', errText(e)); });
     };
   }
-  function rerender(view, render) { renderSteps(view); return render(view); }
+  function rerender(view, render) { return render(view); }
 
   /* ---------- r3: 計画・文書を読む・質問票（対検査の API を使う） ---------- */
   var R2_ROLES = { author: '作成者', moderator: '司会', reviewer: 'レビュアー', approver: '承認者' };

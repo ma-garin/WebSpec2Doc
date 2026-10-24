@@ -254,28 +254,5 @@
     });
   });
 
-  /* settings */
-  DV.on('settings', function () {
-    var el = $('dvgSettings');
-    load(el, '/api/docverify/settings', function (s) {
-      s = (s && s.settings) || s || {};  // API は {settings: {...}} で返す
-      var sev = (s.severities || []).map(function (x) {
-        var k = x.id || x.key || x; return '<li>' + sevChip(k) + ' ' + esc(x.description || x.desc || '') + '</li>';
-      }).join('');
-      var types = (s.types || []).map(function (x) { return '<li>' + esc(x.name || x.label || x) + (x.description ? '：' + esc(x.description) : '') + '</li>'; }).join('');
-      var ec = s.exit_criteria || {};
-      var EC_LABEL = { max_open_critical: '未対応の重大な指摘の上限', max_open_major: '未対応の主要な指摘の上限' };
-      var exit = Object.keys(ec).map(function (k) { return '<li>' + esc(EC_LABEL[k] || k) + '：' + esc(ec[k]) + ' 件</li>'; }).join('');
-      var roles = Object.keys(ROLE).map(function (k) {
-        var d = { author: '文書を書いた人。指摘への対応を記入します。', moderator: '進め方と期限を決め、検討の場を回します。',
-          reviewer: '文書を読み、指摘を出します。', approver: '判定と記録の画面で、出口基準を満たしたかを判断します。' }[k];
-        return '<li><strong>' + esc(ROLE[k]) + '</strong>：' + esc(d) + '</li>';
-      }).join('');
-      el.innerHTML = '<div class="card"><p class="mut">利用者: ' + esc(s.me || 'ゲスト') + '</p></div>' +
-        '<h3 class="dvg-h3">重大度</h3>' + (sev ? '<ul class="dvg-list">' + sev + '</ul>' : '<p class="mut">未設定です。</p>') +
-        '<h3 class="dvg-h3">指摘の種別</h3>' + (types ? '<ul class="dvg-list">' + types + '</ul>' : '<p class="mut">未設定です。</p>') +
-        '<h3 class="dvg-h3">出口基準</h3>' + (exit ? '<ul class="dvg-list">' + exit + '</ul>' : '<p class="mut">未設定です。</p>') +
-        '<h3 class="dvg-h3">役割</h3><ul class="dvg-list">' + roles + '</ul>';
-    });
-  });
+  /* settings は docverify-settings.js */
 })();

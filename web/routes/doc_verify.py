@@ -581,20 +581,37 @@ def checklists():
 
 @bp.route("/api/docverify/settings", methods=["GET", "PUT"])
 def settings_api():
+    """設定 v2（rev 付き・409）。保存先は data/docverify/_settings/<tenant|_none>/settings.json。"""
     if request.method != "GET":
         denied = _denied("tenant_settings")
         if denied:
             return denied
-    from web.services.docverify import settings
+    from web.services.docverify import settings_store as ss
     try:
         if request.method == "GET":
-            return jsonify(settings=settings.load_settings())
-        return jsonify(settings=settings.save_settings(request.get_json(silent=True)))
-    except ValueError as e:
-        return _err(str(e), 400)
+            return jsonify(settings=ss.load())
+        from web.services.docverify.pair_review import current_user as _who
+        return jsonify(settings=ss.save(request.get_json(silent=True), _who()))
+    except ss.SettingsError as e:
+        return jsonify(error=e.message, code=e.code, **e.extra), e.status
     except Exception:
         log.exception("設定の読み書きに失敗")
         return _err("設定を保存できませんでした。もう一度お試しください。", 500)
+
+
+@bp.route("/api/docverify/settings/ai-check", methods=["POST"])
+def settings_ai_check():
+    denied = _denied("tenant_settings")
+    if denied:
+        return denied
+    from web.services.docverify import settings_store as ss
+    try:
+        return jsonify(ss.ai_check(request.get_json(silent=True) or {}))
+    except ss.SettingsError as e:
+        return jsonify(error=e.message, code=e.code), e.status
+    except Exception:
+        log.exception("AI 送信先の確認に失敗")
+        return _err("接続を確認できませんでした。時間をおいてもう一度お試しください。", 500)
 
 
 @bp.route("/api/docverify/metrics")

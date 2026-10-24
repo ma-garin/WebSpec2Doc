@@ -61,8 +61,19 @@
   <div id="dvgMetrics"></div>
 </section>
 
-<section class="dv-view" data-view="settings" hidden>
-  <h2 class="dvg-h">設定</h2>
-  <p class="mut">レビューで使う言葉と基準の説明です。</p>
-  <div id="dvgSettings"></div>
+<section class="dv-view dvs" data-view="settings" hidden>
+  <div class="dvs-head">
+    <p class="dashboard-section-copy">各項目の右に、既定値か利用者設定かを表示します。</p>
+    <div class="dvs-head-acts"><span class="dvs-meta" id="dvsMeta"></span><button type="button" class="p1-btn" id="dvsReload">読み直す</button><button type="button" class="p1-btn is-primary" id="dvsSave" disabled>保存</button></div>
+  </div>
+  <div class="p1-banner" id="dvsBanner" role="status" aria-live="polite" hidden></div>
+  <div class="dvs-body">
+    <nav class="dvs-nav" aria-label="設定の区分">
+      <a href="#settings" data-sec="exit" class="is-on">出口基準</a>
+      <a href="#settings" data-sec="vocab">重大度と種別</a>
+      <a href="#settings" data-sec="roles">役割の割当</a>
+      <a href="#settings" data-sec="ai">AI 送信先</a>
+    </nav>
+    <form class="dvs-form" id="dvsForm" novalidate autocomplete="off"><p class="mut">読み込み中…</p></form>
+  </div>
 </section>

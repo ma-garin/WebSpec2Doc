@@ -107,7 +107,7 @@
       html = [['metrics', '履歴'], ['screen', '根拠']].map(([v, l]) => `<a href="#${v}" data-nav="${v}" class="${v === view ? 'active' : ''}"${v === view ? ' aria-current="page"' : ''}>${l}</a>`).join('');
     } else if (STEPS.includes(view) && r) {
       html = `<a href="#cases" data-nav="cases" class="dv-back">← 案件一覧</a><span class="dv-subtabs-name">${esc(r.name)}</span>`
-        + STEPS.map((v) => tab(v, view)).join('');
+        + STEPS.filter((v) => !['triage', 'screen'].includes(v)).map((v) => tab(v, view)).join('');
     } else if (sectionOf(view) === 'doc') {
       html = '';
     } else {
@@ -248,6 +248,8 @@
     try { saved = sessionStorage.getItem('dv-review'); } catch (e) { saved = null; }
     const deep = location.hash.slice(1).split('/');
     if (deep[0] === 'assure' && deep[1]) saved = decodeURIComponent(deep[1]);   // #assure/<iid> からレビューを復元する
+    const qIid = new URLSearchParams(location.search).get('iid');
+    if (qIid) saved = qIid;   // ?iid=<id>#<画面> の直開き・共有 URL を優先する（監査 D-01）
     if (saved) { try { await openReview(saved, deep[0] || 'read'); return; } catch (e) { banner(''); } }
     show(location.hash.slice(1) || 'cases');
   }

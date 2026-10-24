@@ -27,14 +27,11 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='css/docassure-s-shared.css') }}?v={{ dv_ver }}">
 {% endblock %}
 {% block head_css_late %}  <link rel="stylesheet" href="{{ url_for('static', filename='css/docverify-sidebar.css') }}?v={{ dv_ver }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/docverify-frame.css') }}?v={{ dv_ver }}">
   {# 既存 CSS は .dv-page を祖先に取る（子孫セレクタのみ）。body の class は共通レイアウトが持つので html に付ける #}
   <script>document.documentElement.classList.add('dv-page');</script>
 {% endblock %}
-{% block sidebar_cta %}    <button type="button" class="btn-primary sidebar-primary-action" id="dv-new-review">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
-      <span class="nav-label">新しいレビュー</span>
-    </button>
-{% endblock %}
+{% block sidebar_cta %}{% endblock %}
 {% block sidebar_nav %}{% include 'partials/docverify-sidebar.html' %}{% endblock %}
 {% block content %}
       <header class="c-page-head dv-pagehead" id="dv-pagehead">
@@ -111,6 +108,7 @@
 <script src="{{ url_for('static', filename='js/docassure-diff-panel.js') }}?v={{ dv_ver }}"></script>
 <script src="{{ url_for('static', filename='js/docassure-review-panel.js') }}?v={{ dv_ver }}"></script>
 <script src="{{ url_for('static', filename='js/docassure-links-panel.js') }}?v={{ dv_ver }}"></script>
+<script src="{{ url_for('static', filename='js/docverify-frame.js') }}?v={{ dv_ver }}"></script>
 <script>DV.start();</script>
 <script>(function(){
   /* タブ（レビューを開いた後）とサイドバーの aria-current、作成フォームの表示、パンくずを同期する */

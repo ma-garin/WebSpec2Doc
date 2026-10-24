@@ -302,7 +302,7 @@
           '<td><textarea data-f="answer" rows="2" maxlength="1000" placeholder="回答を書く">' + esc(q.answer) + '</textarea></td>' +
           '<td><select data-f="state">' + R2_Q.map(function (s) { return '<option' + (s === q.state ? ' selected' : '') + '>' + s + '</option>'; }).join('') + '</select> <button type="button" class="p1-btn" data-save>保存</button></td></tr>'; }).join('');
       part(view, 'body').innerHTML = ask + '<div class="r2-card"><div class="r2-sec-t">質問（' + qs.length + ' 件）</div>' + (qs.length ? '<div class="r2-tbl"><table class="dv-t r2-q"><thead><tr><th>番号</th><th>質問</th><th>宛先・期限</th><th>回答</th><th>状態</th></tr></thead><tbody>' + rows + '</tbody></table></div>' : '') + '</div>';
-      if (!qs.length) r2State(view, 'empty', '質問はまだありません。上の「質問を起こす」から作れます。');
+      if (!qs.length) r2State(view, 'empty', '質問はまだありません。対検査で採否を「要確認」にすると、ここから質問を起こせます。');
       part(view, 'body').onclick = function (ev) {
         var a = ev.target.closest('[data-ask]'), s = ev.target.closest('[data-save]');
         if (a) {

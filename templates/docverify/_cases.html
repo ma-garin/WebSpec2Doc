@@ -6,13 +6,14 @@
     <span class="sp"></span>
     <input type="search" class="dvc-search" data-cases-q aria-label="レビュー名で絞り込む" placeholder="レビュー名で絞り込む">
     <button type="button" class="p1-btn" data-cases-act="reload">再読み込み</button>
+    <button type="button" class="p1-btn is-primary" id="dv-new-review">新しいレビュー</button>
   </div>
   <form class="dvc-new" data-cases-form novalidate aria-label="新しいレビュー">
     <input class="dvc-in dvc-name" name="name" required maxlength="100" aria-label="レビュー名" placeholder="レビュー名（例: 会員登録 第 1.2 版）">
     <label class="dvc-file"><span>要件定義書</span><input name="requirements" type="file" accept=".md,.txt,text/markdown,text/plain" required></label>
     <label class="dvc-file"><span>基本設計書</span><input name="design" type="file" accept=".md,.txt,text/markdown,text/plain" required></label>
     <label class="dvc-file"><span>期限</span><input class="dvc-in" name="due" type="date"></label>
-    <button class="p1-btn is-primary" type="submit" data-cases-submit>作成して対検査へ</button>
+    <button class="p1-btn" type="submit" data-cases-submit>作成して対検査へ</button>
   </form>
   <p class="dvc-msg" role="status" aria-live="polite" data-cases-msg></p>
   <div class="dvc-body" data-cases-body></div>

@@ -25,9 +25,14 @@
     return data;
   }
 
+  /* 本文コンテナ（body）の data-state を normal に戻す。loading のままだと .ui-state-pane 以外が隠れる */
+  function settle(body) {
+    if (typeof UIStates !== 'undefined' && UIStates.set) { try { UIStates.set(body, 'normal'); return; } catch (e) { /* 属性だけ戻す */ } }
+    body.dataset.state = 'normal'; body.removeAttribute('aria-busy');
+  }
   function state(root, body, kind, message, action) {
     root.dataset.state = kind;
-    if (kind === 'normal') return;
+    if (kind === 'normal') { settle(body); return; }
     if (typeof UIStates !== 'undefined' && UIStates.set) {
       try { UIStates.set(body, kind === 'search-empty' ? 'no-match' : kind, { msg: message, cta: action && kind !== 'loading' ? { label: action.label, onClick: action.fn } : null }); return; } catch (e) { /* 自前で描く */ }
     }
@@ -71,7 +76,7 @@
     root.querySelector('[data-cases-count]').textContent = C.list.length ? `${C.list.length} 件` + (q ? `（表示 ${list.length} 件）` : '') : '';
     if (!C.list.length) return state(root, body, 'empty', 'レビューはまだありません。確認したい資料から、最初のレビューを作成できます。', { label: '新しいレビュー', fn: openCreate });
     if (!list.length) return state(root, body, 'search-empty', `「${C.q}」に一致するレビューはありません。`, { label: '絞り込みを解除', fn: () => { C.q = ''; root.querySelector('[data-cases-q]').value = ''; renderCases(); } });
-    root.dataset.state = 'normal';
+    root.dataset.state = 'normal'; settle(body);
     body.innerHTML = '<table class="dvc-t" aria-label="レビュー一覧"><thead><tr><th class="c-name">レビュー名</th><th class="c-doc">対象文書と版</th><th class="c-stage">工程</th>'
       + '<th class="c-due">期限</th><th class="c-f">指摘</th><th class="c-v">判定</th><th class="c-who">担当</th></tr></thead><tbody>'
       + list.map(row).join('') + '</tbody></table>';
@@ -183,7 +188,7 @@
     const root = sec('gate'), body = root.querySelector('[data-gate-body]'), g = f.gate, m = f.meta || {};
     G.rev = m.rev; G.trail = trail; G.filter = 'all';
     root.querySelector('[data-gate-ver]').textContent = `${m.baseline_name || '要件定義書'}（${roleLabel(m.baseline_role, '基準')}・${m.baseline_version || '第 ' + (m.req_version || 1) + ' 版'}） ⇔ ${m.target_name || '基本設計書'}（${roleLabel(m.target_role, '確認対象')}・${m.target_version || '第 ' + (m.design_version || 1) + ' 版'}） ・ 指摘 ${f.findings.length} 件`;
-    root.dataset.state = 'normal';
+    root.dataset.state = 'normal'; settle(body);
     const approved = trail.find((t) => t.action === 'approved');
     const hint = approved ? `${approved.user} が ${when(approved.at)} に承認済みです。` : DV.verdict(g.overall) === '判定不能' ? '判定不能です。未確認の理由を読み、対象と比較条件を確かめて再検査してください。' : g.overall.pass ? '全体が合格です。理由を書いて承認できます（起票者は承認できません）。' : '全体が不合格のため承認できません。';
     body.innerHTML = `<div class="dvg-grid"><div><div class="dvg-cards">${card('全体', g.overall)}${card('今回の変更分', g.changed)}</div>`

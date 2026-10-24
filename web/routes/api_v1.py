@@ -8,14 +8,32 @@ import sys
 from datetime import datetime
 from pathlib import Path
 
-from flask import Blueprint, Response, request
+from flask import Blueprint, Response, g, request
 
 from web.config import MAX_DEPTH, MAX_PAGES_LIMIT, OUTPUT_DIR
+from web.services.api_v1_format import api_error, install, job_view
 from web.tenancy import scoped_output_dir
 from web.validation import _clean_int, _valid_domain, _valid_url
 
 bp = Blueprint("api_v1", __name__, url_prefix="/api/v1")
 logger = logging.getLogger(__name__)
+install(bp)
+
+
+def _requester() -> str:
+    """認証済み利用者の表示名。認証オフのときはそう明記する（証跡に空欄を作らない）。"""
+    user = getattr(g, "auth_user", None) or {}
+    name = user.get("display_name") or user.get("username") or user.get("email") or ""
+    return str(name) if name else "認証なし（ローカル実行）"
+
+
+def _job_payload(job: object) -> dict:
+    from web.services.job_queue import job_requested_by
+
+    data = dataclasses.asdict(job)
+    data["view"] = job_view(data)
+    data["requested_by"] = job_requested_by(data["job_id"])
+    return data
 
 
 def _out() -> Path:
@@ -194,7 +212,15 @@ def api_crawl(domain: str) -> tuple[dict, int] | dict:
     max_pages = _clean_int(str(body.get("max_pages", 30)), default=30, lo=1, hi=MAX_PAGES_LIMIT)
     compare = bool(body.get("compare", True))
 
-    from web.services.job_queue import start_crawl_job
+    from web.services.job_queue import active_job_for_domain, start_crawl_job
+
+    active = active_job_for_domain(domain)
+    if active is not None:
+        return api_error(
+            "conflict",
+            "同じサイトのジョブが待機中または実行中です。終わるのを待ってから再投入してください。",
+            job_id=active.job_id,
+        )
 
     job_id = start_crawl_job(
         domain=domain,
@@ -204,6 +230,7 @@ def api_crawl(domain: str) -> tuple[dict, int] | dict:
         formats=_DEFAULT_FORMATS,
         compare=compare,
         output_dir=_out(),
+        requested_by=_requester(),
     )
     logger.info("crawl job queued: domain=%s job_id=%s url=%s", domain, job_id, site_url)
     return {"job_id": job_id, "status": "queued", "domain": domain}, 202
@@ -220,7 +247,7 @@ def api_job_status(job_id: str) -> tuple[dict, int] | dict:
     job = get_job(job_id)
     if job is None:
         return {"error": "job not found"}, 404
-    return dataclasses.asdict(job)
+    return _job_payload(job)
 
 
 # ─────────────────────────── GET /api/v1/sites/<domain>/jobs ───────────────────────────
@@ -234,7 +261,19 @@ def api_domain_jobs(domain: str) -> tuple[dict, int] | dict:
     from web.services.job_queue import list_jobs_for_domain
 
     jobs = list_jobs_for_domain(domain)
-    return {"domain": domain, "jobs": [dataclasses.asdict(j) for j in jobs]}
+    return {"domain": domain, "jobs": [_job_payload(j) for j in jobs]}
+
+
+# ─────────────────────────── GET /api/v1/jobs ───────────────────────────
+
+
+@bp.get("/jobs")
+def api_jobs() -> dict:
+    """このテナントのジョブ一覧を返す（新しい順・最大50件・状態の文言と次の行動つき）。"""
+    from web.services.job_queue import list_jobs_in_scope
+
+    jobs = [_job_payload(j) for j in list_jobs_in_scope(_out())]
+    return {"total": len(jobs), "jobs": jobs}
 
 
 # ─────────────────────────── GET /api/v1/sites/<domain>/test-cases ───────────────────────────

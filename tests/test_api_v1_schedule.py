@@ -70,7 +70,7 @@ def test_put_rejects_unknown_interval(client, scoped) -> None:
     response = client.put("/api/v1/sites/example.com/schedule", json={"interval": "hourly"})
 
     assert response.status_code == 400
-    assert "interval" in response.get_json()["error"]
+    assert "interval" in response.get_json()["error"]["message"]
     assert not _schedule_file(scoped).exists()
 
 

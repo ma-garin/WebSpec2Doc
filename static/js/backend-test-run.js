@@ -276,6 +276,24 @@
     (S.job.viewpoints || []).forEach(function (v) {
       if (v.unverified && v.decision !== 'excluded' && v.decision !== 'discarded') out.push('観点 ' + v.id + ' ' + v.name + ': 根拠を確かめていません'); });
     return out; }
+  /* 判定帯: 全体と今回の変更分を別の行で。件数でなく不合格・未検証・期待値未確定を名指しする */
+  function renderGate() { var box = $('#s8-verdict-band'); if (!box) return; var bands = (S.job.judgement || {}).bands;
+    if (!Array.isArray(bands) || !bands.length) { box.setAttribute('data-state', 'empty'); return; }
+    box.setAttribute('data-state', 'normal'); box.innerHTML = '';
+    var cls = { '合格': 'ok', '不合格': 'ng', '判定不能': 'wa', '未判定': '' };
+    bands.forEach(function (b) { var row = document.createElement('div'); row.className = 's8-gate-row';
+      var h = document.createElement('div'); h.className = 's8-gate-h';
+      var sc = document.createElement('strong'); sc.textContent = b.scope; h.appendChild(sc);
+      var v = document.createElement('span'); v.className = 's8-gate-v ' + (cls[b.verdict] || ''); v.textContent = b.verdict; h.appendChild(v);
+      var s = b.summary || {}, m = document.createElement('span'); m.className = 'bs-mut';
+      m.textContent = '対象 ' + (s.total || 0) + ' 件・合格 ' + (s.pass || 0) + '・不合格 ' + (s.fail || 0) + '・未検証 ' + (s.unverified || 0) + '（合格に数えません）'; h.appendChild(m);
+      row.appendChild(h); var ul = document.createElement('ul'); ul.className = 's8-gate-named';
+      (b.named || []).forEach(function (n) { var li = document.createElement('li');
+        li.textContent = n.kind + ' ' + n.case + ' ' + n.text + (n.expected ? ' ／ 期待結果: ' + n.expected : '');
+        if (n.basis) li.title = '根拠: ' + n.basis; ul.appendChild(li); });
+      if (!ul.children.length) { var li = document.createElement('li'); li.textContent = b.scope === '今回の変更分' ? '前回の判定から変わったケースはありません。' : '名指しする項目はありません。'; ul.appendChild(li); }
+      if ((b.named_total || 0) > (b.named || []).length) { var more = document.createElement('li'); more.className = 'bs-mut'; more.textContent = 'ほか ' + (b.named_total - b.named.length) + ' 件は下の表で確認してください。'; ul.appendChild(more); }
+      row.appendChild(ul); box.appendChild(row); }); }
   function renderKpis(latest, uv, candidates) { var c = {}; latest.forEach(function (r) { c[r.state] = (c[r.state] || 0) + 1; });
     var tiles = [[uv.length, '未検証', uv.length ? 'wa' : '', 'この結果では確かめていないこと', 'eye'], [c.pass || 0, '合格', c.pass ? 'ok' : '', '期待値どおりだったケース', 'pass'],
       [c.fail || 0, '不合格', c.fail ? 'ng' : '', '期待値と違ったケース', 'fail'], [c.undetermined || 0, '判定できない', '', '期待値が決まらず判定できない', 'help'],
@@ -320,7 +338,7 @@
   function renderJudge() { var latest = latestResults(), uv = unverifiedItems(latest);
     var recorded = {}; (S.job.defects || []).forEach(function (d) { recorded[d.case] = 1; });
     var candidates = latest.filter(function (r) { return r.state === 'fail' && !recorded[r.case]; });
-    renderKpis(latest, uv, candidates); renderFacts(latest); renderResults(latest); renderDefects(latest, candidates);
+    renderGate(); renderKpis(latest, uv, candidates); renderFacts(latest); renderResults(latest); renderDefects(latest, candidates);
     renderUnverified(uv); }
   /* 未検証: 件数と理由別チップを先頭に、一覧は既定で折りたたみ（開くと高さ固定の内側スクロール） */
   function renderUnverified(uv) { var ul = $('#bs-unverified'), box = $('#bs-uv-box');

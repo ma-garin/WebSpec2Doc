@@ -118,6 +118,9 @@ def _judge(failed: list[str], total: int, outcome: str, unverified: list[str]) -
         return FAIL
     if outcome in ("failed", "timeout", "cancelled", "partial"):
         return UNDECIDABLE
+    # 不在は証明しない（全 System 共通）: 未検証が 1 件でもあれば合格にしない。
+    if unverified:
+        return UNDECIDABLE
     return PASS
 
 
@@ -166,7 +169,7 @@ def build_verdict(qa: Path) -> dict[str, Any]:
         removed = sorted(n for n in prev_outcomes if n not in outcomes)
         changed = {
             "scope": "今回の変更分",
-            "verdict": FAIL if new_fail else (PASS if delta or removed else UNJUDGED),
+            "verdict": FAIL if new_fail else (UNDECIDABLE if removed else (PASS if delta else UNJUDGED)),
             "basis": f"前回から結果が変わったテスト {len(delta)} 件・今回実行していないテスト {len(removed)} 件",
             "named": {"今回新たに失敗": new_fail, "結果が変わったテスト": delta,
                       "今回実行していない（未検証）": removed},

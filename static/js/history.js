@@ -113,7 +113,7 @@ function _buildTable(items) {
     const diffBadge = it.has_diff ? '<span class="diff-badge">差分あり</span>' : '';
     html += `
       <tr class="${it.has_diff ? 'has-drift' : ''} is-clickable" data-domain="${escHtml(it.domain)}">
-        <td><div class="site-cell"><strong>${escHtml(it.domain)}</strong>${diffBadge}</div></td>
+        <td><div class="site-cell"><strong data-user-content>${escHtml(it.domain)}</strong>${diffBadge}</div></td>
         <td class="num">${it.screens}</td>
         <td class="num">${it.fields}</td>
         <td>${snapBadge}</td>
@@ -121,7 +121,7 @@ function _buildTable(items) {
         <td><div class="history-actions">
           <button type="button" class="c-btn c-btn--sm hist-open" data-domain="${escHtml(it.domain)}">開く</button>
           <div class="c-menu" data-menu>
-            <button type="button" class="c-menu__toggle" aria-haspopup="menu" aria-expanded="false" aria-label="${escHtml(it.domain)} のその他の操作">…</button>
+            <button type="button" class="c-menu__toggle" data-user-content aria-haspopup="menu" aria-expanded="false" aria-label="${escHtml(it.domain)} のその他の操作">…</button>
             <ul class="c-menu__list" role="menu" hidden>
               <li role="none"><button type="button" role="menuitem" class="c-menu__item hist-recrawl" data-domain="${escHtml(it.domain)}">再解析</button></li>
               <li role="none"><button type="button" role="menuitem" class="c-menu__item c-menu__item--danger hist-delete" data-domain="${escHtml(it.domain)}">削除</button></li>

@@ -196,28 +196,43 @@
       '<span>文書 ' + (c.documents || 0) + '</span><span>変更要求 ' + (c.crs || 0) + '</span><span>' + fmtDate(s.updated_at || s.created_at) + '</span></span>' +
       '</button></li>';
   }
+  /* 一覧の読み込み中・空・失敗・権限なしは共通の .ui-state（UIStates）で描く。空の操作は副ボタン（主ボタンは見出し横の 1 個だけ） */
+  function homeState(body, kind, err, retry) {
+    var msg = err && err.message;
+    if (kind === 'loading') { window.UIStates.set(body, 'loading', { msg: '読み込み中…' }); return; }
+    if (kind === 'empty') {
+      window.UIStates.set(body, 'empty', { title: 'まだ対象システムがありません', msg: '対象システムを作って文書を取り込むと、変更要求ごとに影響を分析できます。', cta: { label: '新しい対象システム', onClick: newSystem } });
+      var box = body.querySelector('.ui-state'), tmp = document.createElement('div');
+      tmp.innerHTML = empty({ title: '', steps: [['対象システムを作る', '名前と説明を入れる'], ['文書を取り込む', '要件・設計書・テストケース'], ['変更要求を分析する', '影響とテストを確認']] });
+      var steps = tmp.querySelector('.onboard-steps');
+      if (box && steps) box.insertBefore(steps, box.querySelector('.ui-state__actions'));
+      var b = box && box.querySelector('.c-btn--primary'); if (b) b.classList.remove('c-btn--primary');
+      return;
+    }
+    if (kind === 'forbidden') { window.UIStates.set(body, 'forbidden', { msg: msg, cta: { label: 'システム選択へ戻る', href: '/systems' } }); return; }
+    window.UIStates.set(body, 'error', { msg: msg, cta: { label: 'もう一度読み込む', onClick: retry || render } });
+  }
   function renderHome(root) {
     setTitle('', '対象システム一覧');
     root.innerHTML = '<div class="c-section-head"><div class="c-section-head__main"><h2 class="c-section-head__title">対象システム</h2>' +
       '<p class="c-section-head__desc">役割を持っている対象システムだけを表示します。</p></div><div class="c-section-head__actions">' +
       '<button type="button" class="c-btn" data-act="reload">再読み込み</button></div></div><div id="im-home-body"></div>';
     bindHome(root);
-    var body = $('#im-home-body'); loading(body);
+    var body = $('#im-home-body'); homeState(body, 'loading');
     api.systems().then(function (d) {
       var rows = api.list(d, 'systems');
       var site = state.site;
       if (!rows.length) {
-        body.innerHTML = empty({ title: 'まだ対象システムがありません', desc: '対象システムを作って文書を取り込むと、変更要求ごとに影響を分析できます。',
-          steps: [['対象システムを作る', '名前と説明を入れる'], ['文書を取り込む', '要件・設計書・テストケース'], ['変更要求を分析する', '影響とテストを確認']],
-          actions: '<button type="button" class="c-btn c-btn--primary" data-act="new-sys">新しい対象システム</button>' });
+        homeState(body, 'empty');
         if (site) body.insertBefore(siteCandidates(site, rows), body.firstChild);
-        bindHome(body); return;
+        return;
       }
+      body.classList.remove('ui-state-root'); body.removeAttribute('data-state'); body.removeAttribute('aria-busy');
       body.innerHTML = '<ul class="im-cards">' + rows.map(sysCard).join('') + '</ul>';
       if (site) body.insertBefore(siteCandidates(site, rows), body.firstChild);
       // サイトを渡されて開いたときは、選んだ対象システムの「コード依存」をそのサイトで開く（関連付けはしない）
       $$('[data-sid]', body).forEach(function (b) { b.addEventListener('click', function () { go(site ? { sid: b.dataset.sid, tab: 'rea', site: site } : { sid: b.dataset.sid }); }); });
-    }, function (e) { failed(body, e, function () { renderHome(root); }); });
+    }, function (e) { homeState(body, e && e.status === 403 ? 'forbidden' : 'error', e, function () { renderHome(root); }); });
   }
   /* サイト（指揮などからの deep link）に対応する対象システムの候補。人が関連付けたもの（code_site）だけを候補にし、
      名前の一致などで自動に同一視しない。選ぶのは人。 */

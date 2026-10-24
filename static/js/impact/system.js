@@ -160,7 +160,7 @@
   /* ---------- つながり ---------- */
   function side(l, k) { var o = l[k] || {}; return { code: l[k + '_code'] || o.code || l[k + '_item'], text: l[k + '_text'] || o.text || '' }; }
   function picker(id, label) {
-    return '<div class="im-pick"><label class="bt-field">' + label + '<span class="im-row"><input type="search" id="' + id + '-q" placeholder="項目 ID か本文の語で検索" aria-label="' + label + 'を検索">' +
+    return '<div class="im-pick"><label class="bt-field">' + label + '<span class="im-row"><input type="search" class="c-search" id="' + id + '-q" placeholder="項目 ID か本文の語で検索" aria-label="' + label + 'を検索">' +
       '<button type="button" class="btn-outline-sm" data-find="' + id + '">検索</button></span></label><select id="' + id + '" size="5" aria-label="' + label + 'の候補"></select></div>';
   }
   function links(el, ctx) {

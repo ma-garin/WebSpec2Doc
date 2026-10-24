@@ -18,3 +18,9 @@
 # データ取得領域を持たない入力フォームのため G-4（状態注入）の対象外
 /generate:
   skip: "入力フォームのみで一覧・取得 API の領域が無い"
+/impact:
+  apis: ["**/api/impact/v2/systems*"]
+  empty: {body: {"systems": []}}
+
+/systems:
+  skip: "システム一覧は静的な案内で、取得 API の領域が無い"

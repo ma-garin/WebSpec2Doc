@@ -26,6 +26,31 @@
                 <button type="button" id="r-maximize-btn" class="btn-outline-sm btn-icon-only" title="最大化 (Esc で解除)" aria-label="最大化">⛶</button>
               </div>
             </div>
+            <!-- System 01: 対象サイトの版（クロール時点）を軸にした判定帯。中身は s01-versions.js が
+                 /api/s01/versions から描く。件数だけで判断させず、未確認・今回の変更分を名指しする。 -->
+            <section id="s01-versions" class="s01-versions" data-state="loading" aria-labelledby="s01-versions-title">
+              <div class="s01-versions__head">
+                <h2 id="s01-versions-title" class="s01-versions__title">対象と版</h2>
+                <p class="s01-versions__target" id="s01-target"></p>
+                <label class="s01-versions__ver">版（クロール時点）
+                  <select id="s01-version-select" aria-describedby="s01-version-note"></select>
+                </label>
+                <span id="s01-version-note" class="s01-versions__note"></span>
+              </div>
+              <div class="s01-versions__loading" aria-live="polite">版の情報を読み込んでいます…</div>
+              <div class="s01-versions__error" role="alert"></div>
+              <div class="s01-versions__body">
+                <div class="s01-verdict" role="group" aria-label="判定">
+                  <div class="s01-verdict__row" id="s01-verdict-overall"></div>
+                  <div class="s01-verdict__row" id="s01-verdict-change"></div>
+                </div>
+                <table class="s01-prov" aria-label="生成物の出所と区分">
+                  <thead><tr><th scope="col">生成物</th><th scope="col">区分</th><th scope="col">件数</th><th scope="col">出所</th></tr></thead>
+                  <tbody id="s01-prov-body"></tbody>
+                </table>
+                <ul class="s01-failures" id="s01-failures" aria-label="取得できなかった画面と次の行動"></ul>
+              </div>
+            </section>
             <div class="result-body">
               <!-- 結果ビューのナビ。横一列のタブは 8 個が同格に並んで「今どこを見ているか」が
                    読み取れなかったため、章（読む／設計する／実行する／記録）で束ねた縦ナビにする。
